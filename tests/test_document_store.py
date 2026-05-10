@@ -1,6 +1,10 @@
 from src.acquisition.storage import DocumentStore
 from src.models.document import AAOIFIDocument
 
+import pytest
+
+pytestmark = pytest.mark.unit
+
 
 def test_document_store_round_trips_metadata_without_eval(tmp_path):
     store = DocumentStore(str(tmp_path / "documents.db"))

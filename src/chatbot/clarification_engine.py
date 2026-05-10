@@ -35,7 +35,8 @@ QUESTION_TEMPLATES = {
 class ClarificationEngine:
     """Collects the minimum facts needed before sending a query to RAG."""
 
-    def __init__(self):
+    def __init__(self, max_clarification_turns: int = 2):
+        self.max_clarification_turns = max_clarification_turns
         self.operation_keywords = {
             "loan": ["loan", "borrow", "lend", "credit", "financing"],
             "investment": ["invest", "investment", "shares", "stock", "equity", "mudarabah"],
@@ -148,6 +149,15 @@ class ClarificationEngine:
             session_state.add_message("system", ready_message)
             return {"status": "ready", "message": ready_message}
 
+        if self._clarification_turns(session_state) >= self.max_clarification_turns:
+            session_state.missing_variables = missing
+            session_state.clarifying_questions = []
+            session_state.metadata.pop("awaiting_variable", None)
+            session_state.state = ClarificationState.READY
+            ready_message = "Clarification limit reached. Ready for compliance analysis with available facts."
+            session_state.add_message("system", ready_message)
+            return {"status": "ready", "message": ready_message, "missing_variables": missing}
+
         questions = self.generate_clarifying_questions(missing)
         session_state.missing_variables = missing
         session_state.clarifying_questions = questions
@@ -168,6 +178,13 @@ class ClarificationEngine:
         if facts:
             return f"{session_state.user_input} | transaction_type: {op_type} | " + " | ".join(facts)
         return session_state.user_input
+
+    def _clarification_turns(self, session_state: SessionState) -> int:
+        return sum(
+            1
+            for message in session_state.conversation_history
+            if message.role == "system" and "?" in message.content
+        )
 
     def _map_expected_answer(
         self,

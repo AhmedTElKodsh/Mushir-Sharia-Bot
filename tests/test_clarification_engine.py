@@ -1,6 +1,10 @@
 from src.chatbot.clarification_engine import ClarificationEngine
 from src.models.session import ClarificationState, SessionState
 
+import pytest
+
+pytestmark = pytest.mark.service
+
 
 def test_investment_clarification_collects_company_and_haram_revenue():
     engine = ClarificationEngine()
@@ -53,3 +57,20 @@ def test_build_clarified_query_includes_collected_facts():
     assert "transaction_type: investment" in clarified_query
     assert "company_activity: Software company" in clarified_query
     assert "non_compliant_revenue_percent: 2.5" in clarified_query
+
+
+def test_clarification_loop_stops_after_two_questions_with_available_facts():
+    engine = ClarificationEngine(max_clarification_turns=2)
+    session = SessionState(session_id="l1-two-turn-limit")
+
+    first = engine.process_query(session, "Can you check this?")
+    assert first["status"] == "clarifying"
+
+    second = engine.process_query(session, "It is a loan")
+    assert second["status"] == "clarifying"
+
+    third = engine.process_query(session, "I do not know the rest yet")
+    assert third["status"] == "ready"
+    assert session.state == ClarificationState.READY
+    assert "missing_variables" in third
+    assert "awaiting_variable" not in session.metadata

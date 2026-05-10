@@ -23,20 +23,28 @@ class RAGPipeline:
             self.embedding_generator = model_name
             return
 
-        self.persist_dir = persist_dir or os.getenv("CHROMA_DIR", "./chroma_db")
+        self.vector_db_type = os.getenv("VECTOR_DB_TYPE", "chroma").lower()
+        if self.vector_db_type == "qdrant":
+            from src.rag.qdrant_store import QdrantVectorStore
+
+            self.vector_store = QdrantVectorStore()
+            self.persist_dir = None
+        else:
+            self.persist_dir = persist_dir or os.getenv("CHROMA_DIR", "./chroma_db")
         self.model_name = model_name or os.getenv("EMBED_MODEL", "sentence-transformers/all-mpnet-base-v2")
 
         from sentence_transformers import SentenceTransformer
-        import chromadb
 
         print(f"Loading embedding model: {self.model_name}")
         self.model = SentenceTransformer(self.model_name)
-        
-        print(f"Connecting to ChromaDB: {self.persist_dir}")
-        self.client = chromadb.PersistentClient(path=self.persist_dir)
-        self.collection = self.client.get_collection("aaoifi")
-        
-        print(f"Collection contains {self.collection.count()} chunks")
+
+        if self.vector_store is None:
+            import chromadb
+
+            print(f"Connecting to ChromaDB: {self.persist_dir}")
+            self.client = chromadb.PersistentClient(path=self.persist_dir)
+            self.collection = self.client.get_collection("aaoifi")
+            print(f"Collection contains {self.collection.count()} chunks")
     
     def embed_query(self, query: str) -> List[float]:
         """Generate embedding for a query string."""
@@ -59,7 +67,10 @@ class RAGPipeline:
         query_embedding = self.embed_query(query)
 
         if self.vector_store is not None:
-            return self.vector_store.similarity_search(query_embedding, k=k, threshold=threshold)
+            chunks = self.vector_store.similarity_search(query_embedding, k=k, threshold=threshold)
+            if chunks:
+                return chunks
+            return self.vector_store.similarity_search(query_embedding, k=k, threshold=0.0)[:k]
         
         # Query ChromaDB
         results = self.collection.query(

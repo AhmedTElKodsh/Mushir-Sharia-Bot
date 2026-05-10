@@ -2,15 +2,22 @@ import json
 
 from fastapi.testclient import TestClient
 
+from src.api.dependencies import get_application_service
 from src.api.main import app, parse_cors_origins
+from src.models.ruling import AAOIFICitation, AnswerContract, ComplianceStatus
 
 
-def _sse_events(response_text):
+def _named_sse_events(response_text):
     events = []
     for block in response_text.strip().split("\n\n"):
+        event = {}
         for line in block.splitlines():
+            if line.startswith("event: "):
+                event["type"] = line.removeprefix("event: ")
             if line.startswith("data: "):
-                events.append(json.loads(line.removeprefix("data: ")))
+                event["data"] = json.loads(line.removeprefix("data: "))
+        if event:
+            events.append(event)
     return events
 
 
@@ -23,6 +30,7 @@ def test_root_returns_api_entrypoint():
     assert response.json()["status"] == "ok"
     assert response.json()["endpoints"]["health"] == "/health"
     assert response.json()["endpoints"]["query"] == "/api/v1/query"
+    assert response.json()["endpoints"]["query_stream"] == "/api/v1/query/stream"
 
 
 def test_chat_page_contains_input_and_output_surface():
@@ -35,6 +43,7 @@ def test_chat_page_contains_input_and_output_surface():
     assert 'id="prompt"' in response.text
     assert 'id="messages"' in response.text
     assert "Ask Mushir" in response.text
+    assert "/api/v1/query/stream" in response.text
 
 
 def test_session_created_session_can_be_queried():
@@ -54,110 +63,90 @@ def test_session_created_session_can_be_queried():
 
 
 def test_query_stream_returns_l2_sse_events_for_clarification():
+    class FakeService:
+        def answer(self, query, session_id=None):
+            return AnswerContract(
+                answer="What type of company or business activity is involved?",
+                status=ComplianceStatus.CLARIFICATION_NEEDED,
+                citations=[],
+                reasoning_summary="Missing material facts.",
+                clarification_question="What type of company or business activity is involved?",
+            )
+
+    app.dependency_overrides[get_application_service] = lambda: FakeService()
     client = TestClient(app)
 
-    response = client.post("/api/v1/query", json={"content": "I want to invest in a company"})
+    response = client.post("/api/v1/query/stream", json={"content": "I want to invest in a company"})
+    app.dependency_overrides.clear()
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/event-stream")
-    events = _sse_events(response.text)
-    assert [event["type"] for event in events] == ["thinking", "clarifying"]
-    assert events[-1]["questions"] == ["What type of company or business activity is involved?"]
-    assert events[-1]["context"]["session_id"]
-    assert events[-1]["context"]["extracted_variables"]["operation_type"] == "investment"
-    assert events[-1]["context"]["awaiting_variable"] == "company_activity"
+    events = _named_sse_events(response.text)
+    assert [event["type"] for event in events] == ["started", "retrieval", "token", "done"]
+    assert events[-1]["data"]["status"] == "CLARIFICATION_NEEDED"
+    assert events[-1]["data"]["clarification_question"] == "What type of company or business activity is involved?"
 
 
-def test_query_stream_retrieves_generates_and_completes_when_ready(monkeypatch):
+def test_query_stream_retrieves_generates_and_completes_when_ready():
+    class FakeService:
+        def answer(self, query, session_id=None):
+            assert query == "About 3%"
+            return AnswerContract(
+                answer="According to AAOIFI [FAS-01 §1].",
+                status=ComplianceStatus.COMPLIANT,
+                citations=[
+                    AAOIFICitation(
+                        document_id="fas01.md",
+                        standard_number="FAS-01",
+                        section_number="1",
+                        excerpt="AAOIFI excerpt",
+                    )
+                ],
+                reasoning_summary="Grounded in FAS-01.",
+                metadata={"confidence": 0.91},
+            )
+
     client = TestClient(app)
-
-    class FakeChunk:
-        text = "AAOIFI excerpt"
-        score = 0.91
-
-        class citation:
-            standard_id = "FAS-01"
-            section = "1"
-            source_file = "fas01.md"
-
-    class FakeRAGPipeline:
-        def retrieve(self, query, k=5):
-            assert "non_compliant_revenue_percent: 3.0" in query
-            return [FakeChunk()]
-
-    monkeypatch.setattr("src.api.routes.RAGPipeline", lambda: FakeRAGPipeline())
-    monkeypatch.setattr("src.api.routes.call_llm", lambda system, prompt: "According to AAOIFI [FAS-01 §1].")
+    app.dependency_overrides[get_application_service] = lambda: FakeService()
 
     response = client.post(
-        "/api/v1/query",
+        "/api/v1/query/stream",
         json={
-            "content": "About 3%",
-            "context": {
-                "session_id": "ready-session",
-                "extracted_variables": {
-                    "operation_type": "investment",
-                    "company_activity": "Tech company with some haram revenue",
-                },
-                "awaiting_variable": "non_compliant_revenue_percent",
-            },
+            "query": "About 3%",
+            "context": {"session_id": "ready-session"},
         },
     )
+    app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    events = _sse_events(response.text)
+    events = _named_sse_events(response.text)
     assert [event["type"] for event in events] == [
-        "thinking",
-        "retrieving",
-        "generating",
-        "chunk",
-        "complete",
+        "started",
+        "retrieval",
+        "token",
+        "citation",
+        "done",
     ]
-    assert events[1]["chunks"] == 1
-    assert events[3]["text"] == "According to AAOIFI [FAS-01 §1]."
-    assert events[4]["ruling"]["answer"] == "According to AAOIFI [FAS-01 §1]."
+    assert events[1]["data"]["confidence"] == 0.91
+    assert events[2]["data"]["text"] == "According to AAOIFI [FAS-01 §1]."
+    assert events[4]["data"]["answer"] == "According to AAOIFI [FAS-01 §1]."
 
-def test_query_stream_returns_error_event_when_llm_fails(monkeypatch):
+
+def test_query_stream_returns_error_event_when_llm_fails():
+    class FailingService:
+        def answer(self, query, session_id=None):
+            raise RuntimeError("model unavailable")
+
     client = TestClient(app)
+    app.dependency_overrides[get_application_service] = lambda: FailingService()
 
-    class FakeChunk:
-        text = "AAOIFI excerpt"
-        score = 0.91
-
-        class citation:
-            standard_id = "FAS-01"
-            section = "1"
-            source_file = "fas01.md"
-
-    class FakeRAGPipeline:
-        def retrieve(self, query, k=5):
-            return [FakeChunk()]
-
-    def fail_llm(system, prompt):
-        raise RuntimeError("model unavailable")
-
-    monkeypatch.setattr("src.api.routes.RAGPipeline", lambda: FakeRAGPipeline())
-    monkeypatch.setattr("src.api.routes.call_llm", fail_llm)
-
-    response = client.post(
-        "/api/v1/query",
-        json={
-            "content": "About 3%",
-            "context": {
-                "session_id": "llm-failure-session",
-                "extracted_variables": {
-                    "operation_type": "investment",
-                    "company_activity": "Tech company",
-                },
-                "awaiting_variable": "non_compliant_revenue_percent",
-            },
-        },
-    )
+    response = client.post("/api/v1/query/stream", json={"query": "About 3%"})
+    app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    events = _sse_events(response.text)
-    assert [event["type"] for event in events] == ["thinking", "retrieving", "generating", "error"]
-    assert events[-1]["message"] == "The model provider failed while generating this answer."
-    assert events[-1]["retryable"] is True
+    events = _named_sse_events(response.text)
+    assert [event["type"] for event in events] == ["started", "error"]
+    assert events[-1]["data"]["message"] == "model unavailable"
 
 
 def test_parse_cors_origins_uses_json_not_eval():

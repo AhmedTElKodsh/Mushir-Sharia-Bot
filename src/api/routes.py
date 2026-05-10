@@ -1,213 +1,202 @@
 import json
-from fastapi import APIRouter, HTTPException, Body, Path
-from fastapi.responses import StreamingResponse
-from typing import List, Optional, Dict, Any
 import uuid
-from pydantic import BaseModel
+from typing import Any, Dict
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, Response
+from fastapi.responses import JSONResponse, StreamingResponse
+
+from src.api.dependencies import get_application_service, get_rate_limiter, get_session_manager
+from src.api.rate_limit import InMemoryRateLimiter, RateLimitDecision
+from src.api.schemas import ErrorResponse, QueryRequest, QueryResponse
+from src.chatbot.application_service import ApplicationService
 from src.chatbot.clarification_engine import ClarificationEngine
 from src.chatbot.session_manager import SessionManager
-from src.models.schema import ComplianceRuling
+from src.models.ruling import AnswerContract
 from src.models.session import SessionState
 
 router = APIRouter()
-session_manager = SessionManager()
-RAGPipeline = None
 
-AAOIFI_ADHERENCE_SYSTEM_PROMPT = """You are a Sharia compliance assistant specializing in AAOIFI standards.
 
-Answer only from the provided AAOIFI excerpts. If the excerpts do not cover the question, reply:
-"Not addressed in retrieved AAOIFI standards." Always cite the standard_id and section when available."""
-
-TEMPLATE = """Excerpts from AAOIFI Standards:
-
-{chunks}
-
-Question: {question}
-
-Answer with citations in format [standard_id §section]:"""
-
-# Request/Response models
-class QueryRequest(BaseModel):
-    content: str
-    context: Optional[Dict[str, Any]] = None
-
-class ClarificationResponse(BaseModel):
-    status: str
-    questions: Optional[List[str]] = None
-    message: Optional[str] = None
-
-class RulingResponse(BaseModel):
-    ruling_id: str
-    status: str
-    reasoning: str
-    citations: List[Dict]
-    recommendations: List[str]
-    warnings: List[str]
-
-# Session management
 @router.post("/sessions", response_model=Dict[str, str])
-async def create_session():
-    """Create new session."""
+async def create_session(session_manager: SessionManager = Depends(get_session_manager)):
     session_id = str(uuid.uuid4())
     session_manager.create_session(session_id)
     return {"session_id": session_id, "status": "created"}
 
+
 @router.get("/sessions/{session_id}/history")
-async def get_session_history(session_id: str):
-    """Get session conversation history."""
+async def get_session_history(
+    session_id: str,
+    session_manager: SessionManager = Depends(get_session_manager),
+):
     state = session_manager.get_session(session_id)
     if not state:
         raise HTTPException(status_code=404, detail="Session not found or expired")
     return state.to_dict()
 
-# Query submission
-@router.post("/sessions/{session_id}/query", response_model=ClarificationResponse)
-async def submit_query(
+
+@router.post("/sessions/{session_id}/query")
+async def submit_session_query(
     session_id: str,
     request: QueryRequest = Body(...),
+    session_manager: SessionManager = Depends(get_session_manager),
 ):
-    """Submit query for compliance analysis."""
+    """Compatibility endpoint for the existing clarification prototype."""
     engine = ClarificationEngine()
     state = session_manager.get_session(session_id)
     if not state:
         raise HTTPException(status_code=404, detail="Session not found or expired")
-    result = engine.process_query(state, request.content)
+    result = engine.process_query(state, request.query)
     session_manager.update_session(state)
     return result
 
 
-@router.post("/query")
-async def stream_query(request: QueryRequest = Body(...)):
-    """Stream L2 query progress as server-sent events."""
-    session_state = _session_from_request_context(request)
+@router.post("/query", response_model=QueryResponse)
+async def query(
+    payload: QueryRequest,
+    request: Request,
+    response: Response,
+    application_service: ApplicationService = Depends(get_application_service),
+    rate_limiter: InMemoryRateLimiter = Depends(get_rate_limiter),
+):
+    rate_decision = rate_limiter.check(_rate_limit_key(request))
+    if not rate_decision.allowed:
+        return _rate_limit_response(request.state.request_id, rate_decision)
+    _apply_rate_limit_headers(response, rate_decision)
+    try:
+        answer = _answer_service(application_service, payload, request.state.request_id)
+    except Exception as exc:
+        request_id = request.state.request_id
+        return _error_response("SERVICE_ERROR", str(exc), request_id, status_code=500)
+    return _query_response(answer)
+
+
+@router.post("/query/stream")
+async def query_stream(
+    payload: QueryRequest,
+    request: Request,
+    application_service: ApplicationService = Depends(get_application_service),
+    rate_limiter: InMemoryRateLimiter = Depends(get_rate_limiter),
+):
+    request_id = request.state.request_id
+    rate_decision = rate_limiter.check(_rate_limit_key(request))
+    if not rate_decision.allowed:
+        return _rate_limit_response(request_id, rate_decision)
     return StreamingResponse(
-        _query_events(session_state, request.content),
+        _query_events(application_service, payload, request_id),
         media_type="text/event-stream",
+        headers=rate_decision.headers(),
     )
 
-# Ruling retrieval
-@router.get("/rulings/{ruling_id}", response_model=Optional[RulingResponse])
+
+@router.get("/rulings/{ruling_id}", response_model=None)
 async def get_ruling(ruling_id: str = Path(...)):
-    """Get compliance ruling by ID."""
-    # Placeholder - ruling storage TBD
     raise HTTPException(status_code=404, detail="Ruling storage not yet implemented")
 
-# Auth (simplified for MVP)
+
 @router.post("/auth/login")
 async def login(username: str = Body(...), password: str = Body(...)):
-    """Login endpoint (simplified)."""
     return {"token": "dummy-token", "expires_in": 86400, "message": "Auth not fully implemented in MVP"}
 
 
-def _session_from_request_context(request: QueryRequest) -> SessionState:
-    context = request.context or {}
-    session_id = context.get("session_id") or str(uuid.uuid4())
-    state = session_manager.get_session(session_id) or session_manager.create_session(session_id)
-    if "extracted_variables" in context:
-        state.extracted_variables.update(context["extracted_variables"])
-    if "awaiting_variable" in context:
-        state.metadata["awaiting_variable"] = context["awaiting_variable"]
-    return state
-
-
-def _sse(data: Dict[str, Any]) -> str:
-    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-
-def _context_payload(session_state: SessionState) -> Dict[str, Any]:
+@router.get("/compliance/disclaimer")
+async def compliance_disclaimer():
     return {
-        "session_id": session_state.session_id,
-        "extracted_variables": session_state.extracted_variables,
-        "awaiting_variable": session_state.metadata.get("awaiting_variable"),
+        "version": "l4-disclaimer-v1",
+        "requires_acknowledgement": True,
+        "text": (
+            "Mushir provides informational guidance grounded in retrieved AAOIFI excerpts. "
+            "It does not provide a binding Sharia ruling, fatwa, legal advice, or financial advice. "
+            "Consult a qualified Sharia scholar before relying on any conclusion."
+        ),
     }
 
 
-def format_chunks(chunks) -> str:
-    formatted = []
-    for chunk in chunks:
-        citation = chunk.citation
-        formatted.append(f"[{citation.standard_id}] (Score: {chunk.score:.2f})\n{chunk.text}\n")
-    return "\n---\n".join(formatted)
+def _query_response(answer: AnswerContract) -> QueryResponse:
+    return QueryResponse(**answer.to_dict())
 
 
-def call_llm(system_prompt: str, user_prompt: str) -> str:
-    from src.chatbot.cli import call_llm as cli_call_llm
-
-    return cli_call_llm(system_prompt, user_prompt)
-
-
-def get_rag_pipeline():
-    global RAGPipeline
-    if RAGPipeline is None:
-        from src.rag.pipeline import RAGPipeline as LoadedRAGPipeline
-
-        RAGPipeline = LoadedRAGPipeline
-    return RAGPipeline()
-
-
-def _query_events(session_state: SessionState, content: str):
-    yield _sse({"type": "thinking"})
-
-    engine = ClarificationEngine()
-    result = engine.process_query(session_state, content)
-    session_manager.update_session(session_state)
-    if result["status"] == "clarifying":
-        yield _sse(
-            {
-                "type": "clarifying",
-                "questions": result.get("questions", []),
-                "context": _context_payload(session_state),
-            }
+def _answer_service(application_service: ApplicationService, payload: QueryRequest, request_id: str):
+    try:
+        return application_service.answer(
+            payload.query,
+            session_id=payload.resolved_session_id(),
+            request_id=request_id,
+            disclaimer_acknowledged=bool(payload.context.get("disclaimer_acknowledged", True)),
         )
-        return
-
-    rag = get_rag_pipeline()
-    clarified_query = engine.build_clarified_query(session_state)
-    chunks = rag.retrieve(clarified_query, k=5)
-    yield _sse({"type": "retrieving", "chunks": len(chunks)})
-
-    yield _sse({"type": "generating"})
-    if not chunks:
-        answer = "Not addressed in retrieved AAOIFI standards."
-    else:
-        prompt = TEMPLATE.format(chunks=format_chunks(chunks), question=clarified_query)
+    except TypeError as exc:
+        if "request_id" not in str(exc) and "disclaimer_acknowledged" not in str(exc):
+            raise
         try:
-            answer = call_llm(AAOIFI_ADHERENCE_SYSTEM_PROMPT, prompt)
-        except Exception as exc:
-            yield _sse(
-                {
-                    "type": "error",
-                    "message": "The model provider failed while generating this answer.",
-                    "detail": str(exc),
-                    "retryable": True,
-                    "context": _context_payload(session_state),
-                }
+            return application_service.answer(
+                payload.query,
+                session_id=payload.resolved_session_id(),
+                request_id=request_id,
             )
-            return
+        except TypeError as nested_exc:
+            if "request_id" not in str(nested_exc):
+                raise
+            return application_service.answer(payload.query, session_id=payload.resolved_session_id())
 
-    yield _sse({"type": "chunk", "text": answer})
-    ruling = ComplianceRuling(
-        question=clarified_query,
-        answer=answer,
-        chunks=chunks,
-        confidence=sum(chunk.score for chunk in chunks) / len(chunks) if chunks else 0.0,
+
+def _error_response(code: str, message: str, request_id: str, status_code: int):
+    return JSONResponse(
+        status_code=status_code,
+        content=ErrorResponse(code=code, message=message, request_id=request_id).model_dump(),
     )
-    yield _sse(
-        {
-            "type": "complete",
-            "context": _context_payload(session_state),
-            "ruling": {
-                "question": ruling.question,
-                "answer": ruling.answer,
-                "confidence": ruling.confidence,
-                "sources": [
-                    {
-                        "standard_id": chunk.citation.standard_id,
-                        "section": chunk.citation.section,
-                        "score": chunk.score,
-                    }
-                    for chunk in ruling.chunks
-                ],
-            },
-        }
+
+
+def _rate_limit_key(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown-client"
+
+
+def _apply_rate_limit_headers(response: Response, decision: RateLimitDecision) -> None:
+    for header, value in decision.headers().items():
+        response.headers[header] = value
+
+
+def _rate_limit_response(request_id: str, decision: RateLimitDecision) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content=ErrorResponse(
+            code="RATE_LIMIT_EXCEEDED",
+            message="Rate limit exceeded",
+            request_id=request_id,
+        ).model_dump(),
+        headers=decision.headers(),
     )
+
+
+def _sse(event: str, data: Dict[str, Any]) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _query_events(application_service: ApplicationService, payload: QueryRequest, request_id: str):
+    yield _sse("started", {"request_id": request_id})
+    try:
+        answer = _answer_service(application_service, payload, request_id)
+        response = _query_response(answer).model_dump(mode="json")
+        yield _sse("retrieval", {"confidence": response["metadata"].get("confidence", 0.0)})
+        yield _sse("token", {"text": response["answer"]})
+        for citation in response["citations"]:
+            yield _sse("citation", citation)
+        yield _sse("done", response)
+    except Exception as exc:
+        yield _sse(
+            "error",
+            ErrorResponse(
+                code="SERVICE_ERROR",
+                message=str(exc),
+                request_id=request_id,
+            ).model_dump()["error"],
+        )
+
+
+def _session_from_request_context(request: QueryRequest) -> SessionState:
+    """Kept for older tests/importers; route logic now uses ApplicationService."""
+    return SessionState(session_id=request.resolved_session_id() or str(uuid.uuid4()))
