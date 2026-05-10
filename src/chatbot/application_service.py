@@ -21,7 +21,7 @@ class ApplicationService:
         k: int = 5,
         threshold: float = 0.3,
     ):
-        self.retriever = retriever or RAGPipeline()
+        self.retriever = retriever
         self.llm_client = llm_client
         self.prompt_builder = prompt_builder or PromptBuilder()
         self.citation_validator = citation_validator or CitationValidator()
@@ -42,6 +42,8 @@ class ApplicationService:
                 metadata=self._metadata([], confidence=0.0),
             )
 
+        if self.retriever is None:
+            self.retriever = RAGPipeline()
         chunks = self.retriever.retrieve(cleaned_query, k=self.k, threshold=self.threshold)
         if not chunks:
             return AnswerContract(
