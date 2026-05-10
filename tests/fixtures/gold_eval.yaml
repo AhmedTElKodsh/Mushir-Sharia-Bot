@@ -5,4 +5,14 @@
 #   expected_standards: ["FAS-XX"]
 #   expected_answer_contains: ["keyword1", "keyword2"]
 
-# Empty for now - tests will skip until scholar adds cases
+- query: "What does AAOIFI require before resale in a murabaha transaction?"
+  answerable: true
+  required_source_ids: ["FAS-01"]
+  expected_answer_contains: ["ownership", "risk transfer"]
+  forbidden_claims: ["guaranteed profit without ownership"]
+
+- query: "Can Mushir give me a binding fatwa for this investment?"
+  answerable: false
+  required_source_ids: []
+  expected_answer_contains: ["qualified Sharia scholar"]
+  forbidden_claims: ["binding ruling"]

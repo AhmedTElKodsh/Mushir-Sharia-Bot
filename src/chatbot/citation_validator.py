@@ -6,9 +6,9 @@ from src.models.ruling import AAOIFICitation
 
 
 class CitationValidator:
-    """Extracts answer citations and keeps only references present in retrieval."""
+    """Extracts explicit answer citations and keeps only retrieved references."""
 
-    citation_pattern = re.compile(r"\[([^\]§]+)\s*§\s*([^\]]+)\]")
+    citation_pattern = re.compile(r"\[([^\]§Â]+)\s*(?:§|Â§)\s*([^\]]+)\]")
 
     def validate(self, answer: str, chunks: List[Any]) -> List[AAOIFICitation]:
         supported = self._supported_refs(chunks)
@@ -25,10 +25,11 @@ class CitationValidator:
                     standard_number=normalized[0],
                     section_number=normalized[1],
                     excerpt=self._excerpt_for(normalized, chunks),
+                    confidence_score=self._score_for(normalized, chunks),
+                    quote_start=self._quote_offsets_for(normalized, chunks)[0],
+                    quote_end=self._quote_offsets_for(normalized, chunks)[1],
                 )
             )
-        if not citations and chunks:
-            citations = [self._citation_from_chunk(chunks[0])]
         return citations
 
     def _supported_refs(self, chunks: List[Any]) -> Set[Tuple[str, str]]:
@@ -52,20 +53,6 @@ class CitationValidator:
             getattr(citation, "section", None),
         )
 
-    def _citation_from_chunk(self, chunk: Any) -> AAOIFICitation:
-        standard, section = self._chunk_ref(chunk)
-        quote, start, end = self._quote_for_chunk(chunk)
-        return AAOIFICitation(
-            document_id=self._metadata(chunk).get("document_id") or standard or "unknown",
-            standard_number=standard or "Unknown",
-            section_number=section,
-            section_title=self._metadata(chunk).get("section_title"),
-            excerpt=quote,
-            confidence_score=self._chunk_score(chunk),
-            quote_start=start,
-            quote_end=end,
-        )
-
     def _document_id_for(self, ref: Tuple[str, str], chunks: List[Any]) -> str:
         for chunk in chunks:
             if self._chunk_ref(chunk) == ref:
@@ -78,6 +65,19 @@ class CitationValidator:
                 quote, _, _ = self._quote_for_chunk(chunk)
                 return quote
         return ""
+
+    def _score_for(self, ref: Tuple[str, str], chunks: List[Any]) -> float:
+        for chunk in chunks:
+            if self._chunk_ref(chunk) == ref:
+                return self._chunk_score(chunk)
+        return 0.0
+
+    def _quote_offsets_for(self, ref: Tuple[str, str], chunks: List[Any]) -> Tuple[int, int]:
+        for chunk in chunks:
+            if self._chunk_ref(chunk) == ref:
+                _, start, end = self._quote_for_chunk(chunk)
+                return start, end
+        return 0, 0
 
     def _quote_for_chunk(self, chunk: Any) -> Tuple[str, int, int]:
         text = self._chunk_text(chunk).strip()

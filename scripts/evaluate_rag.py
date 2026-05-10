@@ -18,23 +18,101 @@ def load_cases(path: Path) -> List[Dict[str, Any]]:
     return list(data)
 
 
-def evaluate_retrieval(cases: List[Dict[str, Any]], k: int) -> Dict[str, Any]:
-    pipeline = RAGPipeline()
+def evaluate_retrieval(cases: List[Dict[str, Any]], k: int, pipeline=None) -> Dict[str, Any]:
+    pipeline = pipeline or RAGPipeline()
     results = []
     hits = 0
+    reciprocal_ranks = []
+    answerable_cases = 0
     for case in cases:
         query = case.get("query") or case.get("question") or ""
-        expected = set(case.get("expected_chunk_ids") or case.get("expected_chunks") or [])
+        answerable = case.get("answerable", True)
+        expected = set(
+            case.get("expected_chunk_ids")
+            or case.get("expected_chunks")
+            or case.get("required_source_ids")
+            or case.get("expected_standards")
+            or []
+        )
         chunks = pipeline.retrieve(query, k=k, threshold=0.0)
-        retrieved = [getattr(chunk, "chunk_id", None) if not isinstance(chunk, dict) else chunk.get("chunk_id") for chunk in chunks]
-        matched = bool(expected.intersection(retrieved)) if expected else bool(retrieved)
+        retrieved = [_retrieval_id(chunk) for chunk in chunks]
+        retrieved_rank_candidates = [_retrieval_candidates(chunk) for chunk in chunks]
+        retrieved_refs = set().union(*[_retrieval_candidates(chunk) for chunk in chunks]) if chunks else set()
+        matched_ids = expected.intersection(retrieved_refs)
+        matched = bool(matched_ids) if expected else bool(retrieved)
         hits += int(matched)
-        results.append({"query": query, "retrieved_chunk_ids": retrieved, "matched": matched})
+        if answerable:
+            answerable_cases += 1
+            reciprocal_ranks.append(_reciprocal_rank(retrieved_rank_candidates, expected))
+        results.append(
+            {
+                "query": query,
+                "answerable": answerable,
+                "expected": sorted(expected),
+                "retrieved_ids": retrieved,
+                "matched": matched,
+                "reciprocal_rank": _reciprocal_rank(retrieved_rank_candidates, expected),
+            }
+        )
     return {
         "case_count": len(cases),
-        "precision_at_k_proxy": hits / len(cases) if cases else 0.0,
+        "answerable_case_count": answerable_cases,
+        "hit_at_k": hits / len(cases) if cases else 0.0,
+        "recall_at_k": hits / answerable_cases if answerable_cases else 0.0,
+        "mrr": sum(reciprocal_ranks) / len(reciprocal_ranks) if reciprocal_ranks else 0.0,
         "results": results,
     }
+
+
+def _retrieval_id(chunk: Any) -> str:
+    if isinstance(chunk, dict):
+        metadata = chunk.get("metadata", {})
+        return str(
+            chunk.get("chunk_id")
+            or metadata.get("chunk_id")
+            or metadata.get("standard_number")
+            or metadata.get("source_file")
+            or ""
+        )
+    citation = getattr(chunk, "citation", None)
+    return str(getattr(chunk, "chunk_id", None) or getattr(citation, "standard_id", "") or "")
+
+
+def _retrieval_candidates(chunk: Any) -> set:
+    if isinstance(chunk, dict):
+        metadata = chunk.get("metadata", {})
+        return {
+            str(value)
+            for value in [
+                chunk.get("chunk_id"),
+                metadata.get("chunk_id"),
+                metadata.get("document_id"),
+                metadata.get("standard_number"),
+                metadata.get("source_file"),
+                metadata.get("section_number"),
+            ]
+            if value
+        }
+    citation = getattr(chunk, "citation", None)
+    return {
+        str(value)
+        for value in [
+            getattr(chunk, "chunk_id", None),
+            getattr(citation, "standard_id", None),
+            getattr(citation, "source_file", None),
+            getattr(citation, "section", None),
+        ]
+        if value
+    }
+
+
+def _reciprocal_rank(retrieved: List[set], expected: set) -> float:
+    if not expected:
+        return 0.0
+    for index, candidates in enumerate(retrieved, 1):
+        if candidates.intersection(expected):
+            return 1.0 / index
+    return 0.0
 
 
 def main() -> int:

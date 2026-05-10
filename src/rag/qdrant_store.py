@@ -19,6 +19,7 @@ class QdrantVectorStore:
 
     def __init__(
         self,
+        location: Optional[str] = None,
         url: Optional[str] = None,
         api_key: Optional[str] = None,
         collection_name: Optional[str] = None,
@@ -32,11 +33,19 @@ class QdrantVectorStore:
 
         self.collection_name = collection_name or os.getenv("QDRANT_COLLECTION", DEFAULT_COLLECTION)
         self.vector_size = int(os.getenv("QDRANT_VECTOR_SIZE", str(vector_size)))
-        self.client = QdrantClient(
-            url=url or os.getenv("QDRANT_URL", "http://localhost:6333"),
-            api_key=api_key or os.getenv("QDRANT_API_KEY") or None,
-            timeout=float(os.getenv("QDRANT_TIMEOUT_SECONDS", "10")),
-        )
+        client_location = location or os.getenv("QDRANT_LOCATION")
+        if client_location:
+            self.client = QdrantClient(
+                location=client_location,
+                api_key=api_key or os.getenv("QDRANT_API_KEY") or None,
+                timeout=float(os.getenv("QDRANT_TIMEOUT_SECONDS", "10")),
+            )
+        else:
+            self.client = QdrantClient(
+                url=url or os.getenv("QDRANT_URL", "http://localhost:6333"),
+                api_key=api_key or os.getenv("QDRANT_API_KEY") or None,
+                timeout=float(os.getenv("QDRANT_TIMEOUT_SECONDS", "10")),
+            )
         try:
             self.client.get_collection(self.collection_name)
         except Exception:
@@ -52,7 +61,7 @@ class QdrantVectorStore:
         points = [
             PointStruct(
                 id=self._point_id(chunk.chunk_id),
-                vector=chunk.embedding,
+                vector=chunk.embedding or [],
                 payload={
                     "chunk_id": chunk.chunk_id,
                     "content": chunk.content,

@@ -1,4 +1,5 @@
 """Application service for the Sharia compliance answer flow."""
+import json
 import os
 from typing import Any, Dict, List, Optional
 
@@ -96,6 +97,12 @@ class ApplicationService:
         answer = self.llm_client.generate(prompt)
         citations = self.citation_validator.validate(answer, chunks)
         status = self._status_from_answer(answer, citations)
+        if status == ComplianceStatus.INSUFFICIENT_DATA and not citations:
+            answer = (
+                "INSUFFICIENT_DATA: The retrieved AAOIFI excerpts did not provide "
+                "a safely citable basis for this answer. Please provide more details "
+                "or consult a qualified Sharia scholar."
+            )
         contract = AnswerContract(
             answer=answer,
             status=status,
@@ -134,9 +141,9 @@ class ApplicationService:
         )
 
     def _cached_answer(self, query: str) -> Optional[AnswerContract]:
-        if not self.cache_store:
+        if not self.cache_store or self._eval_mode():
             return None
-        cached = self.cache_store.get_json("response", CacheStore.stable_key(query))
+        cached = self.cache_store.get_json("response", self._cache_key(query))
         if not cached:
             return None
         answer = self._contract_from_dict(cached)
@@ -144,14 +151,34 @@ class ApplicationService:
         return answer
 
     def _cache_answer(self, query: str, answer: AnswerContract) -> None:
-        if not self.cache_store or answer.status == ComplianceStatus.CLARIFICATION_NEEDED:
+        if (
+            not self.cache_store
+            or self._eval_mode()
+            or answer.status == ComplianceStatus.CLARIFICATION_NEEDED
+        ):
             return
         self.cache_store.set_json(
             "response",
-            CacheStore.stable_key(query),
+            self._cache_key(query),
             answer.to_dict(),
             self.response_cache_ttl,
         )
+
+    def _cache_key(self, query: str) -> str:
+        payload = {
+            "query": query.strip().lower(),
+            "prompt_version": getattr(self.prompt_builder, "prompt_version", None),
+            "model_name": getattr(self.llm_client, "model_name", None),
+            "corpus_version": os.getenv("AAOIFI_CORPUS_VERSION", "unknown"),
+            "retriever": type(self.retriever).__name__ if self.retriever else "lazy",
+            "k": self.k,
+            "threshold": self.threshold,
+        }
+        return CacheStore.stable_key(json.dumps(payload, sort_keys=True))
+
+    @staticmethod
+    def _eval_mode() -> bool:
+        return os.getenv("RAG_EVAL_MODE", "false").lower() == "true"
 
     @staticmethod
     def _requires_disclaimer(disclaimer_acknowledged: bool) -> bool:
