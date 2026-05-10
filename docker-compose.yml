@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   sharia-bot:
     build: .
@@ -9,7 +7,7 @@ services:
       - LLM_PROVIDER=${LLM_PROVIDER:-openai}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
-      - VECTOR_DB_TYPE=chroma
+      - VECTOR_DB_TYPE=qdrant
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_COLLECTION=aaoifi_standards
       - CHROMA_PERSIST_DIR=/app/data/chroma
