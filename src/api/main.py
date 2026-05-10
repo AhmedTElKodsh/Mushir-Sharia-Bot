@@ -7,6 +7,7 @@ from typing import List
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from src.api.error_handling import ErrorResponse
@@ -76,6 +77,18 @@ def create_app() -> FastAPI:
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         return response
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(request: Request, exc: RequestValidationError):
+        request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
+        return JSONResponse(
+            status_code=422,
+            content=ErrorResponse.create(
+                "VALIDATION_ERROR",
+                "Request validation failed",
+                request_id,
+            ),
+        )
 
     @app.get("/")
     async def root():

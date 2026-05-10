@@ -67,3 +67,17 @@ def test_rest_query_maps_service_errors_to_controlled_payload():
     assert response.status_code == 500
     assert response.json()["error"]["code"] == "SERVICE_ERROR"
     assert response.json()["error"]["request_id"] == response.headers["X-Request-ID"]
+
+
+@pytest.mark.api
+def test_rest_query_maps_validation_errors_to_controlled_payload():
+    from src.api.main import create_app
+
+    app = create_app()
+
+    with TestClient(app) as client:
+        response = client.post("/api/v1/query", json={"query": "   "})
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert response.json()["error"]["request_id"] == response.headers["X-Request-ID"]

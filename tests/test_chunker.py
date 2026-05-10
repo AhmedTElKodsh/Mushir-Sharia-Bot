@@ -2,6 +2,8 @@ import pytest
 from src.models.chunk import SemanticChunk
 from src.rag.chunker import SemanticChunker, estimate_tokens
 
+pytestmark = pytest.mark.unit
+
 def test_estimate_tokens():
     text = "This is a test sentence with ten words here."
     tokens = estimate_tokens(text)

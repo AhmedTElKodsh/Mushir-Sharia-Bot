@@ -3,6 +3,8 @@ from src.models.session import SessionState, ClarificationState, Message
 from datetime import UTC, datetime, timedelta
 from src.chatbot.session_manager import SessionManager
 
+pytestmark = pytest.mark.service
+
 def test_session_creation():
     state = SessionState(session_id="test-1")
     assert state.session_id == "test-1"

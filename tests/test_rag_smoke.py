@@ -7,9 +7,10 @@ from pathlib import Path
 
 import pytest
 import yaml
-from chromadb import PersistentClient
 
 from src.rag.pipeline import RAGPipeline
+
+pytestmark = [pytest.mark.integration, pytest.mark.smoke]
 
 # Path to gold evaluation set (created by scholar later)
 GOLD_EVAL_PATH = Path("tests/fixtures/gold_eval.yaml")
@@ -23,6 +24,8 @@ if GOLD_EVAL_PATH.exists() and GOLD_EVAL_PATH.stat().st_size > 0:
 
 def test_ingest_nonempty():
     """Verify ChromaDB was populated by ingestion script."""
+    from chromadb import PersistentClient
+
     chroma_dir = os.getenv("CHROMA_DIR", "./chroma_db")
 
     # Check directory exists

@@ -40,6 +40,34 @@ def test_query_response_serializes_l1_answer_contract():
 
 
 @pytest.mark.unit
+def test_query_response_rejects_grounded_status_without_citations():
+    from src.api.schemas import QueryResponse
+
+    with pytest.raises(ValidationError, match="grounded answers must include"):
+        QueryResponse(
+            answer="COMPLIANT",
+            status=ComplianceStatus.COMPLIANT,
+            citations=[],
+            reasoning_summary="No source.",
+            limitations="Informational only.",
+        )
+
+
+@pytest.mark.unit
+def test_query_response_requires_question_for_clarification_status():
+    from src.api.schemas import QueryResponse
+
+    with pytest.raises(ValidationError, match="clarification_question"):
+        QueryResponse(
+            answer="More facts are needed.",
+            status=ComplianceStatus.CLARIFICATION_NEEDED,
+            citations=[],
+            reasoning_summary="Missing facts.",
+            limitations="Informational only.",
+        )
+
+
+@pytest.mark.unit
 def test_error_response_contains_request_id():
     from src.api.schemas import ErrorResponse
 

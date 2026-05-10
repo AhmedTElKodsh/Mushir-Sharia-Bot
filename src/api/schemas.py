@@ -56,6 +56,17 @@ class QueryResponse(BaseModel):
     clarification_question: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+    @model_validator(mode="after")
+    def enforce_answer_contract(self):
+        if self.status not in {
+            ComplianceStatus.INSUFFICIENT_DATA,
+            ComplianceStatus.CLARIFICATION_NEEDED,
+        } and not self.citations:
+            raise ValueError("grounded answers must include at least one citation")
+        if self.status == ComplianceStatus.CLARIFICATION_NEEDED and not self.clarification_question:
+            raise ValueError("clarification responses must include clarification_question")
+        return self
+
 
 class ClarificationResponse(QueryResponse):
     pass
