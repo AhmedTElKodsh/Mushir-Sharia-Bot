@@ -36,7 +36,11 @@ async def lifespan(app: FastAPI):
     app.state.session_manager = _build_session_manager()
     app.state.rate_limiter = _build_rate_limiter()
     app.state.audit_store = _build_audit_store()
-    app.state.application_service = ApplicationService(audit_store=app.state.audit_store)
+    app.state.cache_store = _build_cache_store()
+    app.state.application_service = ApplicationService(
+        audit_store=app.state.audit_store,
+        cache_store=app.state.cache_store,
+    )
     app.state.metrics = MetricsRegistry()
     app.state.infrastructure = _infrastructure_status(app)
     yield
@@ -82,12 +86,26 @@ def _build_audit_store():
     return NullAuditStore()
 
 
+def _build_cache_store():
+    if os.getenv("CACHE_STORE_TYPE", "memory").lower() == "redis":
+        try:
+            from src.storage.cache import RedisCacheStore
+
+            return RedisCacheStore()
+        except Exception as exc:
+            print(f"Redis cache unavailable, falling back to memory cache: {exc}")
+    from src.storage.cache import InMemoryCacheStore
+
+    return InMemoryCacheStore()
+
+
 def _infrastructure_status(app: FastAPI):
     return {
         "vector_store": os.getenv("VECTOR_DB_TYPE", "chroma").lower(),
         "session_store": type(app.state.session_manager).__name__,
         "rate_limit_store": type(app.state.rate_limiter).__name__,
         "audit_store": type(app.state.audit_store).__name__,
+        "cache_store": type(app.state.cache_store).__name__,
     }
 
 
@@ -104,6 +122,7 @@ def create_app() -> FastAPI:
         "session_store": "not_initialized",
         "rate_limit_store": "not_initialized",
         "audit_store": "not_initialized",
+        "cache_store": "not_initialized",
     }
 
     app.add_middleware(
@@ -165,6 +184,7 @@ def create_app() -> FastAPI:
                 "query": "/api/v1/query",
                 "query_stream": "/api/v1/query/stream",
                 "sessions": "/api/v1/sessions",
+                "disclaimer": "/api/v1/compliance/disclaimer",
                 "docs": "/docs",
             },
         }

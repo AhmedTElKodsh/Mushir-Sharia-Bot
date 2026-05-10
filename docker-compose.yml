@@ -17,6 +17,9 @@ services:
       - SQLITE_DB_PATH=/app/data/documents.db
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql://mushir:mushir@postgres:5432/mushir
+      - CACHE_STORE_TYPE=redis
+      - RESPONSE_CACHE_TTL_SECONDS=86400
+      - REQUIRE_DISCLAIMER_ACK=false
       - SESSION_EXPIRY_MINUTES=30
       - LOG_LEVEL=INFO
       - LOG_DIR=/app/logs

@@ -99,6 +99,19 @@ async def login(username: str = Body(...), password: str = Body(...)):
     return {"token": "dummy-token", "expires_in": 86400, "message": "Auth not fully implemented in MVP"}
 
 
+@router.get("/compliance/disclaimer")
+async def compliance_disclaimer():
+    return {
+        "version": "l4-disclaimer-v1",
+        "requires_acknowledgement": True,
+        "text": (
+            "Mushir provides informational guidance grounded in retrieved AAOIFI excerpts. "
+            "It does not provide a binding Sharia ruling, fatwa, legal advice, or financial advice. "
+            "Consult a qualified Sharia scholar before relying on any conclusion."
+        ),
+    }
+
+
 def _query_response(answer: AnswerContract) -> QueryResponse:
     return QueryResponse(**answer.to_dict())
 
@@ -109,11 +122,21 @@ def _answer_service(application_service: ApplicationService, payload: QueryReque
             payload.query,
             session_id=payload.resolved_session_id(),
             request_id=request_id,
+            disclaimer_acknowledged=bool(payload.context.get("disclaimer_acknowledged", True)),
         )
     except TypeError as exc:
-        if "request_id" not in str(exc):
+        if "request_id" not in str(exc) and "disclaimer_acknowledged" not in str(exc):
             raise
-        return application_service.answer(payload.query, session_id=payload.resolved_session_id())
+        try:
+            return application_service.answer(
+                payload.query,
+                session_id=payload.resolved_session_id(),
+                request_id=request_id,
+            )
+        except TypeError as nested_exc:
+            if "request_id" not in str(nested_exc):
+                raise
+            return application_service.answer(payload.query, session_id=payload.resolved_session_id())
 
 
 def _error_response(code: str, message: str, request_id: str, status_code: int):

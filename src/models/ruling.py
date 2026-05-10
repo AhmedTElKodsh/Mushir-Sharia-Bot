@@ -18,6 +18,9 @@ class AAOIFICitation:
     section_number: Optional[str] = None
     section_title: Optional[str] = None
     excerpt: Optional[str] = None
+    confidence_score: Optional[float] = None
+    quote_start: Optional[int] = None
+    quote_end: Optional[int] = None
 
     def __post_init__(self):
         if not self.document_id or not self.document_id.strip():
@@ -32,6 +35,9 @@ class AAOIFICitation:
             "section_number": self.section_number,
             "section_title": self.section_title,
             "excerpt": self.excerpt,
+            "confidence_score": self.confidence_score,
+            "quote_start": self.quote_start,
+            "quote_end": self.quote_end,
         }
 
 

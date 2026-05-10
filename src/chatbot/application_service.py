@@ -1,10 +1,12 @@
-"""Application service for the L1 Sharia compliance answer flow."""
+"""Application service for the Sharia compliance answer flow."""
+import os
 from typing import Any, Dict, List, Optional
 
 from src.chatbot.citation_validator import CitationValidator
 from src.chatbot.prompt_builder import PromptBuilder
-from src.models.ruling import AnswerContract, ComplianceStatus
+from src.models.ruling import AAOIFICitation, AnswerContract, ComplianceStatus
 from src.rag.pipeline import RAGPipeline
+from src.storage.cache import CacheStore
 
 
 class ApplicationService:
@@ -19,6 +21,7 @@ class ApplicationService:
         clarification_service=None,
         session_store=None,
         audit_store=None,
+        cache_store=None,
         k: int = 5,
         threshold: float = 0.3,
     ):
@@ -29,11 +32,32 @@ class ApplicationService:
         self.clarification_service = clarification_service
         self.session_store = session_store
         self.audit_store = audit_store
+        self.cache_store = cache_store
         self.k = k
         self.threshold = threshold
+        self.response_cache_ttl = int(os.getenv("RESPONSE_CACHE_TTL_SECONDS", "86400"))
 
-    def answer(self, query: str, session_id: Optional[str] = None, request_id: Optional[str] = None) -> AnswerContract:
+    def answer(
+        self,
+        query: str,
+        session_id: Optional[str] = None,
+        request_id: Optional[str] = None,
+        disclaimer_acknowledged: bool = True,
+    ) -> AnswerContract:
         cleaned_query = query.strip()
+        if self._requires_disclaimer(disclaimer_acknowledged):
+            contract = AnswerContract(
+                answer="Please acknowledge the Sharia guidance disclaimer before continuing.",
+                status=ComplianceStatus.CLARIFICATION_NEEDED,
+                clarification_question="Do you acknowledge that Mushir provides informational guidance only and not a binding Sharia ruling?",
+                reasoning_summary="Disclaimer acknowledgement is required before compliance analysis.",
+                metadata={"disclaimer_required": True},
+            )
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
+        cached = self._cached_answer(cleaned_query)
+        if cached:
+            return cached
         clarification = self._clarification_question(cleaned_query, session_id)
         if clarification:
             contract = AnswerContract(
@@ -80,6 +104,7 @@ class ApplicationService:
             metadata=self._metadata(chunks, confidence=self._confidence(chunks)),
         )
         self._audit(cleaned_query, contract, session_id, request_id)
+        self._cache_answer(cleaned_query, contract)
         return contract
 
     def _clarification_question(self, query: str, session_id: Optional[str]) -> Optional[str]:
@@ -106,6 +131,55 @@ class ApplicationService:
             answer=answer,
             session_id=session_id,
             request_id=request_id,
+        )
+
+    def _cached_answer(self, query: str) -> Optional[AnswerContract]:
+        if not self.cache_store:
+            return None
+        cached = self.cache_store.get_json("response", CacheStore.stable_key(query))
+        if not cached:
+            return None
+        answer = self._contract_from_dict(cached)
+        answer.metadata = {**answer.metadata, "cache_hit": True}
+        return answer
+
+    def _cache_answer(self, query: str, answer: AnswerContract) -> None:
+        if not self.cache_store or answer.status == ComplianceStatus.CLARIFICATION_NEEDED:
+            return
+        self.cache_store.set_json(
+            "response",
+            CacheStore.stable_key(query),
+            answer.to_dict(),
+            self.response_cache_ttl,
+        )
+
+    @staticmethod
+    def _requires_disclaimer(disclaimer_acknowledged: bool) -> bool:
+        return os.getenv("REQUIRE_DISCLAIMER_ACK", "false").lower() == "true" and not disclaimer_acknowledged
+
+    @staticmethod
+    def _contract_from_dict(data: Dict[str, Any]) -> AnswerContract:
+        return AnswerContract(
+            answer=data["answer"],
+            status=ComplianceStatus(data["status"]),
+            citations=[
+                AAOIFICitation(
+                    document_id=citation["document_id"],
+                    standard_number=citation["standard_number"],
+                    section_number=citation.get("section_number"),
+                    section_title=citation.get("section_title"),
+                    excerpt=citation.get("excerpt"),
+                    confidence_score=citation.get("confidence_score"),
+                    quote_start=citation.get("quote_start"),
+                    quote_end=citation.get("quote_end"),
+                )
+                for citation in data.get("citations", [])
+            ],
+            reasoning_summary=data.get("reasoning_summary", ""),
+            limitations=data.get("limitations")
+            or "Informational guidance only; consult a qualified Sharia scholar for a binding ruling.",
+            clarification_question=data.get("clarification_question"),
+            metadata=data.get("metadata", {}),
         )
 
     def _metadata(self, chunks: List[Any], confidence: float) -> Dict[str, Any]:

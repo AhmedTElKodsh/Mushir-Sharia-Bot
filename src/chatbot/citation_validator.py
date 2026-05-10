@@ -54,12 +54,16 @@ class CitationValidator:
 
     def _citation_from_chunk(self, chunk: Any) -> AAOIFICitation:
         standard, section = self._chunk_ref(chunk)
+        quote, start, end = self._quote_for_chunk(chunk)
         return AAOIFICitation(
             document_id=self._metadata(chunk).get("document_id") or standard or "unknown",
             standard_number=standard or "Unknown",
             section_number=section,
             section_title=self._metadata(chunk).get("section_title"),
-            excerpt=self._chunk_text(chunk)[:300],
+            excerpt=quote,
+            confidence_score=self._chunk_score(chunk),
+            quote_start=start,
+            quote_end=end,
         )
 
     def _document_id_for(self, ref: Tuple[str, str], chunks: List[Any]) -> str:
@@ -71,8 +75,21 @@ class CitationValidator:
     def _excerpt_for(self, ref: Tuple[str, str], chunks: List[Any]) -> str:
         for chunk in chunks:
             if self._chunk_ref(chunk) == ref:
-                return self._chunk_text(chunk)[:300]
+                quote, _, _ = self._quote_for_chunk(chunk)
+                return quote
         return ""
+
+    def _quote_for_chunk(self, chunk: Any) -> Tuple[str, int, int]:
+        text = self._chunk_text(chunk).strip()
+        if not text:
+            return "", 0, 0
+        sentences = re.split(r"(?<=[.!?])\s+", text)
+        quote = next((sentence for sentence in sentences if len(sentence) >= 40), sentences[0])
+        quote = quote[:500]
+        start = text.find(quote)
+        if start < 0:
+            start = 0
+        return quote, start, start + len(quote)
 
     @staticmethod
     def _metadata(chunk: Any) -> Dict[str, Any]:
@@ -89,3 +106,9 @@ class CitationValidator:
         if isinstance(chunk, dict):
             return str(chunk.get("content") or chunk.get("text") or "")
         return str(getattr(chunk, "text", ""))
+
+    @staticmethod
+    def _chunk_score(chunk: Any) -> float:
+        if isinstance(chunk, dict):
+            return float(chunk.get("similarity") or chunk.get("score") or 0.0)
+        return float(getattr(chunk, "score", 0.0) or 0.0)

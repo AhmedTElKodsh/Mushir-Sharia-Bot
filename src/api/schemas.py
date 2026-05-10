@@ -45,6 +45,9 @@ class Citation(BaseModel):
     section_number: Optional[str] = None
     section_title: Optional[str] = None
     excerpt: Optional[str] = None
+    confidence_score: Optional[float] = None
+    quote_start: Optional[int] = None
+    quote_end: Optional[int] = None
 
 
 class QueryResponse(BaseModel):
