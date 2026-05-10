@@ -2,10 +2,11 @@ import json
 import uuid
 from typing import Any, Dict
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, Response
+from fastapi.responses import JSONResponse, StreamingResponse
 
-from src.api.dependencies import get_application_service, get_session_manager
+from src.api.dependencies import get_application_service, get_rate_limiter, get_session_manager
+from src.api.rate_limit import InMemoryRateLimiter, RateLimitDecision
 from src.api.schemas import ErrorResponse, QueryRequest, QueryResponse
 from src.chatbot.application_service import ApplicationService
 from src.chatbot.clarification_engine import ClarificationEngine
@@ -54,8 +55,14 @@ async def submit_session_query(
 async def query(
     payload: QueryRequest,
     request: Request,
+    response: Response,
     application_service: ApplicationService = Depends(get_application_service),
+    rate_limiter: InMemoryRateLimiter = Depends(get_rate_limiter),
 ):
+    rate_decision = rate_limiter.check(_rate_limit_key(request))
+    if not rate_decision.allowed:
+        return _rate_limit_response(request.state.request_id, rate_decision)
+    _apply_rate_limit_headers(response, rate_decision)
     try:
         answer = application_service.answer(payload.query, session_id=payload.resolved_session_id())
     except Exception as exc:
@@ -69,11 +76,16 @@ async def query_stream(
     payload: QueryRequest,
     request: Request,
     application_service: ApplicationService = Depends(get_application_service),
+    rate_limiter: InMemoryRateLimiter = Depends(get_rate_limiter),
 ):
     request_id = request.state.request_id
+    rate_decision = rate_limiter.check(_rate_limit_key(request))
+    if not rate_decision.allowed:
+        return _rate_limit_response(request_id, rate_decision)
     return StreamingResponse(
         _query_events(application_service, payload, request_id),
         media_type="text/event-stream",
+        headers=rate_decision.headers(),
     )
 
 
@@ -92,11 +104,35 @@ def _query_response(answer: AnswerContract) -> QueryResponse:
 
 
 def _error_response(code: str, message: str, request_id: str, status_code: int):
-    from fastapi.responses import JSONResponse
-
     return JSONResponse(
         status_code=status_code,
         content=ErrorResponse(code=code, message=message, request_id=request_id).model_dump(),
+    )
+
+
+def _rate_limit_key(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown-client"
+
+
+def _apply_rate_limit_headers(response: Response, decision: RateLimitDecision) -> None:
+    for header, value in decision.headers().items():
+        response.headers[header] = value
+
+
+def _rate_limit_response(request_id: str, decision: RateLimitDecision) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content=ErrorResponse(
+            code="RATE_LIMIT_EXCEEDED",
+            message="Rate limit exceeded",
+            request_id=request_id,
+        ).model_dump(),
+        headers=decision.headers(),
     )
 
 
@@ -128,4 +164,3 @@ def _query_events(application_service: ApplicationService, payload: QueryRequest
 def _session_from_request_context(request: QueryRequest) -> SessionState:
     """Kept for older tests/importers; route logic now uses ApplicationService."""
     return SessionState(session_id=request.resolved_session_id() or str(uuid.uuid4()))
-

@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from src.api.error_handling import ErrorResponse
+from src.api.rate_limit import InMemoryRateLimiter
 from src.api.routes import router as api_router
 from src.chatbot.application_service import ApplicationService
 from src.chatbot.session_manager import SessionManager
@@ -32,6 +33,10 @@ def parse_cors_origins(value: str) -> List[str]:
 async def lifespan(app: FastAPI):
     app.state.application_service = ApplicationService()
     app.state.session_manager = SessionManager()
+    app.state.rate_limiter = InMemoryRateLimiter(
+        limit=int(os.getenv("RATE_LIMIT_REQUESTS", "100")),
+        window_seconds=int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "3600")),
+    )
     yield
 
 
