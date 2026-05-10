@@ -1,0 +1,97 @@
+# Knowledge Base Directory
+
+This directory will contain your converted AAOIFI standards in Markdown format.
+
+## Automated Conversion (Recommended)
+
+Use the AAOIFI converter script for automatic processing:
+
+```bash
+# 1. Place your PDFs in data/raw/aaoifi_standards/ with naming:
+#    Standard_01_EN.pdf, Standard_01_AR.pdf, Standard_02_EN.pdf, etc.
+
+# 2. Run the converter
+python scripts/convert_aaoifi_to_markdown.py
+
+# 3. Files will be automatically created here with comprehensive metadata
+```
+
+**Output format:**
+```
+AAOIFI_Standard_{number}_{lang}_{title}.md
+```
+
+**Examples:**
+- `AAOIFI_Standard_01_en_Murabaha.md`
+- `AAOIFI_Standard_01_ar_المرابحة.md`
+- `AAOIFI_Standard_02_en_Ijarah_and_Ijarah_Muntahia_Bittamleek.md`
+
+## Manual Conversion
+
+### File Naming Convention
+
+Use this pattern:
+```
+AAOIFI_[Standard-Type][Number]_[Topic-Keywords].md
+```
+
+### Examples
+
+- `AAOIFI_FAS01_General-Presentation-and-Disclosure.md`
+- `AAOIFI_FAS02_Murabaha-and-Murabaha-to-Purchase-Orderer.md`
+- `AAOIFI_FAS03_Mudaraba-Financing.md`
+- `AAOIFI_FAS21_Investment-in-Shares.md`
+
+## How to Add Files
+
+### Option 1: AAOIFI Converter (Recommended)
+```bash
+python scripts/convert_aaoifi_to_markdown.py
+```
+- Automatically extracts titles
+- Generates comprehensive metadata
+- Links bilingual pairs
+- Creates INDEX.md
+
+### Option 2: Generic PDF Converter
+```bash
+python scripts/convert_pdf_to_markdown.py --input-dir "path/to/pdfs/" --output-dir "."
+```
+
+### Option 3: Manual Addition
+1. Convert your AAOIFI PDFs using online tools or manual extraction
+2. Follow the naming convention above
+3. Add YAML frontmatter with metadata
+4. Upload all files to your Gemini Gem
+
+## Metadata Structure
+
+The AAOIFI converter automatically adds comprehensive metadata:
+
+```yaml
+---
+document_type: "AAOIFI Shari'ah Standard"
+standard_number: 1
+title: "Murabaha"
+language: "English"
+language_code: "en"
+source: "AAOIFI"
+category: "Islamic Finance Standards"
+subcategory: "Shari'ah Standards"
+compliance_domain: "Islamic Banking and Finance"
+topics:
+  - Islamic Finance
+  - Shari'ah Compliance
+  - AAOIFI Standards
+paired_document: "Standard_01_AR"
+---
+```
+
+## Notes
+
+- Keep each standard as one file unless it's over 100 pages
+- Preserve section numbers (3.1, 3.2, etc.) for accurate citations
+- Ensure text is clean and readable
+- The AAOIFI converter handles bilingual pairing automatically
+- Delete this .gitkeep file once you add your first standard
+- An INDEX.md file will be auto-generated listing all standards

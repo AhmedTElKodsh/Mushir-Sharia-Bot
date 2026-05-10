@@ -29,6 +29,16 @@ ENV/
 # IDEs
 .vscode/
 .idea/
+.agent/
+.agents/
+.bob/
+.claude/
+.codex/
+.playwright-mcp/
+.trae/
+.kiro/hooks/
+.kiro/skills/
+superpowers/
 *.swp
 *.swo
 *~
@@ -47,6 +57,7 @@ data/
 !data/.gitkeep
 
 # Chroma
+chroma_db/
 chroma/
 *.chroma
 

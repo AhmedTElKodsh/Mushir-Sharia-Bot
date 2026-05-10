@@ -1,0 +1,60 @@
+import pytest
+from unittest.mock import Mock, patch
+
+def test_rag_pipeline_retrieve():
+    """Test RAG pipeline retrieval."""
+    mock_vector_store = Mock()
+    mock_embedding_gen = Mock()
+    mock_embedding_gen.embed_text.return_value = [0.1] * 768
+    mock_vector_store.similarity_search.return_value = [
+        {"chunk_id": "chunk1", "content": "test", "metadata": {}, "similarity": 0.95}
+    ]
+    from src.rag.pipeline import RAGPipeline
+    pipeline = RAGPipeline(mock_vector_store, mock_embedding_gen)
+    chunks = pipeline.retrieve("test query", k=3, threshold=0.7)
+    assert len(chunks) == 1
+    assert chunks[0]["chunk_id"] == "chunk1"
+
+def test_rag_pipeline_augment_prompt():
+    """Test prompt augmentation."""
+    mock_vector_store = Mock()
+    mock_embedding_gen = Mock()
+    from src.rag.pipeline import RAGPipeline
+    pipeline = RAGPipeline(mock_vector_store, mock_embedding_gen)
+    chunks = [
+        {"content": "Standard content here", "metadata": {"standard_number": "FAS 1", "section_title": "Scope"}}
+    ]
+    prompt = pipeline.augment_prompt("Is this compliant?", chunks)
+    assert "FAS 1" in prompt
+    assert "Standard content here" in prompt
+    assert "AAOIFI standards context" in prompt
+
+
+def test_rag_pipeline_returns_best_available_chunks_when_threshold_filters_all():
+    """Low-confidence top-k results should still be visible to the API/UI."""
+    from src.rag.pipeline import RAGPipeline
+
+    class FakeModel:
+        def encode(self, query):
+            return Mock(tolist=lambda: [0.1, 0.2, 0.3])
+
+    class FakeCollection:
+        def query(self, query_embeddings, n_results):
+            return {
+                "documents": [["Investment screening excerpt"]],
+                "metadatas": [[{"source_file": "FAS-screening.md", "section": "2"}]],
+                "distances": [[0.75]],
+                "ids": [["chunk-low-score"]],
+            }
+
+    pipeline = RAGPipeline.__new__(RAGPipeline)
+    pipeline.vector_store = None
+    pipeline.embedding_generator = None
+    pipeline.model = FakeModel()
+    pipeline.collection = FakeCollection()
+
+    chunks = pipeline.retrieve("investment screening", k=1, threshold=0.3)
+
+    assert len(chunks) == 1
+    assert chunks[0].chunk_id == "chunk-low-score"
+    assert chunks[0].score == 0.25

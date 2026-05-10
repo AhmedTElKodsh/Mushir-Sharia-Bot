@@ -1,0 +1,12 @@
+# Requirements for AAOIFI PDF to Markdown Converter
+# Install with: pip install -r requirements.txt
+
+# PDF processing
+PyMuPDF==1.23.8
+
+# Optional: For better text extraction
+pdfplumber==0.10.3
+
+# Optional: For OCR if PDFs are scanned
+# pytesseract==0.3.10
+# Pillow==10.1.0

@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  sharia-bot:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
+      - VECTOR_DB_TYPE=chroma
+      - CHROMA_PERSIST_DIR=/app/data/chroma
+      - DOCUMENT_DB_TYPE=sqlite
+      - SQLITE_DB_PATH=/app/data/documents.db
+      - SESSION_EXPIRY_MINUTES=30
+      - LOG_LEVEL=INFO
+      - LOG_DIR=/app/logs
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped

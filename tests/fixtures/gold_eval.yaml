@@ -1,0 +1,8 @@
+# Gold Evaluation Set
+# Scholar will populate this with validated test cases
+# Format:
+# - query: "Question about AAOIFI compliance"
+#   expected_standards: ["FAS-XX"]
+#   expected_answer_contains: ["keyword1", "keyword2"]
+
+# Empty for now - tests will skip until scholar adds cases

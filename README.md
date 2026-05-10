@@ -1,0 +1,264 @@
+# Sharia Compliance Chatbot
+
+RAG-based Islamic finance compliance analysis system using AAOIFI FAS standards.
+
+## Features
+
+- **AAOIFI FAS Standards**: Acquires and indexes Accounting Standards
+- **RAG Pipeline**: Semantic search with Chroma vector database
+- **Compliance Analysis**: LLM-powered rulings with citations (Google Generative AI)
+- **Semantic Chunking**: LangChain text splitters for legal/financial documents
+
+## Quick Start
+
+```bash
+# Create virtual environment (Python 3.11+ recommended, 3.9+ minimum)
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate  # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up environment
+cp .env.example .env
+# Edit .env with your API key (GOOGLE_API_KEY)
+
+# Convert AAOIFI PDFs to Markdown
+python scripts/convert_pdf_to_markdown.py --input-dir data/pdfs/ --output-dir data/markdown/
+
+# Verify corpus is ready for ingestion
+python scripts/check_corpus.py
+
+# Ingest AAOIFI standards into vector database
+python scripts/ingest.py
+
+# Run RAG pipeline tests
+pytest tests/ -v
+```
+
+## Project Structure
+
+```
+src/
+├── models/          # Data models (Document, Chunk, Ruling)
+├── rag/            # RAG pipeline (chunking, embeddings, vector store)
+└── config/         # Configuration management
+
+scripts/
+├── check_corpus.py               # Verify AAOIFI corpus exists and is ready
+├── ingest.py                     # Ingest markdown files into ChromaDB
+├── convert_pdf_to_markdown.py    # Convert AAOIFI PDFs to Markdown format
+├── convert_aaoifi_to_markdown.py # AAOIFI-specific converter with metadata
+└── download_*.py                 # Various download utilities
+
+data/
+├── raw/            # Raw AAOIFI PDF files
+└── markdown/       # Converted Markdown documents
+```
+
+## Environment Variables
+
+Create a `.env` file with:
+
+```bash
+# LLM Provider
+GOOGLE_API_KEY=your_google_api_key_here
+
+# Vector Database
+CHROMA_PERSIST_DIRECTORY=./data/chroma_db
+CHROMA_DIR=./chroma_db
+
+# Corpus Location
+CORPUS_DIR=./data/aaoifi_md
+
+# Embedding Model
+EMBEDDING_MODEL=sentence-transformers/all-mpnet-base-v2
+EMBED_MODEL=sentence-transformers/all-mpnet-base-v2
+```
+
+## Requirements
+
+- Python 3.9+ (minimum) / Python 3.11+ (recommended for better performance)
+- Google Generative AI API key
+- ~2GB disk space for embedding model (sentence-transformers)
+
+## Scope
+
+Covers AAOIFI FAS (Financial Accounting Standards) series only. Does NOT include Sharia, Governance, or Ethics standards.
+
+**Disclaimer**: This system provides guidance based on AAOIFI FAS standards only. It does NOT replace consultation with qualified Islamic finance scholars.
+
+## Testing
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run specific test modules
+pytest tests/test_rag_pipeline.py -v
+pytest tests/test_semantic_chunking.py -v
+```
+
+## Core Dependencies
+
+- **sentence-transformers** (>=2.2.0): Generate embeddings for semantic search
+- **chromadb** (>=0.4.22): Vector database for storing and retrieving document chunks
+- **langchain-text-splitters** (>=0.0.1): Semantic text chunking for legal/financial documents
+- **google-generativeai** (>=0.3.0): Google Generative AI (Gemini) for compliance analysis
+- **python-dotenv** (>=1.0.0): Environment variable management
+- **pyyaml** (>=6.0): YAML configuration parsing
+- **pytest** (>=7.4.0): Testing framework
+- **numpy** (>=1.24.0): Numerical operations for embeddings
+
+## Scripts
+
+### Corpus Verification
+
+Before ingesting AAOIFI standards into the vector database, verify your corpus is ready:
+
+```bash
+python scripts/check_corpus.py
+```
+
+**Features:**
+- Checks if corpus directory exists (default: `./data/aaoifi_md`)
+- Verifies markdown files are present
+- Displays sample files with sizes
+- Provides actionable next steps if corpus is missing
+
+**Environment Variables:**
+- `CORPUS_DIR`: Path to AAOIFI markdown corpus (default: `./data/aaoifi_md`)
+
+**Expected Output:**
+```
+============================================================
+L0 Corpus Check
+============================================================
+
+✓ Corpus directory exists: ./data/aaoifi_md
+✓ Found 15 markdown files
+
+Sample files:
+  • AAOIFI_Standard_01_en_Murabaha.md (45.2 KB)
+  • AAOIFI_Standard_02_en_Ijarah.md (38.7 KB)
+  ... and 13 more
+
+============================================================
+✓ Corpus is ready for ingestion!
+============================================================
+
+Next step: python scripts/ingest.py
+```
+
+### Vector Database Ingestion
+
+Chunk and embed AAOIFI markdown files into ChromaDB:
+
+```bash
+python scripts/ingest.py
+```
+
+**Features:**
+- Semantic chunking with LangChain (512 tokens, 50 overlap)
+- Generates embeddings using sentence-transformers
+- Stores chunks in ChromaDB with metadata
+- Tracks processing progress per file
+
+**Environment Variables:**
+- `CORPUS_DIR`: Path to AAOIFI markdown corpus (default: `./data/aaoifi_md`)
+- `CHROMA_DIR`: ChromaDB storage location (default: `./chroma_db`)
+- `EMBED_MODEL`: Embedding model (default: `sentence-transformers/all-mpnet-base-v2`)
+
+**Workflow:**
+1. Run `check_corpus.py` to verify corpus exists
+2. Run `ingest.py` to populate vector database
+3. Vector database is ready for RAG queries
+
+### AAOIFI Standards Converter (Recommended)
+
+Convert AAOIFI Shari'ah Standards PDFs to Markdown with comprehensive metadata for Gemini Gem knowledge base:
+
+```bash
+# Automatically converts all Standard_*.pdf files from data/raw/aaoifi_standards/
+python scripts/convert_aaoifi_to_markdown.py
+```
+
+**Features:**
+- Extracts title from first page automatically
+- Detects standard number and language (AR/EN) from filename
+- Generates comprehensive Sharia compliance metadata (YAML frontmatter)
+- Creates bilingual document pairs (links Arabic ↔ English versions)
+- Generates INDEX.md with organized standards list
+- Page-by-page extraction with proper formatting
+- Sanitized filenames for cross-platform compatibility
+
+**Input Format:** `Standard_{number}_{AR|EN}.pdf` (e.g., `Standard_01_EN.pdf`, `Standard_01_AR.pdf`)
+
+**Output:** `gemini-gem-prototype/knowledge-base/AAOIFI_Standard_{number}_{lang}_{title}.md`
+
+**Requirements:** `pip install PyPDF2`
+
+## Current Implementation Status
+
+This project is currently in **Phase 3: RAG Pipeline Development**. The following components are implemented or in progress:
+
+- ✅ Core dependencies installed (sentence-transformers, chromadb, langchain-text-splitters)
+- ✅ LLM provider support (Google Generative AI)
+- ✅ PDF to Markdown conversion scripts
+- 🚧 Semantic chunking implementation
+- 🚧 Vector database setup and indexing
+- 🚧 RAG retrieval pipeline
+- ⏳ Compliance analysis engine (Phase 4)
+- ⏳ Web API interface (Phase 4)
+- ⏳ Session management and clarification loop (Phase 4)
+
+**Note**: Web scraping (Playwright), API framework (FastAPI), and authentication components will be added in later phases as the core RAG pipeline is completed.
+
+### Generic PDF to Markdown Converter
+
+Convert any AAOIFI PDF standards to clean Markdown format:
+
+```bash
+# Convert single PDF
+python scripts/convert_pdf_to_markdown.py --input "data/pdfs/FAS01.pdf" --output "data/markdown/"
+
+# Convert all PDFs in directory
+python scripts/convert_pdf_to_markdown.py --input-dir "data/pdfs/" --output-dir "data/markdown/"
+
+# With custom naming
+python scripts/convert_pdf_to_markdown.py --input "FAS01.pdf" --output "data/markdown/" --name "AAOIFI_FAS01_General-Presentation"
+```
+
+**Features:**
+- Extracts text from PDF with layout preservation
+- Detects document structure (sections, subsections)
+- Converts to clean Markdown with proper headers
+- Adds metadata header with standard info and TOC
+- Removes page numbers and common headers/footers
+- Fixes broken hyphenation and OCR errors
+
+**Requirements:** `pip install pymupdf`
+
+See `scripts/CONVERTER_IMPROVEMENTS.md` for enhancement ideas.
+
+## Development Roadmap
+
+The project follows a 4-phase implementation approach:
+
+1. **Phase 1: Research** ✅ - Technology selection and architecture design
+2. **Phase 2: Data Acquisition** ✅ - PDF conversion scripts and document processing
+3. **Phase 3: RAG Pipeline** 🚧 - Current focus: semantic chunking, embeddings, vector storage
+4. **Phase 4: Chatbot Logic** ⏳ - Session management, clarification engine, compliance analyzer
+5. **Phase 5: Operations** ⏳ - API deployment, monitoring, documentation
+
+See `.kiro/specs/sharia-compliance-chatbot/tasks.md` for detailed implementation tasks.
+
+## Docker Deployment
+
+Docker deployment will be available after Phase 4 completion.
+
+```bash
+# Coming soon
+docker-compose up -d
+```
