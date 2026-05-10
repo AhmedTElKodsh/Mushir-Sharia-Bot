@@ -64,7 +64,7 @@ async def query(
         return _rate_limit_response(request.state.request_id, rate_decision)
     _apply_rate_limit_headers(response, rate_decision)
     try:
-        answer = application_service.answer(payload.query, session_id=payload.resolved_session_id())
+        answer = _answer_service(application_service, payload, request.state.request_id)
     except Exception as exc:
         request_id = request.state.request_id
         return _error_response("SERVICE_ERROR", str(exc), request_id, status_code=500)
@@ -101,6 +101,19 @@ async def login(username: str = Body(...), password: str = Body(...)):
 
 def _query_response(answer: AnswerContract) -> QueryResponse:
     return QueryResponse(**answer.to_dict())
+
+
+def _answer_service(application_service: ApplicationService, payload: QueryRequest, request_id: str):
+    try:
+        return application_service.answer(
+            payload.query,
+            session_id=payload.resolved_session_id(),
+            request_id=request_id,
+        )
+    except TypeError as exc:
+        if "request_id" not in str(exc):
+            raise
+        return application_service.answer(payload.query, session_id=payload.resolved_session_id())
 
 
 def _error_response(code: str, message: str, request_id: str, status_code: int):
@@ -143,7 +156,7 @@ def _sse(event: str, data: Dict[str, Any]) -> str:
 def _query_events(application_service: ApplicationService, payload: QueryRequest, request_id: str):
     yield _sse("started", {"request_id": request_id})
     try:
-        answer = application_service.answer(payload.query, session_id=payload.resolved_session_id())
+        answer = _answer_service(application_service, payload, request_id)
         response = _query_response(answer).model_dump(mode="json")
         yield _sse("retrieval", {"confidence": response["metadata"].get("confidence", 0.0)})
         yield _sse("token", {"text": response["answer"]})

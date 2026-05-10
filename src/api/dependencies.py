@@ -18,7 +18,7 @@ def get_session_manager(request: Request) -> SessionManager:
     return request.app.state.session_manager
 
 
-def get_rate_limiter(request: Request) -> InMemoryRateLimiter:
+def get_rate_limiter(request: Request):
     if not hasattr(request.app.state, "rate_limiter"):
         request.app.state.rate_limiter = InMemoryRateLimiter()
     return request.app.state.rate_limiter

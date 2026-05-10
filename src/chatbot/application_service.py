@@ -18,6 +18,7 @@ class ApplicationService:
         citation_validator=None,
         clarification_service=None,
         session_store=None,
+        audit_store=None,
         k: int = 5,
         threshold: float = 0.3,
     ):
@@ -27,32 +28,37 @@ class ApplicationService:
         self.citation_validator = citation_validator or CitationValidator()
         self.clarification_service = clarification_service
         self.session_store = session_store
+        self.audit_store = audit_store
         self.k = k
         self.threshold = threshold
 
-    def answer(self, query: str, session_id: Optional[str] = None) -> AnswerContract:
+    def answer(self, query: str, session_id: Optional[str] = None, request_id: Optional[str] = None) -> AnswerContract:
         cleaned_query = query.strip()
         clarification = self._clarification_question(cleaned_query, session_id)
         if clarification:
-            return AnswerContract(
+            contract = AnswerContract(
                 answer=clarification,
                 status=ComplianceStatus.CLARIFICATION_NEEDED,
                 clarification_question=clarification,
                 reasoning_summary="Missing facts materially block a grounded AAOIFI answer.",
                 metadata=self._metadata([], confidence=0.0),
             )
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
 
         if self.retriever is None:
             self.retriever = RAGPipeline()
         chunks = self.retriever.retrieve(cleaned_query, k=self.k, threshold=self.threshold)
         if not chunks:
-            return AnswerContract(
+            contract = AnswerContract(
                 answer="Not addressed in retrieved AAOIFI standards.",
                 status=ComplianceStatus.INSUFFICIENT_DATA,
                 citations=[],
                 reasoning_summary="No retrieved AAOIFI excerpts were available to ground an answer.",
                 metadata=self._metadata([], confidence=0.0),
             )
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
 
         prompt = self.prompt_builder.build(
             cleaned_query,
@@ -66,13 +72,15 @@ class ApplicationService:
         answer = self.llm_client.generate(prompt)
         citations = self.citation_validator.validate(answer, chunks)
         status = self._status_from_answer(answer, citations)
-        return AnswerContract(
+        contract = AnswerContract(
             answer=answer,
             status=status,
             citations=citations,
             reasoning_summary=self._reasoning_summary(answer),
             metadata=self._metadata(chunks, confidence=self._confidence(chunks)),
         )
+        self._audit(cleaned_query, contract, session_id, request_id)
+        return contract
 
     def _clarification_question(self, query: str, session_id: Optional[str]) -> Optional[str]:
         if not self.clarification_service:
@@ -83,6 +91,22 @@ class ApplicationService:
         if not self.session_store:
             return []
         return self.session_store.history_for(session_id)
+
+    def _audit(
+        self,
+        query: str,
+        answer: AnswerContract,
+        session_id: Optional[str],
+        request_id: Optional[str],
+    ) -> None:
+        if not self.audit_store:
+            return
+        self.audit_store.log_answer(
+            query=query,
+            answer=answer,
+            session_id=session_id,
+            request_id=request_id,
+        )
 
     def _metadata(self, chunks: List[Any], confidence: float) -> Dict[str, Any]:
         return {

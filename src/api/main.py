@@ -8,13 +8,14 @@ from typing import List
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from src.api.error_handling import ErrorResponse
 from src.api.rate_limit import InMemoryRateLimiter
 from src.api.routes import router as api_router
 from src.chatbot.application_service import ApplicationService
 from src.chatbot.session_manager import SessionManager
+from src.observability.metrics import MetricsRegistry
 
 
 def parse_cors_origins(value: str) -> List[str]:
@@ -32,13 +33,62 @@ def parse_cors_origins(value: str) -> List[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.application_service = ApplicationService()
-    app.state.session_manager = SessionManager()
-    app.state.rate_limiter = InMemoryRateLimiter(
-        limit=int(os.getenv("RATE_LIMIT_REQUESTS", "100")),
-        window_seconds=int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "3600")),
-    )
+    app.state.session_manager = _build_session_manager()
+    app.state.rate_limiter = _build_rate_limiter()
+    app.state.audit_store = _build_audit_store()
+    app.state.application_service = ApplicationService(audit_store=app.state.audit_store)
+    app.state.metrics = MetricsRegistry()
+    app.state.infrastructure = _infrastructure_status(app)
     yield
+
+
+def _build_session_manager():
+    if os.getenv("SESSION_STORE_TYPE", "memory").lower() == "redis":
+        try:
+            from src.chatbot.redis_session_manager import RedisSessionManager
+
+            return RedisSessionManager(expiry_minutes=int(os.getenv("SESSION_EXPIRY_MINUTES", "30")))
+        except Exception as exc:
+            print(f"Redis session store unavailable, falling back to memory: {exc}")
+            return SessionManager(expiry_minutes=int(os.getenv("SESSION_EXPIRY_MINUTES", "30")))
+    return SessionManager(expiry_minutes=int(os.getenv("SESSION_EXPIRY_MINUTES", "30")))
+
+
+def _build_rate_limiter():
+    limit = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
+    window_seconds = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "3600"))
+    if os.getenv("RATE_LIMIT_STORE_TYPE", "memory").lower() == "redis":
+        try:
+            from src.api.redis_rate_limit import RedisRateLimiter
+
+            return RedisRateLimiter(limit=limit, window_seconds=window_seconds)
+        except Exception as exc:
+            print(f"Redis rate limiter unavailable, falling back to memory: {exc}")
+            return InMemoryRateLimiter(limit=limit, window_seconds=window_seconds)
+    return InMemoryRateLimiter(limit=limit, window_seconds=window_seconds)
+
+
+def _build_audit_store():
+    if os.getenv("AUDIT_DATABASE_URL") or os.getenv("DATABASE_URL"):
+        try:
+            from src.storage.audit_store import PostgresAuditStore
+
+            return PostgresAuditStore()
+        except Exception as exc:
+            print(f"PostgreSQL audit store unavailable, falling back to null audit store: {exc}")
+            pass
+    from src.storage.audit_store import NullAuditStore
+
+    return NullAuditStore()
+
+
+def _infrastructure_status(app: FastAPI):
+    return {
+        "vector_store": os.getenv("VECTOR_DB_TYPE", "chroma").lower(),
+        "session_store": type(app.state.session_manager).__name__,
+        "rate_limit_store": type(app.state.rate_limiter).__name__,
+        "audit_store": type(app.state.audit_store).__name__,
+    }
 
 
 def create_app() -> FastAPI:
@@ -48,6 +98,13 @@ def create_app() -> FastAPI:
         version="1.0.0",
         lifespan=lifespan,
     )
+    app.state.metrics = MetricsRegistry()
+    app.state.infrastructure = {
+        "vector_store": os.getenv("VECTOR_DB_TYPE", "chroma").lower(),
+        "session_store": "not_initialized",
+        "rate_limit_store": "not_initialized",
+        "audit_store": "not_initialized",
+    }
 
     app.add_middleware(
         CORSMiddleware,
@@ -61,6 +118,7 @@ def create_app() -> FastAPI:
     async def request_context_and_errors(request: Request, call_next):
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
+        start = MetricsRegistry.timer()
         try:
             response = await call_next(request)
         except Exception:
@@ -76,6 +134,11 @@ def create_app() -> FastAPI:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
+        app.state.metrics.record(
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_seconds=MetricsRegistry.timer() - start,
+        )
         return response
 
     @app.exception_handler(RequestValidationError)
@@ -120,7 +183,15 @@ def create_app() -> FastAPI:
 
     @app.get("/ready")
     async def ready_check():
-        return {"status": "ready", "timestamp": datetime.now(UTC).isoformat()}
+        return {
+            "status": "ready",
+            "timestamp": datetime.now(UTC).isoformat(),
+            "infrastructure": app.state.infrastructure,
+        }
+
+    @app.get("/metrics", response_class=PlainTextResponse)
+    async def metrics():
+        return app.state.metrics.render()
 
     app.include_router(api_router, prefix="/api/v1")
     return app
