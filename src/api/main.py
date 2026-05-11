@@ -3,7 +3,7 @@ import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from typing import List
+from typing import Any, Dict, List
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -116,6 +116,32 @@ def _safe_fallback_message(component: str) -> str:
     return f"{component}: {INFRA_FALLBACK_MESSAGE}"
 
 
+def _readiness_status(app: FastAPI) -> Dict[str, Any]:
+    level = os.getenv("APP_ENV", "dev").strip().lower() or "dev"
+    infrastructure = app.state.infrastructure
+    checks = {
+        "retrieval_configured": infrastructure.get("vector_store") in {"chroma", "qdrant"},
+        "provider_configured": bool(os.getenv("GEMINI_API_KEY")),
+        "auth_configured": bool(os.getenv("AUTH_TOKEN")),
+        "durable_session_store": infrastructure.get("session_store") != "SessionManager",
+        "durable_rate_limit_store": infrastructure.get("rate_limit_store") != "InMemoryRateLimiter",
+        "durable_audit_store": infrastructure.get("audit_store") != "NullAuditStore",
+        "durable_cache_store": infrastructure.get("cache_store") != "InMemoryCacheStore",
+    }
+    production_requirements = [
+        "retrieval_configured",
+        "provider_configured",
+        "auth_configured",
+        "durable_audit_store",
+    ]
+    degraded = level == "production" and not all(checks[name] for name in production_requirements)
+    return {
+        "status": "degraded" if degraded else "ready",
+        "readiness_level": level,
+        "checks": checks,
+    }
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Sharia Compliance Chatbot API",
@@ -210,11 +236,17 @@ def create_app() -> FastAPI:
 
     @app.get("/ready")
     async def ready_check():
-        return {
-            "status": "ready",
-            "timestamp": datetime.now(UTC).isoformat(),
-            "infrastructure": app.state.infrastructure,
-        }
+        readiness = _readiness_status(app)
+        return JSONResponse(
+            status_code=503 if readiness["status"] == "degraded" else 200,
+            content={
+                "status": readiness["status"],
+                "readiness_level": readiness["readiness_level"],
+                "timestamp": datetime.now(UTC).isoformat(),
+                "infrastructure": app.state.infrastructure,
+                "checks": readiness["checks"],
+            },
+        )
 
     @app.get("/metrics", response_class=PlainTextResponse)
     async def metrics():
@@ -264,6 +296,9 @@ CHAT_HTML = """
     .assistant { align-self: flex-start; }
     .event { align-self: flex-start; max-width: 78%; color: #5f6b65; font-size: 13px; padding: 2px 4px; }
     form { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; padding-top: 12px; border-top: 1px solid #ddd6c7; }
+    .controls { display: grid; gap: 8px; }
+    label { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: #3f4a45; line-height: 1.35; }
+    input[type="checkbox"] { margin-top: 2px; accent-color: #214f44; }
     textarea {
       min-height: 72px;
       max-height: 180px;
@@ -293,13 +328,20 @@ CHAT_HTML = """
       <div class="message assistant">Ask a compliance question to test the L2 stream.</div>
     </section>
     <form id="chat-form">
-      <textarea id="prompt" name="prompt" placeholder="Ask Mushir about an Islamic finance transaction...">I want to invest in a company</textarea>
+      <div class="controls">
+        <textarea id="prompt" name="prompt" placeholder="Ask Mushir about an Islamic finance transaction...">I want to invest in a company</textarea>
+        <label>
+          <input id="disclaimer" type="checkbox">
+          <span>I acknowledge Mushir provides informational guidance only, not a binding Sharia ruling, fatwa, legal advice, or financial advice.</span>
+        </label>
+      </div>
       <button id="send" type="submit">Ask Mushir</button>
     </form>
   </main>
   <script>
     const form = document.getElementById("chat-form");
     const promptInput = document.getElementById("prompt");
+    const disclaimer = document.getElementById("disclaimer");
     const messages = document.getElementById("messages");
     const send = document.getElementById("send");
     let context = {};
@@ -340,7 +382,7 @@ CHAT_HTML = """
         const response = await fetch("/api/v1/query/stream", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({query, context})
+          body: JSON.stringify({query, context: {...context, disclaimer_acknowledged: disclaimer.checked}})
         });
         const events = parseSse(await response.text());
         for (const item of events) {
@@ -354,6 +396,11 @@ CHAT_HTML = """
             addMessage("event", `Confidence ${Number(data.confidence || 0).toFixed(2)}`);
           }
           if (item.type === "token") addMessage("assistant", data.text);
+          if (item.type === "citation") {
+            const standard = data.standard_number || data.document_id || "AAOIFI source";
+            const section = data.section_number ? ` §${data.section_number}` : "";
+            addMessage("event", `Citation ${standard}${section}`);
+          }
           if (item.type === "error") {
             if (thinkingMessage) thinkingMessage.remove();
             thinkingMessage = null;

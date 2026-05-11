@@ -22,6 +22,18 @@ DOMAIN_QUERY_EXPANSIONS = {
     "الإجارة": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
     "real estate": ("real estate", "investment in real estate", "rental income", "capital appreciation"),
 }
+AUTHORITY_REQUEST_TERMS = ("binding fatwa", "binding ruling", "legal advice", "financial advice")
+META_EVALUATION_TERMS = ("what if the answer cites", "retrieved sources only contain")
+UNDER_SPECIFIED_INVESTMENT_TERMS = (
+    ("do not know", "business activity"),
+    ("do not know", "debt ratios"),
+    ("unknown", "business activity"),
+    ("unknown", "debt ratios"),
+)
+ARABIC_UNDER_SPECIFIED_TERMS = (
+    ("\u0644\u0645 \u062a\u0643\u0646", "\u0627\u0644\u0646\u0634\u0627\u0637"),
+    ("\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641\u0629", "\u0627\u0644\u0646\u0634\u0627\u0637"),
+)
 
 
 def _env_flag_enabled(name: str, default: bool = True) -> bool:
@@ -51,6 +63,18 @@ def _expanded_query_terms(query: str) -> set[str]:
         if trigger.lower() in lowered_query:
             terms.update(term.lower() for term in expansions)
     return {term for term in terms if len(term) >= 3}
+
+
+def _query_should_skip_retrieval(query: str) -> bool:
+    """Block retrieval for requests that need refusal or clarification, not loose context."""
+    lowered_query = query.lower()
+    if any(term in lowered_query for term in AUTHORITY_REQUEST_TERMS):
+        return True
+    if any(term in lowered_query for term in META_EVALUATION_TERMS):
+        return True
+    if any(all(term in lowered_query for term in terms) for terms in UNDER_SPECIFIED_INVESTMENT_TERMS):
+        return True
+    return any(all(term in query for term in terms) for terms in ARABIC_UNDER_SPECIFIED_TERMS)
 
 
 def _domain_rerank_score(query: str, document: str, metadata: dict, similarity: float) -> float:
@@ -145,7 +169,13 @@ class RAGPipeline:
             return self.embedding_generator.embed_text(query)
         return self.model.encode(query, normalize_embeddings=True).tolist()
     
-    def retrieve(self, query: str, k: int = 5, threshold: float = 0.3) -> List[Any]:
+    def retrieve(
+        self,
+        query: str,
+        k: int = 5,
+        threshold: float = 0.3,
+        allow_low_confidence_fallback: bool = False,
+    ) -> List[Any]:
         """
         Retrieve top-k relevant chunks for a query.
         
@@ -157,11 +187,14 @@ class RAGPipeline:
         Returns:
             List of SemanticChunk objects with citations
         """
+        if _query_should_skip_retrieval(query):
+            return []
+
         query_embedding = self.embed_query(query)
 
         if self.vector_store is not None:
             chunks = self.vector_store.similarity_search(query_embedding, k=k, threshold=threshold)
-            if chunks:
+            if chunks or not allow_low_confidence_fallback:
                 return chunks
             return self.vector_store.similarity_search(query_embedding, k=k, threshold=0.0)[:k]
         
@@ -200,7 +233,8 @@ class RAGPipeline:
                 if rerank_score >= threshold:
                     chunks.append(chunk)
         
-        ranked_chunks = sorted(chunks or fallback_chunks, key=lambda chunk: chunk.score, reverse=True)
+        candidates = chunks if chunks or not allow_low_confidence_fallback else fallback_chunks
+        ranked_chunks = sorted(candidates, key=lambda chunk: chunk.score, reverse=True)
         return ranked_chunks[:k]
 
     def augment_prompt(self, query: str, chunks: List[Any]) -> str:

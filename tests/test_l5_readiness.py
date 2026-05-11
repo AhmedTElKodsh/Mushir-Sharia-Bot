@@ -24,6 +24,7 @@ def test_l5_stable_public_api_smoke_paths():
     assert "/api/v1/query/stream" in chat.text
     assert health.json()["status"] == "healthy"
     assert ready.json()["status"] == "ready"
+    assert ready.json()["readiness_level"] == "dev"
     assert ready.json()["infrastructure"]["vector_store"] in {"chroma", "qdrant"}
     assert ready.json()["infrastructure"]["session_store"]
     assert ready.json()["infrastructure"]["rate_limit_store"]
@@ -34,6 +35,25 @@ def test_l5_stable_public_api_smoke_paths():
     assert disclaimer.json()["version"] == "l5-bilingual-disclaimer-v1"
     assert "ar" in disclaimer.json()["supported_languages"]
     assert "مشير" in disclaimer.json()["translations"]["ar"]
+
+@pytest.mark.api
+def test_l5_production_readiness_degrades_without_required_services(monkeypatch):
+    from src.api.main import create_app
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("AUTH_TOKEN", raising=False)
+
+    with TestClient(create_app()) as client:
+        ready = client.get("/ready")
+
+    payload = ready.json()
+    assert ready.status_code == 503
+    assert payload["status"] == "degraded"
+    assert payload["readiness_level"] == "production"
+    assert payload["checks"]["provider_configured"] is False
+    assert payload["checks"]["auth_configured"] is False
+    assert payload["checks"]["durable_audit_store"] is False
 
 
 @pytest.mark.api

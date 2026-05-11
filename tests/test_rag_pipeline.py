@@ -33,8 +33,8 @@ def test_rag_pipeline_augment_prompt():
     assert "AAOIFI standards context" in prompt
 
 
-def test_rag_pipeline_returns_best_available_chunks_when_threshold_filters_all():
-    """Low-confidence top-k results should still be visible to the API/UI."""
+def test_rag_pipeline_returns_no_chunks_when_threshold_filters_all():
+    """User-facing retrieval should fail closed when all evidence is weak."""
     from src.rag.pipeline import RAGPipeline
 
     class FakeModel:
@@ -44,9 +44,9 @@ def test_rag_pipeline_returns_best_available_chunks_when_threshold_filters_all()
     class FakeCollection:
         def query(self, query_embeddings, n_results):
             return {
-                "documents": [["Investment screening excerpt"]],
+                "documents": [["Weak unrelated excerpt"]],
                 "metadatas": [[{"source_file": "FAS-screening.md", "section": "2"}]],
-                "distances": [[0.75]],
+                "distances": [[0.85]],
                 "ids": [["chunk-low-score"]],
             }
 
@@ -56,11 +56,43 @@ def test_rag_pipeline_returns_best_available_chunks_when_threshold_filters_all()
     pipeline.model = FakeModel()
     pipeline.collection = FakeCollection()
 
-    chunks = pipeline.retrieve("investment screening", k=1, threshold=0.3)
+    chunks = pipeline.retrieve("zzzz", k=1, threshold=0.3)
+
+    assert chunks == []
+
+
+def test_rag_pipeline_can_return_low_confidence_chunks_for_diagnostics():
+    """Diagnostics can opt into low-confidence candidates without changing answer safety."""
+    from src.rag.pipeline import RAGPipeline
+
+    class FakeModel:
+        def encode(self, query, normalize_embeddings=False):
+            return Mock(tolist=lambda: [0.1, 0.2, 0.3])
+
+    class FakeCollection:
+        def query(self, query_embeddings, n_results):
+            return {
+                "documents": [["Weak unrelated excerpt"]],
+                "metadatas": [[{"source_file": "FAS-screening.md", "section": "2"}]],
+                "distances": [[0.85]],
+                "ids": [["chunk-low-score"]],
+            }
+
+    pipeline = RAGPipeline.__new__(RAGPipeline)
+    pipeline.vector_store = None
+    pipeline.embedding_generator = None
+    pipeline.model = FakeModel()
+    pipeline.collection = FakeCollection()
+
+    chunks = pipeline.retrieve(
+        "zzzz",
+        k=1,
+        threshold=0.3,
+        allow_low_confidence_fallback=True,
+    )
 
     assert len(chunks) == 1
     assert chunks[0].chunk_id == "chunk-low-score"
-    assert chunks[0].score >= 0.25
 
 
 def test_rag_pipeline_reranks_bilingual_chroma_candidates_with_domain_terms():

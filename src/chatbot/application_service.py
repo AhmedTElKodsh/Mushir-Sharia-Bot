@@ -207,7 +207,7 @@ class ApplicationService:
 
     @staticmethod
     def _requires_disclaimer(disclaimer_acknowledged: bool) -> bool:
-        return os.getenv("REQUIRE_DISCLAIMER_ACK", "false").lower() == "true" and not disclaimer_acknowledged
+        return os.getenv("REQUIRE_DISCLAIMER_ACK", "true").lower() == "true" and not disclaimer_acknowledged
 
     @staticmethod
     def _contract_from_dict(data: Dict[str, Any]) -> AnswerContract:

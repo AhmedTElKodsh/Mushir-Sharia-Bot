@@ -49,6 +49,17 @@ IGNORE_PATTERNS = [
 ]
 
 
+ALLOW_PATTERNS = [
+    "Dockerfile",
+    "README.md",
+    "requirements.txt",
+    "src/**",
+    "config/**",
+    "gemini-gem-prototype/knowledge-base/**",
+    "chroma_db_multilingual/**",
+]
+
+
 SPACE_VARIABLES = {
     "GEMINI_MODEL": "gemini-2.5-flash",
     "VECTOR_DB_TYPE": "chroma",
@@ -111,6 +122,7 @@ def main() -> None:
         repo_id=args.repo_id,
         repo_type="space",
         folder_path=str(ROOT),
+        allow_patterns=ALLOW_PATTERNS,
         ignore_patterns=IGNORE_PATTERNS,
         commit_message=args.commit_message,
     )

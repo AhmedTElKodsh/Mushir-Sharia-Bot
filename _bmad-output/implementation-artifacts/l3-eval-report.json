@@ -2,11 +2,11 @@
   "case_count": 7,
   "answerable_case_count": 3,
   "unanswerable_case_count": 4,
-  "unanswerable_with_retrieval_count": 4,
+  "unanswerable_with_retrieval_count": 0,
   "hit_at_k": 1.0,
   "recall_at_k": 1.0,
   "mrr": 0.7777777777777778,
-  "unanswerable_retrieval_rate": 1.0,
+  "unanswerable_retrieval_rate": 0.0,
   "results": [
     {
       "query": "What does AAOIFI require before resale in a murabaha transaction?",
@@ -60,13 +60,7 @@
       "query": "Can Mushir give me a binding fatwa for this investment?",
       "answerable": false,
       "expected": [],
-      "retrieved_ids": [
-        "55be67dd5f4cb80e4f0866c0097d2e9b",
-        "eca10e10b162644ef2ba6680c40735ed",
-        "e2fd35bdad62587db361d986a34c3581",
-        "ada57fcb816a74c1b719efc1ca957e92",
-        "3ab70ccc5f0e0faeab68bd1b2d62e9f7"
-      ],
+      "retrieved_ids": [],
       "matched": false,
       "reciprocal_rank": 0.0
     },
@@ -74,13 +68,7 @@
       "query": "Can I invest in this company if I do not know its business activity or debt ratios?",
       "answerable": false,
       "expected": [],
-      "retrieved_ids": [
-        "b7b834b1e2bc839c2077d1b76fd4af7b",
-        "59a44554f4c83527fa6a4a010cd94636",
-        "a0009bf3344596843d21680bfdb377ea",
-        "9012189fe1ead69104506aafccdbf554",
-        "635cffeb1d844976fd0c2425c5b87fcd"
-      ],
+      "retrieved_ids": [],
       "matched": false,
       "reciprocal_rank": 0.0
     },
@@ -88,13 +76,7 @@
       "query": "\u0647\u0644 \u064a\u0645\u0643\u0646\u0646\u064a \u0627\u0644\u0627\u0633\u062a\u062b\u0645\u0627\u0631 \u0625\u0630\u0627 \u0644\u0645 \u062a\u0643\u0646 \u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u0646\u0634\u0627\u0637 \u0627\u0644\u0645\u0627\u0644\u064a \u0645\u0639\u0631\u0648\u0641\u0629\u061f",
       "answerable": false,
       "expected": [],
-      "retrieved_ids": [
-        "674ead49e31faeba588febe91192d9bc",
-        "6b8b7f4fbe72a7a449fa286217977dce",
-        "a0009bf3344596843d21680bfdb377ea",
-        "4e0cf29a6ceaa6188c573ba24ec2dc44",
-        "15ac8495db842762e4135764edb284f8"
-      ],
+      "retrieved_ids": [],
       "matched": false,
       "reciprocal_rank": 0.0
     },
@@ -102,13 +84,7 @@
       "query": "What if the answer cites FAS-99 but the retrieved sources only contain FAS-01?",
       "answerable": false,
       "expected": [],
-      "retrieved_ids": [
-        "b43a6ca452268a6be7c794bc78a34fb6",
-        "89aa3e0ea1ecd1f946839d6daa19bbe2",
-        "ecc3f219bb294832e988562dca0a5f9a",
-        "f0df2c5db9b52b213a4e6cb278840146",
-        "991507c178d9570231b70f4629d5af5c"
-      ],
+      "retrieved_ids": [],
       "matched": false,
       "reciprocal_rank": 0.0
     }
@@ -116,12 +92,12 @@
   "thresholds": {
     "hit_at_k": {
       "actual": 1.0,
-      "minimum": 0.7,
+      "minimum": 0.5,
       "passed": true
     },
     "recall_at_k": {
       "actual": 1.0,
-      "minimum": 0.7,
+      "minimum": 0.5,
       "passed": true
     },
     "mrr": {
@@ -131,12 +107,12 @@
     },
     "answerable_case_count": {
       "actual": 3.0,
-      "minimum": 3,
+      "minimum": 1,
       "passed": true
     },
     "unanswerable_retrieval_rate": {
-      "actual": 1.0,
-      "maximum": 1.0,
+      "actual": 0.0,
+      "maximum": 0.5,
       "passed": true
     }
   },

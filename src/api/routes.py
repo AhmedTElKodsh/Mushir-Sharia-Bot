@@ -93,12 +93,12 @@ async def query_stream(
 
 @router.get("/rulings/{ruling_id}", response_model=None)
 async def get_ruling(ruling_id: str = Path(...)):
-    raise HTTPException(status_code=404, detail="Ruling storage not yet implemented")
+    raise HTTPException(status_code=501, detail="Ruling storage is not enabled in this deployment")
 
 
 @router.post("/auth/login")
 async def login(username: str = Body(...), password: str = Body(...)):
-    return {"token": "dummy-token", "expires_in": 86400, "message": "Auth not fully implemented in MVP"}
+    raise HTTPException(status_code=501, detail="Token login is not enabled in this deployment")
 
 
 @router.get("/compliance/disclaimer")
@@ -131,7 +131,7 @@ def _answer_service(application_service: ApplicationService, payload: QueryReque
     optional_kwargs = {
         "session_id": payload.resolved_session_id(),
         "request_id": request_id,
-        "disclaimer_acknowledged": bool(payload.context.get("disclaimer_acknowledged", True)),
+        "disclaimer_acknowledged": bool(payload.context.get("disclaimer_acknowledged", False)),
     }
     answer_signature = signature(application_service.answer)
     params = answer_signature.parameters

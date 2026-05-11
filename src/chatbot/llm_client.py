@@ -109,24 +109,51 @@ class GeminiClient:
             raise LLMConfigurationError(
                 "GEMINI_API_KEY is not set. Add it to .env or pass api_key explicitly."
             )
-        import google.generativeai as genai
+        try:
+            from google import genai
+            from google.genai import types
+        except ImportError as exc:
+            raise LLMConfigurationError(
+                "google-genai is required for Gemini. Install dependencies from requirements.txt."
+            ) from exc
 
-        genai.configure(api_key=self.api_key)
-        self._model = genai.GenerativeModel(
+        client = genai.Client(api_key=self.api_key)
+        config = types.GenerateContentConfig(
+            temperature=self.temperature,
+            top_p=0.95,
+            top_k=40,
+            max_output_tokens=2048,
+        )
+        self._model = _GoogleGenAIModel(
+            client=client,
             model_name=self.model_name,
-            generation_config={
-                "temperature": self.temperature,
-                "top_p": 0.95,
-                "top_k": 40,
-                "max_output_tokens": 2048,
-            },
+            config=config,
         )
         return self._model
 
     @staticmethod
     def _is_rate_limit(exc: Exception) -> bool:
+        code = getattr(exc, "code", None)
+        if code == 429:
+            return True
         message = str(exc).lower()
         return any(token in message for token in ["quota", "rate limit", "429", "resource exhausted"])
+
+
+class _GoogleGenAIModel:
+    """Small adapter so tests can still inject simple generate_content fakes."""
+
+    def __init__(self, client: Any, model_name: str, config: Any):
+        self.client = client
+        self.model_name = model_name
+        self.config = config
+
+    def generate_content(self, prompt: str, request_options: Optional[dict] = None):
+        return self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=self.config,
+        )
 
 
 AAOIFI_ADHERENCE_SYSTEM_PROMPT = """You are a Sharia compliance analyzer specializing in AAOIFI Financial Accounting Standards (FAS).

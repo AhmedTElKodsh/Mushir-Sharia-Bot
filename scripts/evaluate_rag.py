@@ -23,7 +23,7 @@ def load_cases(path: Path) -> List[Dict[str, Any]]:
     return list(data)
 
 
-def evaluate_retrieval(cases: List[Dict[str, Any]], k: int, pipeline=None) -> Dict[str, Any]:
+def evaluate_retrieval(cases: List[Dict[str, Any]], k: int, threshold: float = 0.3, pipeline=None) -> Dict[str, Any]:
     pipeline = pipeline or RAGPipeline()
     results = []
     answerable_hits = 0
@@ -41,7 +41,7 @@ def evaluate_retrieval(cases: List[Dict[str, Any]], k: int, pipeline=None) -> Di
             or case.get("expected_standards")
             or []
         )
-        chunks = pipeline.retrieve(query, k=k, threshold=0.0)
+        chunks = pipeline.retrieve(query, k=k, threshold=threshold)
         retrieved = [_retrieval_id(chunk) for chunk in chunks]
         retrieved_rank_candidates = [_retrieval_candidates(chunk) for chunk in chunks]
         retrieved_refs = set().union(*[_retrieval_candidates(chunk) for chunk in chunks]) if chunks else set()
@@ -177,6 +177,7 @@ def main() -> int:
     parser.add_argument("--gold", default="tests/fixtures/gold_eval.yaml")
     parser.add_argument("--output", default="_bmad-output/implementation-artifacts/l3-eval-report.json")
     parser.add_argument("--k", type=int, default=5)
+    parser.add_argument("--threshold", type=float, default=0.3)
     parser.add_argument("--min-hit-at-k", type=float, default=0.0)
     parser.add_argument("--min-recall-at-k", type=float, default=0.0)
     parser.add_argument("--min-mrr", type=float, default=0.0)
@@ -185,7 +186,7 @@ def main() -> int:
     args = parser.parse_args()
 
     cases = load_cases(Path(args.gold))
-    report = evaluate_retrieval(cases, args.k)
+    report = evaluate_retrieval(cases, args.k, threshold=args.threshold)
     try:
         report = apply_thresholds(
             report,

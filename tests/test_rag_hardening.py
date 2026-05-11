@@ -385,6 +385,8 @@ def test_evaluate_retrieval_thresholds_ignore_unanswerable_cases_for_recall():
 
     class Pipeline:
         def retrieve(self, query, k=5, threshold=0.0):
+            if threshold >= 0.3 and query == "unanswerable":
+                return []
             return [{"chunk_id": "any", "metadata": {"standard_number": "FAS-01"}, "content": ""}]
 
     report = evaluate_retrieval(
@@ -393,15 +395,16 @@ def test_evaluate_retrieval_thresholds_ignore_unanswerable_cases_for_recall():
             {"query": "unanswerable", "answerable": False, "required_source_ids": []},
         ],
         k=1,
+        threshold=0.3,
         pipeline=Pipeline(),
     )
 
     assert report["answerable_case_count"] == 1
     assert report["unanswerable_case_count"] == 1
-    assert report["unanswerable_with_retrieval_count"] == 1
+    assert report["unanswerable_with_retrieval_count"] == 0
     assert report["hit_at_k"] == 1.0
     assert report["recall_at_k"] == 1.0
-    assert report["unanswerable_retrieval_rate"] == 1.0
+    assert report["unanswerable_retrieval_rate"] == 0.0
 
 
 @pytest.mark.unit
@@ -425,3 +428,22 @@ def test_evaluate_retrieval_thresholds_can_fail_unanswerable_retrieval_rate():
 
     assert report["passed"] is False
     assert report["thresholds"]["unanswerable_retrieval_rate"]["passed"] is False
+
+
+@pytest.mark.unit
+def test_rag_pipeline_skips_retrieval_for_authority_and_underspecified_queries():
+    from src.rag.pipeline import RAGPipeline
+
+    class FakeModel:
+        def encode(self, query, normalize_embeddings=False):
+            raise AssertionError("blocked queries should not be embedded")
+
+    pipeline = RAGPipeline.__new__(RAGPipeline)
+    pipeline.vector_store = None
+    pipeline.embedding_generator = None
+    pipeline.model = FakeModel()
+    pipeline.collection = object()
+
+    assert pipeline.retrieve("Can Mushir give me a binding fatwa for this investment?") == []
+    assert pipeline.retrieve("Can I invest if I do not know the business activity?") == []
+    assert pipeline.retrieve("What if the answer cites FAS-99 but the retrieved sources only contain FAS-01?") == []
