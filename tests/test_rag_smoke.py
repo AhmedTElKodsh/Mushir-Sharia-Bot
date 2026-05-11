@@ -26,7 +26,7 @@ def test_ingest_nonempty():
     """Verify ChromaDB was populated by ingestion script."""
     from chromadb import PersistentClient
 
-    chroma_dir = os.getenv("CHROMA_DIR", "./chroma_db")
+    chroma_dir = os.getenv("CHROMA_DIR", "./chroma_db_multilingual")
 
     # Check directory exists
     assert Path(chroma_dir).exists(), f"ChromaDB directory not found: {chroma_dir}"
@@ -43,8 +43,8 @@ def test_ingest_nonempty():
 def test_retrieval_smoke():
     """Verify retrieval returns relevant chunks for a sample query."""
     pipeline = RAGPipeline(
-        persist_dir=os.getenv("CHROMA_DIR", "./chroma_db"),
-        model_name=os.getenv("EMBED_MODEL", "sentence-transformers/all-mpnet-base-v2"),
+        persist_dir=os.getenv("CHROMA_DIR", "./chroma_db_multilingual"),
+        model_name=os.getenv("EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"),
     )
 
     # Sample query about murabaha (common Islamic finance contract)

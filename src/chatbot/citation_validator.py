@@ -8,7 +8,7 @@ from src.models.ruling import AAOIFICitation
 class CitationValidator:
     """Extracts explicit answer citations and keeps only retrieved references."""
 
-    citation_pattern = re.compile(r"\[([^\]§Â]+)\s*(?:§|Â§)\s*([^\]]+)\]")
+    citation_pattern = re.compile(r"\[([^\]§ÂÃ]+)\s*(?:§|Â§|Ã‚Â§)\s*([^\]]+)\]")
 
     def validate(self, answer: str, chunks: List[Any]) -> List[AAOIFICitation]:
         supported = self._supported_refs(chunks)

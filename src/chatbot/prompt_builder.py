@@ -15,7 +15,7 @@ Do not use uncited external knowledge."""
 class PromptBuilder:
     """Builds prompts from system instructions, recent history, chunks, and query."""
 
-    prompt_version = "l1-aaoifi-grounded-v1"
+    prompt_version = "l1-aaoifi-grounded-bilingual-v1"
 
     def __init__(
         self,
@@ -32,8 +32,20 @@ class PromptBuilder:
         query: str,
         chunks: List[Any],
         history: Optional[List[Dict[str, str]]] = None,
+        response_language: str = "en",
     ) -> str:
         sections = [self.system_prompt.strip()]
+        if response_language == "ar":
+            sections.append(
+                "Language instruction:\n"
+                "Respond in clear Arabic. Keep AAOIFI citation tokens unchanged, "
+                "for example [FAS-01 §1]."
+            )
+        else:
+            sections.append(
+                "Language instruction:\n"
+                "Respond in English unless the user explicitly asks otherwise."
+            )
         rendered_history = self._format_history(history or [])
         if rendered_history:
             sections.append(f"Recent conversation:\n{rendered_history}")

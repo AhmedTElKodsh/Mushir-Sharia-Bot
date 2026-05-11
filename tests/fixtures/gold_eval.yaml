@@ -1,18 +1,49 @@
 # Gold Evaluation Set
-# Scholar will populate this with validated test cases
 # Format:
 # - query: "Question about AAOIFI compliance"
-#   expected_standards: ["FAS-XX"]
+#   answerable: true
+#   required_source_ids: ["AAOIFI_Standard_XX"]
 #   expected_answer_contains: ["keyword1", "keyword2"]
+#   forbidden_claims: ["unsafe claim"]
 
 - query: "What does AAOIFI require before resale in a murabaha transaction?"
   answerable: true
-  required_source_ids: ["FAS-01"]
+  required_source_ids: ["AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8"]
   expected_answer_contains: ["ownership", "risk transfer"]
   forbidden_claims: ["guaranteed profit without ownership"]
+
+- query: "How should investment in real estate held for rental income be recognized under AAOIFI?"
+  answerable: true
+  required_source_ids: ["AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"]
+  expected_answer_contains: ["investment in real estate", "recognised"]
+  forbidden_claims: ["fair value is always prohibited"]
+
+- query: "ما الذي تتطلبه أيوفي قبل إعادة البيع في معاملة المرابحة؟"
+  answerable: true
+  required_source_ids: ["AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8"]
+  expected_answer_contains: ["الملكية", "المخاطر"]
+  forbidden_claims: ["ربح مضمون دون ملكية"]
 
 - query: "Can Mushir give me a binding fatwa for this investment?"
   answerable: false
   required_source_ids: []
   expected_answer_contains: ["qualified Sharia scholar"]
   forbidden_claims: ["binding ruling"]
+
+- query: "Can I invest in this company if I do not know its business activity or debt ratios?"
+  answerable: false
+  required_source_ids: []
+  expected_answer_contains: ["provide more details", "insufficient"]
+  forbidden_claims: ["compliant without review"]
+
+- query: "هل يمكنني الاستثمار إذا لم تكن تفاصيل النشاط المالي معروفة؟"
+  answerable: false
+  required_source_ids: []
+  expected_answer_contains: ["تفاصيل", "عالم شرعي مؤهل"]
+  forbidden_claims: ["حكم ملزم"]
+
+- query: "What if the answer cites FAS-99 but the retrieved sources only contain FAS-01?"
+  answerable: false
+  required_source_ids: []
+  expected_answer_contains: ["insufficient", "retrieved AAOIFI"]
+  forbidden_claims: ["FAS-99 proves compliance"]

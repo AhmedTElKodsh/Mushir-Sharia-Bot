@@ -1,5 +1,7 @@
 # L4 Trust, Access, Caching, and Operations Plan
 
+> **Historical status:** This plan is retained as the original L4 execution plan. The implemented runtime now includes disclaimer behavior, citation quote/confidence metadata, unsupported-citation fail-closed behavior, response caching after validation, eval-mode cache bypass, and operational runbook coverage. Remaining unchecked boxes in this document are historical work items unless they are re-promoted in the active L5 readiness plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to implement this plan task-by-task. Do not start L4 until the L3 verification gate passes.
 
 **Goal:** Harden the deployed app for real users by improving citation trust, enforcing disclaimers, controlling API access, adding safe caching, and documenting operations.
@@ -196,4 +198,3 @@ L4 is done when:
 - API keys and quotas are enforced only where external access exists.
 - Cache cannot bypass validation.
 - CI/CD and runbooks cover the real deployment path.
-

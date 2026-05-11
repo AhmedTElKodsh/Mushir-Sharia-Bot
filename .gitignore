@@ -58,6 +58,7 @@ data/
 
 # Chroma
 chroma_db/
+chroma_db_multilingual/
 chroma/
 *.chroma
 

@@ -1,10 +1,12 @@
 # L1 Core Answer Contract and Stabilization Plan
 
+> **Historical status:** This plan is retained as the original L1 execution plan. The implemented runtime now includes the shared answer contract, `ApplicationService`, `PromptBuilder`, `GeminiClient`, `CitationValidator`, controlled failure handling, and fast unit/service/API coverage. Remaining unchecked boxes in this document are historical work items unless they are re-promoted in the active L5 readiness plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to implement this plan task-by-task. Every implementation step starts with a failing or updated test.
 
 **Goal:** Make the existing CLI RAG app reliable, testable, and grounded before adding API or production infrastructure.
 
-**Architecture:** Preserve the working L0 CLI behavior while extracting a shared application service: `CLI -> ApplicationService -> RAGPipeline`. Keep ChromaDB, sentence-transformers, and Gemini 1.5 Pro as the default local stack. Add simple interfaces for retrieval, prompt building, Gemini calls, citation validation, and clarification so later CLI/API/SSE paths reuse the same core.
+**Architecture:** Preserve the working L0 CLI behavior while extracting a shared application service: `CLI -> ApplicationService -> RAGPipeline`. Keep ChromaDB, sentence-transformers, and Gemini 2.5 Flash as the default local stack. Add simple interfaces for retrieval, prompt building, Gemini calls, citation validation, and clarification so later CLI/API/SSE paths reuse the same core.
 
 **Tech Stack:** Python, ChromaDB, sentence-transformers, google-generativeai, pytest, pytest-mock, pydantic or dataclasses, standard `logging`. Add LangGraph only behind the clarification interface if the clarification flow needs resumable branching; do not let LangGraph leak into CLI or API code.
 
@@ -136,7 +138,7 @@ Acceptance:
 - Test: `tests/test_llm_client.py`
 
 - [ ] Move the AAOIFI grounding prompt and chunk formatting into `PromptBuilder`.
-- [ ] Create `GeminiClient` using `google-generativeai`; keep model `gemini-1.5-pro` and temperature `0.1` as defaults.
+- [x] Create `GeminiClient` using `google-generativeai`; keep model `gemini-2.5-flash` and temperature `0.1` as defaults.
 - [ ] Add retries, timeout handling, missing API key errors, quota/rate-limit errors, and empty-response handling.
 - [ ] Tests must mock the Gemini transport and must not require `GEMINI_API_KEY`.
 - [ ] Add one skipped/marked `llm` smoke test for real Gemini only when a key is present.
@@ -205,4 +207,3 @@ L1 is done when:
 - Prompt construction is centralized.
 - Clarification is service-level and limited.
 - L0 CLI behavior is preserved.
-

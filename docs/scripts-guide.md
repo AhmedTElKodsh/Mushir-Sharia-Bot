@@ -135,9 +135,9 @@ python scripts/ingest.py
 **Features:**
 
 - **Semantic Chunking:** Uses LangChain RecursiveCharacterTextSplitter
-- **Embedding Generation:** sentence-transformers/all-mpnet-base-v2 (768-dim)
-- **Vector Storage:** ChromaDB persistent storage
-- **Metadata Tracking:** Stores source file, chunk index, and total chunks
+- **Embedding Generation:** sentence-transformers/paraphrase-multilingual-mpnet-base-v2 (768-dim)
+- **Vector Storage:** ChromaDB persistent storage using cosine space
+- **Metadata Tracking:** Stores source file, filename language, detected text language, embedding model, chunk index, and total chunks
 - **Progress Reporting:** Real-time processing status per file
 - **Error Handling:** Continues processing if individual files fail
 
@@ -145,9 +145,10 @@ python scripts/ingest.py
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CORPUS_DIR` | `./data/aaoifi_md` | Path to AAOIFI markdown corpus |
-| `CHROMA_DIR` | `./chroma_db` | ChromaDB storage location |
-| `EMBED_MODEL` | `sentence-transformers/all-mpnet-base-v2` | Embedding model |
+| `CORPUS_DIR` | `./gemini-gem-prototype/knowledge-base` | Path to AAOIFI markdown corpus |
+| `CHROMA_DIR` | `./chroma_db_multilingual` | ChromaDB storage location |
+| `EMBED_MODEL` | `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` | Embedding model |
+| `INGEST_LANGUAGES` | `en,ar` | Comma-separated language codes to ingest |
 
 **Chunking Configuration:**
 
@@ -158,9 +159,9 @@ python scripts/ingest.py
 **Output Format:**
 
 ```
-Loading embedding model: sentence-transformers/all-mpnet-base-v2
-Initializing ChromaDB at: ./chroma_db
-Found 15 markdown files to process
+Loading embedding model: sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+Initializing ChromaDB at: ./chroma_db_multilingual
+Found 104 AAOIFI standards to process for languages: en, ar
 
 Processing: AAOIFI_Standard_01_en_Murabaha.md
   Generated 87 chunks
@@ -175,7 +176,7 @@ Processing: AAOIFI_Standard_02_en_Ijarah.md
 ============================================================
 Ingestion complete!
 Total chunks stored: 1245
-ChromaDB location: ./chroma_db
+ChromaDB location: ./chroma_db_multilingual
 ============================================================
 ```
 
@@ -195,6 +196,11 @@ Processing: AAOIFI_Standard_10_en_Example.md
     "documents": ["chunk text content"],
     "metadatas": [{
         "source_file": "AAOIFI_Standard_01_en_Murabaha.md",
+        "standard_number": "AAOIFI_Standard_01_en_Murabaha",
+        "language": "en",
+        "source_language": "en",
+        "embedding_model": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+        "embedding_normalized": true,
         "chunk_idx": 0,
         "total_chunks": 87
     }]

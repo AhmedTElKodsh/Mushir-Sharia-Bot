@@ -146,7 +146,8 @@ def test_query_stream_returns_error_event_when_llm_fails():
     assert response.status_code == 200
     events = _named_sse_events(response.text)
     assert [event["type"] for event in events] == ["started", "error"]
-    assert events[-1]["data"]["message"] == "model unavailable"
+    assert events[-1]["data"]["message"] == "The answer service is temporarily unavailable. Please try again later."
+    assert "model unavailable" not in response.text
 
 
 def test_parse_cors_origins_uses_json_not_eval():

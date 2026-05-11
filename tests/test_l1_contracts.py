@@ -70,6 +70,7 @@ def test_application_service_returns_canonical_answer_contract():
     assert result.clarification_question is None
     assert result.metadata["model_name"] == "fake-gemini"
     assert result.metadata["prompt_version"] == "test-prompt"
+    assert result.metadata["response_language"] == "en"
     assert result.metadata["retrieved_chunk_ids"] == ["chunk-1"]
     assert result.metadata["confidence"] == pytest.approx(0.91)
 
@@ -93,6 +94,26 @@ def test_application_service_returns_insufficient_data_without_retrieved_chunks(
     assert "retrieved AAOIFI" in result.answer
 
 
+@pytest.mark.service
+def test_application_service_detects_arabic_and_localizes_insufficient_data():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    service = ApplicationService(
+        retriever=FakeRetriever([]),
+        llm_client=FakeLLM("this should not be called"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    )
+
+    result = service.answer("هل يمكنني الاستثمار إذا لم أعرف نشاط الشركة؟")
+
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.metadata["response_language"] == "ar"
+    assert "أيوفي" in result.answer
+    assert "عالما شرعيا مؤهلا" in result.limitations
+
+
 @pytest.mark.unit
 def test_prompt_builder_renders_history_chunks_and_query_deterministically():
     from src.chatbot.prompt_builder import PromptBuilder
@@ -112,6 +133,20 @@ def test_prompt_builder_renders_history_chunks_and_query_deterministically():
     assert "recent question" in prompt
     assert "[1] FAS-01 §1 (score: 0.91)" in prompt
     assert "Current question?" in prompt
+
+
+@pytest.mark.unit
+def test_prompt_builder_adds_arabic_response_instruction():
+    from src.chatbot.prompt_builder import PromptBuilder
+
+    prompt = PromptBuilder(system_prompt="SYSTEM").build(
+        "هل هذه المعاملة متوافقة؟",
+        [_chunk()],
+        response_language="ar",
+    )
+
+    assert "Respond in clear Arabic" in prompt
+    assert "[1] FAS-01 §1 (score: 0.91)" in prompt
 
 
 @pytest.mark.unit
@@ -143,3 +178,14 @@ def test_gemini_client_raises_clear_error_for_empty_response():
 
     with pytest.raises(LLMResponseError, match="empty response"):
         client.generate("hello")
+
+
+@pytest.mark.unit
+def test_gemini_client_defaults_to_supported_flash_model(monkeypatch):
+    from src.chatbot.llm_client import GeminiClient
+
+    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+
+    client = GeminiClient(api_key="test-key", model=object())
+
+    assert client.model_name == "gemini-2.5-flash"

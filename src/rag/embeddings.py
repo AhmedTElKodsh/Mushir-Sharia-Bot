@@ -5,7 +5,7 @@ from src.config.logging_config import setup_logging
 
 logger = setup_logging()
 
-MODEL_NAME = "sentence-transformers/all-mpnet-base-v2"
+MODEL_NAME = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 BATCH_SIZE = 32
 EXPECTED_DIM = 768
 

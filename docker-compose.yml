@@ -4,65 +4,31 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
-      - VECTOR_DB_TYPE=qdrant
-      - QDRANT_URL=http://qdrant:6333
-      - QDRANT_COLLECTION=aaoifi_standards
-      - CHROMA_PERSIST_DIR=/app/data/chroma
-      - DOCUMENT_DB_TYPE=sqlite
-      - SQLITE_DB_PATH=/app/data/documents.db
-      - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=postgresql://mushir:mushir@postgres:5432/mushir
-      - CACHE_STORE_TYPE=redis
-      - RESPONSE_CACHE_TTL_SECONDS=86400
-      - REQUIRE_DISCLAIMER_ACK=false
-      - SESSION_EXPIRY_MINUTES=30
-      - LOG_LEVEL=INFO
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      - VECTOR_DB_TYPE=${VECTOR_DB_TYPE:-chroma}
+      - CHROMA_DIR=/app/chroma_db_multilingual
+      - EMBED_MODEL=${EMBED_MODEL:-sentence-transformers/paraphrase-multilingual-mpnet-base-v2}
+      - REQUIRE_ARABIC_RETRIEVAL=${REQUIRE_ARABIC_RETRIEVAL:-true}
+      - CORPUS_DIR=/app/gemini-gem-prototype/knowledge-base
+      - SESSION_STORE_TYPE=${SESSION_STORE_TYPE:-memory}
+      - SESSION_EXPIRY_MINUTES=${SESSION_EXPIRY_MINUTES:-30}
+      - RATE_LIMIT_STORE_TYPE=${RATE_LIMIT_STORE_TYPE:-memory}
+      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS:-100}
+      - RATE_LIMIT_WINDOW_SECONDS=${RATE_LIMIT_WINDOW_SECONDS:-3600}
+      - CACHE_STORE_TYPE=${CACHE_STORE_TYPE:-memory}
+      - RESPONSE_CACHE_TTL_SECONDS=${RESPONSE_CACHE_TTL_SECONDS:-86400}
+      - REQUIRE_DISCLAIMER_ACK=${REQUIRE_DISCLAIMER_ACK:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - LOG_DIR=/app/logs
       - API_HOST=0.0.0.0
       - API_PORT=8000
+      - CORS_ORIGINS=${CORS_ORIGINS:-["*"]}
     volumes:
-      - ./data:/app/data
       - ./logs:/app/logs
-    depends_on:
-      - qdrant
-      - redis
-      - postgres
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
     restart: unless-stopped
-
-  qdrant:
-    image: qdrant/qdrant:v1.12.1
-    ports:
-      - "6333:6333"
-    volumes:
-      - qdrant_data:/qdrant/storage
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:16-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=mushir
-      - POSTGRES_PASSWORD=mushir
-      - POSTGRES_DB=mushir
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
-volumes:
-  qdrant_data:
-  postgres_data:

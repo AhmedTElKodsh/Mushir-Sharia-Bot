@@ -1,3 +1,13 @@
+---
+title: Mushir Sharia Bot
+emoji: ⚖️
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 # Sharia Compliance Chatbot
 
 RAG-based Islamic finance compliance analysis system using AAOIFI FAS standards.

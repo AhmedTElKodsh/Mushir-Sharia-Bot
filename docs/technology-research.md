@@ -25,7 +25,13 @@
 - **Dimension**: 768
 - **Pros**: Good English semantic quality, reasonable size (420MB), strong performance on STS tasks.
 - **Cons**: English-only (no Arabic support for future expansion).
-- **Decision**: MVP model. Covers AAOIFI FAS standards (English).
+- **Decision**: Historical L0 model only. Do not use for Arabic retrieval claims.
+
+### sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+- **Dimension**: 768
+- **Pros**: Supports Arabic and English in the same vector space, preserves the existing 768-dimensional Chroma/Qdrant shape.
+- **Cons**: Requires re-ingesting the corpus; cannot be mixed with an index produced by `all-mpnet-base-v2`.
+- **Decision**: Default local/demo embedding model for bilingual AAOIFI retrieval.
 
 ### multilingual-e5-large
 - **Dimension**: 1024
@@ -33,7 +39,7 @@
 - **Cons**: Larger (2.2GB), slower inference.
 - **Decision**: Future expansion if Arabic standards needed.
 
-**Decision**: all-mpnet-base-v2 for MVP.
+**Decision**: Use `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` for the active bilingual demo gate. Keep `all-mpnet-base-v2` only as historical context for the English-only L0 index.
 
 ## Web Scraping Strategy
 
@@ -65,7 +71,7 @@
 | Component | MVP | Production |
 |-----------|-----|------------|
 | Vector DB | Chroma | Qdrant |
-| Embedding | all-mpnet-base-v2 | all-mpnet-base-v2 or multilingual-e5-large |
+| Embedding | paraphrase-multilingual-mpnet-base-v2 | paraphrase-multilingual-mpnet-base-v2 or multilingual-e5-large |
 | Web Scraping | Playwright | Playwright |
 | LLM | OpenAI GPT-4 | OpenAI GPT-4 or Claude 3 |
 | Document Store | SQLite | PostgreSQL |

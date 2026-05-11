@@ -15,14 +15,23 @@ from src.rag.chunker import SemanticChunker
 from src.rag.qdrant_store import QdrantVectorStore
 
 
-def markdown_documents(corpus_dir: Path) -> Iterable[AAOIFIDocument]:
+def detect_language(path: Path) -> str:
+    if "_ar_" in path.name or "_ar." in path.name:
+        return "ar"
+    if "_en_" in path.name or "_en." in path.name:
+        return "en"
+    return "unknown"
+
+
+def markdown_documents(corpus_dir: Path, languages: set[str]) -> Iterable[AAOIFIDocument]:
     for path in sorted(corpus_dir.rglob("*.md")):
         if path.name in {"INDEX.md", "CONVERSION_SUMMARY.md", ".gitkeep"}:
             continue
-        if "_en_" not in path.name and "_en." not in path.name:
+        language = detect_language(path)
+        if language not in languages:
             continue
         document_id = hashlib.sha256(path.name.encode("utf-8")).hexdigest()[:16]
-        standard_number = path.stem.split("_en_", 1)[0].replace("AAOIFI_Standard_", "AAOIFI-")
+        standard_number = path.stem
         yield AAOIFIDocument(
             document_id=document_id,
             title=path.stem,
@@ -32,7 +41,7 @@ def markdown_documents(corpus_dir: Path) -> Iterable[AAOIFIDocument]:
             metadata={
                 "source_file": path.name,
                 "document_version": "1.0",
-                "language": "en",
+                "language": language,
             },
         )
 
@@ -44,10 +53,10 @@ def embed_chunks(chunks: List[SemanticChunk], model_name: str) -> List[SemanticC
     return chunks
 
 
-def build_chunks(corpus_dir: Path, model_name: str) -> List[SemanticChunk]:
+def build_chunks(corpus_dir: Path, model_name: str, languages: set[str]) -> List[SemanticChunk]:
     chunker = SemanticChunker()
     chunks: List[SemanticChunk] = []
-    for document in markdown_documents(corpus_dir):
+    for document in markdown_documents(corpus_dir, languages):
         document_chunks = chunker.chunk_document(document)
         for chunk in document_chunks:
             chunk.metadata = {
@@ -65,16 +74,18 @@ def build_chunks(corpus_dir: Path, model_name: str) -> List[SemanticChunk]:
 def main() -> int:
     load_dotenv()
     parser = argparse.ArgumentParser(description="Ingest AAOIFI markdown files into Qdrant.")
-    parser.add_argument("--corpus-dir", default="./data/aaoifi_md")
-    parser.add_argument("--model", default="sentence-transformers/all-mpnet-base-v2")
+    parser.add_argument("--corpus-dir", default="./gemini-gem-prototype/knowledge-base")
+    parser.add_argument("--model", default="sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
     parser.add_argument("--collection", default=None)
+    parser.add_argument("--languages", default="en,ar")
     args = parser.parse_args()
 
     corpus_dir = Path(args.corpus_dir)
     if not corpus_dir.exists():
         raise SystemExit(f"Corpus directory not found: {corpus_dir}")
 
-    chunks = build_chunks(corpus_dir, args.model)
+    languages = {language.strip() for language in args.languages.split(",") if language.strip()}
+    chunks = build_chunks(corpus_dir, args.model, languages)
     if not chunks:
         raise SystemExit("No chunks generated; check corpus files and language filters.")
 

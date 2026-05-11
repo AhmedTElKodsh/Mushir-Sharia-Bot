@@ -66,6 +66,8 @@ def test_rest_query_maps_service_errors_to_controlled_payload():
 
     assert response.status_code == 500
     assert response.json()["error"]["code"] == "SERVICE_ERROR"
+    assert response.json()["error"]["message"] == "The answer service is temporarily unavailable. Please try again later."
+    assert "provider down" not in response.text
     assert response.json()["error"]["request_id"] == response.headers["X-Request-ID"]
 
 
@@ -81,3 +83,28 @@ def test_rest_query_maps_validation_errors_to_controlled_payload():
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
     assert response.json()["error"]["request_id"] == response.headers["X-Request-ID"]
+
+
+@pytest.mark.api
+def test_rest_query_does_not_retry_internal_type_errors():
+    from src.api.dependencies import get_application_service
+    from src.api.main import create_app
+
+    class BrokenService:
+        def __init__(self):
+            self.calls = 0
+
+        def answer(self, query, session_id=None, request_id=None, disclaimer_acknowledged=True):
+            self.calls += 1
+            raise TypeError("request_id caused an internal failure")
+
+    service = BrokenService()
+    app = create_app()
+    app.dependency_overrides[get_application_service] = lambda: service
+
+    with TestClient(app) as client:
+        response = client.post("/api/v1/query", json={"query": "Is it compliant?"})
+
+    assert response.status_code == 500
+    assert service.calls == 1
+    assert "request_id caused" not in response.text

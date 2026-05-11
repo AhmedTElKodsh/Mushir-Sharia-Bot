@@ -18,6 +18,9 @@ from src.chatbot.session_manager import SessionManager
 from src.observability.metrics import MetricsRegistry
 
 
+INFRA_FALLBACK_MESSAGE = "configured backend unavailable; falling back to local runtime"
+
+
 def parse_cors_origins(value: str) -> List[str]:
     """Parse CORS origins without evaluating environment-provided code."""
     try:
@@ -53,7 +56,7 @@ def _build_session_manager():
 
             return RedisSessionManager(expiry_minutes=int(os.getenv("SESSION_EXPIRY_MINUTES", "30")))
         except Exception as exc:
-            print(f"Redis session store unavailable, falling back to memory: {exc}")
+            print(_safe_fallback_message("Redis session store"))
             return SessionManager(expiry_minutes=int(os.getenv("SESSION_EXPIRY_MINUTES", "30")))
     return SessionManager(expiry_minutes=int(os.getenv("SESSION_EXPIRY_MINUTES", "30")))
 
@@ -67,7 +70,7 @@ def _build_rate_limiter():
 
             return RedisRateLimiter(limit=limit, window_seconds=window_seconds)
         except Exception as exc:
-            print(f"Redis rate limiter unavailable, falling back to memory: {exc}")
+            print(_safe_fallback_message("Redis rate limiter"))
             return InMemoryRateLimiter(limit=limit, window_seconds=window_seconds)
     return InMemoryRateLimiter(limit=limit, window_seconds=window_seconds)
 
@@ -79,7 +82,7 @@ def _build_audit_store():
 
             return PostgresAuditStore()
         except Exception as exc:
-            print(f"PostgreSQL audit store unavailable, falling back to null audit store: {exc}")
+            print(_safe_fallback_message("PostgreSQL audit store"))
             pass
     from src.storage.audit_store import NullAuditStore
 
@@ -93,7 +96,7 @@ def _build_cache_store():
 
             return RedisCacheStore()
         except Exception as exc:
-            print(f"Redis cache unavailable, falling back to memory cache: {exc}")
+            print(_safe_fallback_message("Redis cache"))
     from src.storage.cache import InMemoryCacheStore
 
     return InMemoryCacheStore()
@@ -107,6 +110,10 @@ def _infrastructure_status(app: FastAPI):
         "audit_store": type(app.state.audit_store).__name__,
         "cache_store": type(app.state.cache_store).__name__,
     }
+
+
+def _safe_fallback_message(component: str) -> str:
+    return f"{component}: {INFRA_FALLBACK_MESSAGE}"
 
 
 def create_app() -> FastAPI:
@@ -328,6 +335,7 @@ CHAT_HTML = """
       addMessage("user", query);
       send.disabled = true;
       send.textContent = "Streaming...";
+      let thinkingMessage = null;
       try {
         const response = await fetch("/api/v1/query/stream", {
           method: "POST",
@@ -337,17 +345,30 @@ CHAT_HTML = """
         const events = parseSse(await response.text());
         for (const item of events) {
           const data = item.data || {};
-          if (item.type === "started") addMessage("event", "Thinking...");
-          if (item.type === "retrieval") addMessage("event", `Confidence ${Number(data.confidence || 0).toFixed(2)}`);
+          if (item.type === "started") {
+            thinkingMessage = addMessage("event", "Thinking...");
+          }
+          if (item.type === "retrieval") {
+            if (thinkingMessage) thinkingMessage.remove();
+            thinkingMessage = null;
+            addMessage("event", `Confidence ${Number(data.confidence || 0).toFixed(2)}`);
+          }
           if (item.type === "token") addMessage("assistant", data.text);
-          if (item.type === "error") addMessage("assistant", data.message);
+          if (item.type === "error") {
+            if (thinkingMessage) thinkingMessage.remove();
+            thinkingMessage = null;
+            addMessage("assistant", data.message);
+          }
           if (item.type === "done") {
+            if (thinkingMessage) thinkingMessage.remove();
+            thinkingMessage = null;
             if (data.clarification_question) addMessage("assistant", data.clarification_question);
             context = data.metadata || context;
             addMessage("event", `Complete - ${data.status}`);
           }
         }
       } catch (error) {
+        if (thinkingMessage) thinkingMessage.remove();
         addMessage("assistant", `Request failed: ${error.message}`);
       } finally {
         send.disabled = false;

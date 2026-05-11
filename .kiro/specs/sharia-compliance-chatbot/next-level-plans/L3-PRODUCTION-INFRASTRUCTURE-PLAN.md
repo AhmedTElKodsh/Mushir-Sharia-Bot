@@ -1,5 +1,7 @@
 # L3 Persistence, Evaluation, and Observability Plan
 
+> **Historical status:** This plan is retained as the original L3 execution plan. The implemented runtime now includes Redis-backed session/rate-limit/cache adapters, PostgreSQL audit storage, metrics, readiness infrastructure reporting, Qdrant adapter/ingest support, and a retrieval evaluation harness. Remaining unchecked boxes in this document are historical work items unless they are re-promoted in the active L5 readiness plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to implement this plan task-by-task. Do not start L3 until the L2 verification gate passes.
 
 **Goal:** Add restart-safe infrastructure and measurable quality gates without changing the L2 API contract.
@@ -202,4 +204,3 @@ L3 is done when:
 - Eval baseline exists and catches known bad cases.
 - Logs/metrics expose real quality and service risks.
 - Qdrant is either justified with parity results or explicitly deferred.
-

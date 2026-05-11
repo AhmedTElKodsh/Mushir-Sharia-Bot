@@ -65,3 +65,5 @@ def test_query_stream_returns_error_event_for_service_failure():
     events = _events(response.text)
     assert [event["event"] for event in events] == ["started", "error"]
     assert events[-1]["data"]["code"] == "SERVICE_ERROR"
+    assert events[-1]["data"]["message"] == "The answer service is temporarily unavailable. Please try again later."
+    assert "provider down" not in response.text

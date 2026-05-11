@@ -72,7 +72,7 @@ class GeminiClient:
         sleep: Callable[[float], None] = time.sleep,
     ):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+        self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         self.temperature = temperature
         self.max_retries = max_retries
         self.timeout_seconds = timeout_seconds

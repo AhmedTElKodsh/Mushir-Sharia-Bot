@@ -21,7 +21,7 @@ _bmad-custom-backup-temp
 chroma_db
 data
 logs
-gemini-gem-prototype
+gemini-gem-prototype/**/*.pdf
 
 *.pyc
 *.pyo

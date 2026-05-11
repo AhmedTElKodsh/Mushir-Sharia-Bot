@@ -1,5 +1,7 @@
 # L2 Minimal API and Optional SSE Plan
 
+> **Historical status:** This plan is retained as the original L2 execution plan. The implemented runtime now includes FastAPI app-factory/lifespan setup, `/api/v1/query`, `/api/v1/query/stream`, `/chat`, request IDs, validation envelopes, rate limiting, and API/SSE tests. Remaining unchecked boxes in this document are historical work items unless they are re-promoted in the active L5 readiness plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to implement this plan task-by-task. Do not start L2 until the L1 verification gate passes.
 
 **Goal:** Expose the L1 application service through a minimal FastAPI API. Add SSE only after the normal REST query path is stable.
@@ -176,4 +178,3 @@ L2 is done when:
 - `/query` is stable and tested.
 - SSE is implemented only if needed and tested.
 - WebSocket, Redis, Qdrant, Postgres, and auth are deferred.
-

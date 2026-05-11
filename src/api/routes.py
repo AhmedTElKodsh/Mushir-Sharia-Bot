@@ -1,5 +1,6 @@
 import json
 import uuid
+from inspect import Parameter, signature
 from typing import Any, Dict
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, Response
@@ -15,6 +16,7 @@ from src.models.ruling import AnswerContract
 from src.models.session import SessionState
 
 router = APIRouter()
+SAFE_SERVICE_ERROR_MESSAGE = "The answer service is temporarily unavailable. Please try again later."
 
 
 @router.post("/sessions", response_model=Dict[str, str])
@@ -67,7 +69,7 @@ async def query(
         answer = _answer_service(application_service, payload, request.state.request_id)
     except Exception as exc:
         request_id = request.state.request_id
-        return _error_response("SERVICE_ERROR", str(exc), request_id, status_code=500)
+        return _error_response("SERVICE_ERROR", _service_error_message(exc), request_id, status_code=500)
     return _query_response(answer)
 
 
@@ -102,13 +104,22 @@ async def login(username: str = Body(...), password: str = Body(...)):
 @router.get("/compliance/disclaimer")
 async def compliance_disclaimer():
     return {
-        "version": "l4-disclaimer-v1",
+        "version": "l5-bilingual-disclaimer-v1",
         "requires_acknowledgement": True,
+        "default_language": "en",
+        "supported_languages": ["en", "ar"],
         "text": (
             "Mushir provides informational guidance grounded in retrieved AAOIFI excerpts. "
             "It does not provide a binding Sharia ruling, fatwa, legal advice, or financial advice. "
             "Consult a qualified Sharia scholar before relying on any conclusion."
         ),
+        "translations": {
+            "ar": (
+                "يقدم مشير إرشادا معلوماتيا مستندا إلى المقاطع المسترجعة من معايير أيوفي. "
+                "ولا يقدم حكما شرعيا ملزما أو فتوى أو نصيحة قانونية أو مالية. "
+                "استشر عالما شرعيا مؤهلا قبل الاعتماد على أي نتيجة."
+            )
+        },
     }
 
 
@@ -117,26 +128,20 @@ def _query_response(answer: AnswerContract) -> QueryResponse:
 
 
 def _answer_service(application_service: ApplicationService, payload: QueryRequest, request_id: str):
-    try:
-        return application_service.answer(
-            payload.query,
-            session_id=payload.resolved_session_id(),
-            request_id=request_id,
-            disclaimer_acknowledged=bool(payload.context.get("disclaimer_acknowledged", True)),
-        )
-    except TypeError as exc:
-        if "request_id" not in str(exc) and "disclaimer_acknowledged" not in str(exc):
-            raise
-        try:
-            return application_service.answer(
-                payload.query,
-                session_id=payload.resolved_session_id(),
-                request_id=request_id,
-            )
-        except TypeError as nested_exc:
-            if "request_id" not in str(nested_exc):
-                raise
-            return application_service.answer(payload.query, session_id=payload.resolved_session_id())
+    optional_kwargs = {
+        "session_id": payload.resolved_session_id(),
+        "request_id": request_id,
+        "disclaimer_acknowledged": bool(payload.context.get("disclaimer_acknowledged", True)),
+    }
+    answer_signature = signature(application_service.answer)
+    params = answer_signature.parameters
+    accepts_kwargs = any(param.kind == Parameter.VAR_KEYWORD for param in params.values())
+    kwargs = {
+        key: value
+        for key, value in optional_kwargs.items()
+        if accepts_kwargs or key in params
+    }
+    return application_service.answer(payload.query, **kwargs)
 
 
 def _error_response(code: str, message: str, request_id: str, status_code: int):
@@ -144,6 +149,10 @@ def _error_response(code: str, message: str, request_id: str, status_code: int):
         status_code=status_code,
         content=ErrorResponse(code=code, message=message, request_id=request_id).model_dump(),
     )
+
+
+def _service_error_message(exc: Exception) -> str:
+    return SAFE_SERVICE_ERROR_MESSAGE
 
 
 def _rate_limit_key(request: Request) -> str:
@@ -191,7 +200,7 @@ def _query_events(application_service: ApplicationService, payload: QueryRequest
             "error",
             ErrorResponse(
                 code="SERVICE_ERROR",
-                message=str(exc),
+                message=_service_error_message(exc),
                 request_id=request_id,
             ).model_dump()["error"],
         )

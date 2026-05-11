@@ -34,7 +34,7 @@ L0 has been updated to use **Google Gemini** instead of OpenAI/Anthropic.
 Your `.env` file is now set up with:
 
 ```env
-GEMINI_API_KEY=AIzaSyBWy14J6SnLqmb2MHAmcT46sNV2ittDbLg
+GEMINI_API_KEY=your-gemini-api-key-here
 EMBED_MODEL=sentence-transformers/all-mpnet-base-v2
 CHROMA_DIR=./chroma_db
 CORPUS_DIR=./gemini-gem-prototype/knowledge-base
@@ -77,13 +77,13 @@ model = genai.GenerativeModel(
 1. Visit: https://makersuite.google.com/app/apikey
 2. Sign in with Google account
 3. Click "Create API Key"
-4. Copy the key (starts with `AIza...`)
+4. Copy the key from Google AI Studio
 
 ### Your Current Key
 
 ✅ Already configured in `.env`:
 ```
-GEMINI_API_KEY=AIzaSyBWy14J6SnLqmb2MHAmcT46sNV2ittDbLg
+GEMINI_API_KEY=your-gemini-api-key-here
 ```
 
 ### Security Best Practices
