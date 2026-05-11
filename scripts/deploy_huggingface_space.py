@@ -14,7 +14,7 @@ import argparse
 import os
 from pathlib import Path
 
-from huggingface_hub import HfApi
+from huggingface_hub import CommitOperationAdd, HfApi
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,6 +60,19 @@ ALLOW_PATTERNS = [
 ]
 
 
+UPLOAD_PATHS = [
+    Path("Dockerfile"),
+    Path("README.md"),
+    Path("requirements.txt"),
+    Path("src"),
+    Path("config"),
+    Path("gemini-gem-prototype") / "knowledge-base",
+    Path("chroma_db_multilingual"),
+]
+
+BATCH_SIZE_BYTES = 25 * 1024 * 1024
+
+
 SPACE_VARIABLES = {
     "GEMINI_MODEL": "gemini-2.5-flash",
     "VECTOR_DB_TYPE": "chroma",
@@ -82,6 +95,63 @@ def require_env(name: str) -> str:
     if not value:
         raise SystemExit(f"Missing required environment variable: {name}")
     return value
+
+
+def iter_upload_files() -> list[Path]:
+    files: list[Path] = []
+    for upload_path in UPLOAD_PATHS:
+        full_path = ROOT / upload_path
+        if full_path.is_file():
+            files.append(full_path)
+        elif full_path.is_dir():
+            files.extend(path for path in full_path.rglob("*") if path.is_file())
+    return files
+
+
+def upload_in_batches(api: HfApi, repo_id: str, commit_message: str) -> None:
+    uploaded = set(api.list_repo_files(repo_id=repo_id, repo_type="space"))
+    batch: list[Path] = []
+    batch_size = 0
+    batch_index = 1
+
+    def flush() -> None:
+        nonlocal batch, batch_size, batch_index
+        if not batch:
+            return
+        operations = [
+            CommitOperationAdd(
+                path_in_repo=path.relative_to(ROOT).as_posix(),
+                path_or_fileobj=str(path),
+            )
+            for path in batch
+        ]
+        print(
+            f"Uploading batch {batch_index}: {len(batch)} files, "
+            f"{batch_size / 1024 / 1024:.1f} MB",
+            flush=True,
+        )
+        api.create_commit(
+            repo_id=repo_id,
+            repo_type="space",
+            operations=operations,
+            commit_message=f"{commit_message} ({batch_index})",
+            num_threads=8,
+        )
+        batch = []
+        batch_size = 0
+        batch_index += 1
+
+    for path in iter_upload_files():
+        if path.relative_to(ROOT).as_posix() in uploaded:
+            continue
+        size = path.stat().st_size
+        if batch and batch_size + size > BATCH_SIZE_BYTES:
+            flush()
+        batch.append(path)
+        batch_size += size
+        if size >= BATCH_SIZE_BYTES:
+            flush()
+    flush()
 
 
 def main() -> None:
@@ -118,14 +188,7 @@ def main() -> None:
     for key, value in SPACE_VARIABLES.items():
         api.add_space_variable(repo_id=args.repo_id, key=key, value=value)
 
-    api.upload_folder(
-        repo_id=args.repo_id,
-        repo_type="space",
-        folder_path=str(ROOT),
-        allow_patterns=ALLOW_PATTERNS,
-        ignore_patterns=IGNORE_PATTERNS,
-        commit_message=args.commit_message,
-    )
+    upload_in_batches(api, args.repo_id, args.commit_message)
 
     print(f"Uploaded Space: https://huggingface.co/spaces/{args.repo_id}")
     print(f"Public app URL: https://{args.repo_id.replace('/', '-')}.hf.space")
