@@ -117,19 +117,24 @@ class GeminiClient:
                 "google-genai is required for Gemini. Install dependencies from requirements.txt."
             ) from exc
 
-        client = genai.Client(api_key=self.api_key)
-        config = types.GenerateContentConfig(
-            temperature=self.temperature,
-            top_p=0.95,
-            top_k=40,
-            max_output_tokens=2048,
-        )
-        self._model = _GoogleGenAIModel(
-            client=client,
-            model_name=self.model_name,
-            config=config,
-        )
-        return self._model
+        try:
+            client = genai.Client(api_key=self.api_key)
+            config = types.GenerateContentConfig(
+                temperature=self.temperature,
+                top_p=0.95,
+                top_k=40,
+                max_output_tokens=2048,
+            )
+            self._model = _GoogleGenAIModel(
+                client=client,
+                model_name=self.model_name,
+                config=config,
+            )
+            return self._model
+        except Exception as exc:
+            raise LLMConfigurationError(
+                f"Failed to initialize Gemini client. Check API key validity: {exc}"
+            ) from exc
 
     @staticmethod
     def _is_rate_limit(exc: Exception) -> bool:
