@@ -21,7 +21,7 @@ class FakeLLM:
         self.answer = answer
         self.prompts = []
 
-    def generate(self, prompt):
+    def generate(self, prompt, **kwargs):
         self.prompts.append(prompt)
         return self.answer
 

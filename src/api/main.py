@@ -158,10 +158,13 @@ def create_app() -> FastAPI:
         "cache_store": "not_initialized",
     }
 
+    _cors_origins = parse_cors_origins(os.getenv("CORS_ORIGINS", '["*"]'))
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=parse_cors_origins(os.getenv("CORS_ORIGINS", '["*"]')),
-        allow_credentials=True,
+        allow_origins=_cors_origins,
+        # credentials=True + wildcard origin is rejected by all browsers (CORS spec);
+        # only enable when a specific origin list is configured.
+        allow_credentials="*" not in _cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -184,7 +187,11 @@ def create_app() -> FastAPI:
             )
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
+        # Allow HuggingFace to embed via iframe; omit X-Frame-Options so the
+        # CSP frame-ancestors directive below takes precedence (RFC 7034 §2).
+        response.headers["Content-Security-Policy"] = (
+            "frame-ancestors 'self' https://huggingface.co https://*.hf.space"
+        )
         response.headers["X-XSS-Protection"] = "1; mode=block"
         app.state.metrics.record(
             path=request.url.path,

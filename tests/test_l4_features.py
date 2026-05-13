@@ -61,9 +61,9 @@ def test_application_service_uses_response_cache_for_identical_query():
         def __init__(self):
             self.calls = 0
 
-        def generate(self, prompt):
+        def generate(self, prompt, **kwargs):
             self.calls += 1
-            return "COMPLIANT: Supported by AAOIFI [FAS-01 Â§1]."
+            return "COMPLIANT: Supported by AAOIFI [FAS-01 §1]."
 
     retriever = Retriever()
     llm = LLM()

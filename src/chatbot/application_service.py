@@ -119,17 +119,27 @@ class ApplicationService:
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
 
-        prompt = self._build_prompt(
-            cleaned_query,
-            chunks,
-            history=self._history(session_id),
-            response_language=response_language,
-        )
         if self.llm_client is None:
             from src.chatbot.llm_client import GeminiClient
 
             self.llm_client = GeminiClient()
-        answer = self.llm_client.generate(prompt)
+        
+        if hasattr(self.prompt_builder, 'build_messages'):
+            system_prompt, user_prompt = self.prompt_builder.build_messages(
+                cleaned_query,
+                chunks,
+                history=self._history(session_id),
+                response_language=response_language,
+            )
+            answer = self.llm_client.generate(user_prompt, system_prompt=system_prompt)
+        else:
+            prompt = self._build_prompt(
+                cleaned_query,
+                chunks,
+                history=self._history(session_id),
+                response_language=response_language,
+            )
+            answer = self.llm_client.generate(prompt)
         citations = self.citation_validator.validate(answer, chunks)
         status = self._status_from_answer(answer, citations)
         if status == ComplianceStatus.INSUFFICIENT_DATA and not citations:
@@ -167,13 +177,7 @@ class ApplicationService:
         history: Optional[List[Dict[str, str]]] = None,
         response_language: str = "en",
     ) -> str:
-        """Build the prompt, preferring the new build_messages() API when available."""
-        # Use new role-separated API if the builder supports it
-        if hasattr(self.prompt_builder, 'build_messages'):
-            return self.prompt_builder.build(
-                query, chunks, history=history, response_language=response_language
-            )
-        # Legacy fallback
+        """Build a single-string prompt for callers without build_messages() support."""
         build_signature = signature(self.prompt_builder.build)
         params = build_signature.parameters
         accepts_kwargs = any(param.kind == Parameter.VAR_KEYWORD for param in params.values())
@@ -185,12 +189,6 @@ class ApplicationService:
         }
         return self.prompt_builder.build(query, chunks, **supported_kwargs)
 
-    def _generate_answer(self, prompt: str) -> str:
-        """Call the LLM, passing system and user content as separate messages when possible."""
-        if hasattr(self.llm_client, 'generate') and hasattr(self.prompt_builder, 'build_messages'):
-            # Not yet wired: for now, full prompt goes as user message (system already embedded)
-            return self.llm_client.generate(prompt)
-        return self.llm_client.generate(prompt)
 
     def _audit(
         self,
@@ -250,7 +248,7 @@ class ApplicationService:
 
     @staticmethod
     def _requires_disclaimer(disclaimer_acknowledged: bool) -> bool:
-        return os.getenv("REQUIRE_DISCLAIMER_ACK", "true").lower() == "true" and not disclaimer_acknowledged
+        return os.getenv("REQUIRE_DISCLAIMER_ACK", "false").lower() == "true" and not disclaimer_acknowledged
 
     @staticmethod
     def _contract_from_dict(data: Dict[str, Any]) -> AnswerContract:
@@ -375,7 +373,7 @@ class ApplicationService:
         upper = answer.upper()
         if "INSUFFICIENT" in upper or not citations:
             return ComplianceStatus.INSUFFICIENT_DATA
-        if "PARTIALLY_COMPLIANT" in upper or "PARTIALLY COMPLIANT" in upper or "PARTIALLY" in upper:
+        if "PARTIALLY_COMPLIANT" in upper or "PARTIALLY COMPLIANT" in upper:
             return ComplianceStatus.PARTIALLY_COMPLIANT
         if "NON_COMPLIANT" in upper or "NON-COMPLIANT" in upper or "NON COMPLIANT" in upper:
             return ComplianceStatus.NON_COMPLIANT

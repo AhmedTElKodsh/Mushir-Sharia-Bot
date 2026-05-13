@@ -68,8 +68,8 @@ def test_application_service_rewrites_unsupported_answer_to_insufficient_data():
     class LLM:
         model_name = "fake"
 
-        def generate(self, prompt):
-            return "COMPLIANT: This is allowed under [FAS-99 §9]."
+        def generate(self, prompt, **kwargs):
+            return "COMPLIANT: This is allowed under [FAS-99]."
 
     result = ApplicationService(retriever=Retriever(), llm_client=LLM()).answer("Is this allowed?")
 
@@ -219,9 +219,9 @@ def test_application_service_bypasses_response_cache_in_eval_mode(monkeypatch):
         def __init__(self):
             self.calls = 0
 
-        def generate(self, prompt):
+        def generate(self, prompt, **kwargs):
             self.calls += 1
-            return "COMPLIANT: Supported by [FAS-01 §1]."
+            return "COMPLIANT: Supported by [FAS-01]."
 
     llm = LLM()
     service = ApplicationService(

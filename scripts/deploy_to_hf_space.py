@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 try:
-    from huggingface_hub import HfApi, login, HfHubHTTPError
+    from huggingface_hub import HfApi, login
     from dotenv import load_dotenv
 except ImportError:
     print("❌ Required packages not installed")
@@ -79,7 +79,7 @@ def authenticate_hf(token: str) -> None:
     try:
         login(token=token, add_to_git_credential=False)
         logger.info("✅ Authenticated successfully")
-    except HfHubHTTPError as e:
+    except Exception as e:
         logger.error(f"Authentication failed: {e}")
         print("\nTroubleshooting:")
         print("1. Verify your token is valid")
@@ -139,7 +139,7 @@ def upload_to_space(
         )
         logger.info("✅ Upload successful!")
         
-    except HfHubHTTPError as e:
+    except Exception as e:
         logger.error(f"Upload failed: {e}")
         print("\nTroubleshooting:")
         print("1. Verify your HF_TOKEN has write access")

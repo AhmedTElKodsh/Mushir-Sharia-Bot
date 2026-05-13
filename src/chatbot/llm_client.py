@@ -35,17 +35,18 @@ class LLMClient:
         else:
             raise ValueError(f"Unsupported provider: {provider}")
 
-    def generate(self, system_prompt: str, user_prompt: str) -> str:
+    def generate(self, prompt: str, system_prompt: Optional[str] = None, **kwargs) -> str:
         """Generate response from LLM."""
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
         for attempt in range(self.max_retries):
             try:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     temperature=self.temperature,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
+                    messages=messages,
                 )
                 return response.choices[0].message.content
             except Exception as e:
@@ -83,7 +84,7 @@ class OpenRouterClient:
         """Generate a response.
 
         Args:
-            prompt: The user message content.
+            prompt: The user message content (must be text only).
             system_prompt: Optional system-role instructions sent as a separate
                 message before the user turn for better instruction following.
         """
@@ -91,8 +92,8 @@ class OpenRouterClient:
         last_error = None
         messages = []
         if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+            messages.append({"role": "system", "content": str(system_prompt)})
+        messages.append({"role": "user", "content": str(prompt)})
         for attempt in range(self.max_retries):
             try:
                 response = client.chat.completions.create(
@@ -109,8 +110,15 @@ class OpenRouterClient:
                 raise
             except Exception as exc:
                 last_error = exc
+                error_str = str(exc).lower()
                 if self._is_rate_limit(exc):
                     raise LLMRateLimitError(f"OpenRouter quota or rate limit error: {exc}") from exc
+                if "image" in error_str and "does not support" in error_str:
+                    raise LLMResponseError(
+                        f"OpenRouter rejected request with image-related error. "
+                        f"This usually means the prompt contains non-text content. "
+                        f"Verify the query is plain text. Original error: {exc}"
+                    ) from exc
                 if attempt < self.max_retries - 1:
                     self._sleep(2 ** attempt)
                 else:

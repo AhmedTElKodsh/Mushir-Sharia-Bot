@@ -13,9 +13,10 @@ DEFAULT_EMBED_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-
 DEFAULT_CHROMA_DIR = "./chroma_db_multilingual"
 REQUIRED_CHROMA_LANGUAGES = ("ar", "en")
 DOMAIN_QUERY_EXPANSIONS = {
-    "murabaha": ("murabaha", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
-    "مرابحة": ("murabaha", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
-    "المرابحة": ("murabaha", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
+    "murabaha": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
+    "murabahah": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
+    "مرابحة": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
+    "المرابحة": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
     "ijarah": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
     "ijara": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
     "إجارة": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),

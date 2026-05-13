@@ -18,14 +18,14 @@ ENV VECTOR_DB_TYPE=chroma \
     CHROMA_DIR=/app/chroma_db_multilingual \
     EMBED_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2 \
     REQUIRE_ARABIC_RETRIEVAL=true \
-    GEMINI_MODEL=gemini-2.5-flash \
+    OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free \
     API_HOST=0.0.0.0 \
-    API_PORT=8000
+    API_PORT=7860
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:7860/health || exit 1
 
-EXPOSE 8000
+EXPOSE 7860
 
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "7860"]
