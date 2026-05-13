@@ -145,7 +145,7 @@ def test_prompt_builder_adds_arabic_response_instruction():
         response_language="ar",
     )
 
-    assert "Respond in clear Arabic" in prompt
+    assert "Respond in clear Modern Standard Arabic" in prompt
     assert "[1] FAS-01 §1 (score: 0.91)" in prompt
 
 
@@ -165,27 +165,36 @@ def test_citation_validator_keeps_only_citations_backed_by_retrieved_chunks():
 
 @pytest.mark.unit
 def test_gemini_client_raises_clear_error_for_empty_response():
+    """OpenRouterClient (aliased as GeminiClient) raises LLMResponseError on empty response."""
     from src.chatbot.llm_client import GeminiClient, LLMResponseError
 
-    class EmptyModel:
-        def generate_content(self, prompt, request_options=None):
-            class Response:
-                text = ""
+    class _EmptyChoice:
+        message = type("Msg", (), {"content": ""})()  # content is empty string
 
-            return Response()
+    class _EmptyResponse:
+        choices = [_EmptyChoice()]
 
-    client = GeminiClient(api_key="test-key", model=EmptyModel(), sleep=lambda _: None)
+    class FakeOpenAIClient:
+        def __init__(self):
+            self.chat = self
+            self.completions = self
+
+        def create(self, **kwargs):
+            return _EmptyResponse()
+
+    client = GeminiClient(api_key="test-key", client=FakeOpenAIClient(), sleep=lambda _: None)
 
     with pytest.raises(LLMResponseError, match="empty response"):
         client.generate("hello")
 
 
 @pytest.mark.unit
-def test_gemini_client_defaults_to_supported_flash_model(monkeypatch):
+def test_openrouter_client_defaults_to_correct_model(monkeypatch):
+    """GeminiClient alias defaults to the OpenRouter model when OPENROUTER_MODEL is not set."""
     from src.chatbot.llm_client import GeminiClient
 
-    monkeypatch.delenv("GEMINI_MODEL", raising=False)
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
 
-    client = GeminiClient(api_key="test-key", model=object())
+    client = GeminiClient(api_key="test-key")
 
-    assert client.model_name == "gemini-2.5-flash"
+    assert client.model_name == "google/gemini-2.0-flash-exp:free"

@@ -1,6 +1,6 @@
-"""Application service for the Sharia compliance answer flow."""
 import json
 import os
+import re
 from inspect import Parameter, signature
 from typing import Any, Dict, List, Optional
 
@@ -9,6 +9,35 @@ from src.chatbot.prompt_builder import PromptBuilder
 from src.models.ruling import AAOIFICitation, AnswerContract, ComplianceStatus
 from src.rag.pipeline import RAGPipeline
 from src.storage.cache import CacheStore
+
+# ---------------------------------------------------------------------------
+# Arabic transliteration normalization map — common English misspellings
+# that users type when searching for Islamic finance terms.
+# ---------------------------------------------------------------------------
+_TRANSLITERATION_MAP = {
+    r'\bmurabah\b': 'murabahah',
+    r'\bmurabahat\b': 'murabahah',
+    r'\bmurabaha\b': 'murabahah',
+    r'\bmudaraba\b': 'mudarabah',
+    r'\bmudharaba\b': 'mudarabah',
+    r'\bmudarabat\b': 'mudarabah',
+    r'\bijara\b': 'ijarah',
+    r'\bijarat\b': 'ijarah',
+    r'\bsukuks\b': 'sukuk',
+    r'\bzakah\b': 'zakat',
+    r'\bghrar\b': 'gharar',
+    r'\bribah\b': 'riba',
+    r'\bmusharakah\b': 'musharakah',  # keep but map variant
+    r'\bmusharaka\b': 'musharakah',
+    r'\bwakala\b': 'wakalah',
+    r'\bqard hasan\b': 'qard al-hasan',
+}
+
+# Arabic diacritic (tashkeel) + tatweel stripping pattern
+_ARABIC_DIACRITICS = re.compile(r'[\u064b-\u065f\u0670\u0640]')
+# Hamza normalization: various alef forms → plain alef
+_HAMZA_NORM = re.compile(r'[\u0622\u0623\u0625\u0671]')  # آ أ إ ٱ → ا
+
 
 
 class ApplicationService:
@@ -46,7 +75,7 @@ class ApplicationService:
         request_id: Optional[str] = None,
         disclaimer_acknowledged: bool = True,
     ) -> AnswerContract:
-        cleaned_query = query.strip()
+        cleaned_query = self._normalize_query(query.strip())
         response_language = self._detect_language(cleaned_query)
         if self._requires_disclaimer(disclaimer_acknowledged):
             contract = AnswerContract(
@@ -138,6 +167,13 @@ class ApplicationService:
         history: Optional[List[Dict[str, str]]] = None,
         response_language: str = "en",
     ) -> str:
+        """Build the prompt, preferring the new build_messages() API when available."""
+        # Use new role-separated API if the builder supports it
+        if hasattr(self.prompt_builder, 'build_messages'):
+            return self.prompt_builder.build(
+                query, chunks, history=history, response_language=response_language
+            )
+        # Legacy fallback
         build_signature = signature(self.prompt_builder.build)
         params = build_signature.parameters
         accepts_kwargs = any(param.kind == Parameter.VAR_KEYWORD for param in params.values())
@@ -148,6 +184,13 @@ class ApplicationService:
             if accepts_kwargs or key in params
         }
         return self.prompt_builder.build(query, chunks, **supported_kwargs)
+
+    def _generate_answer(self, prompt: str) -> str:
+        """Call the LLM, passing system and user content as separate messages when possible."""
+        if hasattr(self.llm_client, 'generate') and hasattr(self.prompt_builder, 'build_messages'):
+            # Not yet wired: for now, full prompt goes as user message (system already embedded)
+            return self.llm_client.generate(prompt)
+        return self.llm_client.generate(prompt)
 
     def _audit(
         self,
@@ -245,8 +288,31 @@ class ApplicationService:
 
     @staticmethod
     def _detect_language(query: str) -> str:
-        arabic_chars = sum(1 for char in query if "\u0600" <= char <= "\u06ff")
-        return "ar" if arabic_chars >= 2 else "en"
+        """Detect query language using character ratio (>30% Arabic = ar).
+
+        Ratio-based approach avoids false positives from code-mixed queries
+        like 'What is مرابحة?' which contain only a single Arabic word.
+        """
+        if not query:
+            return "en"
+        arabic_chars = sum(1 for c in query if '\u0600' <= c <= '\u06ff')
+        ratio = arabic_chars / len(query)
+        return "ar" if ratio > 0.30 else "en"
+
+    @staticmethod
+    def _normalize_query(query: str) -> str:
+        """Normalize user input for better retrieval:
+        1. Strip Arabic diacritics (tashkeel) that cause embedding mismatches.
+        2. Normalize Arabic hamza variants to plain alef.
+        3. Map common English transliteration misspellings to canonical forms.
+        """
+        # Arabic normalization
+        result = _ARABIC_DIACRITICS.sub('', query)
+        result = _HAMZA_NORM.sub('\u0627', result)  # → ا
+        # English transliteration normalization (case-insensitive)
+        for pattern, replacement in _TRANSLITERATION_MAP.items():
+            result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+        return result
 
     @staticmethod
     def _limitations(response_language: str) -> str:

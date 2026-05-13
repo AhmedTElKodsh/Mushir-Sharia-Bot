@@ -41,7 +41,7 @@ def test_l5_production_readiness_degrades_without_required_services(monkeypatch)
     from src.api.main import create_app
 
     monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     monkeypatch.delenv("AUTH_TOKEN", raising=False)
 
     with TestClient(create_app()) as client:

@@ -121,7 +121,7 @@ def _readiness_status(app: FastAPI) -> Dict[str, Any]:
     infrastructure = app.state.infrastructure
     checks = {
         "retrieval_configured": infrastructure.get("vector_store") in {"chroma", "qdrant"},
-        "provider_configured": bool(os.getenv("GEMINI_API_KEY")),
+        "provider_configured": bool(os.getenv("OPENROUTER_API_KEY")),
         "auth_configured": bool(os.getenv("AUTH_TOKEN")),
         "durable_session_store": infrastructure.get("session_store") != "SessionManager",
         "durable_rate_limit_store": infrastructure.get("rate_limit_store") != "InMemoryRateLimiter",
@@ -325,11 +325,11 @@ CHAT_HTML = """
   <header><h1>Mushir Sharia Chatbot</h1></header>
   <main>
     <section id="messages" aria-live="polite" aria-label="Chat messages">
-      <div class="message assistant">Ask a compliance question to test the L2 stream.</div>
+      <div class="message assistant">Ask a Sharia compliance question — in English or Arabic. / اسأل سؤالاً عن الامتثال الشرعي باللغة الإنجليزية أو العربية.</div>
     </section>
     <form id="chat-form">
       <div class="controls">
-        <textarea id="prompt" name="prompt" placeholder="Ask Mushir about an Islamic finance transaction...">I want to invest in a company</textarea>
+        <textarea id="prompt" name="prompt" placeholder="Ask Mushir about an Islamic finance transaction... / اسأل مشير عن معاملة مالية إسلامية...">I want to invest in a company</textarea>
         <label>
           <input id="disclaimer" type="checkbox">
           <span>I acknowledge Mushir provides informational guidance only, not a binding Sharia ruling, fatwa, legal advice, or financial advice.</span>
@@ -350,6 +350,16 @@ CHAT_HTML = """
       const node = document.createElement("div");
       node.className = kind === "event" ? "event" : `message ${kind}`;
       node.textContent = text;
+      // Auto-detect Arabic text and apply RTL direction
+      if (kind !== "event") {
+        const arabicChars = (text.match(/[\u0600-\u06ff]/g) || []).length;
+        const ratio = arabicChars / Math.max(text.length, 1);
+        if (ratio > 0.3) {
+          node.setAttribute("dir", "rtl");
+          node.style.textAlign = "right";
+          node.style.fontFamily = "'Noto Sans Arabic', 'Segoe UI', sans-serif";
+        }
+      }
       messages.appendChild(node);
       messages.scrollTop = messages.scrollHeight;
       return node;
@@ -399,7 +409,12 @@ CHAT_HTML = """
           if (item.type === "citation") {
             const standard = data.standard_number || data.document_id || "AAOIFI source";
             const section = data.section_number ? ` §${data.section_number}` : "";
-            addMessage("event", `Citation ${standard}${section}`);
+            const page = data.quote_start > 0 ? `` : "";  // quote_start used as offset proxy
+            const sourceFile = data.document_id && data.document_id !== standard
+              ? ` — ${data.document_id}` : "";
+            const pageNum = (data.section_title && /\\bp\\.?\\s*\\d+/i.test(data.section_title))
+              ? ` (${data.section_title})` : "";
+            addMessage("event", `📖 ${standard}${section}${pageNum}${sourceFile}`);
           }
           if (item.type === "error") {
             if (thinkingMessage) thinkingMessage.remove();

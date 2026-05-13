@@ -16,7 +16,7 @@ RAG-based Islamic finance compliance analysis system using AAOIFI FAS standards.
 
 - **AAOIFI FAS Standards**: Acquires and indexes Accounting Standards
 - **RAG Pipeline**: Semantic search with Chroma vector database
-- **Compliance Analysis**: LLM-powered rulings with citations (Google Generative AI)
+- **Compliance Analysis**: LLM-powered rulings with citations (OpenRouter API)
 - **Semantic Chunking**: LangChain text splitters for legal/financial documents
 
 ## Quick Start
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 # Set up environment
 cp .env.example .env
-# Edit .env with your API key (GOOGLE_API_KEY)
+# Edit .env with your API key (OPENROUTER_API_KEY)
 
 # Convert AAOIFI PDFs to Markdown
 python scripts/convert_pdf_to_markdown.py --input-dir data/pdfs/ --output-dir data/markdown/
@@ -60,7 +60,11 @@ scripts/
 ├── ingest.py                     # Ingest markdown files into ChromaDB
 ├── convert_pdf_to_markdown.py    # Convert AAOIFI PDFs to Markdown format
 ├── convert_aaoifi_to_markdown.py # AAOIFI-specific converter with metadata
+├── test_space_query.py           # Test deployed Hugging Face Space endpoints
+├── deploy_to_hf_space.py         # Deploy application to Hugging Face Space
 └── download_*.py                 # Various download utilities
+
+test_bot.py                       # End-to-end API testing script
 
 data/
 ├── raw/            # Raw AAOIFI PDF files
@@ -72,25 +76,29 @@ data/
 Create a `.env` file with:
 
 ```bash
-# LLM Provider
-GOOGLE_API_KEY=your_google_api_key_here
+# LLM Configuration - OpenRouter
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free
 
 # Vector Database
 CHROMA_PERSIST_DIRECTORY=./data/chroma_db
-CHROMA_DIR=./chroma_db
+CHROMA_DIR=./chroma_db_multilingual
 
 # Corpus Location
-CORPUS_DIR=./data/aaoifi_md
+CORPUS_DIR=./gemini-gem-prototype/knowledge-base
 
 # Embedding Model
-EMBEDDING_MODEL=sentence-transformers/all-mpnet-base-v2
-EMBED_MODEL=sentence-transformers/all-mpnet-base-v2
+EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+EMBED_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2
+
+# Hugging Face (for deployment)
+HF_TOKEN=your_huggingface_token_here
 ```
 
 ## Requirements
 
 - Python 3.9+ (minimum) / Python 3.11+ (recommended for better performance)
-- Google Generative AI API key
+- OpenRouter API key (supports multiple LLM providers including Gemini, GPT-4, Claude)
 - ~2GB disk space for embedding model (sentence-transformers)
 
 ## Scope
@@ -101,6 +109,8 @@ Covers AAOIFI FAS (Financial Accounting Standards) series only. Does NOT include
 
 ## Testing
 
+### Unit Tests
+
 ```bash
 # Run all tests
 pytest tests/ -v
@@ -110,12 +120,75 @@ pytest tests/test_rag_pipeline.py -v
 pytest tests/test_semantic_chunking.py -v
 ```
 
+### End-to-End API Testing
+
+Test the running API server with the quick test script:
+
+```bash
+# Ensure the server is running first
+# Then run the end-to-end test
+python test_bot.py
+```
+
+**Features:**
+- ✅ Health check endpoint (`/health`)
+- 📊 Readiness check with infrastructure status (`/ready`)
+- 🔍 Real compliance query test (`/api/v1/query`)
+- Displays answer, citations, and response metadata
+- 30-second timeout with error handling
+
+**Expected Output:**
+```
+============================================================
+🧪 Mushir Sharia Bot - End-to-End Test
+============================================================
+
+✅ Health check: {'status': 'healthy'}
+
+📊 Readiness check:
+  Status: ready
+  Level: L2
+  Infrastructure:
+    - vector_db: ready
+    - llm: ready
+    - embedding_model: ready
+
+🔍 Testing query: I want to invest in a company that produces halal food...
+
+✅ Query successful!
+
+📝 Answer:
+  Based on AAOIFI standards...
+
+📚 Citations: 3
+  Status: complete
+
+  First citation:
+    - Document: FAS-21
+    - Standard: FAS-21
+    - Score: 0.856
+
+============================================================
+✅ Testing complete!
+============================================================
+
+💡 Next steps:
+  1. Open browser: http://127.0.0.1:8000/chat
+  2. Try the interactive chat interface
+  3. Check server logs for any errors
+```
+
+**Prerequisites:**
+- Server must be running on `http://127.0.0.1:8000`
+- Vector database must be populated (run `python scripts/ingest.py`)
+- Environment variables configured in `.env`
+
 ## Core Dependencies
 
 - **sentence-transformers** (>=2.2.0): Generate embeddings for semantic search
 - **chromadb** (>=0.4.22): Vector database for storing and retrieving document chunks
 - **langchain-text-splitters** (>=0.0.1): Semantic text chunking for legal/financial documents
-- **google-generativeai** (>=0.3.0): Google Generative AI (Gemini) for compliance analysis
+- **openai** (>=1.0.0): OpenAI-compatible client for OpenRouter API access
 - **python-dotenv** (>=1.0.0): Environment variable management
 - **pyyaml** (>=6.0): YAML configuration parsing
 - **pytest** (>=7.4.0): Testing framework
@@ -214,7 +287,7 @@ python scripts/convert_aaoifi_to_markdown.py
 This project is currently in **Phase 3: RAG Pipeline Development**. The following components are implemented or in progress:
 
 - ✅ Core dependencies installed (sentence-transformers, chromadb, langchain-text-splitters)
-- ✅ LLM provider support (Google Generative AI)
+- ✅ LLM provider support (OpenRouter API with multiple model options)
 - ✅ PDF to Markdown conversion scripts
 - 🚧 Semantic chunking implementation
 - 🚧 Vector database setup and indexing
@@ -263,6 +336,108 @@ The project follows a 4-phase implementation approach:
 5. **Phase 5: Operations** ⏳ - API deployment, monitoring, documentation
 
 See `.kiro/specs/sharia-compliance-chatbot/tasks.md` for detailed implementation tasks.
+
+## Deployment
+
+### Deploy to Hugging Face Space
+
+Deploy the application to Hugging Face Space using the automated deployment script:
+
+```bash
+# Deploy current code to Hugging Face Space
+python scripts/deploy_to_hf_space.py
+```
+
+**Prerequisites:**
+- Hugging Face account with write access
+- `HF_TOKEN` configured in `.env` file (get from https://huggingface.co/settings/tokens)
+- Required packages: `pip install huggingface_hub python-dotenv`
+
+**Features:**
+- Authenticates with Hugging Face Hub API
+- Uploads source code, scripts, and vector database
+- Excludes unnecessary files (`.env`, `.git`, `__pycache__`, etc.)
+- Provides deployment status and Space URL
+- Automatic commit message generation
+
+**What Gets Deployed:**
+- `src/` - Application source code
+- `scripts/` - Utility scripts
+- `requirements.txt` - Python dependencies
+- `Dockerfile` - Container configuration
+- `README.md` - Documentation
+- `chroma_db_multilingual/` - Vector database
+
+**Expected Output:**
+```
+============================================================
+🚀 Deploying Mushir Sharia Bot to Hugging Face Space
+============================================================
+
+Step 1: Authenticating with Hugging Face...
+✅ Authenticated successfully
+
+Step 2: Uploading files to AElKodsh/mushir-sharia-bot...
+  Uploading from: d:\AI Projects\Freelance\Sabry\Mushir-Sharia-Bot
+  To Space: AElKodsh/mushir-sharia-bot
+
+✅ Upload successful!
+
+============================================================
+✅ Deployment Complete!
+============================================================
+
+Your Space is updating at:
+  https://huggingface.co/spaces/AElKodsh/mushir-sharia-bot
+
+Check build logs:
+  https://huggingface.co/spaces/AElKodsh/mushir-sharia-bot?logs=container
+
+Note: It may take 2-5 minutes for the Space to rebuild.
+============================================================
+```
+
+**Troubleshooting:**
+- Verify `HF_TOKEN` has write access to the Space
+- Check Space exists at https://huggingface.co/spaces/AElKodsh/mushir-sharia-bot
+- Review build logs if deployment succeeds but Space fails to start
+- For large uploads, ensure stable internet connection
+
+### Testing Deployed Space
+
+Test the deployed Hugging Face Space endpoints:
+
+```bash
+# Test both query and streaming endpoints
+python scripts/test_space_query.py
+```
+
+**Features:**
+- Tests `/api/v1/query` endpoint with sample compliance query
+- Tests `/api/v1/query/stream` endpoint with SSE streaming
+- Displays response times, status codes, and formatted results
+- Provides diagnostic information for common errors
+
+**Expected Output:**
+```
+🚀 Mushir Sharia Bot - Space Testing
+============================================================
+
+🧪 Testing /api/v1/query endpoint
+   URL: https://AElKodsh-mushir-sharia-bot.hf.space/api/v1/query
+
+📤 Sending query: I want to invest in a company that produces halal food. Is this permissible?
+
+⏱️  Response time: 3.45s
+📊 Status code: 200
+
+✅ Query successful!
+
+📝 Response:
+   Answer: Based on AAOIFI standards...
+   Status: complete
+   Citations: 3 found
+```
 
 ## Docker Deployment
 

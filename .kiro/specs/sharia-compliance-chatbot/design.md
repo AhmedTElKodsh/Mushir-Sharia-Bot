@@ -10,7 +10,7 @@ The Sharia Compliance Chatbot is an AI-powered system that analyzes financial op
 
 **What was built and validated:**
 - ✅ **RAG Pipeline**: Query embedding → ChromaDB search → top-k retrieval → citation extraction
-- ✅ **Gemini 1.5 Pro Integration**: 1M context window, temperature 0.1, cost-effective ($0.011/query)
+- ✅ **OpenRouter Integration**: OpenAI-compatible API, supports multiple models (Gemini, GPT-4, Claude), temperature 0.1, cost-effective
 - ✅ **Data Models**: AAOIFICitation, SemanticChunk, ComplianceRuling
 - ✅ **CLI Chatbot**: Terminal interface with AAOIFI adherence system prompt
 - ✅ **Ingestion**: Markdown corpus → 512-token chunks (50 overlap) → all-mpnet-base-v2 embeddings → ChromaDB
@@ -20,7 +20,7 @@ The Sharia Compliance Chatbot is an AI-powered system that analyzes financial op
 - ✅ **52 English AAOIFI standards** ready to ingest
 
 **Key architectural decisions validated:**
-1. **Gemini 1.5 Pro**: Proven to follow AAOIFI adherence prompt, 1M context, cost-effective → **KEEP**
+1. **OpenRouter API**: Proven to follow AAOIFI adherence prompt, supports multiple LLM providers (Gemini, GPT-4, Claude), cost-effective → **KEEP**
 2. **ChromaDB embedded**: Works well for L0-L2 (<100K vectors) → **Migrate to Qdrant at L3**
 3. **all-mpnet-base-v2**: 768-dim, English-only, good retrieval quality, runs locally → **KEEP**
 4. **512 token chunks, 50 overlap**: Standard for legal text, validated → **KEEP** unless retrieval quality tanks
@@ -52,7 +52,7 @@ The design prioritizes **accuracy and traceability** over speed, ensuring every 
 
 Key design principles:
 - **Strict grounding**: Never generate speculative compliance advice; all rulings must be supported by retrieved AAOIFI standards (✅ validated in L0)
-- **LLM-driven clarification**: Use Gemini to identify missing information, not hand-coded state machines (L1)
+- **LLM-driven clarification**: Use LLM to identify missing information, not hand-coded state machines (L1)
 - **Auditability**: Maintain complete traceability from user queries through retrieval to final rulings (L3+)
 - **Modularity**: Design components with clear boundaries to support independent testing and evolution
 - **Progressive scaling**: L0 (proof of concept) → L1 (clarification) → L2 (API) → L3 (production infra) → L4 (advanced features)
@@ -80,11 +80,11 @@ The system operates in the Islamic finance domain, where compliance determinatio
    - **Skip**: Stale, Quran/Hadith only
    - **Takeaway**: Citation formatting approach
 
-3. **hammadali1805/Quran-Hadith-Chatbot** (6⭐, Streamlit + Chroma + MiniLM + Gemini)
+3. **hammadali1805/Quran-Hadith-Chatbot** (6⭐, Streamlit + Chroma + MiniLM + OpenRouter)
    - **Reusable Pattern**: Chroma + sentence-transformers wiring on Islamic corpora — direct stack mirror
    - **Action**: Look at query-expansion code
    - **Skip**: Notebook-grade, no eval
-   - **Takeaway**: Gemini + Chroma integration pattern
+   - **Takeaway**: OpenRouter + Chroma integration pattern
 
 4. **Shaheer66/Islam-GPT** (2⭐, Apache-2.0, Python)
    - **Skip**: Tiny, no tests
@@ -199,7 +199,7 @@ graph TB
 #### Compliance Analyzer
 - **Role**: Generate compliance rulings grounded in retrieved standards
 - **Implementation**: 
-  - Gemini 1.5 Pro (✅ validated in L0)
+  - OpenRouter API (supports Gemini, GPT-4, Claude, and other models) (✅ validated in L0)
   - Temperature 0.1 for consistent results
   - Strict adherence to citations and quotes (L4+)
 
@@ -241,7 +241,7 @@ graph LR
 
 | Layer | Focus | Duration | Key Deliverables |
 |-------|-------|----------|------------------|
-| L0 | Foundational RAG | ✅ COMPLETE | Terminal RAG loop, Gemini integration, ChromaDB, 52 standards |
+| L0 | Foundational RAG | ✅ COMPLETE | Terminal RAG loop, OpenRouter integration, ChromaDB, 52 standards |
 | L1 | Clarification Loop | 2 weeks | LangGraph state machine, error handling, structured logging, session management |
 | L2 | API + Streaming | 2 weeks | FastAPI REST API, SSE streaming, CORS, basic rate limiting |
 | L3 | Production Ready | 3 weeks | Qdrant, Redis, PostgreSQL, Ragas eval, monitoring (Prometheus/Grafana) |
@@ -327,10 +327,18 @@ def call_llm(
 ) -> str:
     for attempt in range(max_retries):
         try:
-            response = model.generate_content(...)
-            if not response.text:
-                raise ValueError("Empty response from Gemini")
-            return response.text
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.1,
+                timeout=60
+            )
+            if not response.choices[0].message.content:
+                raise ValueError("Empty response from LLM")
+            return response.choices[0].message.content
         except Exception as e:
             logger.warning(
                 f"LLM call failed (attempt {attempt + 1}/{max_retries})",
@@ -360,7 +368,7 @@ logger = logging.getLogger(__name__)
 # Usage
 logger.info("Retrieved %d chunks", len(chunks))
 logger.warning("Low similarity score: %.2f", chunk.score)
-logger.error("Gemini API error", exc_info=True)
+logger.error("LLM API error", exc_info=True)
 ```
 
 ### Session Management
@@ -475,7 +483,7 @@ from ragas.metrics import faithfulness, answer_relevancy
 results = evaluate(
     dataset=gold_eval_set,
     metrics=[faithfulness, answer_relevancy],
-    llm=gemini_model,
+    llm=openrouter_model,
     embeddings=sentence_transformer_model
 )
 

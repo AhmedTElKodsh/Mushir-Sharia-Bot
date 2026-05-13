@@ -42,15 +42,15 @@ def check_api_key():
     from dotenv import load_dotenv
     load_dotenv()
     
-    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
     
-    if gemini_key and len(gemini_key) > 20:
-        print("✓ Gemini API key configured")
+    if openrouter_key and len(openrouter_key) > 20:
+        print("✓ OpenRouter API key configured")
         return True
     else:
-        print("❌ No valid Gemini API key found in .env")
-        print("  Set GEMINI_API_KEY=your-key-here")
-        print("  Get your key from: https://makersuite.google.com/app/apikey")
+        print("❌ No valid OpenRouter API key found in .env")
+        print("  Set OPENROUTER_API_KEY=your-key-here")
+        print("  Get your key from: https://openrouter.ai/keys")
         return False
 
 def check_dependencies():

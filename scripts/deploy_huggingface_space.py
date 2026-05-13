@@ -2,7 +2,7 @@
 
 Required environment:
   HF_TOKEN: Hugging Face user access token with write access.
-  GEMINI_API_KEY: Gemini key to store as a Space secret.
+  OPENROUTER_API_KEY: OpenRouter API key to store as a Space secret.
 
 Example:
   python scripts/deploy_huggingface_space.py --repo-id your-user/mushir-sharia-bot
@@ -74,7 +74,7 @@ BATCH_SIZE_BYTES = 25 * 1024 * 1024
 
 
 SPACE_VARIABLES = {
-    "GEMINI_MODEL": "gemini-2.5-flash",
+    "OPENROUTER_MODEL": "google/gemini-2.0-flash-exp:free",
     "VECTOR_DB_TYPE": "chroma",
     "CHROMA_DIR": "/app/chroma_db_multilingual",
     "EMBED_MODEL": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
@@ -166,7 +166,7 @@ def main() -> None:
     args = parser.parse_args()
 
     token = require_env("HF_TOKEN")
-    gemini_api_key = require_env("GEMINI_API_KEY")
+    openrouter_api_key = require_env("OPENROUTER_API_KEY")
 
     index_path = ROOT / "chroma_db_multilingual" / "chroma.sqlite3"
     if not index_path.exists():
@@ -184,7 +184,7 @@ def main() -> None:
         exist_ok=True,
     )
 
-    api.add_space_secret(repo_id=args.repo_id, key="GEMINI_API_KEY", value=gemini_api_key)
+    api.add_space_secret(repo_id=args.repo_id, key="OPENROUTER_API_KEY", value=openrouter_api_key)
     for key, value in SPACE_VARIABLES.items():
         api.add_space_variable(repo_id=args.repo_id, key=key, value=value)
 

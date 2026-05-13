@@ -9,7 +9,7 @@
 ## What Happened
 
 Your **old Gemini API key** was accidentally committed to git and pushed to GitHub:
-- Key: `AIzaSyBWy14J6SnLqmb2MHAmcT46sNV2ittDbLg`
+- Key: `REDACTED_GEMINI_API_KEY`
 - Repository: https://github.com/AhmedTElKodsh/Mushir-Sharia-Bot
 - Files affected: `GEMINI_SETUP.md`, `HUGGINGFACE_DEPLOYMENT.md`
 - Commits: e090ed6, 68e8e42
@@ -24,7 +24,7 @@ Your **old Gemini API key** was accidentally committed to git and pushed to GitH
 
 **Google Gemini API Key:**
 1. Go to: https://aistudio.google.com/apikey
-2. Find key: `AIzaSyBWy14J6SnLqmb2MHAmcT46sNV2ittDbLg`
+2. Find key: `REDACTED_GEMINI_API_KEY`
 3. Click **Delete** or **Revoke**
 4. Generate a new API key
 5. Update your `.env` file with the new key
@@ -77,7 +77,7 @@ git push --force
 ```bash
 pip install git-filter-repo
 
-git filter-repo --replace-text <(echo "AIzaSyBWy14J6SnLqmb2MHAmcT46sNV2ittDbLg==>REDACTED")
+git filter-repo --replace-text <(echo "REDACTED_GEMINI_API_KEY==>REDACTED")
 git push --force
 ```
 
@@ -153,7 +153,7 @@ Even though only the Gemini key was leaked, rotate everything as a precaution:
 **1. Never Hardcode Secrets**
 ```markdown
 # ❌ BAD
-GEMINI_API_KEY=AIzaSyBWy14J6SnLqmb2MHAmcT46sNV2ittDbLg
+GEMINI_API_KEY=your-new-gemini-api-key-here
 
 # ✅ GOOD
 GEMINI_API_KEY=your-api-key-here
@@ -182,7 +182,7 @@ git diff --cached | grep -E "(AIza|sk-|hf_|ghp_)"
 api_key = os.getenv("GEMINI_API_KEY")
 
 # ❌ BAD
-api_key = "AIzaSyBWy14J6SnLqmb2MHAmcT46sNV2ittDbLg"
+api_key = "your-new-gemini-api-key-here"
 ```
 
 ---

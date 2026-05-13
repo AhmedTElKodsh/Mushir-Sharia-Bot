@@ -31,6 +31,24 @@ QUESTION_TEMPLATES = {
     "duration": "What is the duration of the contract?",
 }
 
+# Arabic versions of the clarification question templates
+QUESTION_TEMPLATES_AR = {
+    "principal_amount": "ما هو المبلغ الأصلي للقرض أو التمويل؟",
+    "interest_rate": "ما هو معدل الفائدة أو الربح المطلوب، إن وجد؟",
+    "term_months": "ما هي مدة القرض بالأشهر؟",
+    "purpose": "ما هو الغرض من هذا القرض أو التمويل؟",
+    "company_activity": "ما هو نشاط الشركة أو المشروع المعني؟",
+    "non_compliant_revenue_percent": "ما النسبة المئوية للإيرادات المصدرها حرام أو غير متوافق مع الشريعة؟",
+    "item_type": "ما هو نوع السلعة أو الأصل المراد شراؤه؟",
+    "price": "ما هو سعر الشراء؟",
+    "payment_terms": "ما هي شروط الدفع؟",
+    "delivery_terms": "ما هي شروط التسليم؟",
+    "contract_type": "ما نوع العقد المطلوب تقييمه؟",
+    "parties": "من هم أطراف العقد؟",
+    "obligations": "ما هي الالتزامات الرئيسية في هذا العقد؟",
+    "duration": "ما هي مدة العقد؟",
+}
+
 
 class ClarificationEngine:
     """Collects the minimum facts needed before sending a query to RAG."""
@@ -38,17 +56,39 @@ class ClarificationEngine:
     def __init__(self, max_clarification_turns: int = 2):
         self.max_clarification_turns = max_clarification_turns
         self.operation_keywords = {
+            # English keywords
             "loan": ["loan", "borrow", "lend", "credit", "financing"],
             "investment": ["invest", "investment", "shares", "stock", "equity", "mudarabah"],
             "purchase": ["buy", "purchase", "acquire", "sell", "murabahah"],
             "contract": ["contract", "agreement", "ijarah", "lease"],
         }
+        # Arabic keywords including Modern Standard Arabic and common عامية
+        self.operation_keywords_ar = {
+            "loan": ["قرض", "قروض", "اقتراض", "تمويل", "ائتمان", "دين"],
+            "investment": [
+                "استثمار", "استثمارات", "مضاربة", "أسهم", "حصص",
+                "صناديق", "ملكية", "شراكة", "مشاركة",
+            ],
+            "purchase": [
+                "بيع", "شراء", "اقتناء", "مرابحة", "تقسيط", "بضاعة",
+                "سلعة", "عقار",
+            ],
+            "contract": [
+                "عقد", "اتفاقية", "إجارة", "أجرة", "إيجار", "تأجير",
+                "وكالة", "مقاولة",
+            ],
+        }
 
     def extract_operation_type(self, text: str) -> Optional[str]:
-        """Identify operation type from user input."""
+        """Identify operation type from user input (supports English and Arabic)."""
         text_lower = text.lower()
+        # English keywords
         for op_type, keywords in self.operation_keywords.items():
             if any(keyword in text_lower for keyword in keywords):
+                return op_type
+        # Arabic keywords (no lowercasing needed for Arabic)
+        for op_type, keywords in self.operation_keywords_ar.items():
+            if any(keyword in text for keyword in keywords):
                 return op_type
         return None
 
@@ -108,11 +148,19 @@ class ClarificationEngine:
         missing = [name for name in required if name not in session_state.extracted_variables]
         return len(missing) == 0, missing
 
-    def generate_clarifying_questions(self, missing_vars: List[str]) -> List[str]:
-        """Generate one clarifying question at a time to keep the loop natural."""
+    def generate_clarifying_questions(
+        self,
+        missing_vars: List[str],
+        response_language: str = "en",
+    ) -> List[str]:
+        """Generate one clarifying question at a time in the appropriate language."""
         if not missing_vars:
             return []
         first_missing = missing_vars[0]
+        if response_language == "ar":
+            return [QUESTION_TEMPLATES_AR.get(
+                first_missing, f"يرجى تقديم المعلومات التالية: {first_missing}"
+            )]
         return [QUESTION_TEMPLATES.get(first_missing, f"Please provide: {first_missing}")]
 
     def process_query(self, session_state: SessionState, query: str) -> Dict[str, Any]:
@@ -126,10 +174,16 @@ class ClarificationEngine:
 
         if not op_type:
             session_state.missing_variables = ["operation_type"]
-            session_state.clarifying_questions = [
-                "What type of transaction is this: loan, investment, purchase, or contract?"
-            ]
+            # Detect language from user's message for appropriate clarification
+            arabic_chars = sum(1 for c in query if '\u0600' <= c <= '\u06ff')
+            lang = "ar" if arabic_chars / max(len(query), 1) > 0.30 else "en"
+            if lang == "ar":
+                clarify_msg = "ما نوع المعاملة المطلوب تقييمها: قرض، استثمار، شراء، أم عقد؟"
+            else:
+                clarify_msg = "What type of transaction is this: loan, investment, purchase, or contract?"
+            session_state.clarifying_questions = [clarify_msg]
             session_state.metadata["awaiting_variable"] = "operation_type"
+            session_state.metadata["response_language"] = lang
             session_state.state = ClarificationState.CLARIFYING
             session_state.add_message("system", session_state.clarifying_questions[0])
             return {"status": "clarifying", "questions": session_state.clarifying_questions}
@@ -158,7 +212,10 @@ class ClarificationEngine:
             session_state.add_message("system", ready_message)
             return {"status": "ready", "message": ready_message, "missing_variables": missing}
 
-        questions = self.generate_clarifying_questions(missing)
+        questions = self.generate_clarifying_questions(
+            missing,
+            response_language=session_state.metadata.get("response_language", "en"),
+        )
         session_state.missing_variables = missing
         session_state.clarifying_questions = questions
         session_state.metadata["awaiting_variable"] = missing[0]

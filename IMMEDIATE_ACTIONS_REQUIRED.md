@@ -10,7 +10,7 @@
 
 Your **old Gemini API key** was found in git history and pushed to GitHub:
 - Repository: https://github.com/AhmedTElKodsh/Mushir-Sharia-Bot
-- Key pattern: `AIzaSyBWy14J6SnLqmb2MHAmcT46sNV2ittDbLg`
+- Key pattern: `REDACTED_GEMINI_API_KEY`
 - Status: ✅ Removed from current files, but still in git history
 
 **Good news**: 
@@ -36,7 +36,7 @@ Your **old Gemini API key** was found in git history and pushed to GitHub:
 
 Your `.env` currently has:
 ```
-GEMINI_API_KEY=AIzaSyAJHYR5ae-4737HoeCbgNNVaSR-zwR5Q3E
+GEMINI_API_KEY=your-new-gemini-api-key-here
 ```
 
 Test it:

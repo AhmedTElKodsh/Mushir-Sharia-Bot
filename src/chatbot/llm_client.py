@@ -58,8 +58,8 @@ class LLMClient:
         return ""
 
 
-class GeminiClient:
-    """Google Gemini client with lazy imports, retries, and clear errors."""
+class OpenRouterClient:
+    """OpenRouter client using OpenAI-compatible API with retries and clear errors."""
 
     def __init__(
         self,
@@ -68,72 +68,76 @@ class GeminiClient:
         temperature: float = 0.1,
         max_retries: int = 3,
         timeout_seconds: int = 60,
-        model: Optional[Any] = None,
+        client: Optional[Any] = None,
         sleep: Callable[[float], None] = time.sleep,
     ):
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
+        self.model_name = model_name or os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-exp:free")
         self.temperature = temperature
         self.max_retries = max_retries
         self.timeout_seconds = timeout_seconds
-        self._model = model
+        self._client = client
         self._sleep = sleep
 
-    def generate(self, prompt: str) -> str:
-        model = self._model or self._build_model()
+    def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        """Generate a response.
+
+        Args:
+            prompt: The user message content.
+            system_prompt: Optional system-role instructions sent as a separate
+                message before the user turn for better instruction following.
+        """
+        client = self._client or self._build_client()
         last_error = None
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
         for attempt in range(self.max_retries):
             try:
-                response = model.generate_content(
-                    prompt,
-                    request_options={"timeout": self.timeout_seconds},
+                response = client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=self.temperature,
+                    timeout=self.timeout_seconds,
                 )
-                text = getattr(response, "text", None)
+                text = response.choices[0].message.content
                 if not text or not text.strip():
-                    raise LLMResponseError("Gemini returned an empty response")
+                    raise LLMResponseError("OpenRouter returned an empty response")
                 return text.strip()
             except LLMResponseError:
                 raise
             except Exception as exc:
                 last_error = exc
                 if self._is_rate_limit(exc):
-                    raise LLMRateLimitError(f"Gemini quota or rate limit error: {exc}") from exc
+                    raise LLMRateLimitError(f"OpenRouter quota or rate limit error: {exc}") from exc
                 if attempt < self.max_retries - 1:
                     self._sleep(2 ** attempt)
                 else:
-                    raise LLMResponseError(f"Gemini generation failed: {exc}") from exc
-        raise LLMResponseError(f"Gemini generation failed: {last_error}")
+                    raise LLMResponseError(f"OpenRouter generation failed: {exc}") from exc
+        raise LLMResponseError(f"OpenRouter generation failed: {last_error}")
 
-    def _build_model(self):
+    def _build_client(self):
         if not self.api_key:
             raise LLMConfigurationError(
-                "GEMINI_API_KEY is not set. Add it to .env or pass api_key explicitly."
+                "OPENROUTER_API_KEY is not set. Add it to .env or pass api_key explicitly."
             )
         try:
-            from google import genai
-            from google.genai import types
+            from openai import OpenAI
         except ImportError as exc:
             raise LLMConfigurationError(
-                "google-genai is required for Gemini. Install dependencies from requirements.txt."
+                "openai is required for OpenRouter. Install dependencies from requirements.txt."
             ) from exc
 
         try:
-            client = genai.Client(api_key=self.api_key)
-            config = types.GenerateContentConfig(
-                temperature=self.temperature,
-                top_p=0.95,
-                top_k=40,
-                max_output_tokens=2048,
+            self._client = OpenAI(
+                api_key=self.api_key,
+                base_url="https://openrouter.ai/api/v1",
             )
-            self._model = _GoogleGenAIModel(
-                client=client,
-                model_name=self.model_name,
-                config=config,
-            )
-            return self._model
+            return self._client
         except Exception as exc:
             raise LLMConfigurationError(
-                f"Failed to initialize Gemini client. Check API key validity: {exc}"
+                f"Failed to initialize OpenRouter client. Check API key validity: {exc}"
             ) from exc
 
     @staticmethod
@@ -145,41 +149,6 @@ class GeminiClient:
         return any(token in message for token in ["quota", "rate limit", "429", "resource exhausted"])
 
 
-class _GoogleGenAIModel:
-    """Small adapter so tests can still inject simple generate_content fakes."""
+# Backward compatibility alias
+GeminiClient = OpenRouterClient
 
-    def __init__(self, client: Any, model_name: str, config: Any):
-        self.client = client
-        self.model_name = model_name
-        self.config = config
-
-    def generate_content(self, prompt: str, request_options: Optional[dict] = None):
-        return self.client.models.generate_content(
-            model=self.model_name,
-            contents=prompt,
-            config=self.config,
-        )
-
-
-AAOIFI_ADHERENCE_SYSTEM_PROMPT = """You are a Sharia compliance analyzer specializing in AAOIFI Financial Accounting Standards (FAS).
-
-STRICT INSTRUCTIONS:
-- Base ALL rulings ONLY on the provided AAOIFI FAS standards context.
-- Every ruling MUST include citations with standard number and section.
-- Format citations as: [AAOIFI FAS X, Section Y].
-- If context is insufficient, state: "INSUFFICIENT_STANDARDS: [what is missing]".
-- Do NOT use external knowledge not in the provided context.
-- Do NOT provide generic Islamic finance advice without citing specific standards.
-
-RESPONSE STRUCTURE:
-1. COMPLIANCE STATUS: [COMPLIANT / NON_COMPLIANT / PARTIALLY_COMPLIANT]
-2. REASONING: [detailed explanation with citations]
-3. CITATIONS: [list all AAOIFI standards used]
-4. RECOMMENDATIONS: [actionable recommendations]
-5. WARNINGS: [any caveats or limitations]
-
-PROHIBITED BEHAVIORS:
-- Do not answer without citing AAOIFI standards.
-- Do not make up standard numbers or sections.
-- Do not provide legal advice beyond AAOIFI FAS scope.
-"""
