@@ -6,6 +6,7 @@ import os
 from typing import Any, List, Optional
 from dotenv import load_dotenv
 from src.models.schema import SemanticChunk, AAOIFICitation
+from src.chatbot.constants import AUTHORITY_REQUEST_TERMS
 
 load_dotenv()
 
@@ -23,7 +24,7 @@ DOMAIN_QUERY_EXPANSIONS = {
     "الإجارة": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
     "real estate": ("real estate", "investment in real estate", "rental income", "capital appreciation"),
 }
-AUTHORITY_REQUEST_TERMS = ("binding fatwa", "binding ruling", "legal advice", "financial advice")
+AUTHORITY_REQUEST_TERMS = AUTHORITY_REQUEST_TERMS
 META_EVALUATION_TERMS = ("what if the answer cites", "retrieved sources only contain")
 UNDER_SPECIFIED_INVESTMENT_TERMS = (
     ("do not know", "business activity"),
@@ -57,9 +58,14 @@ def _preferred_query_language(query: str) -> str:
     return "ar" if any("\u0600" <= char <= "\u06ff" for char in query) else "en"
 
 
+def _contains_arabic(text: str) -> bool:
+    """Check if text contains any Arabic Unicode characters."""
+    return any("\u0600" <= char <= "\u06ff" for char in text)
+
+
 def _expanded_query_terms(query: str) -> set[str]:
     lowered_query = query.lower()
-    terms = {token.strip(".,;:?!()[]{}\"'").lower() for token in lowered_query.split()}
+    terms = {token.strip(".,;:?!()[]{}\"'؟\u061f\u060c").lower() for token in lowered_query.split()}
     for trigger, expansions in DOMAIN_QUERY_EXPANSIONS.items():
         if trigger.lower() in lowered_query:
             terms.update(term.lower() for term in expansions)
@@ -165,10 +171,39 @@ class RAGPipeline:
             print(f"Collection contains {self.collection.count()} chunks")
     
     def embed_query(self, query: str) -> List[float]:
-        """Generate embedding for a query string."""
+        """Generate embedding for a query string.
+
+        For Arabic queries, appends English expansion terms before encoding
+        so the multilingual embedding model produces a vector closer to the
+        English AAOIFI chunks rather than to unrelated Arabic text.
+        """
         if self.embedding_generator is not None:
             return self.embedding_generator.embed_text(query)
-        return self.model.encode(query, normalize_embeddings=True).tolist()
+        if not query:
+            return []
+        encoding_query = self._expand_for_embedding(query)
+        return self.model.encode(encoding_query, normalize_embeddings=True).tolist()
+
+    @staticmethod
+    def _expand_for_embedding(query: str) -> str:
+        """Build an embedding-oriented query that merges Arabic with English synonyms.
+
+        Example: "ما هي المرابحة؟" → "ما هي المرابحة؟ murabaha sale deferred payment"
+        """
+        expanded = _expanded_query_terms(query)
+        english_terms = [t for t in expanded if not _contains_arabic(t)]
+        if not english_terms:
+            for term in expanded:
+                for trigger, expansions in DOMAIN_QUERY_EXPANSIONS.items():
+                    if trigger.lower() == term.lower() or term.lower() in trigger.lower():
+                        english_terms = [t for t in expansions if not _contains_arabic(t)]
+                        if english_terms:
+                            break
+                if english_terms:
+                    break
+        if english_terms:
+            return f"{query} {' '.join(english_terms)}"
+        return query
     
     def retrieve(
         self,
@@ -177,6 +212,7 @@ class RAGPipeline:
         threshold: float = 0.3,
         allow_low_confidence_fallback: bool = False,
     ) -> List[Any]:
+        threshold = max(0.0, min(1.0, threshold))
         """
         Retrieve top-k relevant chunks for a query.
         
@@ -188,10 +224,14 @@ class RAGPipeline:
         Returns:
             List of SemanticChunk objects with citations
         """
+        if k <= 0:
+            return []
         if _query_should_skip_retrieval(query):
             return []
 
         query_embedding = self.embed_query(query)
+        if query_embedding is None or len(query_embedding) == 0:
+            return []
 
         if self.vector_store is not None:
             chunks = self.vector_store.similarity_search(query_embedding, k=k, threshold=threshold)

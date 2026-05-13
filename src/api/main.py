@@ -14,6 +14,7 @@ from src.api.error_handling import ErrorResponse
 from src.api.rate_limit import InMemoryRateLimiter
 from src.api.routes import router as api_router
 from src.chatbot.application_service import ApplicationService
+from src.chatbot.clarification_engine import ClarificationEngine
 from src.chatbot.session_manager import SessionManager
 from src.observability.metrics import MetricsRegistry
 
@@ -41,6 +42,7 @@ async def lifespan(app: FastAPI):
     app.state.audit_store = _build_audit_store()
     app.state.cache_store = _build_cache_store()
     app.state.application_service = ApplicationService(
+        clarification_service=ClarificationEngine(),
         audit_store=app.state.audit_store,
         cache_store=app.state.cache_store,
     )

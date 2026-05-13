@@ -37,6 +37,9 @@ _TRANSLITERATION_MAP = {
 _ARABIC_DIACRITICS = re.compile(r'[\u064b-\u065f\u0670\u0640]')
 # Hamza normalization: various alef forms → plain alef
 _HAMZA_NORM = re.compile(r'[\u0622\u0623\u0625\u0671]')  # آ أ إ ٱ → ا
+from src.chatbot.constants import AUTHORITY_REQUEST_TERMS
+
+_AUTHORITY_REQUEST_TERMS = AUTHORITY_REQUEST_TERMS
 
 
 
@@ -70,11 +73,13 @@ class ApplicationService:
 
     def answer(
         self,
-        query: str,
+        query: Optional[str],
         session_id: Optional[str] = None,
         request_id: Optional[str] = None,
         disclaimer_acknowledged: bool = True,
     ) -> AnswerContract:
+        if not query or not query.strip():
+            return self._empty_query_response()
         cleaned_query = self._normalize_query(query.strip())
         response_language = self._detect_language(cleaned_query)
         if self._requires_disclaimer(disclaimer_acknowledged):
@@ -106,6 +111,19 @@ class ApplicationService:
 
         if self.retriever is None:
             self.retriever = RAGPipeline()
+
+        if self._is_authority_request(cleaned_query):
+            contract = AnswerContract(
+                answer=self._authority_refusal_message(response_language),
+                status=ComplianceStatus.INSUFFICIENT_DATA,
+                citations=[],
+                reasoning_summary="User requested a binding ruling or legal advice, which exceeds Mushir's scope.",
+                limitations=self._limitations(response_language),
+                metadata=self._metadata([], confidence=0.0, response_language=response_language),
+            )
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
+
         chunks = self.retriever.retrieve(cleaned_query, k=self.k, threshold=self.threshold)
         if not chunks:
             contract = AnswerContract(
@@ -335,6 +353,42 @@ class ApplicationService:
         if response_language == "ar":
             return "لا تتناول المقاطع المسترجعة من معايير أيوفي هذا السؤال بشكل كاف."
         return "Not addressed in retrieved AAOIFI standards."
+
+    @staticmethod
+    def _is_authority_request(query: str) -> bool:
+        if not query:
+            return False
+        """Check if the user is requesting a binding ruling, fatwa, or legal advice."""
+        lowered = query.lower()
+        for term in _AUTHORITY_REQUEST_TERMS:
+            if re.search(r'(?<!\w)' + re.escape(term) + r'(?!\w)', lowered):
+                return True
+        return False
+
+    @staticmethod
+    def _empty_query_response() -> AnswerContract:
+        return AnswerContract(
+            answer="Please provide a question about Sharia compliance.",
+            status=ComplianceStatus.INSUFFICIENT_DATA,
+            citations=[],
+            reasoning_summary="Empty or whitespace-only query.",
+            limitations="Informational guidance only; consult a qualified Sharia scholar for a binding ruling.",
+            metadata={"response_language": "en", "cache_hit": False},
+        )
+
+    @staticmethod
+    def _authority_refusal_message(response_language: str) -> str:
+        if response_language == "ar":
+            return (
+                "مشير يقدم إرشادا معلوماتيا فقط بناءً على مقاطع معايير أيوفي المسترجعة. "
+                "لا يصدر فتاوى ملزمة أو آراء قانونية أو نصائح مالية. "
+                "استشر عالما شرعيا مؤهلا للحصول على حكم شرعي ملزم."
+            )
+        return (
+            "Mushir provides informational guidance only, grounded in retrieved AAOIFI excerpts. "
+            "It does not issue binding fatwas, legal opinions, or financial advice. "
+            "Consult a qualified Sharia scholar for a binding religious ruling."
+        )
 
     @staticmethod
     def _insufficient_data_message(response_language: str) -> str:
