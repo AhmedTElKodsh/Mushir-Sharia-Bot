@@ -343,10 +343,6 @@ CHAT_HTML = """
     <form id="chat-form">
       <div class="controls">
         <textarea id="prompt" name="prompt" placeholder="Ask Mushir about an Islamic finance transaction... / اسأل مشير عن معاملة مالية إسلامية...">I want to invest in a company</textarea>
-        <label>
-          <input id="disclaimer" type="checkbox">
-          <span>I acknowledge Mushir provides informational guidance only, not a binding Sharia ruling, fatwa, legal advice, or financial advice.</span>
-        </label>
       </div>
       <button id="send" type="submit">Ask Mushir</button>
     </form>
@@ -354,7 +350,6 @@ CHAT_HTML = """
   <script>
     const form = document.getElementById("chat-form");
     const promptInput = document.getElementById("prompt");
-    const disclaimer = document.getElementById("disclaimer");
     const messages = document.getElementById("messages");
     const send = document.getElementById("send");
     let context = {};
@@ -405,7 +400,7 @@ CHAT_HTML = """
         const response = await fetch("/api/v1/query/stream", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({query, context: {...context, disclaimer_acknowledged: disclaimer.checked}})
+          body: JSON.stringify({query, context})
         });
         const events = parseSse(await response.text());
         for (const item of events) {
