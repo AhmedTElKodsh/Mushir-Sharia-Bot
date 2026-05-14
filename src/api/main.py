@@ -214,8 +214,16 @@ def create_app() -> FastAPI:
             ),
         )
 
-    @app.get("/")
+    @app.get("/", response_class=HTMLResponse)
     async def root():
+        return CHAT_HTML
+
+    @app.get("/chat", response_class=HTMLResponse)
+    async def chat_page():
+        return CHAT_HTML
+
+    @app.get("/api", tags=["info"])
+    async def api_info():
         return {
             "status": "ok",
             "name": "Sharia Compliance Chatbot API",
@@ -230,10 +238,6 @@ def create_app() -> FastAPI:
                 "docs": "/docs",
             },
         }
-
-    @app.get("/chat", response_class=HTMLResponse)
-    async def chat_page():
-        return CHAT_HTML
 
     @app.get("/favicon.ico", include_in_schema=False)
     async def favicon():
