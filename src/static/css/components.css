@@ -1,2 +1,47 @@
 /* ===== Components: Badges, Citations, Buttons, Disclaimer ===== */
-/* Reserved for Phase 1-S2 and Phase 2 expansion */
+
+/* Compliance status badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.badge.compliant {
+  background: var(--color-compliant);
+  color: #ffffff;
+}
+
+.badge.non-compliant {
+  background: var(--color-non-compliant);
+  color: #ffffff;
+}
+
+.badge.partial {
+  background: var(--color-partial);
+  color: #ffffff;
+}
+
+.badge.insufficient {
+  background: var(--color-insufficient);
+  color: #ffffff;
+}
+
+/* Primary CTA button */
+.cta-button {
+  background: var(--color-primary-cta);
+  color: white;
+}
+
+/* Advisor info card */
+.advisor-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--bubble-radius);
+  padding: 16px;
+  background: var(--color-surface);
+}

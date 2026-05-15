@@ -1,8 +1,8 @@
 /* ===== Chat Layout: Header, Messages, Input Area ===== */
 header {
   padding: 22px 28px 14px;
-  border-bottom: 1px solid #ddd6c7;
-  background: #fbfaf6;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 h1 {
@@ -10,13 +10,14 @@ h1 {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: 0;
+  color: var(--color-text-primary);
 }
 
 main {
   display: grid;
   grid-template-rows: 1fr auto;
   gap: 16px;
-  width: min(920px, calc(100vw - 32px));
+  width: var(--chat-max-width);
   margin: 0 auto;
   padding: 20px 0 24px;
 }
@@ -31,11 +32,11 @@ main {
 }
 
 .message {
-  max-width: 78%;
+  max-width: var(--bubble-max-width);
   padding: 12px 14px;
-  border: 1px solid #d8d1c3;
-  border-radius: 8px;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--bubble-radius);
+  background: var(--color-assistant-bubble);
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
@@ -43,8 +44,8 @@ main {
 
 .user {
   align-self: flex-end;
-  background: #e8f1ed;
-  border-color: #b7cec3;
+  background: var(--color-user-bubble);
+  border-color: var(--color-border);
 }
 
 .assistant {
@@ -53,8 +54,8 @@ main {
 
 .event {
   align-self: flex-start;
-  max-width: 78%;
-  color: #5f6b65;
+  max-width: var(--bubble-max-width);
+  color: var(--color-text-secondary);
   font-size: 13px;
   padding: 2px 4px;
 }
@@ -65,7 +66,7 @@ form {
   gap: 10px;
   align-items: end;
   padding-top: 12px;
-  border-top: 1px solid #ddd6c7;
+  border-top: 1px solid var(--color-border);
 }
 
 .controls {
@@ -78,33 +79,33 @@ label {
   gap: 8px;
   align-items: flex-start;
   font-size: 13px;
-  color: #3f4a45;
+  color: var(--color-text-secondary);
   line-height: 1.35;
 }
 
 input[type="checkbox"] {
   margin-top: 2px;
-  accent-color: #214f44;
+  accent-color: var(--color-primary);
 }
 
 textarea {
   min-height: 72px;
   max-height: 180px;
   resize: vertical;
-  border: 1px solid #bdb5a7;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--bubble-radius);
   padding: 12px;
   font: inherit;
-  background: #fff;
+  background: var(--color-assistant-bubble);
   color: inherit;
 }
 
 button {
   height: 44px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--bubble-radius);
   padding: 0 18px;
-  background: #214f44;
+  background: var(--color-primary-cta);
   color: white;
   font: inherit;
   font-weight: 650;
