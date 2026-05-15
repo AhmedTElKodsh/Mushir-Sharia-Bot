@@ -13,11 +13,11 @@
   <header><h1>Mushir Sharia Chatbot</h1></header>
   <main>
     <section id="messages" aria-live="polite" aria-label="Chat messages">
-      <div class="message assistant">Ask a Sharia compliance question — in English or Arabic. / اسأل سؤالاً عن الامتثال الشرعي باللغة الإنجليزية أو العربية.</div>
+      <div class="message assistant" dir="auto">Ask a Sharia compliance question — in English or Arabic. / اسأل سؤالاً عن الامتثال الشرعي باللغة الإنجليزية أو العربية.</div>
     </section>
-    <form id="chat-form">
+    <form id="chat-form" aria-label="Chat input form">
       <div class="controls">
-        <textarea id="prompt" name="prompt" placeholder="Ask Mushir about an Islamic finance transaction... / اسأل مشير عن معاملة مالية إسلامية...">I want to invest in a company</textarea>
+        <textarea id="prompt" name="prompt" placeholder="Ask Mushir about an Islamic finance transaction... / اسأل مشير عن معاملة مالية إسلامية..." dir="auto">I want to invest in a company</textarea>
       </div>
       <button id="send" type="submit">Ask Mushir</button>
     </form>
