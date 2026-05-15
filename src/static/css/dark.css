@@ -1,5 +1,18 @@
 /* ===== Dark Mode: prefers-color-scheme overrides ===== */
-/* Phase 1-S2 will populate these overrides */
 @media (prefers-color-scheme: dark) {
-  /* Dark mode overrides go here */
+  :root {
+    --color-primary: #3a8a74;
+    --color-primary-cta: #2e7a66;
+    --color-surface: #1a1f1c;
+    --color-chat-bg: #141816;
+    --color-user-bubble: #1a332d;
+    --color-assistant-bubble: #252b27;
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-text-primary: #e8ede9;
+    --color-text-secondary: #9aa69e;
+    --color-compliant: #4ade80;
+    --color-non-compliant: #f87171;
+    --color-partial: #facc15;
+    --color-insufficient: #9ca3af;
+  }
 }
