@@ -1,0 +1,5 @@
+/* ===== Dark Mode: prefers-color-scheme overrides ===== */
+/* Phase 1-S2 will populate these overrides */
+@media (prefers-color-scheme: dark) {
+  /* Dark mode overrides go here */
+}

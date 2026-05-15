@@ -1,0 +1,125 @@
+/* ===== Chat Layout: Header, Messages, Input Area ===== */
+header {
+  padding: 22px 28px 14px;
+  border-bottom: 1px solid #ddd6c7;
+  background: #fbfaf6;
+}
+
+h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+main {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 16px;
+  width: min(920px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 20px 0 24px;
+}
+
+#messages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  min-height: 360px;
+  padding: 4px;
+}
+
+.message {
+  max-width: 78%;
+  padding: 12px 14px;
+  border: 1px solid #d8d1c3;
+  border-radius: 8px;
+  background: #fff;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.user {
+  align-self: flex-end;
+  background: #e8f1ed;
+  border-color: #b7cec3;
+}
+
+.assistant {
+  align-self: flex-start;
+}
+
+.event {
+  align-self: flex-start;
+  max-width: 78%;
+  color: #5f6b65;
+  font-size: 13px;
+  padding: 2px 4px;
+}
+
+form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+  padding-top: 12px;
+  border-top: 1px solid #ddd6c7;
+}
+
+.controls {
+  display: grid;
+  gap: 8px;
+}
+
+label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: #3f4a45;
+  line-height: 1.35;
+}
+
+input[type="checkbox"] {
+  margin-top: 2px;
+  accent-color: #214f44;
+}
+
+textarea {
+  min-height: 72px;
+  max-height: 180px;
+  resize: vertical;
+  border: 1px solid #bdb5a7;
+  border-radius: 8px;
+  padding: 12px;
+  font: inherit;
+  background: #fff;
+  color: inherit;
+}
+
+button {
+  height: 44px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 18px;
+  background: #214f44;
+  color: white;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+@media (max-width: 640px) {
+  header { padding-inline: 16px; }
+  main { width: calc(100vw - 24px); }
+  form { grid-template-columns: 1fr; }
+  button { width: 100%; }
+  .message, .event { max-width: 100%; }
+}
