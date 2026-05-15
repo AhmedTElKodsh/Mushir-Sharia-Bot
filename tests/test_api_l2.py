@@ -24,7 +24,7 @@ def _named_sse_events(response_text):
 def test_root_returns_api_entrypoint():
     client = TestClient(app)
 
-    response = client.get("/")
+    response = client.get("/api")
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"

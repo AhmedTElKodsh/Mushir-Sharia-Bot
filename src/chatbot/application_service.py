@@ -5,6 +5,7 @@ from inspect import Parameter, signature
 from typing import Any, Dict, List, Optional
 
 from src.chatbot.citation_validator import CitationValidator
+from src.chatbot.constants import AUTHORITY_REQUEST_TERMS
 from src.chatbot.prompt_builder import PromptBuilder
 from src.models.ruling import AAOIFICitation, AnswerContract, ComplianceStatus
 from src.rag.pipeline import RAGPipeline
@@ -37,10 +38,6 @@ _TRANSLITERATION_MAP = {
 _ARABIC_DIACRITICS = re.compile(r'[\u064b-\u065f\u0670\u0640]')
 # Hamza normalization: various alef forms → plain alef
 _HAMZA_NORM = re.compile(r'[\u0622\u0623\u0625\u0671]')  # آ أ إ ٱ → ا
-from src.chatbot.constants import AUTHORITY_REQUEST_TERMS
-
-_AUTHORITY_REQUEST_TERMS = AUTHORITY_REQUEST_TERMS
-
 
 
 class ApplicationService:
@@ -93,6 +90,21 @@ class ApplicationService:
             )
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
+
+        # Authority check runs BEFORE cache so that tightening the gate always
+        # takes effect immediately — a cached answer never bypasses compliance.
+        if self._is_authority_request(cleaned_query):
+            contract = AnswerContract(
+                answer=self._authority_refusal_message(response_language),
+                status=ComplianceStatus.INSUFFICIENT_DATA,
+                citations=[],
+                reasoning_summary="User requested a binding ruling or legal advice, which exceeds Mushir's scope.",
+                limitations=self._limitations(response_language),
+                metadata=self._metadata([], confidence=0.0, response_language=response_language),
+            )
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
+
         cached = self._cached_answer(cleaned_query)
         if cached:
             return cached
@@ -110,21 +122,31 @@ class ApplicationService:
             return contract
 
         if self.retriever is None:
-            self.retriever = RAGPipeline()
+            try:
+                self.retriever = RAGPipeline()
+            except Exception as exc:
+                print(f"RAG retriever init failed: {exc}")
+                return AnswerContract(
+                    answer=self._not_addressed_message(response_language),
+                    status=ComplianceStatus.INSUFFICIENT_DATA,
+                    citations=[],
+                    reasoning_summary="Retrieval backend is not available.",
+                    limitations=self._limitations(response_language),
+                    metadata=self._metadata([], confidence=0.0, response_language=response_language),
+                )
 
-        if self._is_authority_request(cleaned_query):
-            contract = AnswerContract(
-                answer=self._authority_refusal_message(response_language),
+        try:
+            chunks = self.retriever.retrieve(cleaned_query, k=self.k, threshold=self.threshold)
+        except Exception as exc:
+            print(f"RAG retrieval failed: {exc}")
+            return AnswerContract(
+                answer=self._not_addressed_message(response_language),
                 status=ComplianceStatus.INSUFFICIENT_DATA,
                 citations=[],
-                reasoning_summary="User requested a binding ruling or legal advice, which exceeds Mushir's scope.",
+                reasoning_summary="Retrieval backend is not available.",
                 limitations=self._limitations(response_language),
                 metadata=self._metadata([], confidence=0.0, response_language=response_language),
             )
-            self._audit(cleaned_query, contract, session_id, request_id)
-            return contract
-
-        chunks = self.retriever.retrieve(cleaned_query, k=self.k, threshold=self.threshold)
         if not chunks:
             contract = AnswerContract(
                 answer=self._not_addressed_message(response_language),
@@ -304,7 +326,7 @@ class ApplicationService:
 
     @staticmethod
     def _detect_language(query: str) -> str:
-        """Detect query language using character ratio (>30% Arabic = ar).
+        """Detect query language using character ratio (>50% Arabic = ar).
 
         Ratio-based approach avoids false positives from code-mixed queries
         like 'What is مرابحة?' which contain only a single Arabic word.
@@ -313,7 +335,7 @@ class ApplicationService:
             return "en"
         arabic_chars = sum(1 for c in query if '\u0600' <= c <= '\u06ff')
         ratio = arabic_chars / len(query)
-        return "ar" if ratio > 0.30 else "en"
+        return "ar" if ratio > 0.50 else "en"
 
     @staticmethod
     def _normalize_query(query: str) -> str:
@@ -356,12 +378,19 @@ class ApplicationService:
 
     @staticmethod
     def _is_authority_request(query: str) -> bool:
+        """Check if the user is requesting a binding ruling, fatwa, or legal advice.
+
+        Uses simple substring match. Python re.\b/\w only supports ASCII, so
+        \w-boundary assertions would fail on Arabic terms (فتوى ملزمة, etc.).
+        Simple substring is safe here because the term list is specific enough
+        that false positives (refusing a query that should be answered) are
+        unlikely, and are strictly safer than false negatives.
+        """
         if not query:
             return False
-        """Check if the user is requesting a binding ruling, fatwa, or legal advice."""
         lowered = query.lower()
-        for term in _AUTHORITY_REQUEST_TERMS:
-            if re.search(r'(?<!\w)' + re.escape(term) + r'(?!\w)', lowered):
+        for term in AUTHORITY_REQUEST_TERMS:
+            if term in lowered:
                 return True
         return False
 
@@ -424,16 +453,9 @@ class ApplicationService:
 
     @staticmethod
     def _status_from_answer(answer: str, citations) -> ComplianceStatus:
-        upper = answer.upper()
-        if "INSUFFICIENT" in upper or not citations:
-            return ComplianceStatus.INSUFFICIENT_DATA
-        if "PARTIALLY_COMPLIANT" in upper or "PARTIALLY COMPLIANT" in upper:
-            return ComplianceStatus.PARTIALLY_COMPLIANT
-        if "NON_COMPLIANT" in upper or "NON-COMPLIANT" in upper or "NON COMPLIANT" in upper:
-            return ComplianceStatus.NON_COMPLIANT
-        if "COMPLIANT" in upper:
-            return ComplianceStatus.COMPLIANT
-        return ComplianceStatus.INSUFFICIENT_DATA
+        """Derive compliance status. Delegates to shared function."""
+        from src.chatbot.compliance_analyzer import derive_compliance_status
+        return derive_compliance_status(answer, citations)
 
     @staticmethod
     def _reasoning_summary(answer: str) -> str:

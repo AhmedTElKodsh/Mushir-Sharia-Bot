@@ -11,7 +11,13 @@ CHUNK_OVERLAP = 50
 MIN_TOKENS = 50
 MAX_TOKENS = 512
 
-SEPARATORS = ["\n\n## ", "\n\n### ", "\n\n#### ", "\n\n", "\n", " ", ""]
+# Separators supporting both English and Arabic document structures.
+# Arabic-specific separators: Arabic comma (،), Arabic semicolon (؛),
+# Arabic question mark (؟), and Arabic full stop (۔).
+# These are literal string separators — RecursiveCharacterTextSplitter does
+# not compile regex by default. For regex-level splitting, use a custom
+# split function before the text splitter.
+SEPARATORS = ["\n\n## ", "\n\n### ", "\n\n#### ", "\n\n", "\n", "،", "؛", "؟", "۔", ".", "!", "?", " ", ""]
 
 def estimate_tokens(text: str) -> int:
     """Rough token estimate (chars/4)."""

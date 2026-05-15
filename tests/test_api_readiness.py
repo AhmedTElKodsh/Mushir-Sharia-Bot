@@ -89,7 +89,7 @@ def test_root_returns_api_info():
 
     app = create_app()
     with TestClient(app) as client:
-        res = client.get("/")
+        res = client.get("/api")
 
     assert res.status_code == 200
     body = res.json()

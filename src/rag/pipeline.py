@@ -2,40 +2,19 @@
 L0 RAG Pipeline
 Retrieves relevant AAOIFI chunks for a given query.
 """
+import logging
 import os
 from typing import Any, List, Optional
 from dotenv import load_dotenv
 from src.models.schema import SemanticChunk, AAOIFICitation
-from src.chatbot.constants import AUTHORITY_REQUEST_TERMS
+from src.rag.query_preprocessor import QueryPreprocessor
+from src.rag.embedding_service import EmbeddingService
 
 load_dotenv()
 
 DEFAULT_EMBED_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 DEFAULT_CHROMA_DIR = "./chroma_db_multilingual"
 REQUIRED_CHROMA_LANGUAGES = ("ar", "en")
-DOMAIN_QUERY_EXPANSIONS = {
-    "murabaha": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
-    "murabahah": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
-    "مرابحة": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
-    "المرابحة": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "resale", "sale"),
-    "ijarah": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
-    "ijara": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
-    "إجارة": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
-    "الإجارة": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
-    "real estate": ("real estate", "investment in real estate", "rental income", "capital appreciation"),
-}
-AUTHORITY_REQUEST_TERMS = AUTHORITY_REQUEST_TERMS
-META_EVALUATION_TERMS = ("what if the answer cites", "retrieved sources only contain")
-UNDER_SPECIFIED_INVESTMENT_TERMS = (
-    ("do not know", "business activity"),
-    ("do not know", "debt ratios"),
-    ("unknown", "business activity"),
-    ("unknown", "debt ratios"),
-)
-ARABIC_UNDER_SPECIFIED_TERMS = (
-    ("\u0644\u0645 \u062a\u0643\u0646", "\u0627\u0644\u0646\u0634\u0627\u0637"),
-    ("\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641\u0629", "\u0627\u0644\u0646\u0634\u0627\u0637"),
-)
 
 
 def _env_flag_enabled(name: str, default: bool = True) -> bool:
@@ -45,46 +24,29 @@ def _env_flag_enabled(name: str, default: bool = True) -> bool:
     return raw_value.strip().lower() not in {"0", "false", "no", "off"}
 
 
-def _is_multilingual_model(model_name: str) -> bool:
-    return "multilingual" in model_name.lower()
+def _collection_has_metadata(collection: Any, key: str, value: Any) -> bool:
+    """Check that the collection has at least one document with key==value.
+
+    Tries both the original value and its string representation to handle
+    ChromaDB serialisation differences (e.g. Python True stored as "True").
+    """
+    logger = logging.getLogger(__name__)
+    try:
+        results = collection.get(where={key: value}, limit=1, include=["metadatas"])
+        if bool(results.get("metadatas")):
+            return True
+        # Retry with string form for bools stored as "True" / "False"
+        if isinstance(value, bool):
+            results = collection.get(where={key: str(value)}, limit=1, include=["metadatas"])
+            return bool(results.get("metadatas"))
+    except Exception as exc:
+        logger.error("ChromaDB metadata query failed (key=%s, value=%r): %s", key, value, exc)
+        return False
+    return False
 
 
-def _collection_has_metadata(collection: Any, key: str, value: str) -> bool:
-    results = collection.get(where={key: value}, limit=1, include=["metadatas"])
-    return bool(results.get("metadatas"))
-
-
-def _preferred_query_language(query: str) -> str:
-    return "ar" if any("\u0600" <= char <= "\u06ff" for char in query) else "en"
-
-
-def _contains_arabic(text: str) -> bool:
-    """Check if text contains any Arabic Unicode characters."""
-    return any("\u0600" <= char <= "\u06ff" for char in text)
-
-
-def _expanded_query_terms(query: str) -> set[str]:
-    lowered_query = query.lower()
-    terms = {token.strip(".,;:?!()[]{}\"'؟\u061f\u060c").lower() for token in lowered_query.split()}
-    for trigger, expansions in DOMAIN_QUERY_EXPANSIONS.items():
-        if trigger.lower() in lowered_query:
-            terms.update(term.lower() for term in expansions)
-    return {term for term in terms if len(term) >= 3}
-
-
-def _query_should_skip_retrieval(query: str) -> bool:
-    """Block retrieval for requests that need refusal or clarification, not loose context."""
-    lowered_query = query.lower()
-    if any(term in lowered_query for term in AUTHORITY_REQUEST_TERMS):
-        return True
-    if any(term in lowered_query for term in META_EVALUATION_TERMS):
-        return True
-    if any(all(term in lowered_query for term in terms) for terms in UNDER_SPECIFIED_INVESTMENT_TERMS):
-        return True
-    return any(all(term in query for term in terms) for terms in ARABIC_UNDER_SPECIFIED_TERMS)
-
-
-def _domain_rerank_score(query: str, document: str, metadata: dict, similarity: float) -> float:
+def _domain_rerank_score(query: str, document: str, metadata: dict, similarity: float, expanded_terms: frozenset) -> float:
+    """Rerank score with precomputed expanded terms for performance."""
     haystack = " ".join(
         str(value)
         for value in [
@@ -93,15 +55,15 @@ def _domain_rerank_score(query: str, document: str, metadata: dict, similarity: 
             metadata.get("standard_number", ""),
         ]
     ).lower()
-    lexical_hits = sum(1 for term in _expanded_query_terms(query) if term in haystack)
-    preferred_language = _preferred_query_language(query)
+    lexical_hits = sum(1 for term in expanded_terms if term in haystack)
+    preferred_language = QueryPreprocessor.preferred_language(query)
     language_bonus = 0.015 if metadata.get("source_language") == preferred_language else 0.0
-    return similarity + min(lexical_hits, 4) * 0.035 + language_bonus
+    return min(similarity + min(lexical_hits, 4) * 0.035 + language_bonus, 1.0)
 
 
 def validate_chroma_index_for_arabic_retrieval(collection: Any, model_name: str) -> None:
     """Fail closed when the configured Chroma index cannot support Arabic retrieval."""
-    if not _is_multilingual_model(model_name):
+    if not EmbeddingService.is_multilingual(model_name):
         raise RuntimeError(
             "Arabic semantic retrieval requires a multilingual embedding model. "
             "Set EMBED_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2 "
@@ -134,15 +96,15 @@ def validate_chroma_index_for_arabic_retrieval(collection: Any, model_name: str)
 
 class RAGPipeline:
     """RAG retrieval pipeline with Chroma and injectable test modes."""
-    
+
     def __init__(self, persist_dir: Optional[str] = None, model_name: Optional[str] = None):
         """Initialize RAG pipeline with ChromaDB and embedding model."""
         self.vector_store = None
-        self.embedding_generator = None
+        self.embedding_service = None
 
         if persist_dir is not None and hasattr(persist_dir, "similarity_search"):
             self.vector_store = persist_dir
-            self.embedding_generator = model_name
+            self.embedding_service = model_name
             return
 
         self.vector_db_type = os.getenv("VECTOR_DB_TYPE", "chroma").lower()
@@ -155,10 +117,8 @@ class RAGPipeline:
             self.persist_dir = persist_dir or os.getenv("CHROMA_DIR", DEFAULT_CHROMA_DIR)
         self.model_name = model_name or os.getenv("EMBED_MODEL", DEFAULT_EMBED_MODEL)
 
-        from sentence_transformers import SentenceTransformer
-
-        print(f"Loading embedding model: {self.model_name}")
-        self.model = SentenceTransformer(self.model_name)
+        # Initialize embedding service
+        self.embedding_service = EmbeddingService(self.model_name)
 
         if self.vector_store is None:
             import chromadb
@@ -169,42 +129,35 @@ class RAGPipeline:
             if _env_flag_enabled("REQUIRE_ARABIC_RETRIEVAL", default=True):
                 validate_chroma_index_for_arabic_retrieval(self.collection, self.model_name)
             print(f"Collection contains {self.collection.count()} chunks")
-    
-    def embed_query(self, query: str) -> List[float]:
-        """Generate embedding for a query string.
 
-        For Arabic queries, appends English expansion terms before encoding
-        so the multilingual embedding model produces a vector closer to the
-        English AAOIFI chunks rather than to unrelated Arabic text.
+    def embed_query(self, query: str) -> List[float]:
+        """Generate embedding for a query string with cross-lingual expansion.
+
+        Always expands the query (Arabic↔English synonyms) before encoding so
+        the multilingual model produces vectors close to both language variants
+        of the same AAOIFI concept.
         """
-        if self.embedding_generator is not None:
-            return self.embedding_generator.embed_text(query)
         if not query:
             return []
-        encoding_query = self._expand_for_embedding(query)
-        return self.model.encode(encoding_query, normalize_embeddings=True).tolist()
 
-    @staticmethod
-    def _expand_for_embedding(query: str) -> str:
-        """Build an embedding-oriented query that merges Arabic with English synonyms.
+        encoding_query = QueryPreprocessor.expand_for_embedding(query)
 
-        Example: "ما هي المرابحة؟" → "ما هي المرابحة؟ murabaha sale deferred payment"
-        """
-        expanded = _expanded_query_terms(query)
-        english_terms = [t for t in expanded if not _contains_arabic(t)]
-        if not english_terms:
-            for term in expanded:
-                for trigger, expansions in DOMAIN_QUERY_EXPANSIONS.items():
-                    if trigger.lower() == term.lower() or term.lower() in trigger.lower():
-                        english_terms = [t for t in expansions if not _contains_arabic(t)]
-                        if english_terms:
-                            break
-                if english_terms:
-                    break
-        if english_terms:
-            return f"{query} {' '.join(english_terms)}"
-        return query
-    
+        embedding_service = getattr(self, 'embedding_service', None)
+        if embedding_service is not None and hasattr(embedding_service, 'embed_text'):
+            return embedding_service.embed_text(encoding_query)
+        if embedding_service is not None and hasattr(embedding_service, 'embed_query'):
+            return list(getattr(embedding_service, 'embed_query_cached', lambda q: tuple(embedding_service.embed_text(q)))(encoding_query))
+
+        embedding_generator = getattr(self, 'embedding_generator', None)
+        if embedding_generator is not None and hasattr(embedding_generator, 'embed_text'):
+            return embedding_generator.embed_text(encoding_query)
+
+        model = getattr(self, 'model', None)
+        if model is not None and hasattr(model, 'encode'):
+            return model.encode(encoding_query, normalize_embeddings=True).tolist()
+
+        return []
+
     def retrieve(
         self,
         query: str,
@@ -212,21 +165,18 @@ class RAGPipeline:
         threshold: float = 0.3,
         allow_low_confidence_fallback: bool = False,
     ) -> List[Any]:
-        threshold = max(0.0, min(1.0, threshold))
-        """
-        Retrieve top-k relevant chunks for a query.
-        
+        """Retrieve top-k relevant chunks for a query.
+
         Args:
             query: User question
             k: Number of chunks to retrieve
             threshold: Minimum similarity score (1 - distance)
-        
+
         Returns:
             List of SemanticChunk objects with citations
         """
+        threshold = max(0.0, min(1.0, threshold))
         if k <= 0:
-            return []
-        if _query_should_skip_retrieval(query):
             return []
 
         query_embedding = self.embed_query(query)
@@ -238,13 +188,20 @@ class RAGPipeline:
             if chunks or not allow_low_confidence_fallback:
                 return chunks
             return self.vector_store.similarity_search(query_embedding, k=k, threshold=0.0)[:k]
-        
-        # Query ChromaDB
+
+        # Precompute expanded terms once for reranking (performance optimization)
+        expanded_terms = QueryPreprocessor.expand_terms(query)
+
+        # Query ChromaDB with reduced multiplier (3x instead of 8x)
+        try:
+            rerank_multiplier = int(os.getenv("RERANK_MULTIPLIER", "3"))
+        except (ValueError, TypeError):
+            rerank_multiplier = 3
         results = self.collection.query(
             query_embeddings=[query_embedding],
-            n_results=max(k * 8, k),
+            n_results=max(k * rerank_multiplier, k),
         )
-        
+
         # Convert to SemanticChunk objects
         chunks = []
         fallback_chunks = []
@@ -253,7 +210,7 @@ class RAGPipeline:
                 metadata = results['metadatas'][0][i]
                 distance = results['distances'][0][i]
                 similarity = 1 - distance  # Convert distance to similarity
-                rerank_score = _domain_rerank_score(query, doc, metadata, similarity)
+                rerank_score = _domain_rerank_score(query, doc, metadata, similarity, expanded_terms)
 
                 citation = AAOIFICitation(
                     standard_id=metadata.get('source_file', 'Unknown').replace('.md', ''),
@@ -273,7 +230,7 @@ class RAGPipeline:
                 # Filter by threshold
                 if rerank_score >= threshold:
                     chunks.append(chunk)
-        
+
         candidates = chunks if chunks or not allow_low_confidence_fallback else fallback_chunks
         ranked_chunks = sorted(candidates, key=lambda chunk: chunk.score, reverse=True)
         return ranked_chunks[:k]

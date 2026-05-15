@@ -250,23 +250,23 @@ class TestArabicQueryExpansion:
 
     def test_arabic_only_query_uses_domain_expansion(self):
         """Pure Arabic query should expand via DOMAIN_QUERY_EXPANSIONS to English terms."""
-        from src.rag.pipeline import RAGPipeline, _expanded_query_terms, _contains_arabic
+        from src.rag.query_preprocessor import QueryPreprocessor
 
         # murabaha is in DOMAIN_QUERY_EXPANSIONS with English expansions
-        expanded = _expanded_query_terms("ما هي المرابحة؟")
+        expanded = QueryPreprocessor.expand_terms("ما هي المرابحة؟")
         assert "murabaha" in expanded or "murabahah" in expanded
 
         # English expansion terms should be available for embedding
-        english_terms = [t for t in expanded if not _contains_arabic(t)]
-        assert len(english_terms) > 0, "_expand_for_embedding has no fallback for Arabic-only queries"
+        english_terms = [t for t in expanded if not QueryPreprocessor.contains_arabic(t)]
+        assert len(english_terms) > 0, "expand_for_embedding has no fallback for Arabic-only queries"
 
     def test_expanded_query_terms_strips_arabic_question_mark(self):
-        """_expanded_query_terms should strip ؟ (Arabic question mark) from tokens."""
-        from src.rag.pipeline import _expanded_query_terms
+        """expand_terms should strip ؟ (Arabic question mark) from tokens."""
+        from src.rag.query_preprocessor import QueryPreprocessor
 
         # Both ASCII ? and Arabic ؟ should be stripped
-        terms_ascii = _expanded_query_terms("What is murabaha?")
-        terms_arabic = _expanded_query_terms("ما هي المرابحة؟")
+        terms_ascii = QueryPreprocessor.expand_terms("What is murabaha?")
+        terms_arabic = QueryPreprocessor.expand_terms("ما هي المرابحة؟")
 
         # "murabaha" should appear in both (clean, no ? suffix)
         assert any("murabaha" in t for t in terms_ascii)
@@ -305,62 +305,55 @@ class TestArabicQueryExpansion:
 class TestAuthorityTermsConsolidation:
     """[P2] Tests for AUTHORITY_REQUEST_TERMS single source of truth."""
 
-    def test_pipeline_uses_constants(self):
-        """pipeline.AUTHORITY_REQUEST_TERMS should match shared constants."""
-        from src.rag.pipeline import AUTHORITY_REQUEST_TERMS as PIPELINE_TERMS
-        from src.chatbot.constants import AUTHORITY_REQUEST_TERMS as CONSTANT_TERMS
-
-        assert PIPELINE_TERMS == CONSTANT_TERMS
-
-    def test_both_layers_detect_same_authority_terms(self):
-        """Both pipeline._query_should_skip_retrieval and service._is_authority_request should agree."""
-        from src.rag.pipeline import _query_should_skip_retrieval
+    def test_both_layers_detect_authority_terms(self):
+        """Both coordinator and service should detect authority terms (different sets, different scope)."""
+        from src.chatbot.retrieval_coordinator import RetrievalCoordinator
         from src.chatbot.application_service import ApplicationService
 
-        authority_queries = [
-            "I want a binding fatwa",
-            "Give me a binding ruling",
-            "I need legal advice",
-            "Can I get financial advice?",
-        ]
+        coordinator = RetrievalCoordinator(retriever=object())
 
-        for query in authority_queries:
-            pipeline_result = _query_should_skip_retrieval(query)
-            service_result = ApplicationService._is_authority_request(query)
-            assert pipeline_result == service_result, (
-                f"Mismatch on '{query}': pipeline={pipeline_result}, service={service_result}"
-            )
+        # Both should catch binding fatwa requests (intersection of their sets)
+        assert RetrievalCoordinator._should_skip_retrieval(coordinator, "Give me a binding fatwa") is True
+        assert ApplicationService._is_authority_request("Give me a binding fatwa") is True
 
-    def test_pipeline_skips_retrieval_for_authority_requests(self):
-        """_query_should_skip_retrieval should return True for authority requests."""
-        from src.rag.pipeline import _query_should_skip_retrieval
+        # Coordinator is broader - catches any "fatwa" mention
+        assert RetrievalCoordinator._should_skip_retrieval(coordinator, "What is a fatwa?") is True
 
-        assert _query_should_skip_retrieval("Give me a binding fatwa") is True
-        assert _query_should_skip_retrieval("I need legal advice") is True
-        assert _query_should_skip_retrieval("normal murabaha question") is False
+        # Service is narrower - only binding/legal requests
+        assert ApplicationService._is_authority_request("normal murabaha question") is False
+
+    def test_retrieval_coordinator_skips_for_authority_requests(self):
+        """_should_skip_retrieval should return True for authority requests."""
+        from src.chatbot.retrieval_coordinator import RetrievalCoordinator
+
+        coordinator = RetrievalCoordinator(retriever=object())
+
+        assert RetrievalCoordinator._should_skip_retrieval(coordinator, "Give me a binding fatwa") is True
+        assert RetrievalCoordinator._should_skip_retrieval(coordinator, "is this halal") is True
+        assert RetrievalCoordinator._should_skip_retrieval(coordinator, "normal murabaha question") is False
 
 
 class TestContainsArabic:
-    """[P3] Tests for _contains_arabic helper (docstring fix verification)."""
+    """[P3] Tests for contains_arabic helper."""
 
     def test_detects_arabic_characters(self):
         """Should return True for strings containing Arabic Unicode."""
-        from src.rag.pipeline import _contains_arabic
+        from src.rag.query_preprocessor import QueryPreprocessor
 
-        assert _contains_arabic("مرحبا") is True
-        assert _contains_arabic("Hello مرحبا") is True
-        assert _contains_arabic("Hello world") is False
-        assert _contains_arabic("") is False
+        assert QueryPreprocessor.contains_arabic("مرحبا") is True
+        assert QueryPreprocessor.contains_arabic("Hello مرحبا") is True
+        assert QueryPreprocessor.contains_arabic("Hello world") is False
+        assert QueryPreprocessor.contains_arabic("") is False
 
     def test_detects_arabic_ranges_exactly(self):
         """Should NOT match Persian, Hebrew, or other non-Arabic scripts."""
-        from src.rag.pipeline import _contains_arabic
+        from src.rag.query_preprocessor import QueryPreprocessor
 
         # Hebrew (not Arabic)
-        assert _contains_arabic("שלום") is False
+        assert QueryPreprocessor.contains_arabic("שלום") is False
         # Persian (uses some Arabic-range chars but distinct)
         # The range check is intentional — test against a known non-Arabic string
-        assert _contains_arabic("سلام") is True  # Arabic "salaam" uses same chars
+        assert QueryPreprocessor.contains_arabic("سلام") is True  # Arabic "salaam" uses same chars
 
 
 class TestApplicationServiceIntegration:

@@ -136,5 +136,5 @@ def test_rag_pipeline_reranks_bilingual_chroma_candidates_with_domain_terms():
 
     chunks = pipeline.retrieve("ما حكم المرابحة؟", k=1, threshold=0.3)
 
-    assert collection.n_results == 8
+    assert collection.n_results == 3
     assert chunks[0].chunk_id == "chunk-murabaha"

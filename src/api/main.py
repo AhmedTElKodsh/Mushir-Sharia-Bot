@@ -41,7 +41,12 @@ async def lifespan(app: FastAPI):
     app.state.rate_limiter = _build_rate_limiter()
     app.state.audit_store = _build_audit_store()
     app.state.cache_store = _build_cache_store()
+    # Eagerly build the retriever once at startup so all requests share one
+    # pre-warmed SentenceTransformer model — eliminates the per-request
+    # lazy-init race condition and prevents concurrent OOM on free-tier hosts.
+    retriever = _build_retriever()
     app.state.application_service = ApplicationService(
+        retriever=retriever,
         clarification_service=ClarificationEngine(),
         audit_store=app.state.audit_store,
         cache_store=app.state.cache_store,
@@ -75,6 +80,25 @@ def _build_rate_limiter():
             print(_safe_fallback_message("Redis rate limiter"))
             return InMemoryRateLimiter(limit=limit, window_seconds=window_seconds)
     return InMemoryRateLimiter(limit=limit, window_seconds=window_seconds)
+
+
+def _build_retriever():
+    """Eagerly construct the RAGPipeline at startup to prevent lazy-init races.
+
+    If ChromaDB / SentenceTransformer are unavailable (e.g., in CI or test
+    environments), returns None so ApplicationService falls back to its
+    existing per-request lazy-init path without crashing startup.
+    """
+    from src.config.logging_config import setup_logging as _setup_logging
+
+    _logger = _setup_logging()
+    try:
+        from src.rag.pipeline import RAGPipeline
+
+        return RAGPipeline()
+    except Exception as exc:
+        _logger.error("RAG retriever failed to initialize: %s", exc, exc_info=True)
+        return None
 
 
 def _build_audit_store():

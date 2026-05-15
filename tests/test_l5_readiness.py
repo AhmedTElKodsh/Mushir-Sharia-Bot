@@ -10,6 +10,7 @@ def test_l5_stable_public_api_smoke_paths():
 
     with TestClient(app) as client:
         root = client.get("/")
+        api_info = client.get("/api")
         chat = client.get("/chat")
         health = client.get("/health")
         ready = client.get("/ready")
@@ -17,8 +18,10 @@ def test_l5_stable_public_api_smoke_paths():
         disclaimer = client.get("/api/v1/compliance/disclaimer")
 
     assert root.status_code == 200
-    assert root.json()["endpoints"]["query"] == "/api/v1/query"
-    assert root.json()["endpoints"]["query_stream"] == "/api/v1/query/stream"
+    assert "Mushir" in root.text
+    assert api_info.status_code == 200
+    assert api_info.json()["endpoints"]["query"] == "/api/v1/query"
+    assert api_info.json()["endpoints"]["query_stream"] == "/api/v1/query/stream"
     assert chat.status_code == 200
     assert 'id="prompt"' in chat.text
     assert "/api/v1/query/stream" in chat.text

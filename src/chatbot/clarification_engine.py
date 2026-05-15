@@ -1,6 +1,7 @@
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+
 from src.config.logging_config import setup_logging
 from src.models.session import ClarificationState, SessionState
 
@@ -236,11 +237,30 @@ class ClarificationEngine:
             return f"{session_state.user_input} | transaction_type: {op_type} | " + " | ".join(facts)
         return session_state.user_input
 
+    def ask_if_needed(self, query: str, session_id: Optional[str] = None) -> Optional[str]:
+        """Return a clarifying question if the query needs more facts, else None.
+
+        Provides the stateless interface that ApplicationService requires.
+        Creates a transient SessionState scoped to this single call so repeated
+        invocations with the same query are idempotent.
+        """
+        try:
+            state = SessionState(session_id=session_id or "")
+            result = self.process_query(state, query)
+            if result.get("status") == "clarifying":
+                questions = result.get("questions", [])
+                return questions[0] if questions else None
+        except Exception as exc:
+            logger.warning("Clarification check failed for query: %s", exc)
+        return None
+
     def _clarification_turns(self, session_state: SessionState) -> int:
+        """Count clarification turns, recognising both ASCII '?' and Arabic '\u061f'."""
         return sum(
             1
             for message in session_state.conversation_history
-            if message.role == "system" and "?" in message.content
+            if message.role == "system"
+            and ("?" in message.content or "\u061f" in message.content)
         )
 
     def _map_expected_answer(

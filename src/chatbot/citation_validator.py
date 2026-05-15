@@ -116,7 +116,8 @@ class CitationValidator:
         text = self._chunk_text(chunk).strip()
         if not text:
             return "", 0, 0
-        sentences = re.split(r"(?<=[.!?])\s+", text)
+        # Include Arabic question mark \u061f and Arabic full stop \u06d4 as sentence terminators
+        sentences = re.split(r"(?<=[.!?\u061f\u06d4])\s+", text)
         quote = next((sentence for sentence in sentences if len(sentence) >= 40), sentences[0])
         quote = quote[:500]
         start = text.find(quote)
