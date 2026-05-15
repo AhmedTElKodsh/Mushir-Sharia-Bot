@@ -16,6 +16,7 @@ def test_l5_stable_public_api_smoke_paths():
         ready = client.get("/ready")
         metrics = client.get("/metrics")
         disclaimer = client.get("/api/v1/compliance/disclaimer")
+        app_js = client.get("/static/js/app.js")
 
     assert root.status_code == 200
     assert "Mushir" in root.text
@@ -24,7 +25,9 @@ def test_l5_stable_public_api_smoke_paths():
     assert api_info.json()["endpoints"]["query_stream"] == "/api/v1/query/stream"
     assert chat.status_code == 200
     assert 'id="prompt"' in chat.text
-    assert "/api/v1/query/stream" in chat.text
+    # URL moved to external static JS in Phase 1 refactor — verify JS file instead
+    assert app_js.status_code == 200
+    assert "/api/v1/query/stream" in app_js.text
     assert health.json()["status"] == "healthy"
     assert ready.json()["status"] == "ready"
     assert ready.json()["readiness_level"] == "dev"

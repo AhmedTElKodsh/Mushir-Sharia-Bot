@@ -43,7 +43,9 @@ def test_chat_page_contains_input_and_output_surface():
     assert 'id="prompt"' in response.text
     assert 'id="messages"' in response.text
     assert "Ask Mushir" in response.text
-    assert "/api/v1/query/stream" in response.text
+    # CSS/JS externalised to static files in Phase 1 refactor
+    assert '/static/css/chat.css' in response.text
+    assert '/static/js/app.js' in response.text
 
 
 def test_session_created_session_can_be_queried():

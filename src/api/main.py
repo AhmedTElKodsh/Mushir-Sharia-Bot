@@ -9,6 +9,8 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from src.api.error_handling import ErrorResponse
 from src.api.rate_limit import InMemoryRateLimiter
@@ -216,7 +218,7 @@ def create_app() -> FastAPI:
         # Allow HuggingFace to embed via iframe; omit X-Frame-Options so the
         # CSP frame-ancestors directive below takes precedence (RFC 7034 §2).
         response.headers["Content-Security-Policy"] = (
-            "frame-ancestors 'self' https://huggingface.co https://*.hf.space"
+            "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'self' https://huggingface.co https://*.hf.space"
         )
         response.headers["X-XSS-Protection"] = "1; mode=block"
         app.state.metrics.record(
@@ -237,14 +239,6 @@ def create_app() -> FastAPI:
                 request_id,
             ),
         )
-
-    @app.get("/", response_class=HTMLResponse)
-    async def root():
-        return CHAT_HTML
-
-    @app.get("/chat", response_class=HTMLResponse)
-    async def chat_page():
-        return CHAT_HTML
 
     @app.get("/api", tags=["info"])
     async def api_info():
@@ -289,190 +283,20 @@ def create_app() -> FastAPI:
     async def metrics():
         return app.state.metrics.render()
 
+    STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+    index_html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+
+    @app.get("/", response_class=HTMLResponse)
+    async def root():
+        return index_html
+
+    @app.get("/chat", response_class=HTMLResponse)
+    async def chat_page():
+        return index_html
+
     app.include_router(api_router, prefix="/api/v1")
     return app
-
-
-CHAT_HTML = """
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mushir Sharia Chatbot</title>
-  <style>
-    :root {
-      color-scheme: light;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f7f5ef;
-      color: #1d2521;
-    }
-    body { margin: 0; min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
-    header { padding: 22px 28px 14px; border-bottom: 1px solid #ddd6c7; background: #fbfaf6; }
-    h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0; }
-    main {
-      display: grid;
-      grid-template-rows: 1fr auto;
-      gap: 16px;
-      width: min(920px, calc(100vw - 32px));
-      margin: 0 auto;
-      padding: 20px 0 24px;
-    }
-    #messages { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; min-height: 360px; padding: 4px; }
-    .message {
-      max-width: 78%;
-      padding: 12px 14px;
-      border: 1px solid #d8d1c3;
-      border-radius: 8px;
-      background: #fff;
-      line-height: 1.45;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .user { align-self: flex-end; background: #e8f1ed; border-color: #b7cec3; }
-    .assistant { align-self: flex-start; }
-    .event { align-self: flex-start; max-width: 78%; color: #5f6b65; font-size: 13px; padding: 2px 4px; }
-    form { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; padding-top: 12px; border-top: 1px solid #ddd6c7; }
-    .controls { display: grid; gap: 8px; }
-    label { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: #3f4a45; line-height: 1.35; }
-    input[type="checkbox"] { margin-top: 2px; accent-color: #214f44; }
-    textarea {
-      min-height: 72px;
-      max-height: 180px;
-      resize: vertical;
-      border: 1px solid #bdb5a7;
-      border-radius: 8px;
-      padding: 12px;
-      font: inherit;
-      background: #fff;
-      color: inherit;
-    }
-    button { height: 44px; border: 0; border-radius: 8px; padding: 0 18px; background: #214f44; color: white; font: inherit; font-weight: 650; cursor: pointer; }
-    button:disabled { opacity: 0.55; cursor: wait; }
-    @media (max-width: 640px) {
-      header { padding-inline: 16px; }
-      main { width: calc(100vw - 24px); }
-      form { grid-template-columns: 1fr; }
-      button { width: 100%; }
-      .message, .event { max-width: 100%; }
-    }
-  </style>
-</head>
-<body>
-  <header><h1>Mushir Sharia Chatbot</h1></header>
-  <main>
-    <section id="messages" aria-live="polite" aria-label="Chat messages">
-      <div class="message assistant">Ask a Sharia compliance question — in English or Arabic. / اسأل سؤالاً عن الامتثال الشرعي باللغة الإنجليزية أو العربية.</div>
-    </section>
-    <form id="chat-form">
-      <div class="controls">
-        <textarea id="prompt" name="prompt" placeholder="Ask Mushir about an Islamic finance transaction... / اسأل مشير عن معاملة مالية إسلامية...">I want to invest in a company</textarea>
-      </div>
-      <button id="send" type="submit">Ask Mushir</button>
-    </form>
-  </main>
-  <script>
-    const form = document.getElementById("chat-form");
-    const promptInput = document.getElementById("prompt");
-    const messages = document.getElementById("messages");
-    const send = document.getElementById("send");
-    let context = {};
-
-    function addMessage(kind, text) {
-      const node = document.createElement("div");
-      node.className = kind === "event" ? "event" : `message ${kind}`;
-      node.textContent = text;
-      // Auto-detect Arabic text and apply RTL direction
-      if (kind !== "event") {
-        const arabicChars = (text.match(/[\u0600-\u06ff]/g) || []).length;
-        const ratio = arabicChars / Math.max(text.length, 1);
-        if (ratio > 0.3) {
-          node.setAttribute("dir", "rtl");
-          node.style.textAlign = "right";
-          node.style.fontFamily = "'Noto Sans Arabic', 'Segoe UI', sans-serif";
-        }
-      }
-      messages.appendChild(node);
-      messages.scrollTop = messages.scrollHeight;
-      return node;
-    }
-
-    function parseSse(text) {
-      return text
-        .trim()
-        .split("\\n\\n")
-        .map(block => {
-          const event = {};
-          for (const line of block.split("\\n")) {
-            if (line.startsWith("event: ")) event.type = line.slice(7);
-            if (line.startsWith("data: ")) event.data = JSON.parse(line.slice(6));
-          }
-          return event;
-        })
-        .filter(event => event.type);
-    }
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const query = promptInput.value.trim();
-      if (!query) return;
-      addMessage("user", query);
-      send.disabled = true;
-      send.textContent = "Streaming...";
-      let thinkingMessage = null;
-      try {
-        const response = await fetch("/api/v1/query/stream", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({query, context})
-        });
-        const events = parseSse(await response.text());
-        for (const item of events) {
-          const data = item.data || {};
-          if (item.type === "started") {
-            thinkingMessage = addMessage("event", "Thinking...");
-          }
-          if (item.type === "retrieval") {
-            if (thinkingMessage) thinkingMessage.remove();
-            thinkingMessage = null;
-            addMessage("event", `Confidence ${Number(data.confidence || 0).toFixed(2)}`);
-          }
-          if (item.type === "token") addMessage("assistant", data.text);
-          if (item.type === "citation") {
-            const standard = data.standard_number || data.document_id || "AAOIFI source";
-            const section = data.section_number ? ` §${data.section_number}` : "";
-            const page = data.quote_start > 0 ? `` : "";  // quote_start used as offset proxy
-            const sourceFile = data.document_id && data.document_id !== standard
-              ? ` — ${data.document_id}` : "";
-            const pageNum = (data.section_title && /\\bp\\.?\\s*\\d+/i.test(data.section_title))
-              ? ` (${data.section_title})` : "";
-            addMessage("event", `📖 ${standard}${section}${pageNum}${sourceFile}`);
-          }
-          if (item.type === "error") {
-            if (thinkingMessage) thinkingMessage.remove();
-            thinkingMessage = null;
-            addMessage("assistant", data.message);
-          }
-          if (item.type === "done") {
-            if (thinkingMessage) thinkingMessage.remove();
-            thinkingMessage = null;
-            if (data.clarification_question) addMessage("assistant", data.clarification_question);
-            context = data.metadata || context;
-            addMessage("event", `Complete - ${data.status}`);
-          }
-        }
-      } catch (error) {
-        if (thinkingMessage) thinkingMessage.remove();
-        addMessage("assistant", `Request failed: ${error.message}`);
-      } finally {
-        send.disabled = false;
-        send.textContent = "Ask Mushir";
-      }
-    });
-  </script>
-</body>
-</html>
-"""
 
 
 app = create_app()
