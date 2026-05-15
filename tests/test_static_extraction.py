@@ -1,21 +1,29 @@
 """Regression guard for P1-S1 static extraction.
 
-Captures baseline HTML output from / and /chat before extraction,
-then verifies the extracted static files produce equivalent output.
+Verifies that / and /chat serve the extracted index.html correctly
+via FastAPI StaticFiles mount, and that key structural elements
+are present in both the HTML response and the static files.
 """
 import pytest
 from fastapi.testclient import TestClient
 
 
-BASELINE_STRINGS = [
+# Strings that must appear in the served HTML (not in external JS)
+HTML_SURFACE_STRINGS = [
     "Mushir Sharia Chatbot",
     'id="prompt"',
     'id="messages"',
     'id="chat-form"',
     "Ask a Sharia compliance question",
-    "/api/v1/query/stream",
     "Ask Mushir",
     "I want to invest in a company",
+    '/static/css/base.css',
+    '/static/css/chat.css',
+    '/static/css/components.css',
+    '/static/css/dark.css',
+    '/static/js/sse-client.js',
+    '/static/js/renderer.js',
+    '/static/js/app.js',
 ]
 
 
@@ -29,7 +37,7 @@ def test_root_returns_chat_html():
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
-    for s in BASELINE_STRINGS:
+    for s in HTML_SURFACE_STRINGS:
         assert s in response.text, f"Missing expected string in / response: {s!r}"
 
 
@@ -43,33 +51,70 @@ def test_chat_returns_chat_html():
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
-    for s in BASELINE_STRINGS:
+    for s in HTML_SURFACE_STRINGS:
         assert s in response.text, f"Missing expected string in /chat response: {s!r}"
 
 
 @pytest.mark.api
-def test_chat_html_contains_css_js_structure():
-    """Verify structural elements present in the current inline CHAT_HTML."""
+def test_static_files_accessible():
+    """Verify that extracted static files are served correctly."""
+    from src.api.main import create_app
+
+    app = create_app()
+    static_files = [
+        "/static/css/base.css",
+        "/static/css/chat.css",
+        "/static/css/components.css",
+        "/static/css/dark.css",
+        "/static/js/sse-client.js",
+        "/static/js/renderer.js",
+        "/static/js/app.js",
+        "/static/js/storage.js",
+        "/static/js/shortcuts.js",
+        "/static/js/flyout.js",
+    ]
+    with TestClient(app) as client:
+        for path in static_files:
+            response = client.get(path)
+            assert response.status_code == 200, f"Static file not accessible: {path}"
+
+
+@pytest.mark.api
+def test_static_files_contain_expected_content():
+    """Verify extracted JS and CSS contain the expected code."""
     from src.api.main import create_app
 
     app = create_app()
     with TestClient(app) as client:
-        html = client.get("/chat").text
+        # Verify sse-client.js has parseSse function
+        sse = client.get("/static/js/sse-client.js").text
+        assert "function parseSse" in sse
+        assert "event: " in sse or "event:" in sse
 
-    # CSS block
-    assert "<style>" in html
-    assert "</style>" in html
-    assert ":root {" in html
+        # Verify renderer.js has addMessage and addEvent
+        renderer = client.get("/static/js/renderer.js").text
+        assert "function addMessage" in renderer
+        assert "function addEvent" in renderer
 
-    # JS block
-    assert "<script>" in html
-    assert "</script>" in html
-    assert "function addMessage" in html
-    assert "function parseSse" in html
-    assert "addEventListener(\"submit\"" in html or "addEventListener('submit'" in html
+        # Verify app.js has form submit handler and fetch to /api/v1/query/stream
+        app_js = client.get("/static/js/app.js").text
+        assert "addEventListener" in app_js
+        assert "/api/v1/query/stream" in app_js
 
-    # HTML structure
-    assert "messages" in html
-    assert "chat-form" in html
-    assert "prompt" in html
-    assert "send" in html
+        # Verify base.css has :root custom properties
+        base = client.get("/static/css/base.css").text
+        assert ":root {" in base
+        assert "color-scheme" in base
+
+        # Verify chat.css has message styles
+        chat = client.get("/static/css/chat.css").text
+        assert ".message" in chat
+        assert "button" in chat
+
+        # Verify dark.css has media query
+        dark = client.get("/static/css/dark.css").text
+        assert "@media (prefers-color-scheme: dark)" in dark
+
+        # Verify components.css exists
+        components = client.get("/static/css/components.css").text
+        assert "Components" in components
