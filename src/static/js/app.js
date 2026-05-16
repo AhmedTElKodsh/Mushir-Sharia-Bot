@@ -74,6 +74,7 @@ async function submitQuery() {
   send.textContent = "Streaming...";
   var thinkingMessage = null;
   var _assistantContent = "";
+  var _assistantCitations = [];
 
   try {
     appState.streaming = true;
@@ -119,6 +120,12 @@ async function submitQuery() {
       },
 
       onCitation: function(data) {
+        /* Track citations for persistence */
+        _assistantCitations.push({
+          standard: data.standard_number || data.document_id || "AAOIFI source",
+          section: data.section_number || null,
+          title: data.section_title || null
+        });
         var standard = data.standard_number || data.document_id || "AAOIFI source";
         var section = data.section_number ? " \u00a7" + data.section_number : "";
         var sourceFile = data.document_id && data.document_id !== standard
@@ -140,7 +147,8 @@ async function submitQuery() {
           role: "assistant",
           content: data.message || "An unexpected error occurred.",
           timestamp: Date.now(),
-          status: "error"
+          status: "error",
+          citations: []
         });
         conversationStore.saveConversation(sessionId, messagesArray);
       },
@@ -163,7 +171,8 @@ async function submitQuery() {
           role: "assistant",
           content: _assistantContent,
           timestamp: Date.now(),
-          status: data.status
+          status: data.status,
+          citations: _assistantCitations
         });
         conversationStore.saveConversation(sessionId, messagesArray);
       },
@@ -180,7 +189,8 @@ async function submitQuery() {
           role: "assistant",
           content: "Connection lost: " + err.message,
           timestamp: Date.now(),
-          status: "error"
+          status: "error",
+          citations: []
         });
         conversationStore.saveConversation(sessionId, messagesArray);
       },
@@ -205,7 +215,8 @@ async function submitQuery() {
       role: "assistant",
       content: "Request failed: " + error.message,
       timestamp: Date.now(),
-      status: "error"
+      status: "error",
+      citations: []
     });
     conversationStore.saveConversation(sessionId, messagesArray);
 
