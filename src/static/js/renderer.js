@@ -236,7 +236,13 @@ function renderBadge(status) {
   label.textContent = labels[status] || status;
   badge.appendChild(label);
 
-  messages.appendChild(badge);
+  /* Insert badge before the last assistant message so it renders BEFORE text */
+  var lastAssistant = messages.querySelector(".message.assistant:last-of-type");
+  if (lastAssistant) {
+    messages.insertBefore(badge, lastAssistant);
+  } else {
+    messages.appendChild(badge);
+  }
   messages.scrollTop = messages.scrollHeight;
   return badge;
 }
@@ -355,11 +361,18 @@ function retryHandler() {
 /**
  * Restore previously persisted messages into the chat container.
  * Called synchronously before first paint to avoid flash-of-empty.
- * @param {Array<{role: string, content: string}>} savedMessages
+ * Renders compliance status badges when the message carries a valid status.
+ * @param {Array<{role: string, content: string, status?: string}>} savedMessages
  */
 function restoreMessages(savedMessages) {
+  var VALID_COMPLIANCE = {COMPLIANT:1, NON_COMPLIANT:1, PARTIALLY_COMPLIANT:1, INSUFFICIENT_DATA:1};
   for (var i = 0; i < savedMessages.length; i++) {
-    addMessage(savedMessages[i].role, savedMessages[i].content);
+    var msg = savedMessages[i];
+    /* Render compliance badge before the assistant message if status is a compliance value */
+    if (msg.role === "assistant" && msg.status && VALID_COMPLIANCE[msg.status]) {
+      renderBadge(msg.status);
+    }
+    addMessage(msg.role, msg.content);
   }
   messages.scrollTop = messages.scrollHeight;
 }

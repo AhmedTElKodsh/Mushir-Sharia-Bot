@@ -90,6 +90,47 @@ class _StorageAdapter:
         """Placeholder — override in subclasses for real migrations."""
         return True
 
+    def setObject(self, key: str, value) -> None:  # noqa: N802
+        """Store a JSON-serializable value."""
+        try:
+            import json
+            self._storage.setItem(key, json.dumps(value))
+        except Exception as e:
+            import warnings
+            warnings.warn(f"StorageAdapter: quota exceeded — {e}")
+
+    def getObject(self, key: str):  # noqa: N802
+        """Retrieve and parse a JSON value from storage."""
+        try:
+            import json
+            raw = self._storage.getItem(key)
+            return json.loads(raw) if raw is not None else None
+        except Exception:
+            return None
+
+    CONVERSATION_KEY = "mushir_conversation"
+
+    def saveConversation(self, session_id: str, messages: list) -> None:  # noqa: N802
+        """Persist the full conversation array."""
+        import time
+        data = {
+            "messages": messages,
+            "session_id": session_id,
+            "timestamp": int(time.time() * 1000),
+        }
+        self.setObject(self.CONVERSATION_KEY, data)
+
+    def restoreConversation(self, session_id: str):  # noqa: N802
+        """Restore the persisted conversation object."""
+        return self.getObject(self.CONVERSATION_KEY)
+
+    def clearConversation(self) -> None:  # noqa: N802
+        """Remove the conversation data from storage."""
+        try:
+            self._storage.removeItem(self.CONVERSATION_KEY)
+        except Exception:
+            pass
+
 
 # ===================================================================
 # Tests
@@ -257,3 +298,125 @@ class TestDisclaimerKeyConvention:
         assert "function MockStorage" in content or (
             "class MockStorage" in content
         ), "MockStorage must be defined in storage.js"
+
+
+@pytest.mark.unit
+class TestConversationPersistence:
+    """Verify conversation persistence methods (setObject, getObject,
+    saveConversation, restoreConversation, clearConversation)."""
+
+    CONVERSATION_KEY = "mushir_conversation"
+
+    def test_set_object_get_object_round_trip(self):
+        adapter = _StorageAdapter()
+        data = {"role": "user", "content": "hello", "status": None}
+        adapter.setObject("test_key", data)
+        result = adapter.getObject("test_key")
+        assert result == data
+
+    def test_get_object_returns_none_for_missing_key(self):
+        adapter = _StorageAdapter()
+        assert adapter.getObject("nonexistent") is None
+
+    def test_get_object_handles_corrupt_data(self):
+        adapter = _StorageAdapter()
+        adapter._storage.setItem("corrupt", "not-json{{{")
+        result = adapter.getObject("corrupt")
+        assert result is None
+
+    def test_save_and_restore_conversation(self):
+        adapter = _StorageAdapter()
+        session_id = "session_test_123"
+        msgs = [
+            {"role": "user", "content": "Is this halal?", "timestamp": 1000},
+            {"role": "assistant", "content": "Yes it is.", "timestamp": 2000,
+             "status": "COMPLIANT", "citations": []},
+        ]
+        adapter.saveConversation(session_id, msgs)
+
+        restored = adapter.restoreConversation(session_id)
+        assert restored is not None
+        assert restored["session_id"] == session_id
+        assert len(restored["messages"]) == 2
+        assert restored["messages"][0]["role"] == "user"
+        assert restored["messages"][0]["content"] == "Is this halal?"
+        assert restored["messages"][1]["role"] == "assistant"
+        assert restored["messages"][1]["status"] == "COMPLIANT"
+        assert "timestamp" in restored
+
+    def test_restore_conversation_no_data(self):
+        adapter = _StorageAdapter()
+        result = adapter.restoreConversation("session_ghost")
+        assert result is None
+
+    def test_clear_conversation_removes_data(self):
+        adapter = _StorageAdapter()
+        adapter.saveConversation("sess_1", [{"role": "user", "content": "hi"}])
+        assert adapter.getObject(self.CONVERSATION_KEY) is not None
+        adapter.clearConversation()
+        assert adapter.getObject(self.CONVERSATION_KEY) is None
+
+    def test_clear_conversation_when_empty_does_not_raise(self):
+        adapter = _StorageAdapter()
+        adapter.clearConversation()  # should not raise
+
+    def test_save_conversation_overwrites_previous(self):
+        adapter = _StorageAdapter()
+        adapter.saveConversation("sess_a", [{"role": "user", "content": "first"}])
+        adapter.saveConversation("sess_b", [{"role": "user", "content": "second"}])
+        restored = adapter.restoreConversation("sess_b")
+        assert restored["messages"][0]["content"] == "second"
+        # Same fixed key was overwritten
+        assert len(restored["messages"]) == 1
+
+    def test_quota_error_does_not_raise(self):
+        """Simulate a storage that raises on setItem (quota exceeded)."""
+        class QuotaLimitedStorage:
+            def __init__(self):
+                self._data = {}
+            def getItem(self, key):
+                return self._data.get(key)
+            def setItem(self, key, value):
+                if len(self._data) >= 1:
+                    raise Exception("QuotaExceededError")
+                self._data[key] = str(value)
+            def removeItem(self, key):
+                self._data.pop(key, None)
+            def clear(self):
+                self._data.clear()
+
+        adapter = _StorageAdapter(storage=QuotaLimitedStorage())
+        # First save should work
+        adapter.saveConversation("s1", [{"role": "user", "content": "ok"}])
+        # Second save should trigger quota error but not crash
+        adapter.saveConversation("s1", [
+            {"role": "user", "content": "this message pushes over quota"},
+            {"role": "assistant", "content": "and another one..."},
+        ])
+        # App continues — no exception raised
+
+    def test_js_storage_has_conversation_methods(self):
+        """Structural guard: verify storage.js defines the methods used by app.js."""
+        import os
+        js_path = "src/static/js/storage.js"
+        assert os.path.exists(js_path), f"{js_path} not found"
+        with open(js_path, encoding="utf-8") as fh:
+            content = fh.read()
+        assert "StorageAdapter.prototype.setObject" in content
+        assert "StorageAdapter.prototype.getObject" in content
+        assert "StorageAdapter.prototype.saveConversation" in content
+        assert "StorageAdapter.prototype.restoreConversation" in content
+        assert "StorageAdapter.prototype.clearConversation" in content
+        assert "CONVERSATION_KEY" in content
+        assert "mushir_conversation" in content
+
+    def test_js_restoreMessages_renders_badges(self):
+        """Structural guard: verify renderer.js restoreMessages checks status for badges."""
+        import os
+        js_path = "src/static/js/renderer.js"
+        assert os.path.exists(js_path), f"{js_path} not found"
+        with open(js_path, encoding="utf-8") as fh:
+            content = fh.read()
+        assert "function restoreMessages" in content
+        assert "VALID_COMPLIANCE" in content
+        assert "renderBadge" in content
