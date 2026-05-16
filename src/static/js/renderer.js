@@ -275,9 +275,10 @@ function addEvent(text) {
 /**
  * Render a compliance status badge as a pill before answer text.
  * @param {string} status - COMPLIANT | NON_COMPLIANT | PARTIALLY_COMPLIANT | INSUFFICIENT_DATA
+ * @param {HTMLElement} [targetNode] - Assistant message the badge should label
  * @returns {HTMLElement|null} The badge element, or null if status is unknown
  */
-function renderBadge(status) {
+function renderBadge(status, targetNode) {
   var VALID = {COMPLIANT:1, NON_COMPLIANT:1, PARTIALLY_COMPLIANT:1, INSUFFICIENT_DATA:1};
   if (!VALID[status]) return null;
 
@@ -325,12 +326,17 @@ function renderBadge(status) {
   label.textContent = labels[status] || status;
   badge.appendChild(label);
 
-  /* Insert badge before the last assistant message so it renders BEFORE text */
-  var lastAssistant = messages.querySelector(".message.assistant:last-of-type");
-  if (lastAssistant) {
-    messages.insertBefore(badge, lastAssistant);
+  /* Insert badge before the answer it labels, even after citation/status events. */
+  if (targetNode && targetNode.parentNode === messages) {
+    messages.insertBefore(badge, targetNode);
   } else {
-    messages.appendChild(badge);
+    var assistants = messages.querySelectorAll(".message.assistant");
+    var lastAssistant = assistants.length ? assistants[assistants.length - 1] : null;
+    if (lastAssistant) {
+      messages.insertBefore(badge, lastAssistant);
+    } else {
+      messages.appendChild(badge);
+    }
   }
   messages.scrollTop = messages.scrollHeight;
   return badge;

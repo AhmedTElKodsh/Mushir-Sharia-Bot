@@ -158,8 +158,10 @@ Storage.resetDisclaimer = function () {
  * Conversation persistence
  * =================================================================== */
 
-/** Fixed storage key for the current session's conversation data. */
+/** Fixed storage key for the legacy current session's conversation data. */
 var CONVERSATION_KEY = "mushir_conversation";
+var CONVERSATION_INDEX_KEY = "mushir_conversations_index";
+var CONVERSATION_ITEM_PREFIX = "mushir_conversation_";
 
 /**
  * Store a JavaScript value as JSON.
@@ -197,12 +199,21 @@ StorageAdapter.prototype.getObject = function (key) {
  * @param {Array} messages
  */
 StorageAdapter.prototype.saveConversation = function (sessionId, messages) {
+  var title = this._conversationTitle(messages);
   var data = {
     messages: messages,
     session_id: sessionId,
+    title: title,
     timestamp: Date.now()
   };
+  this.setObject(CONVERSATION_ITEM_PREFIX + sessionId, data);
   this.setObject(CONVERSATION_KEY, data);
+  this._upsertConversationIndex({
+    session_id: sessionId,
+    title: title,
+    timestamp: data.timestamp,
+    message_count: messages.length
+  });
 };
 
 /**
@@ -211,6 +222,9 @@ StorageAdapter.prototype.saveConversation = function (sessionId, messages) {
  * @returns {{messages: Array, session_id: string, timestamp: number}|null}
  */
 StorageAdapter.prototype.restoreConversation = function (sessionId) {
+  if (sessionId) {
+    return this.getObject(CONVERSATION_ITEM_PREFIX + sessionId);
+  }
   return this.getObject(CONVERSATION_KEY);
 };
 
@@ -223,4 +237,39 @@ StorageAdapter.prototype.clearConversation = function () {
   } catch (_) {
     /* noop */
   }
+};
+
+StorageAdapter.prototype.listConversations = function () {
+  var index = this.getObject(CONVERSATION_INDEX_KEY);
+  if (!Array.isArray(index)) return [];
+  return index.sort(function (a, b) {
+    return (b.timestamp || 0) - (a.timestamp || 0);
+  });
+};
+
+StorageAdapter.prototype.deleteConversation = function (sessionId) {
+  this.remove(CONVERSATION_ITEM_PREFIX + sessionId);
+  var index = this.listConversations().filter(function (item) {
+    return item.session_id !== sessionId;
+  });
+  this.setObject(CONVERSATION_INDEX_KEY, index);
+};
+
+StorageAdapter.prototype._upsertConversationIndex = function (entry) {
+  var index = this.listConversations().filter(function (item) {
+    return item.session_id !== entry.session_id;
+  });
+  index.unshift(entry);
+  this.setObject(CONVERSATION_INDEX_KEY, index.slice(0, 30));
+};
+
+StorageAdapter.prototype._conversationTitle = function (messages) {
+  var fallback = "New conversation";
+  if (!Array.isArray(messages)) return fallback;
+  for (var i = 0; i < messages.length; i++) {
+    if (messages[i].role === "user" && messages[i].content) {
+      return messages[i].content.slice(0, 72);
+    }
+  }
+  return fallback;
 };

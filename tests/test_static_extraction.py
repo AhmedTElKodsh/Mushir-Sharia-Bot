@@ -13,10 +13,12 @@ HTML_SURFACE_STRINGS = [
     "Mushir Sharia Chatbot",
     'id="prompt"',
     'id="messages"',
+    'id="history-sidebar"',
+    "Previous chats",
     'id="chat-form"',
     "Ask a Sharia compliance question",
     "Ask Mushir",
-    "I want to invest in a company",
+    'placeholder="Ask about an Islamic finance transaction..."',
     '/static/css/base.css',
     '/static/css/chat.css',
     '/static/css/components.css',
@@ -39,6 +41,8 @@ def test_root_returns_chat_html():
     assert response.headers["content-type"].startswith("text/html")
     for s in HTML_SURFACE_STRINGS:
         assert s in response.text, f"Missing expected string in / response: {s!r}"
+    assert 'id="disclaimer"' not in response.text
+    assert "Informational guidance only" not in response.text
 
 
 @pytest.mark.api
@@ -53,6 +57,8 @@ def test_chat_returns_chat_html():
     assert response.headers["content-type"].startswith("text/html")
     for s in HTML_SURFACE_STRINGS:
         assert s in response.text, f"Missing expected string in /chat response: {s!r}"
+    assert 'id="disclaimer"' not in response.text
+    assert "Informational guidance only" not in response.text
 
 
 @pytest.mark.api
@@ -106,6 +112,8 @@ def test_static_files_contain_expected_content():
         assert "addEventListener" in app_js
         assert "function submitQuery" in app_js
         assert "/api/v1/query/stream" in app_js
+        assert "function loadConversation" in app_js
+        assert "disclaimer_acknowledged: true" in app_js
 
         # Verify base.css has :root custom properties
         base = client.get("/static/css/base.css").text

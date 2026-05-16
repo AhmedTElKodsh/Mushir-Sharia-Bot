@@ -1,13 +1,13 @@
 /**
- * App orchestrator — initializes DOM references, handles form submission,
- * and dispatches SSE events to the renderer.
+ * App orchestrator: initializes DOM references, handles form submission,
+ * dispatches SSE events to the renderer, and manages local chat history.
  */
 
 const form = document.getElementById("chat-form");
 const promptInput = document.getElementById("prompt");
 const messages = document.getElementById("messages");
 const send = document.getElementById("send");
-const disclaimer = document.getElementById("disclaimer");
+const conversationList = document.getElementById("conversation-list");
 let context = {};
 
 /**
@@ -16,27 +16,12 @@ let context = {};
  */
 var appState = { streaming: false };
 
-/* ===== Conversation Persistence State ===== */
-
 /**
  * @type {Array<{role: string, content: string, timestamp?: number, status?: string, citations?: Array}>}
  */
 var messagesArray = [];
 var sessionId = "session_" + Date.now();
 var conversationStore = new StorageAdapter();
-
-/* ===== Restore Conversation on Load (synchronous, before first paint) ===== */
-
-(function restoreOnLoad() {
-  var saved = conversationStore.restoreConversation(sessionId);
-  if (saved && Array.isArray(saved.messages) && saved.messages.length > 0) {
-    messagesArray = saved.messages;
-    /* Clear the HTML-wired welcome message and render saved messages */
-    messages.innerHTML = "";
-    restoreMessages(messagesArray);
-  }
-  /* If no saved conversation, the welcome message in index.html remains visible */
-})();
 
 /**
  * Configurable parameters shared across modules.
@@ -48,22 +33,26 @@ window.lastQuery = "";
 var currentAssistantNode = null;
 var streamActive = false;
 
+(function restoreOnLoad() {
+  var conversations = conversationStore.listConversations();
+  var activeId = conversations.length ? conversations[0].session_id : null;
+  var saved = activeId ? conversationStore.restoreConversation(activeId) : null;
+  if (saved && Array.isArray(saved.messages) && saved.messages.length > 0) {
+    sessionId = saved.session_id || activeId || sessionId;
+    messagesArray = saved.messages;
+    messages.innerHTML = "";
+    restoreMessages(messagesArray);
+  }
+  renderConversationList();
+})();
+
 form.addEventListener("submit", async function(event) {
   event.preventDefault();
   submitQuery();
 });
 
-if (disclaimer) {
-  send.disabled = !disclaimer.checked;
-  disclaimer.addEventListener("change", function() {
-    send.disabled = !disclaimer.checked;
-  });
-}
-
 /**
- * Core query submission — sends the user's message via SSE streaming.
- * Handles typing indicator, error recovery, and retry flow.
- * @param {string} [queryOverride] - Optional override for retry
+ * Core query submission: sends the user's message via SSE streaming.
  */
 async function submitQuery() {
   var query = promptInput.value.trim() || window.lastQuery;
@@ -71,17 +60,15 @@ async function submitQuery() {
   window.lastQuery = query;
   promptInput.value = "";
 
-  // Abort any in-progress typewriter from a previous response
   appState.streaming = false;
   abortTypewriter();
 
   addMessage("user", query);
-  /* Track user message in conversation array */
   messagesArray.push({role: "user", content: query, timestamp: Date.now()});
+  persistConversation();
 
   send.disabled = true;
   send.textContent = "Streaming...";
-  var thinkingMessage = null;
   var _assistantContent = "";
   var _assistantCitations = [];
   var firstTokenReceived = false;
@@ -97,7 +84,7 @@ async function submitQuery() {
       body: JSON.stringify({
         query: query,
         context: Object.assign({}, context, {
-          disclaimer_acknowledged: Boolean(disclaimer && disclaimer.checked)
+          disclaimer_acknowledged: true
         }),
         conversation_history: messagesArray
       })
@@ -114,33 +101,26 @@ async function submitQuery() {
     var reader = response.body.getReader();
 
     processSseStream(reader, {
-      onStarted: function() {
-        // Typing indicator already showing — first token will swap it
-      },
+      onStarted: function() {},
 
       onToken: function(data) {
-        // Accumulate full assistant content for persistence
         _assistantContent += data.text || "";
         if (!firstTokenReceived) {
-          // First token: remove typing indicator, create assistant bubble
           removeTypingIndicator();
           currentAssistantNode = addMessage("assistant", "");
           renderTypewriter(data.text || "", currentAssistantNode);
           firstTokenReceived = true;
         } else if (currentAssistantNode) {
-          /* Extend typewriter buffer with accumulated content so later tokens'
-             text (including citation markers) renders into the DOM. */
           extendTypewriterBuffer(_assistantContent);
         }
       },
 
       onRetrieval: function(data) {
         var confidence = Number(data.confidence || 0).toFixed(2);
-        addEvent("Confidence " + confidence);
+        addEvent("Retrieved AAOIFI evidence - confidence " + confidence);
       },
 
       onCitation: function(data) {
-        /* Track citations for persistence */
         _assistantCitations.push({
           standard: data.standard_number || data.document_id || "AAOIFI source",
           section: data.section_number || null,
@@ -148,12 +128,12 @@ async function submitQuery() {
           excerpt: data.excerpt || data.text || null
         });
         var standard = data.standard_number || data.document_id || "AAOIFI source";
-        var section = data.section_number ? " \u00a7" + data.section_number : "";
+        var section = data.section_number ? " section " + data.section_number : "";
         var sourceFile = data.document_id && data.document_id !== standard
-          ? " \u2014 " + data.document_id : "";
+          ? " - " + data.document_id : "";
         var pageNum = (data.section_title && /\bp\.?\s*\d+/i.test(data.section_title))
           ? " (" + data.section_title + ")" : "";
-        addEvent("\ud83d\udcd6 " + standard + section + pageNum + sourceFile);
+        addEvent("AAOIFI source: " + standard + section + pageNum + sourceFile);
       },
 
       onError: function(data) {
@@ -162,8 +142,6 @@ async function submitQuery() {
         abortTypewriter();
         removeTypingIndicator();
         renderErrorBubble(data.message || "An unexpected error occurred.");
-
-        // Persist the error as an assistant message
         messagesArray.push({
           role: "assistant",
           content: data.message || "An unexpected error occurred.",
@@ -171,7 +149,7 @@ async function submitQuery() {
           status: "error",
           citations: []
         });
-        conversationStore.saveConversation(sessionId, messagesArray);
+        persistConversation();
       },
 
       onDone: function(data) {
@@ -179,7 +157,6 @@ async function submitQuery() {
         appState.streaming = false;
         abortTypewriter();
 
-        /* Post-process citations: replace [N] markers with interactive anchors */
         if (currentAssistantNode && _assistantCitations.length > 0) {
           renderCitations(currentAssistantNode, _assistantCitations);
         }
@@ -191,11 +168,9 @@ async function submitQuery() {
           addMessage("assistant", data.clarification_question);
         }
         context = data.metadata || context;
-        /* Render compliance badge from done event status (retrieval event lacks status) */
-        if (data.status) renderBadge(data.status);
-        addEvent("Complete - " + data.status);
+        if (data.status) renderBadge(data.status, currentAssistantNode);
+        addEvent("Review complete: " + formatStatusLabel(data.status));
 
-        // Persist the completed assistant message
         var assistantContent = _assistantContent || data.answer || data.clarification_question || "";
         if (assistantContent) {
           messagesArray.push({
@@ -206,7 +181,7 @@ async function submitQuery() {
             citations: _assistantCitations
           });
         }
-        conversationStore.saveConversation(sessionId, messagesArray);
+        persistConversation();
       },
 
       onStreamError: function(err) {
@@ -215,8 +190,6 @@ async function submitQuery() {
         abortTypewriter();
         removeTypingIndicator();
         renderErrorBubble("Connection lost: " + err.message);
-
-        // Persist the connection error
         messagesArray.push({
           role: "assistant",
           content: "Connection lost: " + err.message,
@@ -224,7 +197,7 @@ async function submitQuery() {
           status: "error",
           citations: []
         });
-        conversationStore.saveConversation(sessionId, messagesArray);
+        persistConversation();
       },
 
       onComplete: function() {
@@ -232,7 +205,7 @@ async function submitQuery() {
           removeTypingIndicator();
           renderErrorBubble("Stream ended unexpectedly.");
         }
-        send.disabled = Boolean(disclaimer && !disclaimer.checked);
+        send.disabled = false;
         send.textContent = "Ask Mushir";
       }
     });
@@ -241,8 +214,6 @@ async function submitQuery() {
     abortTypewriter();
     removeTypingIndicator();
     renderErrorBubble("Request failed: " + error.message);
-
-    // Persist the network error
     messagesArray.push({
       role: "assistant",
       content: "Request failed: " + error.message,
@@ -250,37 +221,130 @@ async function submitQuery() {
       status: "error",
       citations: []
     });
-    conversationStore.saveConversation(sessionId, messagesArray);
-
-    send.disabled = Boolean(disclaimer && !disclaimer.checked);
+    persistConversation();
+    send.disabled = false;
     send.textContent = "Ask Mushir";
   }
 }
 
-/* ===== New Chat Handler ===== */
 (function() {
   var newChatBtn = document.getElementById("new-chat");
   if (!newChatBtn) return;
   newChatBtn.addEventListener("click", function() {
-    /* Clear the DOM message container */
-    messages.innerHTML = "";
-    /* Clear persisted conversation data */
-    conversationStore.clearConversation();
-    /* Reset application state */
-    messagesArray = [];
-    context = {};
-    if (disclaimer) {
-      disclaimer.checked = false;
-      send.disabled = true;
-    }
-    /* Restore the welcome message */
-    var welcome = document.createElement("div");
-    welcome.className = "message assistant";
-    welcome.setAttribute("dir", "auto");
-    welcome.textContent = "Ask a Sharia compliance question in English or Arabic.";
-    messages.appendChild(welcome);
+    startNewChat();
   });
 })();
 
-/* ===== Keyboard Shortcuts ===== */
+function persistConversation() {
+  conversationStore.saveConversation(sessionId, messagesArray);
+  renderConversationList();
+}
+
+function startNewChat() {
+  messages.innerHTML = "";
+  sessionId = "session_" + Date.now();
+  window.lastQuery = "";
+  currentAssistantNode = null;
+  streamActive = false;
+  appState.streaming = false;
+  abortTypewriter();
+  removeTypingIndicator();
+  promptInput.value = "";
+  send.disabled = false;
+  send.textContent = "Ask Mushir";
+  messagesArray = [];
+  context = {};
+  renderWelcomeMessage();
+  renderConversationList();
+}
+
+function loadConversation(targetSessionId) {
+  if (!targetSessionId || targetSessionId === sessionId) return;
+  var saved = conversationStore.restoreConversation(targetSessionId);
+  if (!saved || !Array.isArray(saved.messages)) return;
+  appState.streaming = false;
+  abortTypewriter();
+  removeTypingIndicator();
+  sessionId = saved.session_id || targetSessionId;
+  messagesArray = saved.messages;
+  context = {};
+  promptInput.value = "";
+  send.disabled = false;
+  send.textContent = "Ask Mushir";
+  messages.innerHTML = "";
+  if (messagesArray.length) {
+    restoreMessages(messagesArray);
+  } else {
+    renderWelcomeMessage();
+  }
+  renderConversationList();
+}
+
+function renderWelcomeMessage() {
+  var welcome = document.createElement("div");
+  welcome.className = "message assistant";
+  welcome.setAttribute("dir", "auto");
+  welcome.textContent = "Ask a Sharia compliance question in English or Arabic.";
+  messages.appendChild(welcome);
+}
+
+function renderConversationList() {
+  if (!conversationList) return;
+  var conversations = conversationStore.listConversations();
+  conversationList.innerHTML = "";
+  if (!conversations.length) {
+    var empty = document.createElement("div");
+    empty.className = "empty-history";
+    empty.textContent = "No previous chats yet.";
+    conversationList.appendChild(empty);
+    return;
+  }
+  conversations.forEach(function(item) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "conversation-item" + (item.session_id === sessionId ? " active" : "");
+    button.setAttribute("role", "listitem");
+    button.setAttribute("title", item.title || "Conversation");
+    button.addEventListener("click", function() {
+      loadConversation(item.session_id);
+    });
+
+    var title = document.createElement("span");
+    title.className = "conversation-title";
+    title.textContent = item.title || "Conversation";
+
+    var meta = document.createElement("span");
+    meta.className = "conversation-meta";
+    meta.textContent = formatConversationTime(item.timestamp);
+
+    button.appendChild(title);
+    button.appendChild(meta);
+    conversationList.appendChild(button);
+  });
+}
+
+function formatConversationTime(timestamp) {
+  if (!timestamp) return "";
+  try {
+    return new Date(timestamp).toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  } catch (_) {
+    return "";
+  }
+}
+
 Shortcuts.init();
+
+function formatStatusLabel(status) {
+  var labels = {
+    COMPLIANT: "Compliant",
+    NON_COMPLIANT: "Non-compliant",
+    PARTIALLY_COMPLIANT: "Partially compliant",
+    INSUFFICIENT_DATA: "Needs more information"
+  };
+  return labels[status] || "Finished";
+}

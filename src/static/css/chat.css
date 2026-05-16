@@ -3,18 +3,19 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22px 28px 14px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  padding: 18px 28px;
+  border-bottom: 1px solid rgba(221, 214, 199, 0.55);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
 }
 
 .header-btn {
-  height: 32px;
-  padding: 0 14px;
+  height: 38px;
+  padding: 0 16px;
   border: 1px solid var(--color-border);
-  border-radius: var(--bubble-radius);
-  background: transparent;
-  color: var(--color-text-secondary);
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #ffffff;
   font: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -24,8 +25,8 @@ header {
 }
 
 .header-btn:hover {
-  background: var(--color-user-bubble);
-  color: var(--color-text-primary);
+  background: var(--color-primary-cta);
+  color: #ffffff;
 }
 
 h1 {
@@ -38,12 +39,91 @@ h1 {
 
 main {
   display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 0;
+  width: min(1240px, calc(100vw - 32px));
+  margin: 18px auto 20px;
+  min-height: calc(100vh - 108px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--app-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.chat-panel {
+  display: grid;
   grid-template-rows: 1fr auto;
-  gap: 14px;
-  width: var(--chat-max-width);
-  margin: 0 auto;
-  min-height: calc(100vh - 72px);
-  padding: 16px 0 20px;
+  min-width: 0;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%);
+}
+
+#history-sidebar {
+  border-right: 1px solid var(--color-border);
+  padding: 18px 14px;
+  min-width: 0;
+  background: var(--color-sidebar-bg);
+}
+
+.sidebar-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  margin: 2px 4px 12px;
+  text-transform: uppercase;
+}
+
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.conversation-item {
+  width: 100%;
+  height: auto;
+  min-height: 52px;
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--bubble-radius);
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.conversation-item:hover,
+.conversation-item.active {
+  border-color: var(--color-border);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.conversation-item.active {
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.conversation-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.conversation-meta {
+  display: block;
+  margin-top: 3px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.empty-history {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 8px 2px;
 }
 
 #messages {
@@ -52,28 +132,32 @@ main {
   gap: 12px;
   overflow-y: auto;
   min-height: 360px;
-  padding: 4px;
+  padding: 26px min(7vw, 72px) 18px;
 }
 
 .message {
   max-width: var(--bubble-max-width);
-  padding: 12px 14px;
+  padding: 13px 16px;
   border: 1px solid var(--color-border);
-  border-radius: var(--bubble-radius);
+  border-radius: 16px;
   background: var(--color-assistant-bubble);
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
+  box-shadow: 0 8px 20px rgba(20, 32, 28, 0.04);
 }
 
 .user {
   align-self: flex-end;
-  background: var(--color-user-bubble);
-  border-color: var(--color-border);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #ffffff;
+  border-bottom-right-radius: 6px;
 }
 
 .assistant {
   align-self: flex-start;
+  border-bottom-left-radius: 6px;
 }
 
 .event {
@@ -87,13 +171,16 @@ main {
 form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "input send"
-    "ack send";
-  gap: 10px;
+  grid-template-areas: "input send";
+  gap: 12px;
   align-items: center;
-  padding-top: 12px;
+  margin: 0 min(7vw, 72px) 24px;
+  padding: 12px;
   border-top: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+  box-shadow: 0 14px 36px rgba(20, 32, 28, 0.08);
 }
 
 .controls {
@@ -116,35 +203,25 @@ input[type="checkbox"] {
   accent-color: var(--color-primary);
 }
 
-.disclaimer-ack {
-  grid-area: ack;
-  align-items: center;
-  min-height: 24px;
-  font-size: 12px;
-}
-
-.disclaimer-ack input[type="checkbox"] {
-  margin-top: 0;
-}
-
 textarea {
-  min-height: 72px;
-  max-height: 180px;
+  min-height: 54px;
+  max-height: 160px;
   resize: vertical;
-  border: 1px solid var(--color-border);
-  border-radius: var(--bubble-radius);
-  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 4px 12px 8px;
   font: inherit;
-  background: var(--color-assistant-bubble);
+  background: transparent;
   color: inherit;
+  outline: none;
 }
 
 button {
   grid-area: send;
-  height: 44px;
+  height: 42px;
   border: 0;
-  border-radius: var(--bubble-radius);
-  padding: 0 18px;
+  border-radius: 999px;
+  padding: 0 20px;
   background: var(--color-primary-cta);
   color: white;
   font: inherit;
@@ -170,13 +247,30 @@ button:disabled {
 
 @media (max-width: 640px) {
   header { padding-inline: 16px; }
-  main { width: calc(100vw - 24px); }
+  main {
+    grid-template-columns: 1fr;
+    width: calc(100vw - 24px);
+    margin-top: 12px;
+  }
+  #history-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 0 12px;
+  }
+  .conversation-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .conversation-item {
+    min-width: 180px;
+  }
   form {
     grid-template-columns: 1fr;
     grid-template-areas:
       "input"
-      "ack"
       "send";
+    margin: 0 14px 16px;
   }
   button { width: 100%; }
   .message, .event { max-width: 100%; }
