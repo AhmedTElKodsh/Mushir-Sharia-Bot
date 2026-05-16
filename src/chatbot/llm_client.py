@@ -74,7 +74,7 @@ class OpenRouterClient:
         sleep: Callable[[float], None] = time.sleep,
     ):
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
-        self.model_name = model_name or os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-exp:free")
+        self.model_name = model_name or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3-haiku")
         self.temperature = temperature
         self.max_retries = max_retries
         self.timeout_seconds = timeout_seconds
