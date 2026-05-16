@@ -95,3 +95,6 @@ form.addEventListener("submit", async function(event) {
     if (banner) banner.style.display = "";
   };
 })();
+
+/* ===== Keyboard Shortcuts ===== */
+Shortcuts.init();
