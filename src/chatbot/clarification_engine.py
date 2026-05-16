@@ -177,15 +177,14 @@ class ClarificationEngine:
         session_state.user_input = query
         session_state.add_message("user", query)
         session_state.state = ClarificationState.ANALYZING
+        session_state.metadata.setdefault("response_language", self._detect_language(query))
 
         expected_variable = session_state.metadata.get("awaiting_variable")
         op_type = self.extract_operation_type(query) or session_state.extracted_variables.get("operation_type")
 
         if not op_type:
             session_state.missing_variables = ["operation_type"]
-            # Detect language from user's message for appropriate clarification
-            arabic_chars = sum(1 for c in query if '\u0600' <= c <= '\u06ff')
-            lang = "ar" if arabic_chars / max(len(query), 1) > 0.30 else "en"
+            lang = session_state.metadata.get("response_language", "en")
             if lang == "ar":
                 clarify_msg = "ما نوع المعاملة المطلوب تقييمها: قرض، استثمار، شراء، أم عقد؟"
             else:
@@ -351,7 +350,21 @@ class ClarificationEngine:
             "summarize ",
             "tell me about ",
         )
-        return text.startswith(starters)
+        if text.startswith(starters):
+            return True
+        arabic_starters = (
+            "ما هي ",
+            "ما هو ",
+            "ما معنى ",
+            "عرف ",
+            "اشرح ",
+        )
+        return query.strip().startswith(arabic_starters)
+
+    @staticmethod
+    def _detect_language(query: str) -> str:
+        arabic_chars = sum(1 for c in query if '\u0600' <= c <= '\u06ff')
+        return "ar" if arabic_chars / max(len(query), 1) > 0.30 else "en"
 
     def _has_specific_transaction_structure(self, query: str) -> bool:
         text = query.strip().lower()

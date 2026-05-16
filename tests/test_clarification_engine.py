@@ -124,3 +124,17 @@ def test_specific_murabaha_compliance_query_skips_extra_clarification():
         )
         is None
     )
+
+
+def test_arabic_definition_question_skips_transaction_clarification():
+    engine = ClarificationEngine()
+
+    assert engine.ask_if_needed("ما هي المرابحة؟") is None
+
+
+def test_arabic_transaction_clarification_uses_arabic_question():
+    engine = ClarificationEngine()
+
+    question = engine.ask_if_needed("أريد شراء سيارة بالمرابحة")
+
+    assert question == "ما هو نوع السلعة أو الأصل المراد شراؤه؟"
