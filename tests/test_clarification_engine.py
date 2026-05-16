@@ -74,3 +74,22 @@ def test_clarification_loop_stops_after_two_questions_with_available_facts():
     assert session.state == ClarificationState.READY
     assert "missing_variables" in third
     assert "awaiting_variable" not in session.metadata
+
+
+def test_murabaha_purchase_with_resale_sequence_is_ready_for_retrieval():
+    engine = ClarificationEngine()
+    query = (
+        "In a murabaha sale, the bank buys a car and sells it to the customer "
+        "at a disclosed markup payable over 24 months."
+    )
+
+    session = SessionState(session_id="l1-murabaha")
+    result = engine.process_query(session, query)
+
+    assert result["status"] == "ready"
+    assert session.extracted_variables["operation_type"] == "purchase"
+    assert session.extracted_variables["item_type"] == "car"
+    assert "payment_terms" in session.extracted_variables
+    assert "delivery_terms" in session.extracted_variables
+    assert session.extracted_variables["price"] == "disclosed markup"
+    assert engine.ask_if_needed(query) is None

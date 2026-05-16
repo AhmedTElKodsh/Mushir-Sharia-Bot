@@ -133,10 +133,18 @@ class ClarificationEngine:
                 variables.setdefault("purpose", text_clean)
 
         if operation_type == "purchase":
-            if amount is not None:
-                variables.setdefault("price", amount)
-            if any(word in text_lower for word in ["deferred", "installment", "cash", "credit"]):
+            item_type = self._extract_purchase_item(text_clean)
+            price = self._extract_price_amount(text_clean)
+            if item_type:
+                variables.setdefault("item_type", item_type)
+            if price is not None:
+                variables.setdefault("price", price)
+            elif any(marker in text_lower for marker in ["disclosed markup", "disclosed mark-up", "known markup", "known mark-up"]):
+                variables.setdefault("price", "disclosed markup")
+            if any(word in text_lower for word in ["deferred", "installment", "instalment", "cash", "credit", "payable", "payment"]):
                 variables.setdefault("payment_terms", text_clean)
+            if self._mentions_delivery_or_resale_sequence(text_lower):
+                variables.setdefault("delivery_terms", text_clean)
 
         return variables
 
@@ -298,6 +306,47 @@ class ClarificationEngine:
     def _extract_months(self, text: str) -> Optional[int]:
         match = re.search(r"(\d+)\s*(?:months?|mos?)", text, re.IGNORECASE)
         return int(match.group(1)) if match else None
+
+    def _extract_purchase_item(self, text: str) -> Optional[str]:
+        patterns = (
+            r"\bbuys?\s+(?:a|an|the)?\s*([a-z][a-z -]{1,40}?)(?:\s+and\b|,|\.|$)",
+            r"\bpurchases?\s+(?:a|an|the)?\s*([a-z][a-z -]{1,40}?)(?:\s+and\b|,|\.|$)",
+            r"\bsells?\s+(?:a|an|the)?\s*([a-z][a-z -]{1,40}?)(?:\s+to\b|,|\.|$)",
+        )
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                item = match.group(1).strip(" .,-")
+                if item and item.lower() not in {"it", "this", "that"}:
+                    return item
+        return None
+
+    def _mentions_price(self, text_lower: str) -> bool:
+        return any(
+            marker in text_lower
+            for marker in ["price", "cost", "amount", "markup", "mark-up", "profit", "usd", "$"]
+        )
+
+    def _extract_price_amount(self, text: str) -> Optional[float]:
+        patterns = (
+            r"\b(?:price|cost|amount)\s*(?:is|of|:)?\s*(?:usd|eur|gbp|sar|aed|egp|\$)?\s*(\d+(?:,\d{3})*(?:\.\d+)?)",
+            r"(?:usd|eur|gbp|sar|aed|egp|\$)\s*(\d+(?:,\d{3})*(?:\.\d+)?)",
+            r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:dinar|dollars?|usd|eur|gbp|sar|aed|egp)\b",
+        )
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                return float(match.group(1).replace(",", ""))
+        return None
+
+    def _mentions_delivery_or_resale_sequence(self, text_lower: str) -> bool:
+        delivery_markers = ["delivery", "deliver", "possession", "ownership", "risk transfer"]
+        if any(marker in text_lower for marker in delivery_markers):
+            return True
+        return (
+            any(marker in text_lower for marker in ["bank buys", "seller buys", "institution buys"])
+            and any(marker in text_lower for marker in ["sells it", "resells", "sells to"])
+        )
 
     def _mentions_non_compliant_revenue(self, text_lower: str) -> bool:
         markers = ["haram", "non-compliant", "non compliant", "impermissible", "prohibited", "revenue"]
