@@ -65,6 +65,7 @@ function abortTypewriter() {
 function _flushTypewriter() {
   if (!_twState || _twState.done) return;
   _twState.node.textContent = _twState.fullText;
+  _twState.node.classList.remove("typewriter-active");
   _twState.done = true;
   messages.scrollTop = messages.scrollHeight;
 }
@@ -101,6 +102,7 @@ function _twTick(timestamp) {
     messages.scrollTop = messages.scrollHeight;
 
     if (s.pos >= s.fullText.length) {
+      s.node.classList.remove("typewriter-active");
       s.done = true;
       _twState = null;
       return;
@@ -144,6 +146,9 @@ function renderTypewriter(text, node) {
     done: false,
     lastTick: 0
   };
+
+  // Add cursor class for blinking indicator during animation
+  node.classList.add("typewriter-active");
 
   // Start the RAF loop
   _twState.rafId = requestAnimationFrame(_twTick);

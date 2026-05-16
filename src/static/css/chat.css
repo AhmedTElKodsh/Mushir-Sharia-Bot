@@ -117,6 +117,17 @@ button:disabled {
   cursor: wait;
 }
 
+/* ===== Typewriter Cursor Animation (P2-S4) ===== */
+.message.assistant.typewriter-active::after {
+  content: "\258c";
+  animation: tw-blink 0.8s step-end infinite;
+  margin-left: 1px;
+}
+
+@keyframes tw-blink {
+  50% { opacity: 0; }
+}
+
 @media (max-width: 640px) {
   header { padding-inline: 16px; }
   main { width: calc(100vw - 24px); }
