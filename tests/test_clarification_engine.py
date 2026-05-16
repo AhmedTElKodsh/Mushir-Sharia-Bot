@@ -93,3 +93,14 @@ def test_murabaha_purchase_with_resale_sequence_is_ready_for_retrieval():
     assert "delivery_terms" in session.extracted_variables
     assert session.extracted_variables["price"] == "disclosed markup"
     assert engine.ask_if_needed(query) is None
+
+
+def test_informational_murabaha_question_skips_transaction_clarification():
+    engine = ClarificationEngine()
+
+    assert (
+        engine.ask_if_needed(
+            "What does AAOIFI say about executing a Murabaha transaction in foreign currency?"
+        )
+        is None
+    )

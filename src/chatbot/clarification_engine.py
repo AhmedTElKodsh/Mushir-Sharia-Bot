@@ -252,6 +252,8 @@ class ClarificationEngine:
         Creates a transient SessionState scoped to this single call so repeated
         invocations with the same query are idempotent.
         """
+        if self._is_informational_query(query):
+            return None
         try:
             state = SessionState(session_id=session_id or "")
             result = self.process_query(state, query)
@@ -320,6 +322,20 @@ class ClarificationEngine:
                 if item and item.lower() not in {"it", "this", "that"}:
                     return item
         return None
+
+    def _is_informational_query(self, query: str) -> bool:
+        text = query.strip().lower()
+        starters = (
+            "what is ",
+            "what are ",
+            "what does ",
+            "what happens ",
+            "explain ",
+            "define ",
+            "summarize ",
+            "tell me about ",
+        )
+        return text.startswith(starters)
 
     def _mentions_price(self, text_lower: str) -> bool:
         return any(
