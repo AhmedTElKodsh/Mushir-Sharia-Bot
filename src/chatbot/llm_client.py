@@ -74,7 +74,7 @@ class OpenRouterClient:
         sleep: Callable[[float], None] = time.sleep,
     ):
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
-        self.model_name = model_name or os.getenv("OPENROUTER_MODEL", "anthropic/claude-3-haiku")
+        self.model_name = model_name or os.getenv("OPENROUTER_MODEL", "openrouter/free")
         self.temperature = temperature
         self.max_retries = max_retries
         self.timeout_seconds = timeout_seconds
@@ -107,7 +107,11 @@ class OpenRouterClient:
                 )
                 text = response.choices[0].message.content
                 if not text or not text.strip():
-                    raise LLMResponseError("OpenRouter returned an empty response")
+                    last_error = LLMResponseError("OpenRouter returned an empty response")
+                    if attempt < self.max_retries - 1:
+                        self._sleep(2 ** attempt)
+                        continue
+                    raise last_error
                 return text.strip()
             except LLMResponseError:
                 raise

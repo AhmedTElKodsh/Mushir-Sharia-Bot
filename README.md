@@ -88,7 +88,7 @@ Create a `.env` file with:
 ```bash
 # LLM Configuration - OpenRouter
 OPENROUTER_API_KEY=your_openrouter_api_key_here
-OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free
+OPENROUTER_MODEL=openrouter/free
 
 # Vector Database
 CHROMA_PERSIST_DIRECTORY=./data/chroma_db

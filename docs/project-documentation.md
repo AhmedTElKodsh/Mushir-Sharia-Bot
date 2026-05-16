@@ -256,7 +256,7 @@ Minimum live-answer configuration:
 
 ```env
 OPENROUTER_API_KEY=your-openrouter-api-key-here
-OPENROUTER_MODEL=anthropic/claude-3-haiku
+OPENROUTER_MODEL=openrouter/free
 OPENROUTER_MAX_TOKENS=1024
 EMBED_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2
 VECTOR_DB_TYPE=chroma
@@ -398,4 +398,3 @@ Production should be considered degraded if required production checks fail.
 - Run the focused gate before the full suite during active development.
 - Use placeholders in docs and examples.
 - Re-run secret scans after handling real credentials or deployment incidents.
-

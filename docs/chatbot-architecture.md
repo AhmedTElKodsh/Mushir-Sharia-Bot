@@ -298,7 +298,7 @@ Each handler can short-circuit the chain by returning early.
 ```bash
 # LLM Configuration
 OPENROUTER_API_KEY=your_key_here
-OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free
+OPENROUTER_MODEL=openrouter/free
 
 # Caching
 RESPONSE_CACHE_TTL_SECONDS=86400  # 24 hours

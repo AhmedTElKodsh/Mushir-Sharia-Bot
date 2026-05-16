@@ -76,7 +76,7 @@ BATCH_SIZE_BYTES = 25 * 1024 * 1024
 
 
 SPACE_VARIABLES = {
-    "OPENROUTER_MODEL": "anthropic/claude-3-haiku",
+    "OPENROUTER_MODEL": "openrouter/free",
     "OPENROUTER_MAX_TOKENS": "1024",
     "VECTOR_DB_TYPE": "chroma",
     "CHROMA_DIR": "/app/chroma_db_multilingual",

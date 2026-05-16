@@ -132,7 +132,7 @@ class AppConfig:
         # LLM Config
         llm = LLMConfig(
             api_key=os.getenv("OPENROUTER_API_KEY", ""),
-            model_name=os.getenv("OPENROUTER_MODEL", "anthropic/claude-3-haiku"),
+            model_name=os.getenv("OPENROUTER_MODEL", "openrouter/free"),
             timeout_seconds=int(os.getenv("LLM_TIMEOUT_SECONDS", "30")),
             max_retries=int(os.getenv("LLM_MAX_RETRIES", "3")),
             retry_delay_seconds=float(os.getenv("LLM_RETRY_DELAY_SECONDS", "1.0")),

@@ -281,7 +281,7 @@ def test_openrouter_client_defaults_to_correct_model(monkeypatch):
 
     client = GeminiClient(api_key="test-key")
 
-    assert client.model_name == "anthropic/claude-3-haiku"
+    assert client.model_name == "openrouter/free"
 
 
 @pytest.mark.unit
