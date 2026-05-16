@@ -99,6 +99,8 @@ async function submitQuery() {
       },
 
       onToken: function(data) {
+        // Accumulate full assistant content for persistence
+        _assistantContent += data.text || "";
         if (!firstTokenReceived) {
           // First token: remove typing indicator, create assistant bubble
           removeTypingIndicator();
@@ -132,6 +134,15 @@ async function submitQuery() {
         abortTypewriter();
         removeTypingIndicator();
         renderErrorBubble(data.message || "An unexpected error occurred.");
+
+        // Persist the error as an assistant message
+        messagesArray.push({
+          role: "assistant",
+          content: data.message || "An unexpected error occurred.",
+          timestamp: Date.now(),
+          status: "error"
+        });
+        conversationStore.saveConversation(sessionId, messagesArray);
       },
 
       onDone: function(data) {
@@ -146,6 +157,15 @@ async function submitQuery() {
         }
         context = data.metadata || context;
         addEvent("Complete - " + data.status);
+
+        // Persist the completed assistant message
+        messagesArray.push({
+          role: "assistant",
+          content: _assistantContent,
+          timestamp: Date.now(),
+          status: data.status
+        });
+        conversationStore.saveConversation(sessionId, messagesArray);
       },
 
       onStreamError: function(err) {
@@ -154,6 +174,15 @@ async function submitQuery() {
         abortTypewriter();
         removeTypingIndicator();
         renderErrorBubble("Connection lost: " + err.message);
+
+        // Persist the connection error
+        messagesArray.push({
+          role: "assistant",
+          content: "Connection lost: " + err.message,
+          timestamp: Date.now(),
+          status: "error"
+        });
+        conversationStore.saveConversation(sessionId, messagesArray);
       },
 
       onComplete: function() {
@@ -170,6 +199,16 @@ async function submitQuery() {
     abortTypewriter();
     removeTypingIndicator();
     renderErrorBubble("Request failed: " + error.message);
+
+    // Persist the network error
+    messagesArray.push({
+      role: "assistant",
+      content: "Request failed: " + error.message,
+      timestamp: Date.now(),
+      status: "error"
+    });
+    conversationStore.saveConversation(sessionId, messagesArray);
+
     send.disabled = false;
     send.textContent = "Ask Mushir";
   }
@@ -203,6 +242,31 @@ async function submitQuery() {
     prefStore.remove(STORAGE_KEY_DISCLAIMER_DISMISSED);
     if (banner) banner.style.display = "";
   };
+})();
+
+/* ===== New Chat Handler ===== */
+(function() {
+  var newChatBtn = document.getElementById("new-chat");
+  if (!newChatBtn) return;
+  newChatBtn.addEventListener("click", function() {
+    /* Clear the DOM message container */
+    messages.innerHTML = "";
+    /* Clear persisted conversation data */
+    conversationStore.clearConversation();
+    /* Re-show disclaimer banner if it was dismissed */
+    if (typeof resetDisclaimerBanner === "function") {
+      resetDisclaimerBanner();
+    }
+    /* Reset application state */
+    messagesArray = [];
+    context = {};
+    /* Restore the welcome message */
+    var welcome = document.createElement("div");
+    welcome.className = "message assistant";
+    welcome.setAttribute("dir", "auto");
+    welcome.textContent = "Ask a Sharia compliance question \u2014 in English or Arabic. / \u0627\u0633\u0623\u0644 \u0633\u0624\u0627\u0644\u0627\u064b \u0639\u0646 \u0627\u0644\u0627\u0645\u062a\u062b\u0627\u0644 \u0627\u0644\u0634\u0631\u0639\u064a \u0628\u0627\u0644\u0644\u063a\u0629 \u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629 \u0623\u0648 \u0627\u0644\u0639\u0631\u0628\u064a\u0629.";
+    messages.appendChild(welcome);
+  });
 })();
 
 /* ===== Keyboard Shortcuts ===== */
