@@ -11,7 +11,7 @@ progress:
   completed_plans: 7
 current_position:
   phase: "02"
-  plan: "s6"
+  plan: "s5"
   status: "completed"
 ---
 
@@ -23,6 +23,7 @@ current_position:
 | s2   | ✅ Completed | `.planning/phases/02-compliance-badges/P2-S2-SUMMARY.md` |
 | s3   | ✅ Completed | `.planning/phases/02-message-persistence/P2-S3-SUMMARY.md` |
 | s4   | ✅ Completed | `.planning/phases/02-code-review-command/P2-S4-SUMMARY.md` |
+| s5   | ✅ Completed | `.planning/phases/02-citation-flyout/P2-S5-SUMMARY.md` |
 | s6   | ✅ Completed | `.planning/phases/02-multi-turn-threading/P2-S6-SUMMARY.md` |
 
 ## Completed Plans
@@ -34,6 +35,7 @@ current_position:
 | P2-S2 | Compliance badges — color-coded status pills before answer text | 2026-05-16 |
 | P2-S3 | Message persistence with StorageAdapter | 2026-05-16 |
 | P2-S4 | Typewriter effect — rAF character-by-character render | 2026-05-16 |
+| P2-S5 | Citation anchors and flyout panel | 2026-05-16 |
 | P2-S6 | Multi-turn threading — conversation_history in POST body | 2026-05-16 |
 
 ## Performance Metrics
@@ -43,3 +45,4 @@ current_position:
 | 2026-05-16 | P2-S4 | ~15m | 3 | 3 |
 | 2026-05-16 | P2-S2 | ~30m | 1 | 3 |
 | 2026-05-16 | P2-S6 | ~10m | 1 | 3 |
+| 2026-05-16 | P2-S5 | ~45m | 5 | 5 |
