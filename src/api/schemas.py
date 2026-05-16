@@ -94,3 +94,54 @@ class ErrorResponse(BaseModel):
 class StreamEvent(BaseModel):
     event: str
     data: Dict[str, Any]
+
+
+# ---------------------------------------------------------------------------
+# SSE event schemas — discriminated union for all 6 streaming event types
+# ---------------------------------------------------------------------------
+
+
+class StartedEvent(BaseModel):
+    """Emitted once when streaming begins, carrying the request_id."""
+
+    event: str = "started"
+    request_id: str
+
+
+class RetrievalEvent(BaseModel):
+    """Emitted after retrieval with the confidence score."""
+
+    event: str = "retrieval"
+    confidence: float
+
+
+class TokenEvent(BaseModel):
+    """Carries a chunk of the generated answer text."""
+
+    event: str = "token"
+    text: str
+
+
+class CitationEvent(BaseModel):
+    """Carries a single AAOIFI citation reference."""
+
+    event: str = "citation"
+    document_id: str
+    standard_number: str
+    excerpt: Optional[str] = None
+
+
+class DoneEvent(BaseModel):
+    """Emitted when streaming completes, with status and full answer."""
+
+    event: str = "done"
+    status: str
+    answer: str
+
+
+class ErrorEvent(BaseModel):
+    """Emitted when the service encounters an error during streaming."""
+
+    event: str = "error"
+    code: str
+    message: str

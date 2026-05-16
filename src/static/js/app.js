@@ -71,17 +71,18 @@ form.addEventListener("submit", async function(event) {
 (function () {
   var banner = document.getElementById("disclaimer-banner");
   var dismissBtn = document.getElementById("dismiss-disclaimer");
+  var prefStore = new StorageAdapter();
 
   if (!banner || !dismissBtn) return;
 
   /* On load: hide banner if already dismissed this session */
-  if (Storage.isDisclaimerDismissed()) {
+  if (prefStore.get(STORAGE_KEY_DISCLAIMER_DISMISSED) === "true") {
     banner.style.display = "none";
   }
 
   /* Dismiss handler: mark dismissed + hide banner */
   dismissBtn.addEventListener("click", function () {
-    Storage.dismissDisclaimer();
+    prefStore.set(STORAGE_KEY_DISCLAIMER_DISMISSED, "true");
     banner.style.display = "none";
   });
 
@@ -91,7 +92,7 @@ form.addEventListener("submit", async function(event) {
    * Callers: future "New Chat" button handler.
    */
   window.resetDisclaimerBanner = function () {
-    Storage.resetDisclaimer();
+    prefStore.remove(STORAGE_KEY_DISCLAIMER_DISMISSED);
     if (banner) banner.style.display = "";
   };
 })();

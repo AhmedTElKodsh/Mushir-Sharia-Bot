@@ -160,3 +160,70 @@ class OpenRouterClient:
 # Backward compatibility alias
 GeminiClient = OpenRouterClient
 
+
+class MockLLM:
+    """Deterministic LLM stub for testing.
+
+    Accepts a pre-defined list of responses and an optional list of per-call
+    delays (seconds). Responses can be strings (returned as-is) or Exception
+    instances (raised on call) to simulate failure modes such as HTTPError(429),
+    HTTPError(502), or TimeoutError.
+
+    Implements the same ``generate(prompt, system_prompt)`` interface as
+    ``OpenRouterClient`` so it can be injected via ``app.dependency_overrides``
+    or passed directly to ``ApplicationService(llm_client=...)``.
+    """
+
+    def __init__(
+        self,
+        responses: list[str | Exception],
+        delays: list[float] | None = None,
+    ):
+        self._responses = list(responses)
+        self._delays = delays if delays is not None else [0.0] * len(responses)
+        self.call_count = 0
+        self.last_prompt: str | None = None
+        self.last_system_prompt: str | None = None
+
+    def generate(self, prompt: str, system_prompt: str | None = None) -> str:
+        """Return the next pre-configured response or raise the next exception.
+
+        Mirrors ``OpenRouterClient.generate()`` signature so the same caller
+        code path is exercised.
+        """
+        import time
+
+        self.last_prompt = prompt
+        self.last_system_prompt = system_prompt
+        idx = self.call_count
+        self.call_count += 1
+
+        # Apply delay if configured for this call index
+        if idx < len(self._delays) and self._delays[idx] > 0:
+            time.sleep(self._delays[idx])
+
+        if idx >= len(self._responses):
+            from src.chatbot.llm_client import LLMResponseError
+
+            raise LLMResponseError(
+                f"MockLLM: no more responses configured (call #{idx}, "
+                f"{len(self._responses)} configured)"
+            )
+
+        response = self._responses[idx]
+        if isinstance(response, Exception):
+            raise response
+
+        return str(response)
+
+    @property
+    def model_name(self) -> str:
+        """Return a stable identifier so ``ApplicationService`` metadata works."""
+        return "mock-llm"
+
+    def reset(self) -> None:
+        """Reset call tracking for test isolation."""
+        self.call_count = 0
+        self.last_prompt = None
+        self.last_system_prompt = None
+
