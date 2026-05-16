@@ -47,6 +47,7 @@ async def lifespan(app: FastAPI):
     # pre-warmed SentenceTransformer model — eliminates the per-request
     # lazy-init race condition and prevents concurrent OOM on free-tier hosts.
     retriever = _build_retriever()
+    app.state.retriever_ready = retriever is not None
     app.state.application_service = ApplicationService(
         retriever=retriever,
         clarification_service=ClarificationEngine(),
@@ -99,7 +100,7 @@ def _build_retriever():
 
         return RAGPipeline()
     except Exception as exc:
-        _logger.error("RAG retriever failed to initialize: %s", exc, exc_info=True)
+        _logger.error("RAG retriever failed to initialize: %s", type(exc).__name__)
         return None
 
 
@@ -133,6 +134,7 @@ def _build_cache_store():
 def _infrastructure_status(app: FastAPI):
     return {
         "vector_store": os.getenv("VECTOR_DB_TYPE", "chroma").lower(),
+        "retriever_ready": bool(getattr(app.state, "retriever_ready", False)),
         "session_store": type(app.state.session_manager).__name__,
         "rate_limit_store": type(app.state.rate_limiter).__name__,
         "audit_store": type(app.state.audit_store).__name__,
@@ -149,6 +151,7 @@ def _readiness_status(app: FastAPI) -> Dict[str, Any]:
     infrastructure = app.state.infrastructure
     checks = {
         "retrieval_configured": infrastructure.get("vector_store") in {"chroma", "qdrant"},
+        "retriever_ready": bool(infrastructure.get("retriever_ready")),
         "provider_configured": bool(os.getenv("OPENROUTER_API_KEY")),
         "auth_configured": bool(os.getenv("AUTH_TOKEN")),
         "durable_session_store": infrastructure.get("session_store") != "SessionManager",
@@ -158,6 +161,7 @@ def _readiness_status(app: FastAPI) -> Dict[str, Any]:
     }
     production_requirements = [
         "retrieval_configured",
+        "retriever_ready",
         "provider_configured",
         "auth_configured",
         "durable_audit_store",
@@ -180,6 +184,7 @@ def create_app() -> FastAPI:
     app.state.metrics = MetricsRegistry()
     app.state.infrastructure = {
         "vector_store": os.getenv("VECTOR_DB_TYPE", "chroma").lower(),
+        "retriever_ready": False,
         "session_store": "not_initialized",
         "rate_limit_store": "not_initialized",
         "audit_store": "not_initialized",

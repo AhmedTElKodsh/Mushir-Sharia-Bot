@@ -74,6 +74,7 @@ class ApplicationService:
         session_id: Optional[str] = None,
         request_id: Optional[str] = None,
         disclaimer_acknowledged: bool = True,
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
     ) -> AnswerContract:
         if not query or not query.strip():
             return self._empty_query_response()
@@ -125,7 +126,7 @@ class ApplicationService:
             try:
                 self.retriever = RAGPipeline()
             except Exception as exc:
-                print(f"RAG retriever init failed: {exc}")
+                print(f"RAG retriever init failed: {type(exc).__name__}")
                 return AnswerContract(
                     answer=self._not_addressed_message(response_language),
                     status=ComplianceStatus.INSUFFICIENT_DATA,
@@ -138,7 +139,7 @@ class ApplicationService:
         try:
             chunks = self.retriever.retrieve(cleaned_query, k=self.k, threshold=self.threshold)
         except Exception as exc:
-            print(f"RAG retrieval failed: {exc}")
+            print(f"RAG retrieval failed: {type(exc).__name__}")
             return AnswerContract(
                 answer=self._not_addressed_message(response_language),
                 status=ComplianceStatus.INSUFFICIENT_DATA,
@@ -168,7 +169,7 @@ class ApplicationService:
             system_prompt, user_prompt = self.prompt_builder.build_messages(
                 cleaned_query,
                 chunks,
-                history=self._history(session_id),
+                history=self._history(session_id, conversation_history),
                 response_language=response_language,
             )
             answer = self.llm_client.generate(user_prompt, system_prompt=system_prompt)
@@ -176,7 +177,7 @@ class ApplicationService:
             prompt = self._build_prompt(
                 cleaned_query,
                 chunks,
-                history=self._history(session_id),
+                history=self._history(session_id, conversation_history),
                 response_language=response_language,
             )
             answer = self.llm_client.generate(prompt)
@@ -205,7 +206,20 @@ class ApplicationService:
             return None
         return self.clarification_service.ask_if_needed(query, session_id=session_id)
 
-    def _history(self, session_id: Optional[str]) -> List[Dict[str, str]]:
+    def _history(
+        self,
+        session_id: Optional[str],
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
+    ) -> List[Dict[str, str]]:
+        if conversation_history:
+            return [
+                {
+                    "role": str(message.get("role", ""))[:20],
+                    "content": str(message.get("content", ""))[:2000],
+                }
+                for message in conversation_history[-10:]
+                if isinstance(message, dict) and message.get("role") and message.get("content")
+            ]
         if not self.session_store:
             return []
         return self.session_store.history_for(session_id)
@@ -380,8 +394,8 @@ class ApplicationService:
     def _is_authority_request(query: str) -> bool:
         """Check if the user is requesting a binding ruling, fatwa, or legal advice.
 
-        Uses simple substring match. Python re.\b/\w only supports ASCII, so
-        \w-boundary assertions would fail on Arabic terms (فتوى ملزمة, etc.).
+        Uses simple substring match because regex word-boundary assertions
+        would fail on Arabic terms.
         Simple substring is safe here because the term list is specific enough
         that false positives (refusing a query that should be answered) are
         unlikely, and are strictly safer than false negatives.

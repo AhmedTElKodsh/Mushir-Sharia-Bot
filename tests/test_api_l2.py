@@ -48,7 +48,7 @@ def test_chat_page_contains_input_and_output_surface():
     assert '/static/js/app.js' in response.text
 
 
-def test_session_created_session_can_be_queried():
+def test_session_query_endpoint_is_disabled():
     client = TestClient(app)
 
     created = client.post("/api/v1/sessions")
@@ -60,8 +60,7 @@ def test_session_created_session_can_be_queried():
         json={"content": "I want to invest in a company"},
     )
 
-    assert queried.status_code == 200
-    assert queried.json()["status"] == "clarifying"
+    assert queried.status_code == 501
 
 
 def test_query_stream_returns_l2_sse_events_for_clarification():

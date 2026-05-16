@@ -10,7 +10,6 @@ from src.api.dependencies import get_application_service, get_rate_limiter, get_
 from src.api.rate_limit import InMemoryRateLimiter, RateLimitDecision
 from src.api.schemas import ErrorResponse, QueryRequest, QueryResponse
 from src.chatbot.application_service import ApplicationService
-from src.chatbot.clarification_engine import ClarificationEngine
 from src.chatbot.session_manager import SessionManager
 from src.models.ruling import AnswerContract
 from src.models.session import SessionState
@@ -43,14 +42,14 @@ async def submit_session_query(
     request: QueryRequest = Body(...),
     session_manager: SessionManager = Depends(get_session_manager),
 ):
-    """Compatibility endpoint for the existing clarification prototype."""
-    engine = ClarificationEngine()
+    """Legacy prototype endpoint kept disabled so it cannot bypass /query gates."""
     state = session_manager.get_session(session_id)
     if not state:
         raise HTTPException(status_code=404, detail="Session not found or expired")
-    result = engine.process_query(state, request.query)
-    session_manager.update_session(state)
-    return result
+    raise HTTPException(
+        status_code=501,
+        detail="Session-scoped query is disabled; use /api/v1/query or /api/v1/query/stream",
+    )
 
 
 @router.post("/query", response_model=QueryResponse)
@@ -132,6 +131,7 @@ def _answer_service(application_service: ApplicationService, payload: QueryReque
         "session_id": payload.resolved_session_id(),
         "request_id": request_id,
         "disclaimer_acknowledged": bool(payload.context.get("disclaimer_acknowledged", False)),
+        "conversation_history": payload.conversation_history,
     }
     answer_signature = signature(application_service.answer)
     params = answer_signature.parameters

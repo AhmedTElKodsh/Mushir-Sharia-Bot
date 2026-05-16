@@ -19,6 +19,7 @@ class QueryRequest(BaseModel):
     content: Optional[str] = None
     session_id: Optional[str] = None
     context: Dict[str, Any] = Field(default_factory=dict)
+    conversation_history: List[Dict[str, Any]] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="before")
     @classmethod

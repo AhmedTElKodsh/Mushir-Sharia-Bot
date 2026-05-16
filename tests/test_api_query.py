@@ -108,3 +108,53 @@ def test_rest_query_does_not_retry_internal_type_errors():
     assert response.status_code == 500
     assert service.calls == 1
     assert "request_id caused" not in response.text
+
+
+@pytest.mark.api
+def test_rest_query_forwards_conversation_history_when_supported():
+    from src.api.dependencies import get_application_service
+    from src.api.main import create_app
+    from src.models.ruling import AnswerContract, ComplianceStatus
+
+    class HistoryAwareService:
+        def __init__(self):
+            self.history = None
+
+        def answer(
+            self,
+            query,
+            session_id=None,
+            request_id=None,
+            disclaimer_acknowledged=True,
+            conversation_history=None,
+        ):
+            self.history = conversation_history
+            return AnswerContract(
+                answer="Not addressed in retrieved AAOIFI standards.",
+                status=ComplianceStatus.INSUFFICIENT_DATA,
+                citations=[],
+                reasoning_summary="No chunks.",
+                metadata={"confidence": 0.0},
+            )
+
+    service = HistoryAwareService()
+    app = create_app()
+    app.dependency_overrides[get_application_service] = lambda: service
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/query",
+            json={
+                "query": "Can you clarify?",
+                "conversation_history": [
+                    {"role": "user", "content": "I want to invest in a company"},
+                    {"role": "assistant", "content": "Please provide sector and debt details."},
+                ],
+            },
+        )
+
+    assert response.status_code == 200
+    assert service.history == [
+        {"role": "user", "content": "I want to invest in a company"},
+        {"role": "assistant", "content": "Please provide sector and debt details."},
+    ]

@@ -43,7 +43,7 @@ def test_get_session_history_returns_404_for_nonexistent():
 
 
 @pytest.mark.api
-def test_get_session_history_after_query():
+def test_session_query_endpoint_is_disabled_instead_of_bypassing_query_gates():
     from src.api.main import create_app
 
     app = create_app()
@@ -55,7 +55,7 @@ def test_get_session_history_after_query():
             f"/api/v1/sessions/{session_id}/query",
             json={"query": "I want to invest in a tech company"},
         )
-        assert query_res.status_code == 200
+        assert query_res.status_code == 501
 
         history_res = client.get(f"/api/v1/sessions/{session_id}/history")
         assert history_res.status_code == 200

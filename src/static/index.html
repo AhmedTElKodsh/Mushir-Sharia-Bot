@@ -12,28 +12,21 @@
 <body>
   <header>
     <h1>Mushir Sharia Chatbot</h1>
-    <button id="new-chat" class="header-btn" type="button" title="Start a new conversation / بدء محادثة جديدة">+ New Chat</button>
+    <button id="new-chat" class="header-btn" type="button" title="Start a new conversation">New Chat</button>
   </header>
-  <div id="disclaimer-banner" class="disclaimer-banner" role="alert">
-    <span class="disclaimer-text">
-      Mushir provides informational guidance grounded in retrieved AAOIFI excerpts.
-      It does not provide a binding Sharia ruling, fatwa, legal advice, or financial advice.
-      Consult a qualified Sharia scholar before relying on any conclusion. /
-      يقدم مشير إرشادا معلوماتيا مستندا إلى المقاطع المسترجعة من معايير أيوفي.
-      ولا يقدم حكما شرعيا ملزما أو فتوى أو نصيحة قانونية أو مالية.
-      استشر عالما شرعيا مؤهلا قبل الاعتماد على أي نتيجة.
-    </span>
-    <button id="dismiss-disclaimer" class="disclaimer-close" aria-label="Dismiss disclaimer / إغلاق التنبيه">&times;</button>
-  </div>
   <main>
     <section id="messages" aria-live="polite" aria-label="Chat messages">
-      <div class="message assistant" dir="auto">Ask a Sharia compliance question — in English or Arabic. / اسأل سؤالاً عن الامتثال الشرعي باللغة الإنجليزية أو العربية.</div>
+      <div class="message assistant" dir="auto">Ask a Sharia compliance question in English or Arabic.</div>
     </section>
     <form id="chat-form" aria-label="Chat input form">
       <div class="controls">
-        <textarea id="prompt" name="prompt" placeholder="Ask Mushir about an Islamic finance transaction... / اسأل مشير عن معاملة مالية إسلامية..." dir="auto">I want to invest in a company</textarea>
+        <textarea id="prompt" name="prompt" placeholder="Ask about an Islamic finance transaction..." dir="auto">I want to invest in a company</textarea>
       </div>
-      <button id="send" type="submit">Ask Mushir</button>
+      <label class="disclaimer-ack">
+        <input id="disclaimer" name="disclaimer" type="checkbox">
+        <span>Informational guidance only, not a binding Sharia ruling.</span>
+      </label>
+      <button id="send" type="submit" disabled>Ask Mushir</button>
     </form>
   </main>
   <script src="/static/js/sse-client.js"></script>

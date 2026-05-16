@@ -7,6 +7,7 @@ const form = document.getElementById("chat-form");
 const promptInput = document.getElementById("prompt");
 const messages = document.getElementById("messages");
 const send = document.getElementById("send");
+const disclaimer = document.getElementById("disclaimer");
 let context = {};
 
 /**
@@ -44,12 +45,20 @@ var conversationStore = new StorageAdapter();
 var config = { typewriterSpeed: 25 };
 
 window.lastQuery = "";
-var firstTokenReceived = false;
+var currentAssistantNode = null;
+var streamActive = false;
 
 form.addEventListener("submit", async function(event) {
   event.preventDefault();
   submitQuery();
 });
+
+if (disclaimer) {
+  send.disabled = !disclaimer.checked;
+  disclaimer.addEventListener("change", function() {
+    send.disabled = !disclaimer.checked;
+  });
+}
 
 /**
  * Core query submission — sends the user's message via SSE streaming.
@@ -75,15 +84,21 @@ async function submitQuery() {
   var thinkingMessage = null;
   var _assistantContent = "";
   var _assistantCitations = [];
+  var firstTokenReceived = false;
+  currentAssistantNode = null;
+  streamActive = true;
 
   try {
     appState.streaming = true;
+    renderTypingIndicator();
     var response = await fetch("/api/v1/query/stream", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
         query: query,
-        context: context,
+        context: Object.assign({}, context, {
+          disclaimer_acknowledged: Boolean(disclaimer && disclaimer.checked)
+        }),
         conversation_history: messagesArray
       })
     });
@@ -172,7 +187,7 @@ async function submitQuery() {
         if (!firstTokenReceived) {
           removeTypingIndicator();
         }
-        if (data.clarification_question) {
+        if (data.clarification_question && data.clarification_question !== _assistantContent) {
           addMessage("assistant", data.clarification_question);
         }
         context = data.metadata || context;
@@ -181,13 +196,16 @@ async function submitQuery() {
         addEvent("Complete - " + data.status);
 
         // Persist the completed assistant message
-        messagesArray.push({
-          role: "assistant",
-          content: _assistantContent,
-          timestamp: Date.now(),
-          status: data.status,
-          citations: _assistantCitations
-        });
+        var assistantContent = _assistantContent || data.answer || data.clarification_question || "";
+        if (assistantContent) {
+          messagesArray.push({
+            role: "assistant",
+            content: assistantContent,
+            timestamp: Date.now(),
+            status: data.status,
+            citations: _assistantCitations
+          });
+        }
         conversationStore.saveConversation(sessionId, messagesArray);
       },
 
@@ -214,7 +232,7 @@ async function submitQuery() {
           removeTypingIndicator();
           renderErrorBubble("Stream ended unexpectedly.");
         }
-        send.disabled = false;
+        send.disabled = Boolean(disclaimer && !disclaimer.checked);
         send.textContent = "Ask Mushir";
       }
     });
@@ -234,40 +252,10 @@ async function submitQuery() {
     });
     conversationStore.saveConversation(sessionId, messagesArray);
 
-    send.disabled = false;
+    send.disabled = Boolean(disclaimer && !disclaimer.checked);
     send.textContent = "Ask Mushir";
   }
 }
-
-/* ===== Disclaimer Banner Logic ===== */
-(function () {
-  var banner = document.getElementById("disclaimer-banner");
-  var dismissBtn = document.getElementById("dismiss-disclaimer");
-  var prefStore = new StorageAdapter();
-
-  if (!banner || !dismissBtn) return;
-
-  /* On load: hide banner if already dismissed this session */
-  if (prefStore.get(STORAGE_KEY_DISCLAIMER_DISMISSED) === "true") {
-    banner.style.display = "none";
-  }
-
-  /* Dismiss handler: mark dismissed + hide banner */
-  dismissBtn.addEventListener("click", function () {
-    prefStore.set(STORAGE_KEY_DISCLAIMER_DISMISSED, "true");
-    banner.style.display = "none";
-  });
-
-  /**
-   * Global reset for "New Chat" feature.
-   * Clears the dismissed flag and re-shows the banner.
-   * Callers: future "New Chat" button handler.
-   */
-  window.resetDisclaimerBanner = function () {
-    prefStore.remove(STORAGE_KEY_DISCLAIMER_DISMISSED);
-    if (banner) banner.style.display = "";
-  };
-})();
 
 /* ===== New Chat Handler ===== */
 (function() {
@@ -278,18 +266,18 @@ async function submitQuery() {
     messages.innerHTML = "";
     /* Clear persisted conversation data */
     conversationStore.clearConversation();
-    /* Re-show disclaimer banner if it was dismissed */
-    if (typeof resetDisclaimerBanner === "function") {
-      resetDisclaimerBanner();
-    }
     /* Reset application state */
     messagesArray = [];
     context = {};
+    if (disclaimer) {
+      disclaimer.checked = false;
+      send.disabled = true;
+    }
     /* Restore the welcome message */
     var welcome = document.createElement("div");
     welcome.className = "message assistant";
     welcome.setAttribute("dir", "auto");
-    welcome.textContent = "Ask a Sharia compliance question \u2014 in English or Arabic. / \u0627\u0633\u0623\u0644 \u0633\u0624\u0627\u0644\u0627\u064b \u0639\u0646 \u0627\u0644\u0627\u0645\u062a\u062b\u0627\u0644 \u0627\u0644\u0634\u0631\u0639\u064a \u0628\u0627\u0644\u0644\u063a\u0629 \u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629 \u0623\u0648 \u0627\u0644\u0639\u0631\u0628\u064a\u0629.";
+    welcome.textContent = "Ask a Sharia compliance question in English or Arabic.";
     messages.appendChild(welcome);
   });
 })();

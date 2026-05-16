@@ -39,10 +39,11 @@ h1 {
 main {
   display: grid;
   grid-template-rows: 1fr auto;
-  gap: 16px;
+  gap: 14px;
   width: var(--chat-max-width);
   margin: 0 auto;
-  padding: 20px 0 24px;
+  min-height: calc(100vh - 72px);
+  padding: 16px 0 20px;
 }
 
 #messages {
@@ -85,14 +86,18 @@ main {
 
 form {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "input send"
+    "ack send";
   gap: 10px;
-  align-items: end;
+  align-items: center;
   padding-top: 12px;
   border-top: 1px solid var(--color-border);
 }
 
 .controls {
+  grid-area: input;
   display: grid;
   gap: 8px;
 }
@@ -111,6 +116,17 @@ input[type="checkbox"] {
   accent-color: var(--color-primary);
 }
 
+.disclaimer-ack {
+  grid-area: ack;
+  align-items: center;
+  min-height: 24px;
+  font-size: 12px;
+}
+
+.disclaimer-ack input[type="checkbox"] {
+  margin-top: 0;
+}
+
 textarea {
   min-height: 72px;
   max-height: 180px;
@@ -124,6 +140,7 @@ textarea {
 }
 
 button {
+  grid-area: send;
   height: 44px;
   border: 0;
   border-radius: var(--bubble-radius);
@@ -137,7 +154,7 @@ button {
 
 button:disabled {
   opacity: 0.55;
-  cursor: wait;
+  cursor: not-allowed;
 }
 
 /* ===== Typewriter Cursor Animation (P2-S4) ===== */
@@ -154,7 +171,13 @@ button:disabled {
 @media (max-width: 640px) {
   header { padding-inline: 16px; }
   main { width: calc(100vw - 24px); }
-  form { grid-template-columns: 1fr; }
+  form {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "input"
+      "ack"
+      "send";
+  }
   button { width: 100%; }
   .message, .event { max-width: 100%; }
 }

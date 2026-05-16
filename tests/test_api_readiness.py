@@ -46,7 +46,13 @@ def test_ready_checks_all_required_infrastructure_components():
         res = client.get("/ready")
 
     checks = res.json()["checks"]
-    required = ["retrieval_configured", "provider_configured", "auth_configured", "durable_audit_store"]
+    required = [
+        "retrieval_configured",
+        "retriever_ready",
+        "provider_configured",
+        "auth_configured",
+        "durable_audit_store",
+    ]
     for key in required:
         assert key in checks, f"Missing check: {key}"
 
@@ -61,6 +67,7 @@ def test_ready_infrastructure_shows_store_types():
 
     infra = res.json()["infrastructure"]
     assert "vector_store" in infra
+    assert "retriever_ready" in infra
     assert "session_store" in infra
     assert "rate_limit_store" in infra
     assert "audit_store" in infra
@@ -108,3 +115,41 @@ def test_favicon_returns_204():
         res = client.get("/favicon.ico")
 
     assert res.status_code == 204
+
+
+@pytest.mark.api
+def test_production_ready_degrades_when_retriever_startup_fails(monkeypatch):
+    from src.api import main as api_main
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-provider-key")
+    monkeypatch.setenv("AUTH_TOKEN", "test-auth-token")
+    monkeypatch.setattr(api_main, "_build_retriever", lambda: None)
+
+    app = api_main.create_app()
+    with TestClient(app) as client:
+        res = client.get("/ready")
+
+    body = res.json()
+    assert res.status_code == 503
+    assert body["status"] == "degraded"
+    assert body["checks"]["retriever_ready"] is False
+    assert body["infrastructure"]["retriever_ready"] is False
+
+
+@pytest.mark.api
+def test_retrieval_error_log_does_not_include_raw_secret(capsys):
+    from src.chatbot.application_service import ApplicationService
+    from src.models.ruling import ComplianceStatus
+
+    class SecretFailingRetriever:
+        def retrieve(self, query, k=5, threshold=0.3):
+            raise RuntimeError("OPENROUTER_API_KEY=sk-test-secret")
+
+    service = ApplicationService(retriever=SecretFailingRetriever())
+    answer = service.answer("What is murabahah?")
+
+    captured = capsys.readouterr()
+    assert answer.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert "sk-test-secret" not in captured.out
+    assert "OPENROUTER_API_KEY" not in captured.out
