@@ -182,3 +182,184 @@ function addMessage(kind, text) {
 function addEvent(text) {
   return addMessage("event", text);
 }
+
+/**
+ * Render a compliance status badge as a pill before answer text.
+ * @param {string} status - COMPLIANT | NON_COMPLIANT | PARTIALLY_COMPLIANT | INSUFFICIENT_DATA
+ * @returns {HTMLElement|null} The badge element, or null if status is unknown
+ */
+function renderBadge(status) {
+  var VALID = {COMPLIANT:1, NON_COMPLIANT:1, PARTIALLY_COMPLIANT:1, INSUFFICIENT_DATA:1};
+  if (!VALID[status]) return null;
+
+  var normalized = status.toLowerCase().replace(/_/g, "-");
+  var labels = {
+    COMPLIANT:           "Compliant",
+    NON_COMPLIANT:       "Non-Compliant",
+    PARTIALLY_COMPLIANT: "Partially Compliant",
+    INSUFFICIENT_DATA:   "Insufficient Data"
+  };
+
+  /* Remove any existing badge (from a prior started/retrieval event) */
+  var existing = messages.querySelector(".badge");
+  if (existing) existing.remove();
+
+  var badge  = document.createElement("div");
+  badge.className = "badge " + normalized;
+  badge.setAttribute("data-status", normalized);
+  badge.setAttribute("role", "status");
+  badge.setAttribute("aria-label", "Compliance status: " + (labels[status] || status));
+
+  /* Icon */
+  var icon = document.createElement("span");
+  icon.className = "badge-icon";
+  icon.setAttribute("aria-hidden", "true");
+
+  switch (status) {
+    case "COMPLIANT":
+      icon.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      break;
+    case "NON_COMPLIANT":
+      icon.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3L9 9M9 3L3 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+      break;
+    case "PARTIALLY_COMPLIANT":
+      icon.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M6 1a5 5 0 010 10V1z" fill="currentColor" opacity="0.4"/></svg>';
+      break;
+    case "INSUFFICIENT_DATA":
+      icon.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+      break;
+  }
+  badge.appendChild(icon);
+
+  /* Label */
+  var label = document.createElement("span");
+  label.textContent = labels[status] || status;
+  badge.appendChild(label);
+
+  messages.appendChild(badge);
+  messages.scrollTop = messages.scrollHeight;
+  return badge;
+}
+
+// ---- Typing indicator & Error bubble (P2-S1) -------------------------------
+
+/**
+ * Reference to the current typing-indicator node (set by renderTypingIndicator,
+ * cleared by removeTypingIndicator). Used to track whether the placeholder
+ * should be replaced by the first token.
+ * @type {HTMLElement|null}
+ */
+var typingNode = null;
+
+/**
+ * Render a typing indicator inside an assistant bubble placeholder.
+ * Shows three animated dots by default.
+ * Respects `prefers-reduced-motion`: shows static "Mushir is composing..." text.
+ * @returns {HTMLElement} The created DOM node
+ */
+function renderTypingIndicator() {
+  var node = document.createElement("div");
+  node.className = "message assistant";
+
+  var indicator = document.createElement("span");
+  indicator.className = "typing-indicator";
+  for (var i = 0; i < 3; i++) {
+    var dot = document.createElement("span");
+    dot.className = "dot";
+    indicator.appendChild(dot);
+  }
+
+  // prefers-reduced-motion: CSS hides dots and shows static text
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    indicator.classList.add("static-text");
+  }
+
+  node.appendChild(indicator);
+  messages.appendChild(node);
+  messages.scrollTop = messages.scrollHeight;
+  typingNode = node;
+  return node;
+}
+
+/**
+ * Remove the typing indicator placeholder from the DOM.
+ * Safe to call when no typing indicator is showing.
+ */
+function removeTypingIndicator() {
+  if (typingNode) {
+    typingNode.remove();
+    typingNode = null;
+  }
+}
+
+/**
+ * Render an error bubble with a red border, error icon, message, and "Retry" button.
+ * Removes the typing indicator if it is still present.
+ * @param {string} message - Error description from the SSE error event
+ * @returns {HTMLElement} The created DOM node
+ */
+function renderErrorBubble(message) {
+  // Remove typing indicator if it's still showing
+  removeTypingIndicator();
+
+  var node = document.createElement("div");
+  node.className = "error-bubble";
+
+  var header = document.createElement("div");
+  header.className = "error-header";
+
+  var icon = document.createElement("span");
+  icon.className = "error-icon";
+  icon.textContent = "!";
+  header.appendChild(icon);
+
+  var title = document.createElement("span");
+  title.textContent = "Error";
+  header.appendChild(title);
+
+  node.appendChild(header);
+
+  var msg = document.createElement("div");
+  msg.className = "error-message";
+  msg.textContent = message;
+  node.appendChild(msg);
+
+  var retry = document.createElement("button");
+  retry.className = "retry-button";
+  retry.textContent = "Retry";
+  retry.addEventListener("click", retryHandler);
+  node.appendChild(retry);
+
+  messages.appendChild(node);
+  messages.scrollTop = messages.scrollHeight;
+  return node;
+}
+
+/**
+ * Retry handler — re-submits the last user query through the form submit flow.
+ * Removes the current error bubble, restores the prompt value, and dispatches
+ * a new submit event.
+ */
+function retryHandler() {
+  if (!window.lastQuery) return;
+
+  // Remove the error bubble
+  var errorBubble = document.querySelector(".error-bubble");
+  if (errorBubble) errorBubble.remove();
+
+  // Restore the last query to the input and re-submit
+  promptInput.value = window.lastQuery;
+  form.dispatchEvent(new Event("submit", { cancelable: true }));
+}
+
+/**
+ * Restore previously persisted messages into the chat container.
+ * Called synchronously before first paint to avoid flash-of-empty.
+ * @param {Array<{role: string, content: string}>} savedMessages
+ */
+function restoreMessages(savedMessages) {
+  for (var i = 0; i < savedMessages.length; i++) {
+    addMessage(savedMessages[i].role, savedMessages[i].content);
+  }
+  messages.scrollTop = messages.scrollHeight;
+}

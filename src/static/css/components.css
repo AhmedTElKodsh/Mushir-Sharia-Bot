@@ -1,15 +1,16 @@
 /* ===== Components: Badges, Citations, Buttons, Disclaimer ===== */
 
-/* Compliance status badge */
+/* Compliance status badge — pill-shaped */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 12px;
   font-size: 12px;
-  font-weight: 600;
-  line-height: 1.4;
+  font-weight: 700;
+  line-height: 1.6;
+  margin-bottom: 8px;
 }
 
 .badge.compliant {
@@ -30,6 +31,16 @@
 .badge.insufficient {
   background: var(--color-insufficient);
   color: #ffffff;
+}
+
+/* Icon inside badge */
+.badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 /* Primary CTA button */
@@ -92,4 +103,120 @@
     padding-inline: 16px;
     font-size: 12px;
   }
+}
+
+/* ===== Typing Indicator (Animated Dots) ===== */
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+}
+
+.typing-indicator .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-secondary);
+  animation: typingDot 1.4s ease-in-out infinite;
+}
+
+.typing-indicator .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingDot {
+  0%, 60%, 100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+/* prefers-reduced-motion: static text instead of animated dots */
+@media (prefers-reduced-motion: reduce) {
+  .typing-indicator .dot {
+    display: none;
+  }
+  .typing-indicator.static-text::before {
+    content: "Mushir is composing...";
+    font-size: 13px;
+    color: var(--color-text-secondary);
+  }
+}
+
+/* ===== Error Bubble ===== */
+.error-bubble {
+  max-width: var(--bubble-max-width);
+  padding: 12px 14px;
+  border: 2px solid var(--color-non-compliant);
+  border-radius: var(--bubble-radius);
+  background: var(--color-assistant-bubble);
+  line-height: 1.45;
+  word-break: break-word;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.error-bubble .error-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--color-non-compliant);
+  font-size: 14px;
+}
+
+.error-bubble .error-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-non-compliant);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.error-bubble .error-message {
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.error-bubble .retry-button {
+  align-self: flex-start;
+  height: 36px;
+  border: 1px solid var(--color-non-compliant);
+  border-radius: var(--bubble-radius);
+  padding: 0 16px;
+  background: transparent;
+  color: var(--color-non-compliant);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.error-bubble .retry-button:hover {
+  background: var(--color-non-compliant);
+  color: #ffffff;
+}
+
+.error-bubble .retry-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }

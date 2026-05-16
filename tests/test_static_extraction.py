@@ -86,19 +86,25 @@ def test_static_files_contain_expected_content():
 
     app = create_app()
     with TestClient(app) as client:
-        # Verify sse-client.js has parseSse function
+        # Verify sse-client.js has parseSse and processSseStream functions
         sse = client.get("/static/js/sse-client.js").text
         assert "function parseSse" in sse
+        assert "function processSseStream" in sse
         assert "event: " in sse or "event:" in sse
 
-        # Verify renderer.js has addMessage and addEvent
+        # Verify renderer.js has addMessage, addEvent, renderTypingIndicator,
+        # renderErrorBubble, and retryHandler
         renderer = client.get("/static/js/renderer.js").text
         assert "function addMessage" in renderer
         assert "function addEvent" in renderer
+        assert "function renderTypingIndicator" in renderer
+        assert "function renderErrorBubble" in renderer
+        assert "function retryHandler" in renderer
 
-        # Verify app.js has form submit handler and fetch to /api/v1/query/stream
+        # Verify app.js has form submit handler, submitQuery, and /api/v1/query/stream
         app_js = client.get("/static/js/app.js").text
         assert "addEventListener" in app_js
+        assert "function submitQuery" in app_js
         assert "/api/v1/query/stream" in app_js
 
         # Verify base.css has :root custom properties
@@ -115,6 +121,10 @@ def test_static_files_contain_expected_content():
         dark = client.get("/static/css/dark.css").text
         assert "@media (prefers-color-scheme: dark)" in dark
 
-        # Verify components.css exists
+        # Verify components.css has typing indicator and error bubble styles
         components = client.get("/static/css/components.css").text
         assert "Components" in components
+        assert ".typing-indicator" in components
+        assert ".error-bubble" in components
+        assert "@keyframes typingDot" in components
+        assert "@media (prefers-reduced-motion: reduce)" in components
