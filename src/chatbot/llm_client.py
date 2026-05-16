@@ -69,6 +69,7 @@ class OpenRouterClient:
         temperature: float = 0.1,
         max_retries: int = 3,
         timeout_seconds: int = 60,
+        max_tokens: Optional[int] = None,
         client: Optional[Any] = None,
         sleep: Callable[[float], None] = time.sleep,
     ):
@@ -77,6 +78,7 @@ class OpenRouterClient:
         self.temperature = temperature
         self.max_retries = max_retries
         self.timeout_seconds = timeout_seconds
+        self.max_tokens = max_tokens if max_tokens is not None else int(os.getenv("OPENROUTER_MAX_TOKENS", "1024"))
         self._client = client
         self._sleep = sleep
 
@@ -100,6 +102,7 @@ class OpenRouterClient:
                     model=self.model_name,
                     messages=messages,
                     temperature=self.temperature,
+                    max_tokens=self.max_tokens,
                     timeout=self.timeout_seconds,
                 )
                 text = response.choices[0].message.content

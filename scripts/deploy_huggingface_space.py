@@ -75,6 +75,7 @@ BATCH_SIZE_BYTES = 25 * 1024 * 1024
 
 SPACE_VARIABLES = {
     "OPENROUTER_MODEL": "google/gemini-2.0-flash-exp:free",
+    "OPENROUTER_MAX_TOKENS": "1024",
     "VECTOR_DB_TYPE": "chroma",
     "CHROMA_DIR": "/app/chroma_db_multilingual",
     "EMBED_MODEL": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
@@ -109,7 +110,6 @@ def iter_upload_files() -> list[Path]:
 
 
 def upload_in_batches(api: HfApi, repo_id: str, commit_message: str) -> None:
-    uploaded = set(api.list_repo_files(repo_id=repo_id, repo_type="space"))
     batch: list[Path] = []
     batch_size = 0
     batch_index = 1
@@ -142,8 +142,6 @@ def upload_in_batches(api: HfApi, repo_id: str, commit_message: str) -> None:
         batch_index += 1
 
     for path in iter_upload_files():
-        if path.relative_to(ROOT).as_posix() in uploaded:
-            continue
         size = path.stat().st_size
         if batch and batch_size + size > BATCH_SIZE_BYTES:
             flush()

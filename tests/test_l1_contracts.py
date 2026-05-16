@@ -178,14 +178,18 @@ def test_gemini_client_raises_clear_error_for_empty_response():
         def __init__(self):
             self.chat = self
             self.completions = self
+            self.kwargs = None
 
         def create(self, **kwargs):
+            self.kwargs = kwargs
             return _EmptyResponse()
 
-    client = GeminiClient(api_key="test-key", client=FakeOpenAIClient(), sleep=lambda _: None)
+    fake_client = FakeOpenAIClient()
+    client = GeminiClient(api_key="test-key", client=fake_client, sleep=lambda _: None)
 
     with pytest.raises(LLMResponseError, match="empty response"):
         client.generate("hello")
+    assert fake_client.kwargs["max_tokens"] == 1024
 
 
 @pytest.mark.unit
@@ -198,3 +202,14 @@ def test_openrouter_client_defaults_to_correct_model(monkeypatch):
     client = GeminiClient(api_key="test-key")
 
     assert client.model_name == "google/gemini-2.0-flash-exp:free"
+
+
+@pytest.mark.unit
+def test_openrouter_client_accepts_configurable_max_tokens(monkeypatch):
+    from src.chatbot.llm_client import GeminiClient
+
+    monkeypatch.setenv("OPENROUTER_MAX_TOKENS", "768")
+
+    client = GeminiClient(api_key="test-key")
+
+    assert client.max_tokens == 768

@@ -19,6 +19,7 @@ ENV VECTOR_DB_TYPE=chroma \
     EMBED_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2 \
     REQUIRE_ARABIC_RETRIEVAL=true \
     OPENROUTER_MODEL=google/gemini-2.0-flash-exp:free \
+    OPENROUTER_MAX_TOKENS=1024 \
     API_HOST=0.0.0.0 \
     API_PORT=7860
 
