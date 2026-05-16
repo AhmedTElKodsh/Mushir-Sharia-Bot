@@ -66,9 +66,9 @@ var Shortcuts = Shortcuts || {};
     // 2. Citation flyout open → only Escape may close it
     if (_isFlyoutOpen()) {
       if (isEscape) {
-        document.body.classList.remove("flyout-open");
-        if (input) input.blur();
         event.preventDefault();
+        Flyout.close();
+        if (input) input.blur();
       }
       return; // block everything else while flyout is open
     }

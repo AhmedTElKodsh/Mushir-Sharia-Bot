@@ -154,6 +154,92 @@ function renderTypewriter(text, node) {
   _twState.rafId = requestAnimationFrame(_twTick);
 }
 
+// ---- Typewriter buffer helpers (P2-S5) -------------------------------------
+
+/**
+ * Extend the active typewriter's full-text buffer with the accumulated
+ * streaming content.  Called from app.js each time a new SSE token arrives
+ * *after* the first, so that the typewriter renders the *full* answer text
+ * instead of only the first token.
+ *
+ * Safe to call when no typewriter is running (no-op).
+ * @param {string} fullText — Complete accumulated text from all tokens so far
+ */
+function extendTypewriterBuffer(fullText) {
+  if (_twState) {
+    _twState.fullText = fullText;
+  }
+}
+
+// ---- Citation post-processing (P2-S5) --------------------------------------
+
+/**
+ * Walk an assistant message node's text for citation markers `[N]` (N = 1-9)
+ * and replace each marker with an interactive `<a class="citation-anchor">`
+ * element.  Stores the citations array on the node for the click handler.
+ *
+ * Called after the typewriter finishes rendering (streaming path) or
+ * immediately after restoring a persisted message.
+ *
+ * @param {HTMLElement} node — The assistant message DOM element
+ * @param {Array<{standard?: string, section?: string, title?: string, excerpt?: string}>} citations
+ */
+function renderCitations(node, citations) {
+  if (!node || !citations || citations.length === 0) return;
+
+  var text = node.textContent;
+  var pattern = /\[(\d)\]/g;
+  var match;
+  var parts = [];
+  var lastIndex = 0;
+
+  while ((match = pattern.exec(text)) !== null) {
+    var num = parseInt(match[1], 10);
+
+    /* Text segment before this marker */
+    if (match.index > lastIndex) {
+      parts.push(document.createTextNode(text.slice(lastIndex, match.index)));
+    }
+
+    /* Build the anchor element */
+    var anchor = document.createElement("a");
+    anchor.className = "citation-anchor";
+    anchor.href = "#";
+    anchor.setAttribute("data-citation", num);
+    anchor.textContent = "[" + num + "]";
+
+    /* Use a closure to capture per-anchor values */
+    (function (idx, msgNode) {
+      anchor.addEventListener("click", function (e) {
+        e.preventDefault();
+        var data = msgNode._citations;
+        if (data && data[idx - 1]) {
+          Flyout.open(data[idx - 1]);
+        }
+      });
+    })(num, node);
+
+    parts.push(anchor);
+    lastIndex = match.index + String(num).length + 2; // "[N]" length
+  }
+
+  if (parts.length === 0) return; // no citation markers found
+
+  /* Remaining text after the last marker */
+  if (lastIndex < text.length) {
+    parts.push(document.createTextNode(text.slice(lastIndex)));
+  }
+
+  /* Attach citation data to the node for the click handler closure */
+  node._citations = citations;
+
+  /* Rebuild the node with mixed text + anchor children */
+  node.innerHTML = "";
+  for (var i = 0; i < parts.length; i++) {
+    node.appendChild(parts[i]);
+  }
+}
+
 // ---- Message rendering ----------------------------------------------------
 
 /**
@@ -375,7 +461,11 @@ function restoreMessages(savedMessages) {
     if (msg.role === "assistant" && msg.status && VALID_COMPLIANCE[msg.status]) {
       renderBadge(msg.status);
     }
-    addMessage(msg.role, msg.content);
+    var node = addMessage(msg.role, msg.content);
+    /* Post-process citations for persisted assistant messages */
+    if (msg.role === "assistant" && msg.citations && msg.citations.length > 0) {
+      renderCitations(node, msg.citations);
+    }
   }
   messages.scrollTop = messages.scrollHeight;
 }

@@ -113,7 +113,9 @@ async function submitQuery() {
           renderTypewriter(data.text || "", currentAssistantNode);
           firstTokenReceived = true;
         } else if (currentAssistantNode) {
-          // Subsequent tokens: typewriter handles appending
+          /* Extend typewriter buffer with accumulated content so later tokens'
+             text (including citation markers) renders into the DOM. */
+          extendTypewriterBuffer(_assistantContent);
         }
       },
 
@@ -127,7 +129,8 @@ async function submitQuery() {
         _assistantCitations.push({
           standard: data.standard_number || data.document_id || "AAOIFI source",
           section: data.section_number || null,
-          title: data.section_title || null
+          title: data.section_title || null,
+          excerpt: data.excerpt || data.text || null
         });
         var standard = data.standard_number || data.document_id || "AAOIFI source";
         var section = data.section_number ? " \u00a7" + data.section_number : "";
@@ -160,6 +163,12 @@ async function submitQuery() {
         streamActive = false;
         appState.streaming = false;
         abortTypewriter();
+
+        /* Post-process citations: replace [N] markers with interactive anchors */
+        if (currentAssistantNode && _assistantCitations.length > 0) {
+          renderCitations(currentAssistantNode, _assistantCitations);
+        }
+
         if (!firstTokenReceived) {
           removeTypingIndicator();
         }
