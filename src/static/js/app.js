@@ -66,3 +66,32 @@ form.addEventListener("submit", async function(event) {
     send.textContent = "Ask Mushir";
   }
 });
+
+/* ===== Disclaimer Banner Logic ===== */
+(function () {
+  var banner = document.getElementById("disclaimer-banner");
+  var dismissBtn = document.getElementById("dismiss-disclaimer");
+
+  if (!banner || !dismissBtn) return;
+
+  /* On load: hide banner if already dismissed this session */
+  if (Storage.isDisclaimerDismissed()) {
+    banner.style.display = "none";
+  }
+
+  /* Dismiss handler: mark dismissed + hide banner */
+  dismissBtn.addEventListener("click", function () {
+    Storage.dismissDisclaimer();
+    banner.style.display = "none";
+  });
+
+  /**
+   * Global reset for "New Chat" feature.
+   * Clears the dismissed flag and re-shows the banner.
+   * Callers: future "New Chat" button handler.
+   */
+  window.resetDisclaimerBanner = function () {
+    Storage.resetDisclaimer();
+    if (banner) banner.style.display = "";
+  };
+})();
