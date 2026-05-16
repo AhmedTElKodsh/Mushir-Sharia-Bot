@@ -9,33 +9,61 @@ const messages = document.getElementById("messages");
 const send = document.getElementById("send");
 let context = {};
 
+/**
+ * Global application state shared across modules.
+ * @type {{ streaming: boolean }}
+ */
+var appState = { streaming: false };
+
+/**
+ * Configurable parameters shared across modules.
+ * @type {{ typewriterSpeed: number }}
+ */
+var config = { typewriterSpeed: 25 };
+
 form.addEventListener("submit", async function(event) {
   event.preventDefault();
   var query = promptInput.value.trim();
   if (!query) return;
+
+  // Abort any in-progress typewriter from a previous response
+  appState.streaming = false;
+  abortTypewriter();
+
   addMessage("user", query);
   send.disabled = true;
   send.textContent = "Streaming...";
   var thinkingMessage = null;
+
   try {
+    appState.streaming = true;
     var response = await fetch("/api/v1/query/stream", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({query: query, context: context})
     });
     var events = parseSse(await response.text());
+
     for (var i = 0; i < events.length; i++) {
       var item = events[i];
       var data = item.data || {};
+
       if (item.type === "started") {
         thinkingMessage = addEvent("Thinking...");
       }
+
       if (item.type === "retrieval") {
         if (thinkingMessage) thinkingMessage.remove();
         thinkingMessage = null;
         addEvent("Confidence " + Number(data.confidence || 0).toFixed(2));
       }
-      if (item.type === "token") addMessage("assistant", data.text);
+
+      if (item.type === "token") {
+        // Create the assistant bubble then render via typewriter
+        var node = addMessage("assistant", "");
+        renderTypewriter(data.text, node);
+      }
+
       if (item.type === "citation") {
         var standard = data.standard_number || data.document_id || "AAOIFI source";
         var section = data.section_number ? " \u00a7" + data.section_number : "";
@@ -45,14 +73,19 @@ form.addEventListener("submit", async function(event) {
           ? " (" + data.section_title + ")" : "";
         addEvent("\ud83d\udcd6 " + standard + section + pageNum + sourceFile);
       }
+
       if (item.type === "error") {
         if (thinkingMessage) thinkingMessage.remove();
         thinkingMessage = null;
         addMessage("assistant", data.message);
       }
+
       if (item.type === "done") {
         if (thinkingMessage) thinkingMessage.remove();
         thinkingMessage = null;
+        // Flush remaining typewriter text instantly on completion
+        appState.streaming = false;
+        abortTypewriter();
         if (data.clarification_question) addMessage("assistant", data.clarification_question);
         context = data.metadata || context;
         addEvent("Complete - " + data.status);
@@ -60,6 +93,8 @@ form.addEventListener("submit", async function(event) {
     }
   } catch (error) {
     if (thinkingMessage) thinkingMessage.remove();
+    appState.streaming = false;
+    abortTypewriter();
     addMessage("assistant", "Request failed: " + error.message);
   } finally {
     send.disabled = false;
