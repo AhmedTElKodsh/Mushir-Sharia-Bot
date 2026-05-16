@@ -9,6 +9,7 @@ from src.chatbot.constants import AUTHORITY_REQUEST_TERMS
 from src.chatbot.prompt_builder import PromptBuilder
 from src.models.ruling import AAOIFICitation, AnswerContract, ComplianceStatus
 from src.rag.pipeline import RAGPipeline
+from src.rag.query_preprocessor import QueryPreprocessor
 from src.storage.cache import CacheStore
 
 # ---------------------------------------------------------------------------
@@ -161,6 +162,32 @@ class ApplicationService:
             )
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
+
+        definition_contract = self._definition_answer_if_supported(
+            cleaned_query,
+            chunks,
+            response_language,
+        )
+        if definition_contract is None and self._is_definition_query(cleaned_query):
+            try:
+                wider_chunks = self.retriever.retrieve(
+                    cleaned_query,
+                    k=max(self.k * 8, 40),
+                    threshold=0.0,
+                )
+            except Exception as exc:
+                print(f"Definition retrieval expansion failed: {type(exc).__name__}")
+                wider_chunks = []
+            if wider_chunks:
+                definition_contract = self._definition_answer_if_supported(
+                    cleaned_query,
+                    wider_chunks,
+                    response_language,
+                )
+        if definition_contract:
+            self._audit(cleaned_query, definition_contract, session_id, request_id)
+            self._cache_answer(cleaned_query, definition_contract)
+            return definition_contract
 
         if self.llm_client is None:
             from src.chatbot.llm_client import GeminiClient
@@ -491,6 +518,142 @@ class ApplicationService:
             else:
                 scores.append(float(getattr(chunk, "score", 0.0) or 0.0))
         return sum(scores) / len(scores)
+
+    def _definition_answer_if_supported(
+        self,
+        query: str,
+        chunks: List[Any],
+        response_language: str,
+    ) -> Optional[AnswerContract]:
+        if not self._is_definition_query(query):
+            return None
+        chunk = self._best_definition_chunk(query, chunks)
+        if chunk is None:
+            return None
+        citation = self.citation_validator.citation_for_chunk(chunk)
+        if citation is None:
+            return None
+        marker = self._inline_citation_marker(citation)
+        answer = self._definition_answer_text(citation.excerpt or "", marker, response_language)
+        return AnswerContract(
+            answer=answer,
+            status=ComplianceStatus.INSUFFICIENT_DATA,
+            citations=[citation],
+            reasoning_summary=self._reasoning_summary(answer),
+            limitations=self._limitations(response_language),
+            metadata=self._metadata(
+                chunks,
+                confidence=self._confidence(chunks),
+                response_language=response_language,
+            ),
+        )
+
+    @classmethod
+    def _is_definition_query(cls, query: str) -> bool:
+        if not query:
+            return False
+        lowered = query.strip().lower()
+        blocking_terms = (
+            "compliant",
+            "allowed",
+            "permissible",
+            "requirements",
+            "requirement",
+            "conditions",
+            "is it halal",
+            "حكم",
+            "يجوز",
+            "حلال",
+            "شروط",
+            "متطلبات",
+        )
+        if any(term in lowered for term in blocking_terms):
+            return False
+        english_starters = (
+            "what is ",
+            "what are ",
+            "define ",
+            "explain ",
+            "tell me about ",
+        )
+        arabic_starters = (
+            "ما هي ",
+            "ما هو ",
+            "ما معنى ",
+            "عرف ",
+            "اشرح ",
+        )
+        return lowered.startswith(english_starters) or lowered.startswith(arabic_starters)
+
+    def _best_definition_chunk(self, query: str, chunks: List[Any]) -> Optional[Any]:
+        expanded_terms = {
+            term.lower()
+            for term in QueryPreprocessor.expand_terms(query)
+            if len(term) >= 4
+        }
+        definition_indicators = (
+            " is sale",
+            " is a sale",
+            " - is ",
+            " – is ",
+            " refers to ",
+            " means ",
+            "defined as",
+            "definition",
+            "هي ",
+            "يقصد",
+            "تعني",
+            "تعريف",
+        )
+
+        best_chunk = None
+        best_score = -1.0
+        for chunk in chunks:
+            text = self._chunk_text(chunk)
+            lowered = text.lower()
+            term_hit = any(term in lowered for term in expanded_terms)
+            definition_hit = any(indicator in lowered for indicator in definition_indicators)
+            if not term_hit or not definition_hit:
+                continue
+            score = float(getattr(chunk, "score", 0.0) or 0.0)
+            if isinstance(chunk, dict):
+                score = float(chunk.get("similarity") or chunk.get("score") or 0.0)
+            score += 0.25
+            if score > best_score:
+                best_score = score
+                best_chunk = chunk
+        return best_chunk if best_score >= 0 else None
+
+    @staticmethod
+    def _chunk_text(chunk: Any) -> str:
+        if isinstance(chunk, dict):
+            return str(chunk.get("content") or chunk.get("text") or "")
+        return str(getattr(chunk, "text", ""))
+
+    @staticmethod
+    def _inline_citation_marker(citation: AAOIFICitation) -> str:
+        if citation.section_number:
+            return f"[{citation.standard_number} §{citation.section_number}]"
+        return f"[{citation.standard_number}]"
+
+    @staticmethod
+    def _definition_answer_text(excerpt: str, marker: str, response_language: str) -> str:
+        excerpt = " ".join((excerpt or "").split())
+        if len(excerpt) > 420:
+            excerpt = f"{excerpt[:417].rstrip()}..."
+        if response_language == "ar":
+            return (
+                "INSUFFICIENT_DATA: هذا سؤال تعريفي وليس تقييما لحالة امتثال محددة.\n\n"
+                f"بناء على المقطع المسترجع من أيوفي: {excerpt} {marker}\n\n"
+                "لإصدار تقييم امتثال، أحتاج تفاصيل المعاملة نفسها مثل الأصل، وتسلسل التملك، "
+                "والثمن، والربح، وشروط الدفع."
+            )
+        return (
+            "INSUFFICIENT_DATA: This is a definition question, not a compliance assessment for a specific transaction.\n\n"
+            f"Based on the retrieved AAOIFI excerpt: {excerpt} {marker}\n\n"
+            "For a compliance assessment, provide the transaction facts, including the asset, ownership sequence, "
+            "price, profit, and payment terms."
+        )
 
     @staticmethod
     def _status_from_answer(answer: str, citations) -> ComplianceStatus:

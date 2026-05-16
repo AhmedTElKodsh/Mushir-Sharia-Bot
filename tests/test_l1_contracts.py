@@ -226,6 +226,114 @@ def test_citation_validator_keeps_only_citations_backed_by_retrieved_chunks():
 
 
 @pytest.mark.unit
+def test_citation_validator_accepts_arabic_aaoifi_citation_format():
+    from src.chatbot.citation_validator import CitationValidator
+
+    validator = CitationValidator()
+
+    citations = validator.validate(
+        "التعريف مستند إلى [معيار أيوفي FAS-28، القسم 8، صفحة 8].",
+        [_chunk(standard_id="FAS-28", section=None)],
+    )
+
+    assert len(citations) == 1
+    assert citations[0].standard_number == "FAS-28"
+    assert citations[0].excerpt
+
+
+@pytest.mark.service
+def test_application_service_answers_arabic_definition_with_validator_backed_citation():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    class FailingLLM(FakeLLM):
+        def generate(self, prompt, **kwargs):
+            raise AssertionError("definition questions should be answered from retrieved citations")
+
+    chunks = [
+        _chunk(
+            chunk_id="murabaha-detail",
+            standard_id="FAS-28",
+            section=None,
+            score=0.89,
+        ),
+        SemanticChunk(
+            chunk_id="murabaha-definition",
+            text=(
+                "Murabaha - is sale of goods with an agreed upon profit mark-up on the cost. "
+                "This could be on a spot basis or deferred payment basis."
+            ),
+            citation=AAOIFICitation(
+                standard_id="FAS-28",
+                section=None,
+                page=8,
+                source_file="AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8.md",
+            ),
+            score=0.84,
+        ),
+    ]
+
+    result = ApplicationService(
+        retriever=FakeRetriever(chunks),
+        llm_client=FailingLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    ).answer("ما هي المرابحة؟")
+
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.metadata["response_language"] == "ar"
+    assert len(result.citations) == 1
+    assert result.citations[0].standard_number == "FAS-28"
+    assert "Murabaha - is sale of goods" in result.answer
+    assert "[FAS-28]" in result.answer
+
+
+@pytest.mark.service
+def test_application_service_expands_definition_retrieval_before_llm():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    class ExpandingRetriever:
+        def __init__(self):
+            self.calls = []
+
+        def retrieve(self, query, k=5, threshold=0.3):
+            self.calls.append((query, k, threshold))
+            if len(self.calls) == 1:
+                return [_chunk(chunk_id="murabaha-accounting", standard_id="FAS-28", section=None)]
+            return [
+                SemanticChunk(
+                    chunk_id="murabaha-definition",
+                    text="Murabaha - is sale of goods with an agreed upon profit mark-up on the cost.",
+                    citation=AAOIFICitation(
+                        standard_id="FAS-28",
+                        section=None,
+                        page=8,
+                        source_file="AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8.md",
+                    ),
+                    score=0.78,
+                )
+            ]
+
+    class FailingLLM(FakeLLM):
+        def generate(self, prompt, **kwargs):
+            raise AssertionError("wider retrieval should find the definition before LLM generation")
+
+    retriever = ExpandingRetriever()
+    result = ApplicationService(
+        retriever=retriever,
+        llm_client=FailingLLM("unused"),
+        citation_validator=CitationValidator(),
+    ).answer("ما هي المرابحة؟")
+
+    assert len(retriever.calls) == 2
+    assert retriever.calls[1][1] == 40
+    assert retriever.calls[1][2] == 0.0
+    assert len(result.citations) == 1
+    assert "Murabaha - is sale of goods" in result.answer
+
+
+@pytest.mark.unit
 def test_gemini_client_raises_clear_error_for_empty_response():
     """OpenRouterClient (aliased as GeminiClient) raises LLMResponseError on empty response."""
     from src.chatbot.llm_client import GeminiClient, LLMResponseError

@@ -9,7 +9,9 @@ class CitationValidator:
     """Extracts explicit answer citations and keeps only retrieved references."""
 
     citation_pattern = re.compile(
-        r"\[(?:AAOIFI\s+)?FAS-?(\d+)(?:\s*(?:§|Â§|section)\s*([A-Za-z0-9.\-]+))?[^\]]*\]",
+        r"\[[^\]]*?(?:AAOIFI\s+)?FAS-?(\d+)"
+        r"(?:\s*(?:§|section|القسم)\s*([A-Za-z0-9.\-]+))?"
+        r"[^\]]*\]",
         re.IGNORECASE,
     )
 
@@ -17,37 +19,48 @@ class CitationValidator:
         """Extract citations from answer and match against retrieved chunks."""
         citations = []
         seen = set()
-        
-        # Find all FAS-XX references in the answer
+
+        # Find all FAS-XX references in the answer.
         for match in self.citation_pattern.finditer(answer):
             standard_num = match.group(1)
             cited_section = self._normalize_section(match.group(2))
             standard = self._normalize_standard(f"FAS-{standard_num}")
-            
-            # Find chunks that match this standard
+
+            # Find chunks that match this standard.
             for chunk in chunks:
                 chunk_standard, chunk_section = self._chunk_ref(chunk)
                 normalized_chunk_section = self._normalize_section(chunk_section)
                 ref = (chunk_standard, chunk_section)
-                
+
                 section_matches = (
                     cited_section is None
+                    or normalized_chunk_section is None
                     or cited_section == normalized_chunk_section
                 )
                 if chunk_standard == standard and section_matches and ref not in seen:
                     seen.add(ref)
-                    citations.append(
-                        AAOIFICitation(
-                            document_id=self._document_id_for(ref, chunks),
-                            standard_number=standard,
-                            section_number=chunk_section,
-                            excerpt=self._excerpt_for(ref, chunks),
-                            confidence_score=self._score_for(ref, chunks),
-                            quote_start=self._quote_offsets_for(ref, chunks)[0],
-                            quote_end=self._quote_offsets_for(ref, chunks)[1],
-                        )
-                    )
+                    citation = self.citation_for_chunk(chunk)
+                    if citation:
+                        citations.append(citation)
         return citations
+
+    def citation_for_chunk(self, chunk: Any) -> Optional[AAOIFICitation]:
+        """Build a validator-backed citation directly from one retrieved chunk."""
+        standard, section = self._chunk_ref(chunk)
+        if not standard:
+            return None
+        quote, start, end = self._quote_for_chunk(chunk)
+        metadata = self._metadata(chunk)
+        return AAOIFICitation(
+            document_id=metadata.get("document_id") or standard,
+            standard_number=standard,
+            section_number=section,
+            section_title=metadata.get("section_title"),
+            excerpt=quote,
+            confidence_score=self._chunk_score(chunk),
+            quote_start=start,
+            quote_end=end,
+        )
 
     @staticmethod
     def _normalize_section(section: Optional[str]) -> Optional[str]:
@@ -56,8 +69,8 @@ class CitationValidator:
         value = str(section).strip()
         if not value:
             return None
-        value = re.sub(r"^(?:section|§|Â§)\s*", "", value, flags=re.IGNORECASE)
-        return value.rstrip(".,;:").lower()
+        value = re.sub(r"^(?:section|§|القسم)\s*", "", value, flags=re.IGNORECASE)
+        return value.rstrip(".,;:،").lower()
 
     def _supported_refs(self, chunks: List[Any]) -> Set[Tuple[str, str]]:
         refs = set()
@@ -70,18 +83,17 @@ class CitationValidator:
     def _chunk_ref(self, chunk: Any) -> Tuple[Optional[str], Optional[str]]:
         if isinstance(chunk, dict):
             metadata = chunk.get("metadata", {})
-            # Handle various formats: standard_number, source_file, document_id
+            # Handle various formats: standard_number, source_file, document_id.
             standard = (
-                metadata.get("standard_number") 
-                or metadata.get("source_file") 
+                metadata.get("standard_number")
+                or metadata.get("source_file")
                 or metadata.get("document_id")
             )
-            # Normalize standard name (e.g., "AAOIFI_Standard_28_en_..." -> "FAS-28")
             if standard:
                 standard = self._normalize_standard(standard)
             section = (
-                metadata.get("section_number") 
-                or metadata.get("section") 
+                metadata.get("section_number")
+                or metadata.get("section")
                 or metadata.get("section_title")
             )
             return (standard, section)
@@ -97,9 +109,7 @@ class CitationValidator:
     @staticmethod
     def _normalize_standard(standard: str) -> str:
         """Normalize standard reference to FAS-XX format."""
-        import re
-        # Match patterns like: AAOIFI_Standard_28, FAS-28, Standard_28
-        match = re.search(r'[Ss]tandard[_\s]*(\d+)', standard) or re.search(r'FAS-?(\d+)', standard)
+        match = re.search(r"[Ss]tandard[_\s]*(\d+)", standard) or re.search(r"FAS-?(\d+)", standard)
         if match:
             return f"FAS-{int(match.group(1)):02d}"
         return standard
@@ -134,7 +144,6 @@ class CitationValidator:
         text = self._chunk_text(chunk).strip()
         if not text:
             return "", 0, 0
-        # Include Arabic question mark \u061f and Arabic full stop \u06d4 as sentence terminators
         sentences = re.split(r"(?<=[.!?\u061f\u06d4])\s+", text)
         quote = next((sentence for sentence in sentences if len(sentence) >= 40), sentences[0])
         quote = quote[:500]
