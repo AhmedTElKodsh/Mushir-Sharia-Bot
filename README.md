@@ -53,6 +53,16 @@ pytest tests/ -v
 src/
 ├── models/          # Data models (Document, Chunk, Ruling)
 ├── rag/            # RAG pipeline (chunking, embeddings, vector store)
+├── chatbot/        # Chatbot coordination and generation
+│   ├── answer_generator.py      # LLM generation coordinator
+│   ├── application_service.py   # Main application orchestrator
+│   ├── llm_client.py            # LLM client wrappers (OpenRouter, OpenAI)
+│   ├── prompt_builder.py        # AAOIFI-grounded prompt construction
+│   ├── citation_validator.py    # Citation extraction and validation
+│   ├── clarification_engine.py  # Multi-turn clarification logic
+│   └── session_manager.py       # Session state management
+├── api/            # FastAPI REST endpoints
+├── storage/        # Caching and persistence
 └── config/         # Configuration management
 
 scripts/

@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mushir — UX Design Direction</title>
+<style>
+  :root {
+    --primary: #214f44;
+    --primary-hover: #1a3f36;
+    --surface: #fbfaf6;
+    --chat-bg: #f7f5ef;
+    --border: #ddd6c7;
+    --user-bubble: #e8f1ed;
+    --asst-bubble: #fff;
+    --text: #1d2521;
+    --text-secondary: #5f6b65;
+    --green: #1a7f4a;
+    --red: #b33a3a;
+    --amber: #b8860b;
+    --gray: #6b7280;
+    --radius: 8px;
+    --max-w: 920px;
+    --font: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-ar: 'Noto Sans Arabic', 'Segoe UI', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font); background: #e8e4db; color: var(--text); display: grid; place-items: center; min-height: 100vh; padding: 24px; }
+  .frame { width: var(--max-w); max-width: 100%; background: var(--chat-bg); border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,.12); overflow: hidden; display: flex; flex-direction: column; }
+
+  /* States nav */
+  .tabs { display: flex; gap: 0; background: var(--primary); padding: 0; }
+  .tabs button { flex: 1; padding: 14px 8px; border: none; background: transparent; color: rgba(255,255,255,.7); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; border-bottom: 3px solid transparent; }
+  .tabs button.active { color: #fff; border-bottom-color: #fff; background: rgba(255,255,255,.08); }
+  .tabs button:hover { background: rgba(255,255,255,.05); }
+
+  /* Chat layout */
+  .chat { display: flex; flex-direction: column; height: 620px; }
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .header h1 { font-size: 18px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+  .header .actions { display: flex; gap: 8px; }
+  .header button { padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font: inherit; font-size: 13px; cursor: pointer; color: var(--text); }
+  .header button:hover { background: #e8e3d9; }
+
+  .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .messages::-webkit-scrollbar { width: 6px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .msg { max-width: 78%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); line-height: 1.5; word-break: break-word; position: relative; }
+  .msg.user { align-self: flex-end; background: var(--user-bubble); border-color: #b7cec3; }
+  .msg.asst { align-self: flex-start; background: var(--asst-bubble); }
+  .msg .time { font-size: 11px; color: var(--text-secondary); margin-top: 6px; text-align: right; }
+
+  /* Compliance badge */
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; letter-spacing: .3px; margin-bottom: 8px; }
+  .badge.compliant { background: #dff0e6; color: var(--green); border: 1px solid #b8d9c8; }
+  .badge.non-compliant { background: #f5e0e0; color: var(--red); border: 1px solid #e0b8b8; }
+  .badge.partial { background: #f5edd6; color: var(--amber); border: 1px solid #d9c99a; }
+  .badge.insufficient { background: #e8e8e8; color: var(--gray); border: 1px solid #ccc; }
+
+  /* Citation cards */
+  .citations { margin-top: 10px; }
+  .citation { border: 1px solid var(--border); border-radius: 6px; margin-top: 6px; overflow: hidden; }
+  .citation summary { padding: 8px 12px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 6px; }
+  .citation summary:hover { background: #f5f3ed; }
+  .citation .body { padding: 8px 12px 12px; font-size: 13px; color: var(--text-secondary); border-top: 1px solid var(--border); line-height: 1.6; }
+  .citation .body strong { color: var(--text); }
+
+  /* Disclaimer banner */
+  .disclaimer { padding: 10px 20px; background: #f5f3ed; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+  .disclaimer strong { color: var(--primary); }
+
+  /* Typing indicator */
+  .typing { display: flex; align-items: center; gap: 8px; align-self: flex-start; padding: 12px 14px; background: var(--asst-bubble); border: 1px solid var(--border); border-radius: var(--radius); }
+  .typing .dots { display: flex; gap: 3px; }
+  .typing .dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--text-secondary); animation: pulse 1.2s infinite; }
+  .typing .dots span:nth-child(2) { animation-delay: .2s; }
+  .typing .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes pulse { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+
+  /* Streaming text cursor */
+  .cursor { display: inline-block; width: 2px; height: 1em; background: var(--primary); margin-left: 2px; animation: blink .8s infinite; vertical-align: text-bottom; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* Input area */
+  .input-area { padding: 16px 20px; border-top: 1px solid var(--border); background: var(--surface); }
+  .input-row { display: flex; gap: 10px; align-items: flex-end; }
+  .input-row textarea { flex: 1; min-height: 48px; max-height: 120px; resize: vertical; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; font: inherit; font-size: 14px; background: var(--asst-bubble); color: var(--text); }
+  .input-row textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(33,79,68,.15); }
+  .input-row button { height: 48px; padding: 0 20px; border: none; border-radius: var(--radius); background: var(--primary); color: #fff; font: inherit; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .input-row button:hover { background: var(--primary-hover); }
+  .input-row button:disabled { opacity: .5; cursor: wait; }
+
+  /* Event status */
+  .event { align-self: flex-start; font-size: 12px; color: var(--text-secondary); padding: 2px 4px; }
+
+  /* Labels */
+  .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-secondary); margin-bottom: 6px; }
+
+  /* Layout */
+  .main-row { display: flex; flex: 1; }
+  .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .sidebar.hidden { display: none; }
+  .sidebar h3 { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+  .sidebar .item { padding: 10px 16px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 13px; }
+  .sidebar .item:hover { background: #e8e3d9; }
+  .sidebar .item .preview { font-size: 12px; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar .item .time { font-size: 11px; color: var(--text-secondary); }
+  .main-content { flex: 1; display: flex; flex-direction: column; }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .msg { max-width: 100%; }
+    .sidebar { display: none; }
+    .header h1 { font-size: 16px; }
+    body { padding: 0; }
+    .frame { border-radius: 0; }
+    .chat { height: 100dvh; }
+  }
+
+  /* Dark theme preview */
+  .dark-preview { margin-top: 32px; width: var(--max-w); max-width: 100%; }
+  .dark-preview .frame { background: #141816; }
+  .dark-preview .frame { --surface: #1a1f1d; --chat-bg: #141816; --border: #3a423e; --user-bubble: #1e3a2e; --asst-bubble: #242b27; --text: #e3e8e4; --text-secondary: #9aa39e; }
+  .dark-preview .frame .badge.compliant { background: #1a3a2a; color: #4ade80; border-color: #2a5a3a; }
+  .dark-preview .frame .badge.non-compliant { background: #3a1a1a; color: #f87171; border-color: #5a2a2a; }
+  .section-label { font-size: 14px; font-weight: 700; color: var(--text-secondary); margin: 32px 0 12px; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<!-- ====== STATE 1: Welcome / Empty Chat ====== -->
+<div class="section-label">✦ Welcome View</div>
+<div class="frame">
+  <div class="header">
+    <h1>⚖️ Mushir</h1>
+    <div class="actions">
+      <button>New Chat</button>
+    </div>
+  </div>
+  <div class="disclaimer">
+    <span>ℹ️</span>
+    <span><strong>Informational guidance only.</strong> Consult a qualified Sharia scholar for a binding ruling.</span>
+  </div>
+  <div class="chat">
+    <div class="messages">
+      <div class="msg asst" style="text-align:center;align-self:center;max-width:80%;background:transparent;border-color:transparent;color:var(--text-secondary);font-size:14px;padding:40px 20px;">
+        <div style="font-size:48px;margin-bottom:12px;">⚖️</div>
+        <div style="font-weight:600;font-size:16px;color:var(--text);margin-bottom:4px;">Ask Mushir about Sharia compliance</div>
+        <div style="font-size:13px;">Type a question in English or Arabic</div>
+        <div style="font-size:12px;margin-top:16px;color:var(--text-secondary);opacity:.7;">e.g. "Is this investment halal?" · "ما حكم هذا الاستثمار؟"</div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea placeholder="Ask Mushir about an Islamic finance transaction..." rows="1"></textarea>
+        <button>Ask</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STATE 2: Streaming Answer ====== -->
+<div class="section-label">✦ Streaming Answer</div>
+<div class="frame">
+  <div class="header">
+    <h1>⚖️ Mushir</h1>
+    <div class="actions"><button>New Chat</button></div>
+  </div>
+  <div class="disclaimer">
+    <span>ℹ️</span>
+    <span><strong>Informational guidance only.</strong> Consult a qualified Sharia scholar for a binding ruling.</span>
+  </div>
+  <div class="chat">
+    <div class="messages">
+      <div class="msg user">Is investing in a company with 5% haram revenue permissible?</div>
+      <div class="event" style="margin-bottom:-6px;">Composing... <span style="font-size:11px;opacity:.6;">based on AAOIFI FAS-21</span></div>
+      <div class="msg asst">
+        <span class="badge compliant">● COMPLIANT</span>
+        <div>
+          Based on AAOIFI FAS-21 (Section 4/3), investment in a company whose primary activity is permissible is acceptable when incidental non-compliant revenue <span style="color:var(--primary);font-weight:600;cursor:pointer;border-bottom:1px dotted var(--primary);">does not exceed 5% [1]</span>. The company's halal food production qualifies as a permissible primary activity, and 5% incidental haram revenue falls within the impurity tolerance threshold.<span class="cursor"></span>
+        </div>
+        <div class="citations">
+          <details class="citation">
+            <summary>📖 FAS-21 §4/3 [1]</summary>
+            <div class="body">
+              <strong>AAOIFI FAS-21, Section 4/3:</strong><br>
+              "It is permissible to invest in companies whose primary activity is permissible even if a small portion of their income is derived from impermissible sources, provided that the impermissible income does not exceed 5% of the company's total revenue."
+            </div>
+          </details>
+        </div>
+        <div class="time">Just now</div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea placeholder="Ask a follow-up question..." rows="1"></textarea>
+        <button disabled>Ask</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STATE 3: Complete Answer with All Status Types ====== -->
+<div class="section-label">✦ Compliance Status Badges</div>
+<div class="frame">
+  <div class="header">
+    <h1>⚖️ Mushir</h1>
+    <div class="actions"><button>New Chat</button></div>
+  </div>
+  <div class="disclaimer">
+    <span>ℹ️</span>
+    <span><strong>Informational guidance only.</strong> Consult a qualified Sharia scholar for a binding ruling.</span>
+  </div>
+  <div class="chat">
+    <div class="messages">
+      <div class="msg user">Is a conventional bank loan with riba permissible?</div>
+      <div class="msg asst">
+        <span class="badge non-compliant">● NON-COMPLIANT</span>
+        <div>
+          Conventional loans involving riba (interest) are not permissible under AAOIFI standards. FAS-2 explicitly prohibits any transaction structured around predetermined interest.<span style="color:var(--primary);font-weight:600;cursor:pointer;border-bottom:1px dotted var(--primary);"> [FAS-2 §3/1]</span>
+        </div>
+        <div class="time">2 min ago</div>
+      </div>
+      <div class="msg user">What about a murabahah with late payment penalty?</div>
+      <div class="msg asst">
+        <span class="badge partial">● PARTIALLY COMPLIANT</span>
+        <div>
+          The murabahah structure itself is permissible under FAS-2. However, charging additional fees specifically for late payment may constitute a penalty that requires careful structuring to avoid resembling riba. <span style="color:var(--primary);font-weight:600;cursor:pointer;border-bottom:1px dotted var(--primary);"> [FAS-2 §5/2]</span>
+        </div>
+        <div class="time">Just now</div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea placeholder="Ask a follow-up question..." rows="1"></textarea>
+        <button>Ask</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STATE 4: With Sidebar ====== -->
+<div class="section-label">✦ With Session Sidebar</div>
+<div class="frame">
+  <div class="header">
+    <h1>⚖️ Mushir</h1>
+    <div class="actions"><button>New Chat</button></div>
+  </div>
+  <div class="chat" style="height:480px;">
+    <div class="main-row" style="flex:1;">
+      <div class="sidebar">
+        <h3>Recent Sessions</h3>
+        <div class="item">
+          <div style="font-weight:600;">Murabahah financing</div>
+          <div class="preview">Is a murabahah structure...</div>
+          <div class="time">2 min ago</div>
+        </div>
+        <div class="item">
+          <div style="font-weight:600;">Sukuk investment</div>
+          <div class="preview">What are the AAOIFI requirements...</div>
+          <div class="time">1 hr ago</div>
+        </div>
+        <div class="item">
+          <div style="font-weight:600;">Haram revenue question</div>
+          <div class="preview">Is investing with 5%...</div>
+          <div class="time">Yesterday</div>
+        </div>
+        <div class="item">
+          <div style="font-weight:600;">Ijarah contract review</div>
+          <div class="preview">Lease to own structure...</div>
+          <div class="time">2 days ago</div>
+        </div>
+      </div>
+      <div class="main-content">
+        <div class="messages">
+          <div class="msg user">What are the AAOIFI requirements for a sukuk issuance?</div>
+          <div class="msg asst">
+            <span class="badge compliant">● COMPLIANT</span>
+            <div>
+              Under AAOIFI FAS-17, sukuk must represent ownership in real assets or usufruct, with returns tied to asset performance — not a fixed return. The SPV must be bankruptcy-remote and assets must be Sharia-compliant.<span style="color:var(--primary);font-weight:600;cursor:pointer;border-bottom:1px dotted var(--primary);"> [FAS-17 §3/1]</span>
+            </div>
+            <div class="time">Just now</div>
+          </div>
+        </div>
+        <div class="input-area">
+          <div class="input-row">
+            <textarea placeholder="Ask a follow-up question..." rows="1"></textarea>
+            <button>Ask</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== STATE 5: Dark Mode ====== -->
+<div class="section-label">✦ Dark Theme</div>
+<div class="dark-preview">
+<div class="frame">
+  <div class="header">
+    <h1>⚖️ Mushir</h1>
+    <div class="actions"><button>New Chat</button></div>
+  </div>
+  <div class="disclaimer">
+    <span>ℹ️</span>
+    <span><strong>Informational guidance only.</strong> Consult a qualified Sharia scholar for a binding ruling.</span>
+  </div>
+  <div class="chat">
+    <div class="messages">
+      <div class="msg user">ما حكم الاستثمار في شركة تتعامل بالحرام؟</div>
+      <div class="msg asst" dir="rtl" style="font-family:var(--font-ar);text-align:right;">
+        <span class="badge compliant">● متوافق</span>
+        <div>
+          بناء على معيار أيوفي المالي رقم 21، القسم 4/3، فإن الاستثمار في شركة نشاطها الأساسي حلال يعتبر جائزا عندما لا تتجاوز الإيرادات غير المتوافقة 5% من إجمالي الإيرادات.
+          <span style="color:var(--primary);font-weight:600;cursor:pointer;border-bottom:1px dotted var(--primary);"> [أيوفي 21 §4/3]</span>
+        </div>
+        <div class="citations">
+          <details class="citation">
+            <summary>📖 معيار أيوفي 21 §4/3</summary>
+            <div class="body">
+              <strong>نص المعيار:</strong><br>
+              "يجوز الاستثمار في الشركات التي يكون نشاطها الأساسي مباحا حتى لو كان جزء صغير من دخلها من مصادر غير مباحة، بشرط ألا يتجاوز الدخل غير المباح 5% من إجمالي إيرادات الشركة."
+            </div>
+          </details>
+        </div>
+        <div class="time">الآن</div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea placeholder="اسأل مشير عن معاملة مالية إسلامية..." rows="1" dir="rtl"></textarea>
+        <button>اسأل</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ====== STATE 6: Clarification Loop ====== -->
+<div class="section-label">✦ Clarification Loop (Conversational)</div>
+<div class="frame">
+  <div class="header">
+    <h1>⚖️ Mushir</h1>
+    <div class="actions"><button>New Chat</button></div>
+  </div>
+  <div class="disclaimer">
+    <span>ℹ️</span>
+    <span><strong>Informational guidance only.</strong> Consult a qualified Sharia scholar for a binding ruling.</span>
+  </div>
+  <div class="chat">
+    <div class="messages">
+      <div class="msg user">I want to invest in a company. Is it permissible?</div>
+      <div class="msg asst">
+        <div style="color:var(--text-secondary);font-style:italic;">
+          What type of company activity is involved?
+        </div>
+        <div class="time">Just now</div>
+      </div>
+      <div class="msg user">It's a food company, but they also have some interest income from bonds.</div>
+      <div class="msg asst">
+        <div style="color:var(--text-secondary);font-style:italic;">
+          What percentage of their revenue comes from non-compliant sources?
+        </div>
+        <div class="time">Just now</div>
+      </div>
+      <div class="msg user">About 5%.</div>
+      <div class="event">All information gathered. Ready for compliance analysis.</div>
+      <div class="msg asst">
+        <span class="badge compliant">● COMPLIANT</span>
+        <div>
+          Based on AAOIFI FAS-21 Section 4/3, investment in a food company is permissible. The 5% non-compliant revenue falls within the impurity tolerance threshold as long as the primary business activity is halal.<span style="color:var(--primary);font-weight:600;cursor:pointer;border-bottom:1px dotted var(--primary);"> [FAS-21 §4/3]</span>
+        </div>
+        <div class="time">Just now</div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea placeholder="Ask a follow-up question..." rows="1"></textarea>
+        <button>Ask</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- State labels -->
+<div style="margin-top:24px;font-size:12px;color:var(--text-secondary);text-align:center;max-width:var(--max-w);padding:0 20px;">
+  <strong>Design Direction: Mushir</strong> — Custom CSS design system, earth tones + compliance green, bilingual RTL support, inline citation cards, typewriter streaming, session sidebar, dark mode auto-detection.
+  <div style="margin-top:4px;">Designed by Sally / UX Designer — May 2026</div>
+</div>
+
+<script>
+  // Simple tab switching for interactive preview
+  document.querySelectorAll('.tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.frame').forEach((f,i) => {
+        f.style.display = btn.dataset.target == i ? '' : 'none';
+      });
+    });
+  });
+</script>
+</body>
+</html>

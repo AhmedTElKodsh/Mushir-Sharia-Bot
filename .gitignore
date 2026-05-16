@@ -32,9 +32,11 @@ ENV/
 .agent/
 .agents/
 .bob/
+.cline/
 .claude/
 .codex/
 .playwright-mcp/
+.pytest-tmp/
 .trae/
 .kiro/hooks/
 .kiro/skills/
@@ -51,6 +53,8 @@ superpowers/
 # Logs
 logs/
 *.log
+uvicorn-*.out.log
+uvicorn-*.err.log
 
 # Data
 data/
@@ -84,6 +88,7 @@ Thumbs.db
 .gsd-id
 .mcp.json
 .bg-shell/
+.planning/
 *.code-workspace
 .env.*
 !.env.example
@@ -96,3 +101,8 @@ vendor/
 coverage/
 .cache/
 tmp/
+*.bak
+test_query.json
+test_bot.py
+system_role.docx
+hf-space-chat.png

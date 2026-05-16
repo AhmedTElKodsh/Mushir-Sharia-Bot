@@ -270,7 +270,7 @@ dir .env
 copy .env.example .env
 
 # Edit .env and add:
-OPENAI_API_KEY=sk-proj-your-actual-key-here
+OPENAI_API_KEY=<your-openai-api-key>
 ```
 
 **Verify key format:**

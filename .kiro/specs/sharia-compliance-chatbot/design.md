@@ -9,7 +9,8 @@ The Sharia Compliance Chatbot is an AI-powered system that analyzes financial op
 ### L0 Implementation Status (COMPLETE ✅)
 
 **What was built and validated:**
-- ✅ **RAG Pipeline**: Query embedding → ChromaDB search → top-k retrieval → citation extraction
+- ✅ **RAG Pipeline**: Query preprocessing → embedding → ChromaDB search → top-k retrieval → citation extraction
+- ✅ **Query Preprocessor**: Arabic diacritic normalization, transliteration mapping, domain term expansion, language detection
 - ✅ **OpenRouter Integration**: OpenAI-compatible API, supports multiple models (Gemini, GPT-4, Claude), temperature 0.1, cost-effective
 - ✅ **Data Models**: AAOIFICitation, SemanticChunk, ComplianceRuling
 - ✅ **CLI Chatbot**: Terminal interface with AAOIFI adherence system prompt
@@ -183,6 +184,7 @@ graph TB
 #### RAG Pipeline
 - **Role**: Retrieve relevant AAOIFI standards and augment LLM prompt
 - **Implementation**: 
+  - Query Preprocessor: Normalizes Arabic diacritics, transliteration variants, and expands domain terms (✅ L0 complete)
   - Embedding Generator: sentence-transformers (all-mpnet-base-v2) (✅ validated in L0)
   - Vector Database: ChromaDB (L0-L2) or Qdrant (L3+)
   - Prompt Constructor: strictly adhere to AAOIFI grounding prompt (✅ validated in L0)

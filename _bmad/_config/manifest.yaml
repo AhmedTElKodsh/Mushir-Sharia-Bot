@@ -1,49 +1,49 @@
 installation:
   version: 6.6.0
   installDate: 2026-05-06T17:13:36.169Z
-  lastUpdated: 2026-05-06T17:13:36.169Z
+  lastUpdated: 2026-05-14T12:43:11.298Z
 modules:
   - name: core
     version: 6.6.0
     installDate: 2026-05-06T17:13:28.410Z
-    lastUpdated: 2026-05-06T17:13:35.958Z
+    lastUpdated: 2026-05-14T12:43:11.076Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: bmm
     version: 6.6.0
     installDate: 2026-05-06T17:13:27.926Z
-    lastUpdated: 2026-05-06T17:13:35.961Z
+    lastUpdated: 2026-05-14T12:43:11.080Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: bmb
-    version: v1.7.0
+    version: v1.8.0
     installDate: 2026-05-06T17:13:29.681Z
-    lastUpdated: 2026-05-06T17:13:36.029Z
+    lastUpdated: 2026-05-14T12:43:11.159Z
     source: external
     npmPackage: bmad-builder
     repoUrl: https://github.com/bmad-code-org/bmad-builder
     channel: stable
-    sha: 86033fc9aeae2ca6d52c7cdb675c1f4bf17fc1c1
+    sha: d64469f61fadc6cfbf2dea6a0a257fe6eb2790a2
   - name: cis
     version: v0.2.0
     installDate: 2026-05-06T17:13:29.866Z
-    lastUpdated: 2026-05-06T17:13:36.097Z
+    lastUpdated: 2026-05-14T12:43:11.229Z
     source: external
     npmPackage: bmad-creative-intelligence-suite
     repoUrl: https://github.com/bmad-code-org/bmad-module-creative-intelligence-suite
     channel: stable
     sha: 14a63b893c07173b7a6cfe0fb6a9a72ba51d3cf1
   - name: tea
-    version: v1.15.1
+    version: v1.17.0
     installDate: 2026-05-06T17:13:34.771Z
-    lastUpdated: 2026-05-06T17:13:36.169Z
+    lastUpdated: 2026-05-14T12:43:11.298Z
     source: external
     npmPackage: bmad-method-test-architecture-enterprise
     repoUrl: https://github.com/bmad-code-org/bmad-method-test-architecture-enterprise
     channel: stable
-    sha: 7c94bdc6e3d2c8c3cad09eb0a32a42fade0e9079
+    sha: 4360295a45d8cb55ae89491c8a5fb4b7ac223bf0
 ides:
   - claude-code
   - codex
@@ -55,3 +55,6 @@ ides:
   - kiro
   - mux
   - trae
+  - cline
+  - opencode
+  - windsurf
