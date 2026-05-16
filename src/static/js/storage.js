@@ -153,3 +153,74 @@ Storage.dismissDisclaimer = function () {
 Storage.resetDisclaimer = function () {
   sessionStorage.removeItem(STORAGE_KEY_DISCLAIMER_DISMISSED);
 };
+
+/* ===================================================================
+ * Conversation persistence
+ * =================================================================== */
+
+/** Fixed storage key for the current session's conversation data. */
+var CONVERSATION_KEY = "mushir_conversation";
+
+/**
+ * Store a JavaScript value as JSON.
+ * Handles quota errors gracefully (console.warn, app continues).
+ * @param {string} key
+ * @param {*} value
+ */
+StorageAdapter.prototype.setObject = function (key, value) {
+  try {
+    this._storage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.warn("StorageAdapter: quota exceeded or unavailable \u2014", e.message);
+  }
+};
+
+/**
+ * Retrieve and parse a JSON value from storage.
+ * @param {string} key
+ * @returns {*|null}
+ */
+StorageAdapter.prototype.getObject = function (key) {
+  try {
+    var raw = this._storage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+};
+
+/**
+ * Persist the full conversation array.
+ * Schema: { messages: [{role, content, timestamp, status, citations}], session_id, timestamp }
+ *
+ * @param {string} sessionId
+ * @param {Array} messages
+ */
+StorageAdapter.prototype.saveConversation = function (sessionId, messages) {
+  var data = {
+    messages: messages,
+    session_id: sessionId,
+    timestamp: Date.now()
+  };
+  this.setObject(CONVERSATION_KEY, data);
+};
+
+/**
+ * Restore the persisted conversation object, or null if none exists.
+ * @param {string} sessionId — Used for forward-compatibility; the key name is fixed.
+ * @returns {{messages: Array, session_id: string, timestamp: number}|null}
+ */
+StorageAdapter.prototype.restoreConversation = function (sessionId) {
+  return this.getObject(CONVERSATION_KEY);
+};
+
+/**
+ * Remove the conversation data from storage.
+ */
+StorageAdapter.prototype.clearConversation = function () {
+  try {
+    this._storage.removeItem(CONVERSATION_KEY);
+  } catch (_) {
+    /* noop */
+  }
+};
