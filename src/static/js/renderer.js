@@ -158,6 +158,9 @@ function renderTypewriter(text, node) {
 
 /**
  * Add a message or event bubble to the chat container.
+ * Always APPENDS a new DOM node — never replaces existing content.
+ * This ensures multi-turn threading: each user query and assistant response
+ * creates a new bubble below all previous messages.
  * @param {string} kind - "user", "assistant", or "event"
  * @param {string} text - Message text content
  * @returns {HTMLElement} The created DOM node

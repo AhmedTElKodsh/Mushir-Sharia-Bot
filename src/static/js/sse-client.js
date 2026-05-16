@@ -24,6 +24,10 @@ function parseSse(text) {
  * Process an SSE stream from a ReadableStream reader, calling lifecycle
  * callbacks for each event type as it arrives.
  *
+ * The conversation_history for the current thread is attached to the fetch
+ * POST body upstream (in app.js submitQuery) so the backend receives full
+ * multi-turn context with every request.
+ *
  * @param {ReadableStreamDefaultReader} reader - Response body reader
  * @param {object} callbacks - Event callbacks
  * @param {function} callbacks.onStarted - Called on 'started' event
@@ -34,8 +38,10 @@ function parseSse(text) {
  * @param {function} callbacks.onDone - Called on 'done' event with data
  * @param {function} callbacks.onStreamError - Called on fetch/parse error
  * @param {function} callbacks.onComplete - Called when stream fully consumed
+ * @param {Array} [conversationHistory] - Optional conversation history array
+ *        for callbacks that need access to the current thread context.
  */
-function processSseStream(reader, callbacks) {
+function processSseStream(reader, callbacks, conversationHistory) {
   var decoder = new TextDecoder();
   var buffer = "";
   var reading = true;

@@ -81,7 +81,11 @@ async function submitQuery() {
     var response = await fetch("/api/v1/query/stream", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({query: query, context: context})
+      body: JSON.stringify({
+        query: query,
+        context: context,
+        conversation_history: messagesArray
+      })
     });
 
     if (!response.ok) {
