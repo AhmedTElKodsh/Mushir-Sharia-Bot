@@ -88,7 +88,8 @@ def test_query_stream_returns_helpful_provider_rate_limit_error():
     events = _events(response.text)
     assert [event["event"] for event in events] == ["started", "error"]
     assert events[-1]["data"]["message"] == (
-        "The answer provider is rate-limiting requests. Please wait a moment and try again."
+        "The answer provider is out of credits or rate-limiting requests. "
+        "Ask the operator to check provider billing, quota, or model access."
     )
     assert "quota exhausted" not in response.text
 

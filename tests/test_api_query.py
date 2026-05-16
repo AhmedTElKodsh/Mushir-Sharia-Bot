@@ -108,7 +108,8 @@ def test_rest_query_maps_provider_rate_limit_to_helpful_payload():
 
     assert response.status_code == 500
     assert response.json()["error"]["message"] == (
-        "The answer provider is rate-limiting requests. Please wait a moment and try again."
+        "The answer provider is out of credits or rate-limiting requests. "
+        "Ask the operator to check provider billing, quota, or model access."
     )
 
 

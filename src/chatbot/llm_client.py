@@ -156,8 +156,21 @@ class OpenRouterClient:
         code = getattr(exc, "code", None)
         if code == 429:
             return True
+        if code == 402:
+            return True
         message = str(exc).lower()
-        return any(token in message for token in ["quota", "rate limit", "429", "resource exhausted"])
+        return any(
+            token in message
+            for token in [
+                "quota",
+                "rate limit",
+                "429",
+                "402",
+                "payment required",
+                "insufficient credits",
+                "resource exhausted",
+            ]
+        )
 
 
 # Backward compatibility alias

@@ -255,6 +255,24 @@ def test_gemini_client_raises_clear_error_for_empty_response():
 
 
 @pytest.mark.unit
+def test_openrouter_client_maps_payment_required_to_rate_limit_error():
+    from src.chatbot.llm_client import GeminiClient, LLMRateLimitError
+
+    class FakeOpenAIClient:
+        def __init__(self):
+            self.chat = self
+            self.completions = self
+
+        def create(self, **kwargs):
+            raise RuntimeError("Error code: 402 - insufficient credits")
+
+    client = GeminiClient(api_key="test-key", client=FakeOpenAIClient(), sleep=lambda _: None)
+
+    with pytest.raises(LLMRateLimitError, match="quota or rate limit"):
+        client.generate("hello")
+
+
+@pytest.mark.unit
 def test_openrouter_client_defaults_to_correct_model(monkeypatch):
     """GeminiClient alias defaults to the OpenRouter model when OPENROUTER_MODEL is not set."""
     from src.chatbot.llm_client import GeminiClient

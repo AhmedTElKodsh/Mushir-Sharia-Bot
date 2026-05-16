@@ -22,7 +22,7 @@ SAFE_PROVIDER_CONFIG_MESSAGE = (
     "The answer provider is not configured for this deployment. Ask the operator to check the provider API key."
 )
 SAFE_PROVIDER_RATE_LIMIT_MESSAGE = (
-    "The answer provider is rate-limiting requests. Please wait a moment and try again."
+    "The answer provider is out of credits or rate-limiting requests. Ask the operator to check provider billing, quota, or model access."
 )
 SAFE_PROVIDER_RESPONSE_MESSAGE = (
     "The answer provider returned an unusable response. Please try again with a shorter, plain-text question."

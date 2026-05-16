@@ -23,6 +23,11 @@ import requests
 
 __test__ = False
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 
 # Configuration
 @dataclass
@@ -243,16 +248,20 @@ def _process_stream_response(response: requests.Response, config: Config):
     print("✅ Stream started")
     print()
     print("📡 Events:")
+    current_event = None
     
     for line in response.iter_lines():
         if line:
             decoded = line.decode('utf-8')
             if decoded.startswith('event:'):
                 event_type = decoded.split(':', 1)[1].strip()
+                current_event = event_type
                 print(f"   • {event_type}")
             elif decoded.startswith('data:'):
                 try:
                     data = json.loads(decoded.split(':', 1)[1].strip())
+                    if current_event == "error":
+                        raise RuntimeError(f"SSE error event: {data}")
                     if 'text' in data:
                         print(f"     Text: {truncate_text(data['text'], config.max_citation_preview)}")
                     elif 'confidence' in data:
