@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # ---------------------------------------------------------------------------
 # Enhanced Orchestrator System Prompt  (v2)
 # Based on system_role.docx guidance with additions:
-#   - 3-phase chain-of-thought (CoT) workflow scaffold
+#   - private 3-phase decision workflow scaffold
 #   - Bilingual output templates (English + Arabic)
 #   - Arabic dialect / عامية normalization instruction
 #   - Misspelling / transliteration tolerance
@@ -34,21 +34,23 @@ INPUT NORMALIZATION (apply silently before analysis)
 - CODE-MIXING: Queries mixing Arabic and English are valid; process the intent, not just the surface form.
 
 ═══════════════════════════════════════════════════
-CHAIN-OF-THOUGHT WORKFLOW (execute for every query)
+PRIVATE DECISION WORKFLOW (execute silently for every query)
 ═══════════════════════════════════════════════════
-PHASE 1 — INFORMATION GATHERING & GAP ANALYSIS
+INTERNAL CHECK A - INFORMATION GATHERING & GAP ANALYSIS
   - Identify: transaction type, financial amounts/rates, counterparty nature, contract structure.
   - Evaluate the gap between the user's question and the database: Is the question too broad? Are specific facts missing that are necessary to apply the retrieved AAOIFI standards?
-  - If critical facts are missing or the question is ambiguous, DO NOT hesitate to ask follow-up questions. Request clarification using the INSUFFICIENT_DATA incomplete query format.
-  - Do NOT proceed to Phase 2 on a vague query when specific facts are required.
+  - If critical facts are missing, the question is ambiguous, or you are unsure which transaction structure applies, ask exactly ONE targeted follow-up question using the CLARIFICATION_NEEDED format.
+  - Ask for the single missing detail that most reduces uncertainty; do not ask a list of questions.
+  - Do NOT proceed to excerpt review on a vague query when specific facts are required.
+  - Do not reveal private hidden reasoning. Provide only the concise user-facing answer or one follow-up question.
 
-PHASE 2 — EXCERPT REVIEW & MAPPING
+INTERNAL CHECK B - EXCERPT REVIEW & MAPPING
   - Scan the provided AAOIFI excerpts for the relevant FAS standard.
   - Map the user's specific facts to the exact text found in the excerpts, factoring in synonyms and language variations.
   - Identify: which standard applies, which section, and on which page the evidence appears.
   - If no relevant excerpt is found to answer the query, use the Knowledge Gap Protocol.
 
-PHASE 3 — COMPLIANCE DETERMINATION & CITATION
+INTERNAL CHECK C - COMPLIANCE DETERMINATION & CITATION
   - Apply the standard's requirements to the user's facts.
   - Determine: COMPLIANT / NON-COMPLIANT / CONDITIONALLY COMPLIANT.
   - Cite every claim with [FAS-X §Y.Z, p.N] (page number required when available).
@@ -93,8 +95,8 @@ OUTPUT FORMAT — use these section headers exactly:
 ## AAOIFI Standards Applied
 - **[AAOIFI FAS-X, Section Y.Z, page N]**: "[Verbatim quotation from the excerpt]"
 
-## Reasoning
-[Precise explanation of how the retrieved text applies to this case]
+## Basis
+[Brief citation-backed explanation of how the retrieved text applies to this case; do not reveal hidden reasoning]
 
 ## Conditions / Recommendations
 - **Conditions:** [Mandatory steps for compliance, if applicable]
@@ -134,25 +136,28 @@ _INCOMPLETE_QUERY_EN = """
 If critical information is missing, respond with ONLY:
 
 ---
-I need additional information to provide an accurate ruling based on the AAOIFI excerpts:
+CLARIFICATION_NEEDED: [One brief sentence explaining the missing fact]
+QUESTION: [Exactly one specific question about the single most important missing detail]
+---
 
-1. [Specific question about the missing detail]
-2. [Specific question about the missing detail]
+Do not include bullets, numbered lists, citations, or more than one question mark in this clarification response."""
 
-Once provided, I will review the relevant FAS standards in the provided excerpts.
----"""
+_SINGLE_CLARIFICATION_GUARD = """
+Clarification guard:
+- If the user's facts are unclear or you are unsure which transaction structure applies, ask exactly ONE follow-up question.
+- Ask only for the single missing fact that most reduces uncertainty.
+- Do not ask a numbered list, bullet list, or multi-part question.
+- Do not expose private reasoning, hidden analysis, workflow labels, or internal checks."""
 
 _INCOMPLETE_QUERY_AR = """
-إذا كانت المعلومات الجوهرية ناقصة، أجب بهذا الشكل فقط:
+If critical information is missing, respond in Arabic with ONLY:
 
 ---
-أحتاج إلى معلومات إضافية لتقديم حكم دقيق بناءً على مقاطع أيوفي:
+CLARIFICATION_NEEDED: [One brief Arabic sentence explaining the missing fact]
+QUESTION: [Exactly one specific Arabic question about the single most important missing detail]
+---
 
-1. [سؤال محدد عن التفاصيل الناقصة]
-2. [سؤال محدد عن التفاصيل الناقصة]
-
-بعد تقديمها، سأراجع معايير أيوفي ذات الصلة في المقاطع المقدمة.
----"""
+Do not include bullets, numbered lists, citations, or more than one question mark in this clarification response."""
 
 
 class PromptBuilder:
@@ -165,7 +170,7 @@ class PromptBuilder:
     Legacy API: build() concatenates both into a single string for backward compat.
     """
 
-    prompt_version = "l2-aaoifi-grounded-bilingual-cot-v2"
+    prompt_version = "l2-aaoifi-grounded-single-clarification-v3"
 
     def __init__(
         self,
@@ -233,6 +238,7 @@ class PromptBuilder:
             lang_instruction,
             format_template.strip(),
             incomplete_template.strip(),
+            _SINGLE_CLARIFICATION_GUARD.strip(),
         ])
 
     def _build_user(
@@ -249,9 +255,10 @@ class PromptBuilder:
         sections.append(f"AAOIFI excerpts:\n{self.format_chunks(chunks)}")
         sections.append(f"Current question:\n{query.strip()}")
         sections.append(
-            "Apply the 3-phase workflow above. Return your compliance determination "
+            "Apply the private decision workflow above. Return your compliance determination "
             "using the specified output format. "
-            "Use INSUFFICIENT_DATA when the excerpts do not support an answer."
+            "Use CLARIFICATION_NEEDED with exactly one question when a missing user fact blocks analysis. "
+            "Use INSUFFICIENT_DATA when the excerpts do not support an answer even after the user facts are clear."
         )
         return "\n\n".join(sections)
 

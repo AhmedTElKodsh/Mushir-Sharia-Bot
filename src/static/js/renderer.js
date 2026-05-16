@@ -174,7 +174,8 @@ function extendTypewriterBuffer(fullText) {
 // ---- Citation post-processing (P2-S5) --------------------------------------
 
 /**
- * Walk an assistant message node's text for citation markers `[N]` (N = 1-9)
+ * Walk an assistant message node's text for citation markers `[N]` or
+ * `[FAS-X §Y.Z, p.N]`
  * and replace each marker with an interactive `<a class="citation-anchor">`
  * element.  Stores the citations array on the node for the click handler.
  *
@@ -188,13 +189,18 @@ function renderCitations(node, citations) {
   if (!node || !citations || citations.length === 0) return;
 
   var text = node.textContent;
-  var pattern = /\[(\d)\]/g;
+  var pattern = /\[(?:(\d)|((?:AAOIFI\s+)?FAS-?\d+)([^\]]*))\]/gi;
   var match;
   var parts = [];
   var lastIndex = 0;
 
   while ((match = pattern.exec(text)) !== null) {
-    var num = parseInt(match[1], 10);
+    var citationIndex = match[1]
+      ? parseInt(match[1], 10) - 1
+      : _citationIndexForMarker(match[2], match[3], citations);
+    if (citationIndex < 0 || citationIndex >= citations.length) {
+      continue;
+    }
 
     /* Text segment before this marker */
     if (match.index > lastIndex) {
@@ -205,22 +211,22 @@ function renderCitations(node, citations) {
     var anchor = document.createElement("a");
     anchor.className = "citation-anchor";
     anchor.href = "#";
-    anchor.setAttribute("data-citation", num);
-    anchor.textContent = "[" + num + "]";
+    anchor.setAttribute("data-citation", String(citationIndex + 1));
+    anchor.textContent = match[0];
 
     /* Use a closure to capture per-anchor values */
     (function (idx, msgNode) {
       anchor.addEventListener("click", function (e) {
         e.preventDefault();
         var data = msgNode._citations;
-        if (data && data[idx - 1]) {
-          Flyout.open(data[idx - 1]);
+        if (data && data[idx]) {
+          Flyout.open(data[idx]);
         }
       });
-    })(num, node);
+    })(citationIndex, node);
 
     parts.push(anchor);
-    lastIndex = match.index + String(num).length + 2; // "[N]" length
+    lastIndex = match.index + match[0].length;
   }
 
   if (parts.length === 0) return; // no citation markers found
@@ -238,6 +244,21 @@ function renderCitations(node, citations) {
   for (var i = 0; i < parts.length; i++) {
     node.appendChild(parts[i]);
   }
+}
+
+function _citationIndexForMarker(standardMarker, suffix, citations) {
+  var standard = String(standardMarker || "").replace(/AAOIFI\s+/i, "").replace(/FAS-?(\d+)/i, "FAS-$1").toLowerCase();
+  var sectionMatch = String(suffix || "").match(/(?:§|Â§|section)\s*([A-Za-z0-9.\-]+)/i);
+  var section = sectionMatch ? sectionMatch[1].toLowerCase() : null;
+  for (var i = 0; i < citations.length; i++) {
+    var citation = citations[i] || {};
+    var citationStandard = String(citation.standard || "").replace(/FAS-?(\d+)/i, "FAS-$1").toLowerCase();
+    var citationSection = citation.section == null ? null : String(citation.section).toLowerCase();
+    if (citationStandard === standard && (!section || citationSection === section)) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 // ---- Message rendering ----------------------------------------------------
@@ -289,10 +310,6 @@ function renderBadge(status, targetNode) {
     PARTIALLY_COMPLIANT: "Partially Compliant",
     INSUFFICIENT_DATA:   "Insufficient Data"
   };
-
-  /* Remove any existing badge (from a prior started/retrieval event) */
-  var existing = messages.querySelector(".badge");
-  if (existing) existing.remove();
 
   var badge  = document.createElement("div");
   badge.className = "badge " + normalized;
@@ -463,11 +480,10 @@ function restoreMessages(savedMessages) {
   var VALID_COMPLIANCE = {COMPLIANT:1, NON_COMPLIANT:1, PARTIALLY_COMPLIANT:1, INSUFFICIENT_DATA:1};
   for (var i = 0; i < savedMessages.length; i++) {
     var msg = savedMessages[i];
-    /* Render compliance badge before the assistant message if status is a compliance value */
-    if (msg.role === "assistant" && msg.status && VALID_COMPLIANCE[msg.status]) {
-      renderBadge(msg.status);
-    }
     var node = addMessage(msg.role, msg.content);
+    if (msg.role === "assistant" && msg.status && VALID_COMPLIANCE[msg.status]) {
+      renderBadge(msg.status, node);
+    }
     /* Post-process citations for persisted assistant messages */
     if (msg.role === "assistant" && msg.citations && msg.citations.length > 0) {
       renderCitations(node, msg.citations);

@@ -21,6 +21,8 @@ from typing import Dict, Any, Optional, Tuple
 
 import requests
 
+__test__ = False
+
 
 # Configuration
 @dataclass

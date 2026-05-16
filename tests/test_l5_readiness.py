@@ -120,7 +120,7 @@ def test_l5_stream_error_state_is_user_safe():
     assert response.status_code == 200
     assert "event: started" in response.text
     assert "event: error" in response.text
-    assert "The answer service is temporarily unavailable. Please try again later." in response.text
+    assert "The answer service could not complete the request. Please try again later." in response.text
     assert "provider unavailable" not in response.text
 
 

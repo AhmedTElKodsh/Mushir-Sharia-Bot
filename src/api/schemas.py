@@ -69,6 +69,12 @@ class QueryResponse(BaseModel):
             raise ValueError("grounded answers must include at least one citation")
         if self.status == ComplianceStatus.CLARIFICATION_NEEDED and not self.clarification_question:
             raise ValueError("clarification responses must include clarification_question")
+        if self.status == ComplianceStatus.CLARIFICATION_NEEDED and self.clarification_question:
+            question = self.clarification_question.strip()
+            if "\n" in question or question.count("?") + question.count("\u061f") != 1:
+                raise ValueError("clarification responses must contain exactly one concise question")
+            if question.lstrip().startswith(("-", "*", "1.", "2.")):
+                raise ValueError("clarification responses must not use lists")
         return self
 
 

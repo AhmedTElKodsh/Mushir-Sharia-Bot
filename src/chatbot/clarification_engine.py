@@ -254,6 +254,8 @@ class ClarificationEngine:
         """
         if self._is_informational_query(query):
             return None
+        if self._has_specific_transaction_structure(query):
+            return None
         try:
             state = SessionState(session_id=session_id or "")
             result = self.process_query(state, query)
@@ -325,6 +327,20 @@ class ClarificationEngine:
 
     def _is_informational_query(self, query: str) -> bool:
         text = query.strip().lower()
+        judgment_terms = (
+            "ruling",
+            "compliant",
+            "compliance",
+            "permissible",
+            "allowed",
+            "halal",
+            "haram",
+            "valid",
+            "can i",
+            "should i",
+        )
+        if any(term in text for term in judgment_terms):
+            return False
         starters = (
             "what is ",
             "what are ",
@@ -336,6 +352,30 @@ class ClarificationEngine:
             "tell me about ",
         )
         return text.startswith(starters)
+
+    def _has_specific_transaction_structure(self, query: str) -> bool:
+        text = query.strip().lower()
+        if len(text.split()) < 8:
+            return False
+        known_structures = ("murabahah", "murabaha", "ijarah", "mudarabah", "musharakah", "sukuk")
+        judgment_terms = ("compliant", "permissible", "allowed", "valid", "ruling")
+        concrete_terms = (
+            "disclosed markup",
+            "disclosed mark-up",
+            "payable",
+            "deferred",
+            "installment",
+            "instalment",
+            "ownership",
+            "possession",
+            "risk transfer",
+            "delivery",
+        )
+        return (
+            any(term in text for term in known_structures)
+            and any(term in text for term in judgment_terms)
+            and any(term in text for term in concrete_terms)
+        )
 
     def _mentions_price(self, text_lower: str) -> bool:
         return any(

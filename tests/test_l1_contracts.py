@@ -95,6 +95,32 @@ def test_application_service_returns_insufficient_data_without_retrieved_chunks(
 
 
 @pytest.mark.service
+def test_application_service_converts_llm_uncertainty_to_one_followup_question():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    uncertain_answer = """
+PHASE 1: I need more information.
+1. What is the company activity?
+2. What percentage of revenue is non-compliant?
+"""
+    service = ApplicationService(
+        retriever=FakeRetriever([_chunk()]),
+        llm_client=FakeLLM(uncertain_answer),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    )
+
+    result = service.answer("Can I invest in this company?")
+
+    assert result.status == ComplianceStatus.CLARIFICATION_NEEDED
+    assert result.clarification_question == "What is the company activity?"
+    assert result.answer == "I need one detail before checking the AAOIFI evidence: What is the company activity?"
+    assert "PHASE" not in result.answer
+    assert "2." not in result.answer
+
+
+@pytest.mark.service
 def test_application_service_detects_arabic_and_localizes_insufficient_data():
     from src.chatbot.application_service import ApplicationService
     from src.chatbot.citation_validator import CitationValidator
@@ -147,6 +173,42 @@ def test_prompt_builder_adds_arabic_response_instruction():
 
     assert "Respond in clear Modern Standard Arabic" in prompt
     assert "[1] FAS-01 §1 (score: 0.91)" in prompt
+
+
+@pytest.mark.unit
+def test_prompt_builder_uses_single_clarification_guard_without_hidden_reasoning_labels():
+    from src.chatbot.prompt_builder import PromptBuilder
+
+    prompt = PromptBuilder().build(
+        "Can I invest?",
+        [_chunk()],
+        response_language="en",
+    )
+
+    assert "ask exactly ONE targeted follow-up question" in prompt
+    assert "Clarification guard:" in prompt
+    assert "CLARIFICATION_NEEDED" in prompt
+    assert "chain-of-thought" not in prompt.lower()
+    assert "## Reasoning" not in prompt
+    assert "PHASE 1" not in prompt
+    assert "1. [Specific question" not in prompt
+    assert "2. [Specific question" not in prompt
+
+
+@pytest.mark.unit
+def test_prompt_builder_arabic_clarification_template_stays_single_question():
+    from src.chatbot.prompt_builder import PromptBuilder
+
+    prompt = PromptBuilder().build(
+        "هل يجوز الاستثمار؟",
+        [_chunk()],
+        response_language="ar",
+    )
+
+    assert "CLARIFICATION_NEEDED" in prompt
+    assert "Exactly one specific Arabic question" in prompt
+    assert "1. [" not in prompt
+    assert "2. [" not in prompt
 
 
 @pytest.mark.unit

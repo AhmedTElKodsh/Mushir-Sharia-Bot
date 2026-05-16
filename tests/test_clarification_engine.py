@@ -104,3 +104,23 @@ def test_informational_murabaha_question_skips_transaction_clarification():
         )
         is None
     )
+
+
+def test_judgment_query_with_missing_facts_asks_one_targeted_question():
+    engine = ClarificationEngine()
+
+    question = engine.ask_if_needed("What is the ruling on my investment?")
+
+    assert question == "What type of company or business activity is involved?"
+    assert question.count("?") == 1
+
+
+def test_specific_murabaha_compliance_query_skips_extra_clarification():
+    engine = ClarificationEngine()
+
+    assert (
+        engine.ask_if_needed(
+            "Is a Murabaha sale with disclosed markup payable over 24 months compliant?"
+        )
+        is None
+    )

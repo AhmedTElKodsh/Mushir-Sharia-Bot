@@ -10,12 +10,23 @@ from src.api.dependencies import get_application_service, get_rate_limiter, get_
 from src.api.rate_limit import InMemoryRateLimiter, RateLimitDecision
 from src.api.schemas import ErrorResponse, QueryRequest, QueryResponse
 from src.chatbot.application_service import ApplicationService
+from src.chatbot.llm_client import LLMConfigurationError, LLMRateLimitError, LLMResponseError
 from src.chatbot.session_manager import SessionManager
 from src.models.ruling import AnswerContract
 from src.models.session import SessionState
+from src.security.input_validator import InputValidator
 
 router = APIRouter()
-SAFE_SERVICE_ERROR_MESSAGE = "The answer service is temporarily unavailable. Please try again later."
+SAFE_SERVICE_ERROR_MESSAGE = "The answer service could not complete the request. Please try again later."
+SAFE_PROVIDER_CONFIG_MESSAGE = (
+    "The answer provider is not configured for this deployment. Ask the operator to check the provider API key."
+)
+SAFE_PROVIDER_RATE_LIMIT_MESSAGE = (
+    "The answer provider is rate-limiting requests. Please wait a moment and try again."
+)
+SAFE_PROVIDER_RESPONSE_MESSAGE = (
+    "The answer provider returned an unusable response. Please try again with a shorter, plain-text question."
+)
 
 
 @router.post("/sessions", response_model=Dict[str, str])
@@ -64,6 +75,9 @@ async def query(
     if not rate_decision.allowed:
         return _rate_limit_response(request.state.request_id, rate_decision)
     _apply_rate_limit_headers(response, rate_decision)
+    validation_error = _validate_query(payload)
+    if validation_error:
+        return _error_response("VALIDATION_ERROR", validation_error, request.state.request_id, status_code=422)
     try:
         answer = _answer_service(application_service, payload, request.state.request_id)
     except Exception as exc:
@@ -83,6 +97,9 @@ async def query_stream(
     rate_decision = rate_limiter.check(_rate_limit_key(request))
     if not rate_decision.allowed:
         return _rate_limit_response(request_id, rate_decision)
+    validation_error = _validate_query(payload)
+    if validation_error:
+        return _error_response("VALIDATION_ERROR", validation_error, request_id, status_code=422)
     return StreamingResponse(
         _query_events(application_service, payload, request_id),
         media_type="text/event-stream",
@@ -152,7 +169,18 @@ def _error_response(code: str, message: str, request_id: str, status_code: int):
 
 
 def _service_error_message(exc: Exception) -> str:
+    if isinstance(exc, LLMConfigurationError):
+        return SAFE_PROVIDER_CONFIG_MESSAGE
+    if isinstance(exc, LLMRateLimitError):
+        return SAFE_PROVIDER_RATE_LIMIT_MESSAGE
+    if isinstance(exc, LLMResponseError):
+        return SAFE_PROVIDER_RESPONSE_MESSAGE
     return SAFE_SERVICE_ERROR_MESSAGE
+
+
+def _validate_query(payload: QueryRequest) -> str | None:
+    valid, error = InputValidator().validate_query(payload.query)
+    return None if valid else error
 
 
 def _rate_limit_key(request: Request) -> str:

@@ -92,15 +92,16 @@ def test_query_requires_disclaimer_acknowledgement_by_default():
     class FakeService:
         def answer(self, query, session_id=None, request_id=None, disclaimer_acknowledged=True):
             assert disclaimer_acknowledged is False
+            question = (
+                "Do you acknowledge that Mushir provides informational guidance only "
+                "and not a binding Sharia ruling?"
+            )
             return AnswerContract(
-                answer="Please acknowledge the Sharia guidance disclaimer before continuing.",
+                answer=question,
                 status=ComplianceStatus.CLARIFICATION_NEEDED,
                 citations=[],
-                reasoning_summary="Disclaimer acknowledgement is required.",
-                clarification_question=(
-                    "Do you acknowledge that Mushir provides informational guidance only "
-                    "and not a binding Sharia ruling?"
-                ),
+                reasoning_summary="Mushir needs explicit acknowledgement of its informational-only scope before analysis.",
+                clarification_question=question,
                 metadata={"disclaimer_required": True},
             )
 
@@ -112,6 +113,7 @@ def test_query_requires_disclaimer_acknowledgement_by_default():
 
     assert response.status_code == 200
     assert response.json()["status"] == "CLARIFICATION_NEEDED"
+    assert "acknowledge the Sharia guidance disclaimer before continuing" not in response.text
     assert response.json()["metadata"]["disclaimer_required"] is True
 
 
@@ -174,7 +176,7 @@ def test_query_stream_returns_error_event_when_llm_fails():
     assert response.status_code == 200
     events = _named_sse_events(response.text)
     assert [event["type"] for event in events] == ["started", "error"]
-    assert events[-1]["data"]["message"] == "The answer service is temporarily unavailable. Please try again later."
+    assert events[-1]["data"]["message"] == "The answer service could not complete the request. Please try again later."
     assert "model unavailable" not in response.text
 
 

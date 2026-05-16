@@ -81,11 +81,12 @@ class ApplicationService:
         cleaned_query = self._normalize_query(query.strip())
         response_language = self._detect_language(cleaned_query)
         if self._requires_disclaimer(disclaimer_acknowledged):
+            question = self._disclaimer_acknowledgement_question(response_language)
             contract = AnswerContract(
-                answer=self._disclaimer_acknowledgement_message(response_language),
+                answer=question,
                 status=ComplianceStatus.CLARIFICATION_NEEDED,
-                clarification_question=self._disclaimer_acknowledgement_question(response_language),
-                reasoning_summary="Disclaimer acknowledgement is required before compliance analysis.",
+                clarification_question=question,
+                reasoning_summary="Mushir needs explicit acknowledgement of its informational-only scope before analysis.",
                 limitations=self._limitations(response_language),
                 metadata={"disclaimer_required": True, "response_language": response_language},
             )
@@ -111,11 +112,12 @@ class ApplicationService:
             return cached
         clarification = self._clarification_question(cleaned_query, session_id)
         if clarification:
+            clarification_answer = self._clarification_answer(clarification, response_language)
             contract = AnswerContract(
-                answer=clarification,
+                answer=clarification_answer,
                 status=ComplianceStatus.CLARIFICATION_NEEDED,
                 clarification_question=clarification,
-                reasoning_summary="Missing facts materially block a grounded AAOIFI answer.",
+                reasoning_summary=self._clarification_reason(clarification, response_language),
                 limitations=self._limitations(response_language),
                 metadata=self._metadata([], confidence=0.0, response_language=response_language),
             )
@@ -182,6 +184,19 @@ class ApplicationService:
             )
             answer = self.llm_client.generate(prompt)
         citations = self.citation_validator.validate(answer, chunks)
+        llm_clarification = self._llm_clarification_question(answer, citations)
+        if llm_clarification:
+            contract = AnswerContract(
+                answer=self._clarification_answer(llm_clarification, response_language),
+                status=ComplianceStatus.CLARIFICATION_NEEDED,
+                citations=[],
+                clarification_question=llm_clarification,
+                reasoning_summary=self._clarification_reason(llm_clarification, response_language),
+                limitations=self._limitations(response_language),
+                metadata=self._metadata(chunks, confidence=self._confidence(chunks), response_language=response_language),
+            )
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
         status = self._status_from_answer(answer, citations)
         if status == ComplianceStatus.INSUFFICIENT_DATA and not citations:
             answer = self._insufficient_data_message(response_language)
@@ -376,13 +391,25 @@ class ApplicationService:
     def _disclaimer_acknowledgement_message(response_language: str) -> str:
         if response_language == "ar":
             return "يرجى الإقرار بتنبيه الإرشاد الشرعي قبل المتابعة."
-        return "Please acknowledge the Sharia guidance disclaimer before continuing."
+        return ApplicationService._disclaimer_acknowledgement_question(response_language)
 
     @staticmethod
     def _disclaimer_acknowledgement_question(response_language: str) -> str:
         if response_language == "ar":
             return "هل تقر بأن مشير يقدم إرشادا معلوماتيا فقط وليس حكما شرعيا ملزما؟"
         return "Do you acknowledge that Mushir provides informational guidance only and not a binding Sharia ruling?"
+
+    @staticmethod
+    def _clarification_answer(clarification: str, response_language: str) -> str:
+        if response_language == "ar":
+            return f"أحتاج إلى تفصيل واحد قبل مراجعة مقاطع أيوفي: {clarification}"
+        return f"I need one detail before checking the AAOIFI evidence: {clarification}"
+
+    @staticmethod
+    def _clarification_reason(clarification: str, response_language: str) -> str:
+        if response_language == "ar":
+            return "السؤال غير مكتمل؛ هذا التفصيل مطلوب قبل تقديم إجابة مستندة إلى مقاطع أيوفي."
+        return f"The question is missing a material fact needed for a grounded AAOIFI answer: {clarification}"
 
     @staticmethod
     def _not_addressed_message(response_language: str) -> str:
@@ -470,6 +497,38 @@ class ApplicationService:
         """Derive compliance status. Delegates to shared function."""
         from src.chatbot.compliance_analyzer import derive_compliance_status
         return derive_compliance_status(answer, citations)
+
+    @classmethod
+    def _llm_clarification_question(cls, answer: str, citations) -> Optional[str]:
+        if citations:
+            return None
+        text = (answer or "").strip()
+        if not text:
+            return None
+        lowered = text.lower()
+        if not any(token in lowered for token in ["clarification_needed", "need more information", "need additional information", "missing"]):
+            return None
+        return cls._single_question_from_text(text)
+
+    @staticmethod
+    def _single_question_from_text(text: str) -> str:
+        cleaned_lines = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            stripped = re.sub(r"^(?:[-*]|\d+[.)])\s*", "", stripped)
+            if stripped.lower().startswith(("phase ", "reasoning", "analysis")):
+                continue
+            cleaned_lines.append(stripped)
+        for line in cleaned_lines:
+            if line.lower().startswith("question:"):
+                question = line.split(":", 1)[1].strip()
+                return question if question.endswith(("?", "\u061f")) else f"{question}?"
+            if "?" in line or "\u061f" in line:
+                question = re.split(r"[?\u061f]", line, maxsplit=1)[0].strip()
+                return f"{question}?"
+        return "What is the single most important transaction detail needed to assess this against AAOIFI?"
 
     @staticmethod
     def _reasoning_summary(answer: str) -> str:

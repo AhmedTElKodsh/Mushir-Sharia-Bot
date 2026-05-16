@@ -16,6 +16,7 @@ HTML_SURFACE_STRINGS = [
     'id="history-sidebar"',
     "Previous chats",
     'id="chat-form"',
+    'id="disclaimer-ack"',
     "Ask a Sharia compliance question",
     "Ask Mushir",
     'placeholder="Ask about an Islamic finance transaction..."',
@@ -41,8 +42,7 @@ def test_root_returns_chat_html():
     assert response.headers["content-type"].startswith("text/html")
     for s in HTML_SURFACE_STRINGS:
         assert s in response.text, f"Missing expected string in / response: {s!r}"
-    assert 'id="disclaimer"' not in response.text
-    assert "Informational guidance only" not in response.text
+    assert "informational guidance only" in response.text.lower()
 
 
 @pytest.mark.api
@@ -57,8 +57,7 @@ def test_chat_returns_chat_html():
     assert response.headers["content-type"].startswith("text/html")
     for s in HTML_SURFACE_STRINGS:
         assert s in response.text, f"Missing expected string in /chat response: {s!r}"
-    assert 'id="disclaimer"' not in response.text
-    assert "Informational guidance only" not in response.text
+    assert "informational guidance only" in response.text.lower()
 
 
 @pytest.mark.api
@@ -113,7 +112,12 @@ def test_static_files_contain_expected_content():
         assert "function submitQuery" in app_js
         assert "/api/v1/query/stream" in app_js
         assert "function loadConversation" in app_js
-        assert "disclaimer_acknowledged: true" in app_js
+        assert "Before I answer, please tick the acknowledgement above." in app_js
+        assert "formatHttpError" in app_js
+        assert "Request ID:" in app_js
+        assert "session_id: sessionId" in app_js
+        assert "disclaimer_acknowledged: Boolean(disclaimerAck && disclaimerAck.checked)" in app_js
+        assert "CLARIFICATION_NEEDED: \"Needs clarification\"" in app_js
 
         # Verify base.css has :root custom properties
         base = client.get("/static/css/base.css").text

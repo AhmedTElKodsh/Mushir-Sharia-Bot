@@ -68,6 +68,21 @@ def test_query_response_requires_question_for_clarification_status():
 
 
 @pytest.mark.unit
+def test_query_response_rejects_crowded_clarification_questions():
+    from src.api.schemas import QueryResponse
+
+    with pytest.raises(ValidationError, match="exactly one concise question"):
+        QueryResponse(
+            answer="More facts are needed.",
+            status=ComplianceStatus.CLARIFICATION_NEEDED,
+            citations=[],
+            clarification_question="1. What is the company activity?\n2. What percentage is non-compliant?",
+            reasoning_summary="Missing facts.",
+            limitations="Informational only.",
+        )
+
+
+@pytest.mark.unit
 def test_error_response_contains_request_id():
     from src.api.schemas import ErrorResponse
 

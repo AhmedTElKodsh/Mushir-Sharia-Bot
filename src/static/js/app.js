@@ -8,6 +8,7 @@ const promptInput = document.getElementById("prompt");
 const messages = document.getElementById("messages");
 const send = document.getElementById("send");
 const conversationList = document.getElementById("conversation-list");
+const disclaimerAck = document.getElementById("disclaimer-ack");
 let context = {};
 
 /**
@@ -67,11 +68,26 @@ async function submitQuery() {
   messagesArray.push({role: "user", content: query, timestamp: Date.now()});
   persistConversation();
 
+  if (disclaimerAck && !disclaimerAck.checked) {
+    var disclaimerMessage = "Before I answer, please tick the acknowledgement above. Mushir provides informational guidance from retrieved AAOIFI excerpts only. It is not a binding fatwa, legal advice, or financial advice.";
+    addMessage("assistant", disclaimerMessage);
+    messagesArray.push({
+      role: "assistant",
+      content: disclaimerMessage,
+      timestamp: Date.now(),
+      status: "CLARIFICATION_NEEDED",
+      citations: []
+    });
+    persistConversation();
+    return;
+  }
+
   send.disabled = true;
   send.textContent = "Streaming...";
   var _assistantContent = "";
   var _assistantCitations = [];
   var firstTokenReceived = false;
+  var currentRequestId = "";
   currentAssistantNode = null;
   streamActive = true;
 
@@ -83,8 +99,9 @@ async function submitQuery() {
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
         query: query,
+        session_id: sessionId,
         context: Object.assign({}, context, {
-          disclaimer_acknowledged: true
+          disclaimer_acknowledged: Boolean(disclaimerAck && disclaimerAck.checked)
         }),
         conversation_history: messagesArray
       })
@@ -92,7 +109,8 @@ async function submitQuery() {
 
     if (!response.ok) {
       removeTypingIndicator();
-      renderErrorBubble("Server returned " + response.status + ": " + response.statusText);
+      var responseRequestId = response.headers.get("X-Request-ID") || "";
+      renderErrorBubble(await formatHttpError(response, responseRequestId));
       send.disabled = false;
       send.textContent = "Ask Mushir";
       return;
@@ -101,7 +119,9 @@ async function submitQuery() {
     var reader = response.body.getReader();
 
     processSseStream(reader, {
-      onStarted: function() {},
+      onStarted: function(data) {
+        currentRequestId = data.request_id || "";
+      },
 
       onToken: function(data) {
         _assistantContent += data.text || "";
@@ -141,10 +161,11 @@ async function submitQuery() {
         appState.streaming = false;
         abortTypewriter();
         removeTypingIndicator();
-        renderErrorBubble(data.message || "An unexpected error occurred.");
+        var errorMessage = formatSafeStreamError(data, currentRequestId);
+        renderErrorBubble(errorMessage);
         messagesArray.push({
           role: "assistant",
-          content: data.message || "An unexpected error occurred.",
+          content: errorMessage,
           timestamp: Date.now(),
           status: "error",
           citations: []
@@ -164,7 +185,7 @@ async function submitQuery() {
         if (!firstTokenReceived) {
           removeTypingIndicator();
         }
-        if (data.clarification_question && data.clarification_question !== _assistantContent) {
+        if (data.status !== "CLARIFICATION_NEEDED" && data.clarification_question && data.clarification_question !== _assistantContent) {
           addMessage("assistant", data.clarification_question);
         }
         context = data.metadata || context;
@@ -189,10 +210,11 @@ async function submitQuery() {
         appState.streaming = false;
         abortTypewriter();
         removeTypingIndicator();
-        renderErrorBubble("Connection lost: " + err.message);
+        var connectionMessage = "Connection interrupted before Mushir finished. Please retry." + formatRequestIdSuffix(currentRequestId);
+        renderErrorBubble(connectionMessage);
         messagesArray.push({
           role: "assistant",
-          content: "Connection lost: " + err.message,
+          content: connectionMessage,
           timestamp: Date.now(),
           status: "error",
           citations: []
@@ -203,7 +225,7 @@ async function submitQuery() {
       onComplete: function() {
         if (streamActive) {
           removeTypingIndicator();
-          renderErrorBubble("Stream ended unexpectedly.");
+          renderErrorBubble("Connection interrupted before Mushir finished. Please retry." + formatRequestIdSuffix(currentRequestId));
         }
         send.disabled = false;
         send.textContent = "Ask Mushir";
@@ -213,10 +235,11 @@ async function submitQuery() {
     appState.streaming = false;
     abortTypewriter();
     removeTypingIndicator();
-    renderErrorBubble("Request failed: " + error.message);
+    var requestMessage = "Could not reach the answer service. Please check your connection and retry.";
+    renderErrorBubble(requestMessage);
     messagesArray.push({
       role: "assistant",
-      content: "Request failed: " + error.message,
+      content: requestMessage,
       timestamp: Date.now(),
       status: "error",
       citations: []
@@ -225,6 +248,36 @@ async function submitQuery() {
     send.disabled = false;
     send.textContent = "Ask Mushir";
   }
+}
+
+async function formatHttpError(response, requestId) {
+  var message = "The request could not be processed.";
+  var code = "";
+  try {
+    var payload = await response.clone().json();
+    if (payload && payload.error) {
+      message = payload.error.message || message;
+      code = payload.error.code || "";
+      requestId = payload.error.request_id || requestId;
+    }
+  } catch (_) {
+    if (response.status === 429) {
+      message = "Too many requests. Please wait a moment and try again.";
+    }
+  }
+  if (code === "VALIDATION_ERROR") {
+    return "I couldn't process that question: " + message + formatRequestIdSuffix(requestId);
+  }
+  return message + formatRequestIdSuffix(requestId);
+}
+
+function formatSafeStreamError(data, fallbackRequestId) {
+  var message = (data && data.message) || "The answer service could not complete the request. Please try again later.";
+  return message + formatRequestIdSuffix((data && data.request_id) || fallbackRequestId);
+}
+
+function formatRequestIdSuffix(requestId) {
+  return requestId ? " Request ID: " + requestId + "." : "";
 }
 
 (function() {
@@ -344,7 +397,8 @@ function formatStatusLabel(status) {
     COMPLIANT: "Compliant",
     NON_COMPLIANT: "Non-compliant",
     PARTIALLY_COMPLIANT: "Partially compliant",
-    INSUFFICIENT_DATA: "Needs more information"
+    INSUFFICIENT_DATA: "Needs more information",
+    CLARIFICATION_NEEDED: "Needs clarification"
   };
   return labels[status] || "Finished";
 }

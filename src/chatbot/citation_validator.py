@@ -8,7 +8,10 @@ from src.models.ruling import AAOIFICitation
 class CitationValidator:
     """Extracts explicit answer citations and keeps only retrieved references."""
 
-    citation_pattern = re.compile(r"\[(?:AAOIFI\s+)?FAS-?(\d+)[^\]]*\]")
+    citation_pattern = re.compile(
+        r"\[(?:AAOIFI\s+)?FAS-?(\d+)(?:\s*(?:§|Â§|section)\s*([A-Za-z0-9.\-]+))?[^\]]*\]",
+        re.IGNORECASE,
+    )
 
     def validate(self, answer: str, chunks: List[Any]) -> List[AAOIFICitation]:
         """Extract citations from answer and match against retrieved chunks."""
@@ -18,15 +21,20 @@ class CitationValidator:
         # Find all FAS-XX references in the answer
         for match in self.citation_pattern.finditer(answer):
             standard_num = match.group(1)
-            standard = f"FAS-{standard_num}"
+            cited_section = self._normalize_section(match.group(2))
+            standard = self._normalize_standard(f"FAS-{standard_num}")
             
             # Find chunks that match this standard
             for chunk in chunks:
                 chunk_standard, chunk_section = self._chunk_ref(chunk)
+                normalized_chunk_section = self._normalize_section(chunk_section)
                 ref = (chunk_standard, chunk_section)
                 
-                # Match if standard matches (section can be None for definitions)
-                if chunk_standard == standard and ref not in seen:
+                section_matches = (
+                    cited_section is None
+                    or cited_section == normalized_chunk_section
+                )
+                if chunk_standard == standard and section_matches and ref not in seen:
                     seen.add(ref)
                     citations.append(
                         AAOIFICitation(
@@ -40,6 +48,16 @@ class CitationValidator:
                         )
                     )
         return citations
+
+    @staticmethod
+    def _normalize_section(section: Optional[str]) -> Optional[str]:
+        if section is None:
+            return None
+        value = str(section).strip()
+        if not value:
+            return None
+        value = re.sub(r"^(?:section|§|Â§)\s*", "", value, flags=re.IGNORECASE)
+        return value.rstrip(".,;:").lower()
 
     def _supported_refs(self, chunks: List[Any]) -> Set[Tuple[str, str]]:
         refs = set()
@@ -83,7 +101,7 @@ class CitationValidator:
         # Match patterns like: AAOIFI_Standard_28, FAS-28, Standard_28
         match = re.search(r'[Ss]tandard[_\s]*(\d+)', standard) or re.search(r'FAS-?(\d+)', standard)
         if match:
-            return f"FAS-{match.group(1)}"
+            return f"FAS-{int(match.group(1)):02d}"
         return standard
 
     def _document_id_for(self, ref: Tuple[str, str], chunks: List[Any]) -> str:

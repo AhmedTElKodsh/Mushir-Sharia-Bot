@@ -204,6 +204,15 @@ python test_bot.py
 - **pytest** (>=7.4.0): Testing framework
 - **numpy** (>=1.24.0): Numerical operations for embeddings
 
+## Current Documentation
+
+For the current maintained documentation set, start with:
+
+- `docs/index.md` - Documentation map.
+- `docs/project-documentation.md` - Full current technical documentation.
+- `docs/client-plain-language-logic.md` - Simple client-facing explanation of the whole logic.
+- `project-context.md` - Implementation context and rules for AI agents and developers.
+
 ## Scripts
 
 ### Corpus Verification

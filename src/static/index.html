@@ -25,6 +25,10 @@
       </section>
       <form id="chat-form" aria-label="Chat input form">
         <div class="controls">
+          <label class="disclaimer-ack">
+            <input id="disclaimer-ack" name="disclaimer_acknowledged" type="checkbox">
+            <span>I understand Mushir gives informational guidance only, not a binding fatwa, legal advice, or financial advice.</span>
+          </label>
           <textarea id="prompt" name="prompt" placeholder="Ask about an Islamic finance transaction..." dir="auto"></textarea>
         </div>
         <button id="send" type="submit">Ask Mushir</button>

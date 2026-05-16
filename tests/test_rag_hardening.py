@@ -43,6 +43,52 @@ def test_citation_validator_fails_closed_for_unsupported_citation():
     assert citations == []
 
 
+@pytest.mark.unit
+def test_citation_validator_rejects_wrong_section_in_supported_standard():
+    from src.chatbot.citation_validator import CitationValidator
+    from src.models.schema import AAOIFICitation, SemanticChunk
+
+    chunk = SemanticChunk(
+        chunk_id="chunk-1",
+        text="AAOIFI requires ownership and risk transfer before resale.",
+        citation=AAOIFICitation(
+            standard_id="FAS-28",
+            section="3.1",
+            page=47,
+            source_file="FAS-28.md",
+        ),
+        score=0.9,
+    )
+
+    citations = CitationValidator().validate("COMPLIANT: See [FAS-28 §999.9, p.1].", [chunk])
+
+    assert citations == []
+
+
+@pytest.mark.unit
+def test_citation_validator_matches_unpadded_fas_number_to_padded_standard():
+    from src.chatbot.citation_validator import CitationValidator
+    from src.models.schema import AAOIFICitation, SemanticChunk
+
+    chunk = SemanticChunk(
+        chunk_id="chunk-1",
+        text="AAOIFI requires ownership and risk transfer before resale.",
+        citation=AAOIFICitation(
+            standard_id="FAS-01",
+            section="1",
+            page=None,
+            source_file="FAS-01.md",
+        ),
+        score=0.9,
+    )
+
+    citations = CitationValidator().validate("COMPLIANT: See [FAS-1 section 1].", [chunk])
+
+    assert len(citations) == 1
+    assert citations[0].standard_number == "FAS-01"
+    assert citations[0].section_number == "1"
+
+
 @pytest.mark.service
 def test_application_service_rewrites_unsupported_answer_to_insufficient_data():
     from src.chatbot.application_service import ApplicationService

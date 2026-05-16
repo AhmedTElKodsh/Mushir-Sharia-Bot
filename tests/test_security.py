@@ -2,8 +2,27 @@
 import pytest
 from fastapi.testclient import TestClient
 from src.api.main import create_app, parse_cors_origins
+from src.api.dependencies import get_application_service
 from src.security.cors_validator import CORSValidator
 from src.security.input_validator import InputValidator
+from src.models.ruling import AnswerContract, ComplianceStatus
+
+
+class FastFakeService:
+    def answer(self, query, **kwargs):
+        return AnswerContract(
+            answer="Not addressed in retrieved AAOIFI standards.",
+            status=ComplianceStatus.INSUFFICIENT_DATA,
+            citations=[],
+            reasoning_summary="No fake evidence.",
+            metadata={"confidence": 0.0},
+        )
+
+
+def app_with_fast_service():
+    app = create_app()
+    app.dependency_overrides[get_application_service] = lambda: FastFakeService()
+    return app
 
 
 class TestCORSValidation:
@@ -103,7 +122,7 @@ class TestRateLimiting:
 
     def test_rate_limit_headers_present(self):
         """Rate limit headers should be present in responses."""
-        app = create_app()
+        app = app_with_fast_service()
         client = TestClient(app)
         
         response = client.post("/api/v1/query", json={"query": "What is Murabaha?"})
@@ -113,7 +132,7 @@ class TestRateLimiting:
 
     def test_rate_limit_exceeded_returns_429(self):
         """Exceeding rate limit should return 429 status."""
-        app = create_app()
+        app = app_with_fast_service()
         client = TestClient(app)
         
         # Make many requests to exceed limit
@@ -129,7 +148,7 @@ class TestRateLimiting:
 
     def test_rate_limit_uses_x_forwarded_for(self):
         """Rate limiting should respect X-Forwarded-For header."""
-        app = create_app()
+        app = app_with_fast_service()
         client = TestClient(app)
         
         # Request with X-Forwarded-For header

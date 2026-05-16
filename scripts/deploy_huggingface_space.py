@@ -14,10 +14,12 @@ import argparse
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from huggingface_hub import CommitOperationAdd, HfApi
 
 
 ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT / ".env")
 
 
 IGNORE_PATTERNS = [
