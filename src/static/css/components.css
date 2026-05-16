@@ -23,12 +23,12 @@
   color: #ffffff;
 }
 
-.badge.partial {
+.badge.partially-compliant {
   background: var(--color-partial);
   color: #ffffff;
 }
 
-.badge.insufficient {
+.badge.insufficient-data {
   background: var(--color-insufficient);
   color: #ffffff;
 }

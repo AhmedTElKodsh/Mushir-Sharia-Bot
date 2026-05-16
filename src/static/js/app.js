@@ -114,7 +114,6 @@ async function submitQuery() {
       },
 
       onRetrieval: function(data) {
-        if (data.status) renderBadge(data.status);
         var confidence = Number(data.confidence || 0).toFixed(2);
         addEvent("Confidence " + confidence);
       },
@@ -164,6 +163,8 @@ async function submitQuery() {
           addMessage("assistant", data.clarification_question);
         }
         context = data.metadata || context;
+        /* Render compliance badge from done event status (retrieval event lacks status) */
+        if (data.status) renderBadge(data.status);
         addEvent("Complete - " + data.status);
 
         // Persist the completed assistant message
