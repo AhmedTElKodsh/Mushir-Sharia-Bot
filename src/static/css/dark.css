@@ -19,6 +19,7 @@ html[data-theme="dark"] {
   --color-secondary-button-bg: #1d2924;
   --color-secondary-button-text: #edf4ef;
   --color-secondary-button-hover: #21483d;
+  --color-composer-muted: #788a82;
   --color-user-bubble: #174234;
   --color-assistant-bubble: #1d2924;
   --color-border: rgba(222, 236, 226, 0.16);

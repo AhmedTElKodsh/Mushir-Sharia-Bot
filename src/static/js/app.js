@@ -57,13 +57,6 @@ var I18N = {
     welcome: "Ask a Sharia compliance question in English or Arabic.",
     welcomeKicker: "AAOIFI-grounded assistant",
     welcomeCopy: "Mushir checks retrieved standard excerpts, asks for missing facts, and keeps answers informational.",
-    examplesLabel: "Example questions",
-    exampleMurabahaLabel: "Murabaha delay",
-    exampleMurabaha: "Can a customer delay payment in a murabaha contract?",
-    exampleIjaraLabel: "Ijara facts",
-    exampleIjara: "What information is needed to assess an ijara transaction?",
-    exampleArabicLabel: "Arabic question",
-    exampleArabic: "هل يجوز فرض غرامة تأخير في عقد مرابحة؟",
     placeholder: "Ask about an Islamic finance transaction...",
     composerHint: "Add the transaction type, parties, payment terms, and the exact point you want checked.",
     ask: "Ask Mushir",
@@ -109,13 +102,6 @@ var I18N = {
     welcome: "اسأل عن الالتزام الشرعي في المعاملات المالية بالعربية أو الإنجليزية.",
     welcomeKicker: "مساعد مستند إلى معايير أيوفي",
     welcomeCopy: "يفحص مشير مقتطفات المعايير المسترجعة، ويطلب الحقائق الناقصة، ويحافظ على الإجابات في نطاق المعلومات.",
-    examplesLabel: "أسئلة مقترحة",
-    exampleMurabahaLabel: "تأخير المرابحة",
-    exampleMurabaha: "هل يجوز للعميل تأخير السداد في عقد مرابحة؟",
-    exampleIjaraLabel: "بيانات الإجارة",
-    exampleIjara: "ما المعلومات المطلوبة لتقييم معاملة إجارة؟",
-    exampleArabicLabel: "سؤال عربي",
-    exampleArabic: "هل يجوز فرض غرامة تأخير في عقد مرابحة؟",
     placeholder: "اسأل عن معاملة مالية إسلامية...",
     composerHint: "أضف نوع المعاملة، والأطراف، وشروط السداد، والنقطة التي تريد فحصها بدقة.",
     ask: "اسأل مشير",
@@ -200,7 +186,6 @@ function applyLanguage(language) {
     welcomeNodes[i].setAttribute("dir", currentLanguage === "ar" ? "rtl" : "ltr");
   }
   refreshWelcomeCards();
-  bindPromptChips();
   renderConversationList();
 }
 
@@ -526,19 +511,13 @@ function renderWelcomeMessage() {
   welcome.setAttribute("data-welcome", "true");
   welcome.innerHTML = welcomeCardMarkup();
   messages.appendChild(welcome);
-  bindPromptChips();
 }
 
 function welcomeCardMarkup() {
   return [
     '<div class="welcome-kicker">' + escapeHtml(t("welcomeKicker")) + '</div>',
     '<div class="welcome-title">' + escapeHtml(t("welcome")) + '</div>',
-    '<div class="welcome-copy">' + escapeHtml(t("welcomeCopy")) + '</div>',
-    '<div class="prompt-chips" aria-label="' + escapeHtml(t("examplesLabel")) + '">',
-      '<button class="prompt-chip" type="button" data-example="' + escapeHtml(t("exampleMurabaha")) + '">' + escapeHtml(t("exampleMurabahaLabel")) + '</button>',
-      '<button class="prompt-chip" type="button" data-example="' + escapeHtml(t("exampleIjara")) + '">' + escapeHtml(t("exampleIjaraLabel")) + '</button>',
-      '<button class="prompt-chip" type="button" data-example="' + escapeHtml(t("exampleArabic")) + '">' + escapeHtml(t("exampleArabicLabel")) + '</button>',
-    '</div>'
+    '<div class="welcome-copy">' + escapeHtml(t("welcomeCopy")) + '</div>'
   ].join("");
 }
 
@@ -546,18 +525,6 @@ function refreshWelcomeCards() {
   var cards = messages.querySelectorAll(".welcome-card[data-welcome='true']");
   for (var i = 0; i < cards.length; i++) {
     cards[i].innerHTML = welcomeCardMarkup();
-  }
-}
-
-function bindPromptChips() {
-  var chips = messages.querySelectorAll(".prompt-chip");
-  for (var i = 0; i < chips.length; i++) {
-    if (chips[i].dataset.bound === "true") continue;
-    chips[i].dataset.bound = "true";
-    chips[i].addEventListener("click", function() {
-      promptInput.value = this.getAttribute("data-example") || "";
-      promptInput.focus();
-    });
   }
 }
 

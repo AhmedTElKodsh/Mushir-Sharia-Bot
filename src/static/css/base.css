@@ -23,6 +23,7 @@
   --color-secondary-button-bg: #ffffff;
   --color-secondary-button-text: var(--color-primary);
   --color-secondary-button-hover: var(--color-primary-soft);
+  --color-composer-muted: #8b9691;
 
   /* Bubbles */
   --color-user-bubble: #dff3eb;

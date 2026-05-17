@@ -125,7 +125,7 @@ def test_static_files_contain_expected_content():
         assert "function applyTheme" in app_js
         assert "mushir_ui_theme" in app_js
         assert "mushir_ui_language" in app_js
-        assert "function bindPromptChips" in app_js
+        assert "prompt-chip" not in app_js
         assert "composerHint" in app_js
 
         # Verify base.css has :root custom properties
@@ -139,7 +139,8 @@ def test_static_files_contain_expected_content():
         assert "#send" in chat
         assert "html[dir=\"rtl\"]" in chat
         assert ".welcome-card" in chat
-        assert ".prompt-chip" in chat
+        assert ".prompt-chip" not in chat
+        assert "textarea::placeholder" in chat
 
         # Verify dark.css does not auto-switch the Space into dark mode
         dark = client.get("/static/css/dark.css").text
