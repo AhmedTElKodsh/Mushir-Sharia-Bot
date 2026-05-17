@@ -97,8 +97,7 @@
   .typing-indicator .dot {
     display: none;
   }
-  .typing-indicator.static-text::before {
-    content: "Mushir is composing...";
+  .typing-indicator.static-text {
     font-size: 13px;
     color: var(--color-text-secondary);
   }

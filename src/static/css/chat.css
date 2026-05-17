@@ -5,7 +5,7 @@ header {
   justify-content: space-between;
   padding: 18px 28px;
   border-bottom: 1px solid var(--color-border);
-  background: rgba(249, 251, 248, 0.94);
+  background: var(--color-header-tint);
   backdrop-filter: blur(14px);
 }
 
@@ -29,6 +29,23 @@ header {
   color: #ffffff;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.header-btn.secondary {
+  background: var(--color-secondary-button-bg);
+  color: var(--color-secondary-button-text);
+}
+
+.header-btn.secondary:hover {
+  background: var(--color-secondary-button-hover);
+  color: var(--color-secondary-button-text);
+}
+
 h1 {
   margin: 0;
   font-size: 24px;
@@ -37,13 +54,37 @@ h1 {
   color: var(--color-text-primary);
 }
 
+html[dir="rtl"] h1,
+html[dir="rtl"] .sidebar-heading,
+html[dir="rtl"] .conversation-item {
+  text-align: right;
+}
+
+html[dir="rtl"] main {
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+
+html[dir="rtl"] #history-sidebar {
+  grid-column: 2;
+  grid-row: 1;
+  border-right: 0;
+  border-left: 1px solid var(--color-border);
+}
+
+html[dir="rtl"] .chat-panel {
+  grid-column: 1;
+  grid-row: 1;
+}
+
 main {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   gap: 0;
   width: min(1240px, calc(100vw - 32px));
   margin: 18px auto 20px;
-  min-height: calc(100vh - 108px);
+  height: calc(100vh - 108px);
+  height: calc(100dvh - 108px);
+  min-height: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--app-radius);
   background: var(--color-surface);
@@ -55,13 +96,15 @@ main {
   display: grid;
   grid-template-rows: 1fr auto;
   min-width: 0;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
+  min-height: 0;
+  background: linear-gradient(180deg, var(--color-panel-start) 0%, var(--color-panel-end) 100%);
 }
 
 #history-sidebar {
   border-right: 1px solid var(--color-border);
   padding: 18px 14px;
   min-width: 0;
+  overflow-y: auto;
   background: var(--color-sidebar-bg);
 }
 
@@ -131,8 +174,67 @@ main {
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
-  min-height: 360px;
+  min-height: 0;
   padding: 26px min(7vw, 72px) 18px;
+}
+
+.welcome-card {
+  align-self: stretch;
+  max-width: 760px;
+  padding: 18px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-card-bg);
+  box-shadow: var(--shadow-card);
+}
+
+.welcome-kicker {
+  margin-bottom: 7px;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.welcome-title {
+  color: var(--color-text-primary);
+  font-size: 18px;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.welcome-copy {
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.prompt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.prompt-chip {
+  min-height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.prompt-chip:hover,
+.prompt-chip:focus-visible {
+  border-color: var(--color-primary);
+  background: var(--color-chip-hover);
+  outline: none;
 }
 
 .message {
@@ -164,8 +266,12 @@ main {
   align-self: flex-start;
   max-width: var(--bubble-max-width);
   color: var(--color-text-secondary);
-  font-size: 13px;
-  padding: 2px 4px;
+  font-size: 12px;
+  font-weight: 650;
+  padding: 5px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-event-bg);
 }
 
 form {
@@ -179,12 +285,13 @@ form {
   border: 1px solid var(--color-border);
   border-radius: 16px;
   background: var(--color-surface);
-  box-shadow: 0 14px 36px rgba(20, 32, 28, 0.08);
+  box-shadow: var(--shadow-composer);
 }
 
 .controls {
   grid-area: input;
   display: grid;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -201,7 +308,14 @@ textarea {
   outline: none;
 }
 
-button {
+#composer-hint {
+  padding: 0 4px 2px 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+#send {
   grid-area: send;
   height: 42px;
   border: 0;
@@ -214,7 +328,7 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
+#send:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -231,17 +345,57 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
-  header { padding-inline: 16px; }
+  header {
+    gap: 12px;
+    padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+  h1 {
+    font-size: 23px;
+    line-height: 1.35;
+  }
+  .header-btn {
+    flex: 0 0 auto;
+  }
+  .header-actions {
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .header-btn {
+    padding-inline: 12px;
+  }
   main {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
     width: calc(100vw - 24px);
+    height: calc(100dvh - 102px);
     margin-top: 12px;
+    margin-bottom: 12px;
   }
   #history-sidebar {
     border-right: 0;
+    border-left: 0;
     border-bottom: 1px solid var(--color-border);
-    padding: 0 0 12px;
+    padding: 12px 14px;
+    max-height: 116px;
   }
+  html[dir="rtl"] main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  html[dir="rtl"] #history-sidebar,
+  html[dir="rtl"] .chat-panel {
+    grid-column: 1;
+  }
+  html[dir="rtl"] #history-sidebar {
+    grid-row: 1;
+    border-left: 0;
+  }
+  html[dir="rtl"] .chat-panel {
+    grid-row: 2;
+  }
+  .sidebar-heading { margin-bottom: 8px; }
   .conversation-list {
     flex-direction: row;
     overflow-x: auto;
@@ -256,7 +410,23 @@ button:disabled {
       "input"
       "send";
     margin: 0 14px 16px;
+    padding: 8px 12px 10px;
   }
-  button { width: 100%; }
+  textarea {
+    min-height: 42px;
+    max-height: 96px;
+    padding-top: 9px;
+    padding-bottom: 8px;
+  }
+  #send { width: 100%; }
   .message, .event { max-width: 100%; }
+  .welcome-card {
+    padding: 15px 16px;
+  }
+  .welcome-title {
+    font-size: 16px;
+  }
+  .prompt-chip {
+    flex: 1 1 auto;
+  }
 }

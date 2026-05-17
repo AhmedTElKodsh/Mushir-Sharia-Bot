@@ -29,6 +29,10 @@ function _applyDirection(node, text) {
   return false;
 }
 
+function _uiText(key, fallback) {
+  return typeof t === "function" ? t(key) : fallback;
+}
+
 // ---- Typewriter engine (P2-S4) --------------------------------------------
 
 /**
@@ -305,17 +309,17 @@ function renderBadge(status, targetNode) {
 
   var normalized = status.toLowerCase().replace(/_/g, "-");
   var labels = {
-    COMPLIANT:           "Compliant",
-    NON_COMPLIANT:       "Non-Compliant",
-    PARTIALLY_COMPLIANT: "Partially Compliant",
-    INSUFFICIENT_DATA:   "Insufficient Data"
+    COMPLIANT:           _uiText("statusCompliant", "Compliant"),
+    NON_COMPLIANT:       _uiText("statusNonCompliant", "Non-compliant"),
+    PARTIALLY_COMPLIANT: _uiText("statusPartiallyCompliant", "Partially compliant"),
+    INSUFFICIENT_DATA:   _uiText("statusInsufficientData", "Needs more information")
   };
 
   var badge  = document.createElement("div");
   badge.className = "badge " + normalized;
   badge.setAttribute("data-status", normalized);
   badge.setAttribute("role", "status");
-  badge.setAttribute("aria-label", "Compliance status: " + (labels[status] || status));
+  badge.setAttribute("aria-label", (labels[status] || status));
 
   /* Icon */
   var icon = document.createElement("span");
@@ -390,6 +394,7 @@ function renderTypingIndicator() {
   // prefers-reduced-motion: CSS hides dots and shows static text
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     indicator.classList.add("static-text");
+    indicator.textContent = _uiText("composing", "Mushir is composing...");
   }
 
   node.appendChild(indicator);
@@ -432,7 +437,7 @@ function renderErrorBubble(message) {
   header.appendChild(icon);
 
   var title = document.createElement("span");
-  title.textContent = "Error";
+  title.textContent = _uiText("error", "Error");
   header.appendChild(title);
 
   node.appendChild(header);
@@ -444,7 +449,7 @@ function renderErrorBubble(message) {
 
   var retry = document.createElement("button");
   retry.className = "retry-button";
-  retry.textContent = "Retry";
+  retry.textContent = _uiText("retry", "Retry");
   retry.addEventListener("click", retryHandler);
   node.appendChild(retry);
 

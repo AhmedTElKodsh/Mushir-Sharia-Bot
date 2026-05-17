@@ -14,9 +14,13 @@ HTML_SURFACE_STRINGS = [
     'id="prompt"',
     'id="messages"',
     'id="history-sidebar"',
+    'id="theme-toggle"',
+    'id="language-toggle"',
     "Previous chats",
     'id="chat-form"',
     "Ask a Sharia compliance question",
+    "AAOIFI-grounded assistant",
+    "Add the transaction type",
     "Ask Mushir",
     'placeholder="Ask about an Islamic finance transaction..."',
     '/static/css/base.css',
@@ -116,21 +120,31 @@ def test_static_files_contain_expected_content():
         assert "Request ID:" in app_js
         assert "session_id: sessionId" in app_js
         assert "disclaimer_acknowledged: true" in app_js
-        assert "CLARIFICATION_NEEDED: \"Needs clarification\"" in app_js
+        assert "CLARIFICATION_NEEDED: t(\"statusClarificationNeeded\")" in app_js
+        assert "function applyLanguage" in app_js
+        assert "function applyTheme" in app_js
+        assert "mushir_ui_theme" in app_js
+        assert "mushir_ui_language" in app_js
+        assert "function bindPromptChips" in app_js
+        assert "composerHint" in app_js
 
         # Verify base.css has :root custom properties
         base = client.get("/static/css/base.css").text
         assert ":root {" in base
-        assert "color-scheme" in base
+        assert "color-scheme: light" in base
 
         # Verify chat.css has message styles
         chat = client.get("/static/css/chat.css").text
         assert ".message" in chat
-        assert "button" in chat
+        assert "#send" in chat
+        assert "html[dir=\"rtl\"]" in chat
+        assert ".welcome-card" in chat
+        assert ".prompt-chip" in chat
 
-        # Verify dark.css has media query
+        # Verify dark.css does not auto-switch the Space into dark mode
         dark = client.get("/static/css/dark.css").text
-        assert "@media (prefers-color-scheme: dark)" in dark
+        assert "prefers-color-scheme: dark" not in dark
+        assert 'html[data-theme="dark"]' in dark
 
         # Verify components.css has typing indicator and error bubble styles
         components = client.get("/static/css/components.css").text

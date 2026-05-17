@@ -1,6 +1,6 @@
 /* ===== Base: CSS Reset + Design Tokens ===== */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /* Brand colors */
   --color-primary: #28594d;
@@ -12,6 +12,17 @@
   --color-chat-bg: #f6f8f5;
   --color-sidebar-bg: #edf4ee;
   --color-header-bg: #f9fbf8;
+  --color-header-tint: rgba(249, 251, 248, 0.94);
+  --color-body-start: #fbfcfa;
+  --color-body-end: #eef4ef;
+  --color-panel-start: #ffffff;
+  --color-panel-end: #fbfdfb;
+  --color-card-bg: #ffffff;
+  --color-event-bg: rgba(255, 255, 255, 0.72);
+  --color-chip-hover: #d8ebe3;
+  --color-secondary-button-bg: #ffffff;
+  --color-secondary-button-text: var(--color-primary);
+  --color-secondary-button-hover: var(--color-primary-soft);
 
   /* Bubbles */
   --color-user-bubble: #dff3eb;
@@ -40,6 +51,8 @@
   --bubble-radius: 8px;
   --app-radius: 16px;
   --shadow-soft: 0 18px 50px rgba(20, 32, 28, 0.10);
+  --shadow-card: 0 10px 28px rgba(20, 32, 28, 0.05);
+  --shadow-composer: 0 14px 36px rgba(20, 32, 28, 0.08);
 }
 
 *,
@@ -52,10 +65,12 @@ body {
   margin: 0;
   font-family: var(--font-latin);
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-rows: auto 1fr;
+  overflow: hidden;
   background:
-    linear-gradient(180deg, #fbfcfa 0%, #eef4ef 100%),
+    linear-gradient(180deg, var(--color-body-start) 0%, var(--color-body-end) 100%),
     var(--color-chat-bg);
   color: var(--color-text-primary);
 }

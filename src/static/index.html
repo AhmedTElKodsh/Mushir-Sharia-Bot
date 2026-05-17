@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +12,11 @@
 <body>
   <header>
     <h1>Mushir Sharia Chatbot</h1>
-    <button id="new-chat" class="header-btn" type="button" title="Start a new conversation">New Chat</button>
+    <div class="header-actions" aria-label="Chat controls">
+      <button id="theme-toggle" class="header-btn secondary" type="button" title="Switch to dark theme">Dark</button>
+      <button id="language-toggle" class="header-btn secondary" type="button" title="Switch to Arabic">العربية</button>
+      <button id="new-chat" class="header-btn" type="button" title="Start a new conversation">New Chat</button>
+    </div>
   </header>
   <main>
     <aside id="history-sidebar" aria-label="Previous chats">
@@ -21,11 +25,21 @@
     </aside>
     <section class="chat-panel" aria-label="Current chat">
       <section id="messages" aria-live="polite" aria-label="Chat messages">
-        <div class="message assistant" dir="auto">Ask a Sharia compliance question in English or Arabic.</div>
+        <div class="welcome-card" data-welcome="true">
+          <div class="welcome-kicker">AAOIFI-grounded assistant</div>
+          <div class="welcome-title">Ask a Sharia compliance question in English or Arabic.</div>
+          <div class="welcome-copy">Mushir checks retrieved standard excerpts, asks for missing facts, and keeps answers informational.</div>
+          <div class="prompt-chips" aria-label="Example questions">
+            <button class="prompt-chip" type="button" data-example="Can a customer delay payment in a murabaha contract?">Murabaha delay</button>
+            <button class="prompt-chip" type="button" data-example="What information is needed to assess an ijara transaction?">Ijara facts</button>
+            <button class="prompt-chip" type="button" data-example="هل يجوز فرض غرامة تأخير في عقد مرابحة؟">سؤال عربي</button>
+          </div>
+        </div>
       </section>
       <form id="chat-form" aria-label="Chat input form">
         <div class="controls">
           <textarea id="prompt" name="prompt" placeholder="Ask about an Islamic finance transaction..." dir="auto"></textarea>
+          <div id="composer-hint">Add the transaction type, parties, payment terms, and the exact point you want checked.</div>
         </div>
         <button id="send" type="submit">Ask Mushir</button>
       </form>
