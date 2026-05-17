@@ -106,3 +106,5 @@ test_query.json
 test_bot.py
 system_role.docx
 hf-space-chat.png
+browser-smoke/
+docs/mushir-client-report.docx
