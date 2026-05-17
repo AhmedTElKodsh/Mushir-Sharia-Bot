@@ -69,6 +69,14 @@ Production target mode:
 - configured `AUTH_TOKEN`
 - configured `OPENROUTER_API_KEY`
 
+## Hosting And Retrieval Payload Direction
+
+- Keep Hugging Face Spaces as the public demo host for now. It is the intended lightweight demo/beta surface for `/chat`, `/health`, `/ready`, and live smoke checks.
+- Do not treat a large Chroma upload failure as an automatic reason to leave Hugging Face. Treat it first as a deployment-shape problem: app/UI changes and retrieval-index changes should not be bundled together by default.
+- Stop re-uploading `chroma_db_multilingual` unless the retrieval index actually changes. For UI-only changes, use `scripts/deploy_huggingface_space.py --ui-only`. For app/runtime changes that do not touch retrieval data, use `--skip-index`.
+- Use the full deploy path only after rebuilding or changing the Chroma index, and verify the index through `/ready` plus a live query smoke before calling the bot ready.
+- Long-term upgrade direction: move the retrieval payload out of routine Space commits into external artifact or vector storage. Good candidates are a versioned object/artifact store for index downloads, a managed vector database, or a deliberate Postgres/pgvector design. Do not use Supabase merely as a raw Chroma folder dump unless there is a clear operational reason.
+
 ## Important Environment Variables
 
 - `OPENROUTER_API_KEY`: required for live answer generation.

@@ -19,7 +19,7 @@ Official references:
 
 - A Hugging Face account.
 - A write-capable Hugging Face access token in `HF_TOKEN`.
-- A Gemini key in `GEMINI_API_KEY`.
+- An OpenRouter key in `OPENROUTER_API_KEY`.
 - `chroma_db_multilingual/chroma.sqlite3` present locally.
 
 Install the deployment client if needed:
@@ -28,15 +28,43 @@ Install the deployment client if needed:
 .\.venv\Scripts\python.exe -m pip install huggingface_hub
 ```
 
-## Deploy
+## Deploy Policy
+
+Keep Hugging Face Spaces as the public demo app host. A storage-limit or LFS failure while uploading `chroma_db_multilingual` does not, by itself, mean the host is wrong. It usually means the deploy bundled a large retrieval artifact with a small app/UI change.
+
+Default rule:
+
+- UI-only changes: use `--ui-only`.
+- App/runtime changes that do not alter retrieval data: use `--skip-index`.
+- Retrieval changes: use the full deploy path and verify `/ready` plus a real query smoke.
+
+Long-term upgrade direction: externalize the retrieval payload into artifact or vector storage so routine app deploys stay small. Prefer a versioned object/artifact store, a managed vector database, or a deliberate Postgres/pgvector design. Do not use Supabase as a raw Chroma folder store unless the project explicitly accepts the boot-time download, integrity, and cold-start tradeoffs.
+
+## Full Deploy
 
 ```powershell
 $env:HF_TOKEN="hf_..."
-$env:GEMINI_API_KEY="..."
+$env:OPENROUTER_API_KEY="..."
 .\.venv\Scripts\python.exe scripts\deploy_huggingface_space.py --repo-id your-user/mushir-sharia-bot
 ```
 
-The script creates or updates a Docker Space, stores `GEMINI_API_KEY` as a Space secret, sets runtime variables, and uploads the repo plus `chroma_db_multilingual`.
+The script creates or updates a Docker Space, stores `OPENROUTER_API_KEY` as a Space secret, sets runtime variables, and uploads the repo plus `chroma_db_multilingual`.
+
+## Lightweight Deploys
+
+For a UI-only repair, do not re-upload the Chroma payload:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\deploy_huggingface_space.py --repo-id your-user/mushir-sharia-bot --ui-only --commit-message "Fix chat UI layout"
+```
+
+For app/runtime changes that do not alter retrieval data, reuse the existing Space index:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\deploy_huggingface_space.py --repo-id your-user/mushir-sharia-bot --skip-index --commit-message "Deploy app runtime update"
+```
+
+Use the full deploy path only when `chroma_db_multilingual` changes. That keeps routine UI/API deploys small while preserving `/ready` as the gate for full bot readiness.
 
 ## Post-Deploy Smoke
 

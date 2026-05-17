@@ -3,9 +3,11 @@
 Required environment:
   HF_TOKEN: Hugging Face user access token with write access.
   OPENROUTER_API_KEY: OpenRouter API key to store as a Space secret.
+    Optional when using --ui-only.
 
 Example:
   python scripts/deploy_huggingface_space.py --repo-id your-user/mushir-sharia-bot
+  python scripts/deploy_huggingface_space.py --repo-id your-user/mushir-sharia-bot --ui-only
 """
 
 from __future__ import annotations
@@ -100,9 +102,9 @@ def require_env(name: str) -> str:
     return value
 
 
-def iter_upload_files() -> list[Path]:
+def iter_upload_files(upload_paths: list[Path]) -> list[Path]:
     files: list[Path] = []
-    for upload_path in UPLOAD_PATHS:
+    for upload_path in upload_paths:
         full_path = ROOT / upload_path
         if full_path.is_file():
             files.append(full_path)
@@ -111,7 +113,7 @@ def iter_upload_files() -> list[Path]:
     return files
 
 
-def upload_in_batches(api: HfApi, repo_id: str, commit_message: str) -> None:
+def upload_in_batches(api: HfApi, repo_id: str, commit_message: str, upload_paths: list[Path]) -> None:
     batch: list[Path] = []
     batch_size = 0
     batch_index = 1
@@ -143,7 +145,7 @@ def upload_in_batches(api: HfApi, repo_id: str, commit_message: str) -> None:
         batch_size = 0
         batch_index += 1
 
-    for path in iter_upload_files():
+    for path in iter_upload_files(upload_paths):
         size = path.stat().st_size
         if batch and batch_size + size > BATCH_SIZE_BYTES:
             flush()
@@ -163,13 +165,27 @@ def main() -> None:
         default="Deploy Mushir Sharia Bot Docker Space",
         help="Commit message for the Space upload",
     )
+    parser.add_argument(
+        "--skip-index",
+        action="store_true",
+        help="Do not upload chroma_db_multilingual. Use for app/runtime-only deploys.",
+    )
+    parser.add_argument(
+        "--ui-only",
+        action="store_true",
+        help="Upload only src/static UI assets. Implies --skip-index.",
+    )
     args = parser.parse_args()
 
     token = require_env("HF_TOKEN")
-    openrouter_api_key = require_env("OPENROUTER_API_KEY")
+    ui_only = bool(args.ui_only)
+    skip_index = bool(args.skip_index or ui_only)
+    upload_paths = [Path("src") / "static"] if ui_only else list(UPLOAD_PATHS)
+    if skip_index:
+        upload_paths = [path for path in upload_paths if path != Path("chroma_db_multilingual")]
 
     index_path = ROOT / "chroma_db_multilingual" / "chroma.sqlite3"
-    if not index_path.exists():
+    if not skip_index and not index_path.exists():
         raise SystemExit(
             "Missing chroma_db_multilingual/chroma.sqlite3. "
             "Run bilingual ingest before deploying."
@@ -184,11 +200,22 @@ def main() -> None:
         exist_ok=True,
     )
 
-    api.add_space_secret(repo_id=args.repo_id, key="OPENROUTER_API_KEY", value=openrouter_api_key)
-    for key, value in SPACE_VARIABLES.items():
-        api.add_space_variable(repo_id=args.repo_id, key=key, value=value)
+    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+    if openrouter_api_key:
+        api.add_space_secret(repo_id=args.repo_id, key="OPENROUTER_API_KEY", value=openrouter_api_key)
+    elif not ui_only:
+        raise SystemExit("Missing required environment variable: OPENROUTER_API_KEY")
 
-    upload_in_batches(api, args.repo_id, args.commit_message)
+    if not ui_only:
+        for key, value in SPACE_VARIABLES.items():
+            api.add_space_variable(repo_id=args.repo_id, key=key, value=value)
+
+    if skip_index:
+        print("Skipping chroma_db_multilingual upload; existing Space index will be reused.", flush=True)
+    if ui_only:
+        print("UI-only deploy: uploading src/static assets only.", flush=True)
+
+    upload_in_batches(api, args.repo_id, args.commit_message, upload_paths)
 
     print(f"Uploaded Space: https://huggingface.co/spaces/{args.repo_id}")
     print(f"Public app URL: https://{args.repo_id.replace('/', '-')}.hf.space")
