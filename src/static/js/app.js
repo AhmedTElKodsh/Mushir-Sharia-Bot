@@ -8,7 +8,6 @@ const promptInput = document.getElementById("prompt");
 const messages = document.getElementById("messages");
 const send = document.getElementById("send");
 const conversationList = document.getElementById("conversation-list");
-const disclaimerAck = document.getElementById("disclaimer-ack");
 let context = {};
 
 /**
@@ -68,20 +67,6 @@ async function submitQuery() {
   messagesArray.push({role: "user", content: query, timestamp: Date.now()});
   persistConversation();
 
-  if (disclaimerAck && !disclaimerAck.checked) {
-    var disclaimerMessage = "Before I answer, please tick the acknowledgement above. Mushir provides informational guidance from retrieved AAOIFI excerpts only. It is not a binding fatwa, legal advice, or financial advice.";
-    addMessage("assistant", disclaimerMessage);
-    messagesArray.push({
-      role: "assistant",
-      content: disclaimerMessage,
-      timestamp: Date.now(),
-      status: "CLARIFICATION_NEEDED",
-      citations: []
-    });
-    persistConversation();
-    return;
-  }
-
   send.disabled = true;
   send.textContent = "Streaming...";
   var _assistantContent = "";
@@ -101,7 +86,7 @@ async function submitQuery() {
         query: query,
         session_id: sessionId,
         context: Object.assign({}, context, {
-          disclaimer_acknowledged: Boolean(disclaimerAck && disclaimerAck.checked)
+          disclaimer_acknowledged: true
         }),
         conversation_history: messagesArray
       })

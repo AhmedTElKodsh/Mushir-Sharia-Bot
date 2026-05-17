@@ -2,13 +2,15 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --color-primary: #3a8a74;
-    --color-primary-cta: #2e7a66;
-    --color-surface: #1a1f1c;
-    --color-chat-bg: #111513;
-    --color-sidebar-bg: #151c18;
+    --color-primary-cta: #40917a;
+    --color-primary-soft: #173229;
+    --color-surface: #18211d;
+    --color-chat-bg: #0f1714;
+    --color-sidebar-bg: #121c18;
+    --color-header-bg: #16211c;
     --color-user-bubble: #1a332d;
-    --color-assistant-bubble: #252b27;
-    --color-border: rgba(255, 255, 255, 0.08);
+    --color-assistant-bubble: #202a25;
+    --color-border: rgba(226, 236, 228, 0.12);
     --color-text-primary: #e8ede9;
     --color-text-secondary: #9aa69e;
     --color-compliant: #4ade80;

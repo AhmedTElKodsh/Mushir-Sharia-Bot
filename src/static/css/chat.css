@@ -4,8 +4,8 @@ header {
   align-items: center;
   justify-content: space-between;
   padding: 18px 28px;
-  border-bottom: 1px solid rgba(221, 214, 199, 0.55);
-  background: rgba(255, 255, 255, 0.78);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(249, 251, 248, 0.94);
   backdrop-filter: blur(14px);
 }
 
@@ -55,7 +55,7 @@ main {
   display: grid;
   grid-template-rows: 1fr auto;
   min-width: 0;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
 }
 
 #history-sidebar {
@@ -175,10 +175,9 @@ form {
   gap: 12px;
   align-items: center;
   margin: 0 min(7vw, 72px) 24px;
-  padding: 12px;
-  border-top: 1px solid var(--color-border);
+  padding: 10px 12px;
   border: 1px solid var(--color-border);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--color-surface);
   box-shadow: 0 14px 36px rgba(20, 32, 28, 0.08);
 }
@@ -186,30 +185,16 @@ form {
 .controls {
   grid-area: input;
   display: grid;
-  gap: 8px;
-}
-
-label {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  line-height: 1.35;
-}
-
-input[type="checkbox"] {
-  margin-top: 2px;
-  accent-color: var(--color-primary);
+  min-width: 0;
 }
 
 textarea {
-  min-height: 54px;
+  min-height: 48px;
   max-height: 160px;
   resize: vertical;
   border: 0;
   border-radius: 12px;
-  padding: 12px 4px 12px 8px;
+  padding: 12px 4px 10px 8px;
   font: inherit;
   background: transparent;
   color: inherit;

@@ -3,20 +3,22 @@
   color-scheme: light dark;
 
   /* Brand colors */
-  --color-primary: #214f44;
-  --color-primary-cta: #2e7a66;
+  --color-primary: #28594d;
+  --color-primary-cta: #3c8b76;
+  --color-primary-soft: #e5f2ec;
 
   /* Surfaces */
   --color-surface: #ffffff;
-  --color-chat-bg: #f4f7f5;
-  --color-sidebar-bg: #eef4f0;
+  --color-chat-bg: #f6f8f5;
+  --color-sidebar-bg: #edf4ee;
+  --color-header-bg: #f9fbf8;
 
   /* Bubbles */
   --color-user-bubble: #dff3eb;
   --color-assistant-bubble: #ffffff;
 
   /* Borders */
-  --color-border: #ddd6c7;
+  --color-border: #d7dfd6;
 
   /* Text */
   --color-text-primary: #1d2521;
@@ -53,7 +55,7 @@ body {
   display: grid;
   grid-template-rows: auto 1fr;
   background:
-    radial-gradient(circle at top left, rgba(46, 122, 102, 0.14), transparent 34%),
+    linear-gradient(180deg, #fbfcfa 0%, #eef4ef 100%),
     var(--color-chat-bg);
   color: var(--color-text-primary);
 }
