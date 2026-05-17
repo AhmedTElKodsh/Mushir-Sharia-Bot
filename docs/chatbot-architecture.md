@@ -8,14 +8,16 @@ The chatbot uses a layered architecture that separates concerns between orchestr
 
 ## Component Hierarchy
 
-```
-ApplicationService (Orchestrator)
-    ↓
-AnswerGenerator (Coordination Layer)
-    ↓
-PromptBuilder + LLMClient (Generation Layer)
-    ↓
-CitationValidator (Validation Layer)
+```mermaid
+flowchart TD
+    A["ApplicationService<br/>Orchestrator"] --> B["ClarificationEngine<br/>one focused question"]
+    A --> C["RAGPipeline<br/>AAOIFI retrieval"]
+    C --> D{"Definition query with direct excerpt?"}
+    D -- "Yes" --> E["Deterministic cited definition"]
+    D -- "No" --> F["PromptBuilder + LLMClient"]
+    F --> G["CitationValidator"]
+    E --> H["AnswerContract"]
+    G --> H
 ```
 
 ## Core Components
@@ -68,6 +70,7 @@ The component uses Python's `inspect.signature()` to dynamically detect which pa
 - Authority request detection (refuses binding fatwas)
 - Cache lookup and storage
 - RAG retrieval coordination
+- Deterministic cited definition answers for supported definition questions
 - Answer generation via AnswerGenerator
 - Citation validation
 - Compliance status determination
@@ -107,13 +110,18 @@ def answer(
    - Retrieve top-k chunks from vector database
    - Return INSUFFICIENT_DATA if no chunks found
 
-5. **Generation:**
+5. **Definition Shortcut:**
+   - If the user asks a definition-style question and a retrieved AAOIFI excerpt directly defines the term, return a cited definition before calling the model
+   - Expand retrieval once for definition questions when the initial top-k window finds related but non-definitional chunks
+   - Keep the answer status as INSUFFICIENT_DATA because a definition is not a transaction-level compliance assessment
+
+6. **Generation:**
    - Build prompt via PromptBuilder
    - Generate answer via AnswerGenerator → LLMClient
    - Validate citations via CitationValidator
    - Determine compliance status from answer text
 
-6. **Post-processing:**
+7. **Post-processing:**
    - Audit log the query and answer
    - Cache the answer (unless clarification or eval mode)
    - Return AnswerContract
@@ -156,7 +164,7 @@ def build(
 **System Prompt:**
 - AAOIFI grounding protocol (strict attribution, no hallucinations)
 - Input normalization rules (misspellings, Arabic dialects)
-- 3-phase chain-of-thought workflow
+- private 3-phase decision workflow with no hidden reasoning exposed to the user
 - Citation format requirements
 - Prohibited behaviors
 - Language-specific instructions
@@ -227,34 +235,28 @@ def generate(
 
 ## Data Flow
 
-```
-User Query
-    ↓
-ApplicationService.answer()
-    ↓
-[Query Normalization]
-    ↓
-[Cache Check] → Cache Hit? → Return Cached Answer
-    ↓ No
-[Clarification Check] → Needed? → Return Clarification Question
-    ↓ No
-[RAG Retrieval] → No Chunks? → Return INSUFFICIENT_DATA
-    ↓ Chunks Found
-AnswerGenerator.generate()
-    ↓
-PromptBuilder.build_messages()
-    ↓
-LLMClient.generate()
-    ↓
-CitationValidator.validate()
-    ↓
-[Status Determination]
-    ↓
-[Audit Logging]
-    ↓
-[Cache Storage]
-    ↓
-Return AnswerContract
+```mermaid
+flowchart TD
+    A["User Query"] --> B["ApplicationService.answer()"]
+    B --> C["Query normalization"]
+    C --> D{"Cache hit?"}
+    D -- "Yes" --> E["Return cached AnswerContract"]
+    D -- "No" --> F{"Clarification needed?"}
+    F -- "Yes" --> G["Return CLARIFICATION_NEEDED"]
+    F -- "No" --> H["RAG retrieval"]
+    H --> I{"No chunks?"}
+    I -- "Yes" --> J["Return INSUFFICIENT_DATA"]
+    I -- "No" --> K{"Definition excerpt found?"}
+    K -- "Yes" --> L["Return cited definition"]
+    K -- "No" --> M["PromptBuilder.build_messages()"]
+    M --> N["LLMClient.generate()"]
+    N --> O["CitationValidator.validate()"]
+    O --> P{"Valid citations?"}
+    P -- "No" --> J
+    P -- "Yes" --> Q["Status determination"]
+    Q --> R["Audit and cache"]
+    L --> R
+    R --> S["Return AnswerContract"]
 ```
 
 ## Design Patterns

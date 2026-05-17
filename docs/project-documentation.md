@@ -4,6 +4,15 @@ Mushir is a FastAPI-based Sharia compliance chatbot for Islamic finance question
 
 This document describes the current project as implemented in the repository.
 
+Last refreshed: 2026-05-17
+
+Current published demo:
+
+- GitHub branch: `main`
+- Hugging Face Space: `https://huggingface.co/spaces/AElKodsh/mushir-sharia-bot`
+- Live app URL: `https://aelkodsh-mushir-sharia-bot.hf.space`
+- Latest verified release behavior: `/health` and `/ready` return `200`; English and Arabic Murabaha definition questions return citation-backed `INSUFFICIENT_DATA` informational answers; unclear Arabic Murabaha purchase questions ask one follow-up question.
+
 ## Goals
 
 Mushir is built to:
@@ -47,19 +56,28 @@ Mushir must not:
 
 The current answer path is:
 
-```text
-User or API client
-  -> FastAPI route validation and rate limiting
-  -> ApplicationService
-  -> disclaimer and authority checks
-  -> clarification check
-  -> RAG retrieval
-  -> prompt construction
-  -> OpenRouter LLM call
-  -> citation validation
-  -> status classification
-  -> audit/cache handling
-  -> API or chat UI response
+```mermaid
+flowchart TD
+    A["User or API client"] --> B["FastAPI validation and rate limiting"]
+    B --> C["ApplicationService"]
+    C --> D{"Binding ruling, fatwa, legal, or financial advice?"}
+    D -- "Yes" --> E["Safe informational refusal"]
+    D -- "No" --> F{"Question missing material facts?"}
+    F -- "Yes" --> G["Ask exactly one follow-up question"]
+    F -- "No" --> H["Retrieve AAOIFI excerpts"]
+    H --> I{"Definition query with citable excerpt?"}
+    I -- "Yes" --> J["Deterministic citation-backed definition answer"]
+    I -- "No" --> K["Build strict grounded prompt"]
+    K --> L["OpenRouter LLM call"]
+    L --> M["Validate citations against retrieved chunks"]
+    M --> N{"Citations and evidence strong enough?"}
+    N -- "Yes" --> O["Return grounded answer"]
+    N -- "No" --> P["Return INSUFFICIENT_DATA"]
+    J --> Q["Audit/cache/API/UI response"]
+    O --> Q
+    P --> Q
+    G --> Q
+    E --> Q
 ```
 
 ## API Layer
@@ -133,15 +151,18 @@ It performs:
 7. Clarification check.
 8. Retriever initialization fallback.
 9. RAG retrieval.
-10. Prompt building.
-11. LLM generation.
-12. Citation validation.
-13. LLM uncertainty conversion into one follow-up question.
-14. Compliance status derivation.
-15. Audit logging.
-16. Safe response caching.
+10. Deterministic definition-answer handling when a retrieved AAOIFI excerpt directly defines the requested term.
+11. Prompt building.
+12. LLM generation.
+13. Citation validation.
+14. LLM uncertainty conversion into one follow-up question.
+15. Compliance status derivation.
+16. Audit logging.
+17. Safe response caching.
 
 The service returns `INSUFFICIENT_DATA` when the evidence path is not strong enough.
+
+For definition-style questions such as `What is Murabaha?` or `ما هي المرابحة؟`, the service now prefers a direct citation-backed excerpt answer before calling the model. This avoids a fragile dependency on whether a free model formats Arabic citations exactly as requested.
 
 ## Clarification Logic
 
@@ -207,6 +228,13 @@ The client raises typed errors for missing configuration, rate limits, and unusa
 
 `src/chatbot/citation_validator.py` parses citations in generated answers and keeps only citations that match retrieved chunks.
 
+The validator accepts short English-style and Arabic-style AAOIFI references, including:
+
+- `[FAS-28]`
+- `[FAS-28 §8]`
+- `[AAOIFI FAS-28, Section 8, page 8]`
+- `[معيار أيوفي FAS-28، القسم 8، صفحة 8]`
+
 Accepted answer statuses include:
 
 - `COMPLIANT`;
@@ -216,6 +244,8 @@ Accepted answer statuses include:
 - `CLARIFICATION_NEEDED`.
 
 If no valid citation supports a compliance answer, the system falls back to insufficient data.
+
+When a retrieved chunk does not have section metadata, the validator can still accept a standard-level citation for that retrieved standard. When section metadata exists, mismatched sections remain rejected.
 
 ## Browser Chat UI
 
@@ -366,8 +396,24 @@ Before treating any deployment as live, verify:
 - `/chat`;
 - one English answerable question;
 - one Arabic answerable question;
+- one English definition query, such as `What is Murabaha?`;
+- one Arabic definition query, such as `ما هي المرابحة؟`;
 - one unanswerable or out-of-scope question;
 - no secrets in logs or responses.
+
+## Latest Verification Snapshot
+
+Last verified on 2026-05-17 against the Hugging Face Space:
+
+| Check | Expected result | Observed result |
+| --- | --- | --- |
+| `/health` | HTTP 200 | HTTP 200 |
+| `/ready` | HTTP 200 with retriever ready | HTTP 200 |
+| `What is Murabaha?` | Citation-backed informational definition | `INSUFFICIENT_DATA`, 1 citation |
+| `ما هي المرابحة؟` | Citation-backed informational definition | `INSUFFICIENT_DATA`, 1 citation |
+| `أريد شراء سيارة بالمرابحة` | One Arabic follow-up question | `CLARIFICATION_NEEDED` |
+
+The `INSUFFICIENT_DATA` status for definition questions is intentional: a definition is useful informational guidance, but it is not a full compliance ruling for a concrete transaction.
 
 ## Operational Checks
 

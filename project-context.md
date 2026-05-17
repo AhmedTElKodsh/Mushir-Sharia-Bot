@@ -2,6 +2,8 @@
 
 This file is the working context for AI agents and developers making changes in this repository. Keep changes grounded in the current codebase, not in older roadmap language.
 
+Last refreshed: 2026-05-17
+
 ## Product Purpose
 
 Mushir is a Sharia compliance assistant for Islamic finance questions. It answers only from retrieved AAOIFI Financial Accounting Standards excerpts and must not issue binding fatwas, legal opinions, or financial advice.
@@ -12,6 +14,7 @@ The product goal is a safe, citation-grounded chatbot that can:
 - ask one focused follow-up question when facts are missing;
 - retrieve relevant AAOIFI excerpts from a vector index;
 - generate a concise answer with citations;
+- answer simple definition questions directly from citable retrieved excerpts when possible;
 - refuse or return `INSUFFICIENT_DATA` when the source material is not enough;
 - expose the same behavior through `/chat`, REST, and SSE APIs.
 
@@ -24,10 +27,11 @@ The main runtime flow is:
 3. `src/chatbot/application_service.py` is the central answer orchestrator.
 4. `src/chatbot/clarification_engine.py` asks a single targeted question when the user query is too vague.
 5. `src/rag/pipeline.py` embeds and retrieves AAOIFI chunks from Chroma or Qdrant.
-6. `src/chatbot/prompt_builder.py` builds strict AAOIFI-grounded prompts.
-7. `src/chatbot/llm_client.py` calls OpenRouter through an OpenAI-compatible client.
-8. `src/chatbot/citation_validator.py` accepts only citations backed by retrieved chunks.
-9. `src/models/ruling.py` and `src/api/schemas.py` define the answer contract returned to API/UI callers.
+6. Definition-style questions are answered from retrieved, citable excerpts before the LLM is called when the retrieved text directly defines the requested term.
+7. `src/chatbot/prompt_builder.py` builds strict AAOIFI-grounded prompts.
+8. `src/chatbot/llm_client.py` calls OpenRouter through an OpenAI-compatible client.
+9. `src/chatbot/citation_validator.py` accepts only citations backed by retrieved chunks.
+10. `src/models/ruling.py` and `src/api/schemas.py` define the answer contract returned to API/UI callers.
 
 ## Safety Rules
 
@@ -38,6 +42,8 @@ The main runtime flow is:
 - If the user asks for a binding ruling, refuse within Mushir's informational scope.
 - If the question is unclear, ask exactly one focused follow-up question.
 - If retrieval or citations are weak, fail closed with `INSUFFICIENT_DATA`.
+- Definition questions may return `INSUFFICIENT_DATA` with citations because a definition is not a transaction-level compliance ruling.
+- Arabic citation support must stay validator-backed. Keep `[FAS-X]`, `[FAS-X §Y]`, and Arabic citation formats covered by tests.
 - Cache only validated non-clarification answers.
 - Keep docs secret-safe: use placeholders, not real keys or key-shaped examples.
 
@@ -110,11 +116,17 @@ curl.exe http://127.0.0.1:8000/health
 curl.exe http://127.0.0.1:8000/ready
 ```
 
+Smoke bilingual answer behavior:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\test_l1_contracts.py::test_application_service_answers_arabic_definition_with_validator_backed_citation tests\test_l1_contracts.py::test_application_service_expands_definition_retrieval_before_llm tests\test_clarification_engine.py::test_arabic_definition_question_skips_transaction_clarification -q
+```
+
 ## Documentation Map
 
 - `README.md`: public project overview and setup.
 - `docs/project-documentation.md`: current full technical documentation.
-- `docs/client-plain-language-logic.md`: simple client-facing explanation.
+- `docs/client-plain-language-logic.md`: simple client-facing report with visuals and graphs.
 - `docs/chatbot-architecture.md`: detailed answer-generation architecture.
 - `docs/l5-production-readiness.md`: release/readiness runbook.
 - `docs/ops/deployment.md`: deployment operations.
@@ -129,4 +141,3 @@ curl.exe http://127.0.0.1:8000/ready
 - Do not rewrite historical planning docs unless explicitly asked; add current-state docs or clearly mark updates instead.
 - Use `apply_patch` for manual file edits.
 - Avoid broad refactors unless they directly reduce risk or remove duplicated logic already visible in the codebase.
-

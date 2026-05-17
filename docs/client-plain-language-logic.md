@@ -1,120 +1,204 @@
-# Mushir Logic Explained Simply
+# Mushir Client Report: How The Chatbot Works
 
-This document explains how Mushir works in plain language for a non-technical client.
+Last refreshed: 2026-05-17
 
-## What Mushir Is
+This report explains Mushir in plain language for a non-technical client. It focuses on what the system does, how it keeps answers safe, and what a reviewer should expect from the live chatbot.
 
-Mushir is a chatbot that helps answer Islamic finance compliance questions using AAOIFI Financial Accounting Standards. It is designed to behave like a careful research assistant: it searches the provided standards, checks whether the information is enough, and gives a cautious answer with references.
+## Executive Summary
 
-Mushir is not a scholar and does not issue binding fatwas. Its answers are informational guidance only. A qualified Sharia scholar should make any final binding decision.
+Mushir is a Sharia compliance research chatbot for Islamic finance questions. It searches the provided AAOIFI Financial Accounting Standards, gives citation-backed informational guidance, and avoids guessing when the evidence is weak.
 
-## The Simple Version
+Mushir is not a scholar and does not issue binding fatwas. It is best understood as a careful assistant that helps users find and summarize relevant AAOIFI evidence before a qualified Sharia scholar or compliance team makes the final decision.
 
-When a user asks a question, Mushir follows this process:
+## What Mushir Does
 
-1. It checks whether the question is clear enough.
-2. If the question is missing an important detail, it asks one follow-up question.
-3. If the question is clear, it searches the AAOIFI standards stored in the system.
-4. It gives the best-matching text to the AI model.
-5. The AI writes an answer using only that retrieved text.
-6. Mushir checks that the answer includes real citations from the retrieved standards.
-7. If the sources are not strong enough, Mushir says it does not have enough data instead of guessing.
+| Client need | Mushir behavior |
+| --- | --- |
+| Ask in English or Arabic | Accepts English, Arabic, and mixed-language questions |
+| Ask a broad or unclear question | Asks one focused follow-up question |
+| Ask a definition question | Gives a short source-backed definition when the standard contains one |
+| Ask a transaction compliance question | Searches the standards and answers only with citations |
+| Ask for a binding ruling or fatwa | Refuses and explains its informational-only scope |
+| Ask something unsupported by the documents | Returns `INSUFFICIENT_DATA` instead of guessing |
 
-## Example
+## The Simple Flow
 
-If a user asks:
+```mermaid
+flowchart TD
+    A["User asks a question"] --> B{"Is the request allowed?"}
+    B -- "Binding fatwa, legal advice, financial advice" --> C["Mushir refuses politely"]
+    B -- "Allowed informational question" --> D{"Is one key detail missing?"}
+    D -- "Yes" --> E["Mushir asks one follow-up question"]
+    D -- "No" --> F["Mushir searches AAOIFI excerpts"]
+    F --> G{"Is there strong source evidence?"}
+    G -- "No" --> H["Mushir says INSUFFICIENT_DATA"]
+    G -- "Yes" --> I{"Is it a definition question?"}
+    I -- "Yes" --> J["Mushir returns a direct cited definition"]
+    I -- "No" --> K["AI drafts answer from retrieved excerpts"]
+    K --> L{"Do citations validate?"}
+    L -- "Yes" --> M["Mushir returns the answer with citations"]
+    L -- "No" --> H
+```
 
-> Can I invest in this company?
+## Why The System Is Cautious
 
-Mushir should not immediately answer, because it does not know what the company does. Instead, it asks one focused question, such as:
+Islamic finance answers depend on details. For example, a Murabaha transaction can depend on ownership, asset transfer, price disclosure, profit disclosure, and payment terms. If those facts are missing, a confident answer would be risky.
 
-> What type of company or business activity is involved?
+Mushir is designed to be helpful without pretending to know more than the documents support.
 
-If the user asks:
+```mermaid
+pie title Response Types Mushir Intentionally Supports
+    "Citation-backed answer" : 35
+    "One follow-up question" : 25
+    "Insufficient data" : 25
+    "Scope refusal" : 15
+```
 
-> Is a Murabaha sale with disclosed markup payable over 24 months compliant?
+The exact percentages above are representative, not production analytics. They show the intended balance: Mushir should not always answer. Sometimes the safest and most useful response is a clarification, refusal, or evidence gap.
 
-Mushir has enough structure to start checking the standards, so it searches the AAOIFI documents and answers only if it finds useful evidence.
+## Example User Journeys
 
-## Why Mushir Asks Follow-Up Questions
+### 1. A clear definition question
 
-Some Islamic finance questions depend heavily on details. A small missing fact can change the answer. Mushir is built to avoid overwhelming the user, so it asks only the most important missing question first.
+User asks:
 
-This helps the user move forward without receiving a long checklist.
+> ما هي المرابحة؟
 
-## Why Mushir Uses Citations
+Expected behavior:
 
-Every serious answer should point back to the standard it came from. Citations help show:
+1. Mushir recognizes this as a definition question.
+2. It searches the AAOIFI excerpts.
+3. It finds a citable Murabaha definition.
+4. It returns the definition with a citation such as `[FAS-28]`.
+5. It explains that a definition is not the same as a full compliance ruling.
 
-- which AAOIFI standard was used;
-- which section or page supports the answer;
-- whether the answer is based on actual source text;
-- whether the system had enough evidence.
+Latest live verification:
 
-If Mushir cannot connect the answer to retrieved AAOIFI text, it should not present the answer as grounded.
+| Question | Result |
+| --- | --- |
+| `ما هي المرابحة؟` | `INSUFFICIENT_DATA`, 1 citation, no clarification |
+| `What is Murabaha?` | `INSUFFICIENT_DATA`, 1 citation, no clarification |
 
-## What Happens When Mushir Is Unsure
+The `INSUFFICIENT_DATA` label is intentional here. The user asked for a definition, not a complete transaction ruling.
 
-Mushir is intentionally cautious. If the search results are weak, if citations are missing, or if the question goes beyond the stored standards, it returns a controlled message like:
+### 2. An unclear transaction question
 
-> The retrieved AAOIFI excerpts did not provide a safely citable basis for this answer.
+User asks:
 
-This is a safety feature, not a bug. It prevents confident but unsupported answers.
+> أريد شراء سيارة بالمرابحة
 
-## What Mushir Refuses To Do
+Expected behavior:
 
-Mushir refuses or limits requests that ask it to:
+Mushir should not ask a long checklist. It asks one focused follow-up question first:
 
-- issue a binding fatwa;
-- replace a Sharia scholar;
-- give legal advice;
-- give financial advice;
-- answer from general AI knowledge without AAOIFI support;
-- invent missing standards or citations.
+> ما هو نوع السلعة أو الأصل المراد شراؤه؟
 
-## Languages
+This keeps the conversation simple while collecting the most important missing detail.
 
-Mushir supports English and Arabic. It can also understand mixed Arabic and English questions. Arabic support depends on a multilingual search index, so the system checks that the Arabic and English source material exists before treating Arabic retrieval as ready.
+### 3. A request outside Mushir's authority
 
-## The User Experience
+User asks:
 
-The user can interact with Mushir through:
+> Give me a binding fatwa.
 
-- a web chat page at `/chat`;
-- a normal API endpoint for one full answer;
-- a streaming API endpoint that sends progress-style events.
+Expected behavior:
 
-In the chat interface, the user sees:
+Mushir refuses to issue a binding ruling and reminds the user that it only provides informational guidance from retrieved AAOIFI excerpts.
 
-- the answer;
-- compliance status;
-- citations;
-- clarification questions when needed;
-- safe error messages if something goes wrong.
+## What Happens Behind The Scenes
 
-## The Main Safety Promise
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as Web/API Layer
+    participant Service as Answer Service
+    participant Search as AAOIFI Search Index
+    participant AI as AI Model
+    participant Validator as Citation Validator
 
-Mushir should be helpful, but not overconfident.
+    User->>API: Sends question
+    API->>Service: Validates and forwards request
+    Service->>Service: Checks scope and clarity
+    Service->>Search: Retrieves relevant AAOIFI excerpts
+    alt Definition found directly
+        Service->>Validator: Builds citation from retrieved excerpt
+        Service->>User: Returns cited definition
+    else Needs generated explanation
+        Service->>AI: Sends only retrieved excerpts
+        AI->>Service: Drafts answer
+        Service->>Validator: Confirms citations match retrieved excerpts
+        Validator->>Service: Accept or reject citations
+        Service->>User: Returns cited answer or insufficient data
+    end
+```
 
-Its core promise is:
+## Safety Controls
 
-> If the AAOIFI evidence is available, Mushir explains it with citations. If the evidence is not available or the question is unclear, Mushir asks one focused question or says it does not have enough data.
+| Risk | Control |
+| --- | --- |
+| The AI guesses from general knowledge | Prompt requires answers only from retrieved AAOIFI excerpts |
+| The AI invents a citation | Citation validator keeps only citations backed by retrieved chunks |
+| Arabic retrieval silently fails | The app checks that the multilingual Arabic/English index is available |
+| User asks an unclear question | Clarification engine asks exactly one focused follow-up |
+| User asks for a fatwa or legal advice | Authority guard refuses within informational scope |
+| Provider or model fails | API returns safe, helpful error messages |
+| Secrets appear in docs or errors | Docs use placeholders and runtime errors are sanitized |
+
+## Quality Snapshot
+
+Latest local verification after the Arabic definition citation update:
+
+```mermaid
+xychart-beta
+    title "Automated Test Result Snapshot"
+    x-axis ["Passed", "Skipped", "Failed"]
+    y-axis "Tests" 0 --> 300
+    bar [275, 4, 0]
+```
+
+Latest live deployment checks:
+
+| Live check | Result |
+| --- | --- |
+| Health endpoint | Passed |
+| Readiness endpoint | Passed |
+| English definition query | Passed with citation |
+| Arabic definition query | Passed with citation |
+| Arabic unclear purchase query | Passed with one follow-up |
 
 ## What A Client Should Expect
 
-Mushir is good for:
+Mushir is useful for:
 
-- early compliance research;
-- comparing a transaction idea against available AAOIFI excerpts;
-- identifying which standard may be relevant;
+- early Islamic finance compliance research;
+- finding relevant AAOIFI excerpts quickly;
 - preparing better questions for a scholar or compliance team;
-- showing source-backed guidance in English or Arabic.
+- explaining why more facts are needed;
+- providing English and Arabic informational guidance with citations.
 
-Mushir is not meant to be the final authority for:
+Mushir is not suitable as the final authority for:
 
 - binding Sharia rulings;
 - legal decisions;
 - investment recommendations;
 - regulatory sign-off;
-- cases where the source documents are incomplete.
+- cases where source documents are incomplete or not ingested.
 
+## Client Acceptance Checklist
+
+Before a client demo or handoff, verify:
+
+- The chat page opens.
+- `/health` returns healthy.
+- `/ready` reports the retriever is ready.
+- English definition query returns a citation.
+- Arabic definition query returns a citation.
+- Unclear Arabic transaction query asks one follow-up question.
+- Binding fatwa request is refused safely.
+- No API keys or credentials appear in screenshots, logs, docs, or responses.
+
+## Plain-Language Bottom Line
+
+Mushir is built to be careful. If it has AAOIFI evidence, it shows the answer with citations. If the user question is unclear, it asks one focused question. If the evidence is not strong enough, it says so instead of guessing.
+
+That is the main trust promise of the product.

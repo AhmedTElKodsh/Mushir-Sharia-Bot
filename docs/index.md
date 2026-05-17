@@ -5,7 +5,7 @@ This index points to the current documentation set for Mushir. Older L0 and plan
 ## Start Here
 
 - [Project Documentation](project-documentation.md): full current technical documentation for developers and maintainers.
-- [Client Plain-Language Logic](client-plain-language-logic.md): simple explanation of how Mushir works for non-technical stakeholders.
+- [Client Plain-Language Report](client-plain-language-logic.md): non-technical client explanation with representative diagrams, graphs, acceptance checks, and live behavior examples.
 - [Project Context](../project-context.md): concise implementation rules for AI agents and developers.
 - [Architecture](chatbot-architecture.md): deeper component-level architecture of the answer-generation path.
 - [Production Readiness](l5-production-readiness.md): runtime modes, release gates, and operational checks.
@@ -28,9 +28,8 @@ This index points to the current documentation set for Mushir. Older L0 and plan
 | Task | Best Doc |
 | --- | --- |
 | Understand the whole app | [Project Documentation](project-documentation.md) |
-| Explain the system to a client | [Client Plain-Language Logic](client-plain-language-logic.md) |
+| Explain the system to a client | [Client Plain-Language Report](client-plain-language-logic.md) |
 | Give another AI agent the rules | [Project Context](../project-context.md) |
 | Run or deploy the app | [Deployment](ops/deployment.md) |
 | Verify production readiness | [Production Readiness](l5-production-readiness.md) |
 | Debug answer generation | [Architecture](chatbot-architecture.md) |
-
