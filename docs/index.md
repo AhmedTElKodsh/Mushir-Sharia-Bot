@@ -5,10 +5,11 @@ This index points to the current documentation set for Mushir. Older L0 and plan
 ## Start Here
 
 - [Project Documentation](project-documentation.md): full current technical documentation for developers and maintainers.
-- [Client Plain-Language Report](client-plain-language-logic.md): non-technical client explanation with representative diagrams, graphs, acceptance checks, and live behavior examples.
+- [Client Plain-Language Report](client-plain-language-logic.md): non-technical client explanation of project planning, implemented behavior, current limits, L5 readiness, and proposed L6 direction.
 - [Project Context](../project-context.md): concise implementation rules for AI agents and developers.
 - [Architecture](chatbot-architecture.md): deeper component-level architecture of the answer-generation path.
 - [Production Readiness](l5-production-readiness.md): runtime modes, release gates, and operational checks.
+- [Deep Research Report](deep-research-report.md): research synthesis for the post-L5 rules-first Sharia commercial-process evaluator direction.
 
 ## Operations
 
@@ -20,6 +21,7 @@ This index points to the current documentation set for Mushir. Older L0 and plan
 ## Historical Planning
 
 - [Next-Level Planning Index](../.kiro/specs/sharia-compliance-chatbot/next-level-plans/README.md): historical L1-L4 plans and the L5 readiness plan.
+- [L6 Rules-First Evaluator Plan](../.kiro/specs/sharia-compliance-chatbot/next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md): proposed post-L5 architecture for transaction schemas, source routing, executable rules, and non-fatwa verdicts.
 - [L0 Architecture](../L0_ARCHITECTURE.md): original baseline architecture.
 - [Implementation Summary](../IMPLEMENTATION_SUMMARY.md): earlier implementation summary.
 

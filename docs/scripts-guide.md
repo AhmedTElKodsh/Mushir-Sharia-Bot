@@ -544,7 +544,7 @@ The script validates the following response fields:
   Response: {"detail": "LLM client initialization failed"}
 
 💡 Check:
-   - GEMINI_API_KEY in .env
+   - `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, and `OPENROUTER_MAX_TOKENS` in `.env`
    - Server logs for detailed error
 ```
 
@@ -737,7 +737,7 @@ SPACE_URL = "https://AElKodsh-mushir-sharia-bot.hf.space"
    Response: {"detail": "LLM client initialization failed"}
 
 💡 This might indicate:
-   - Missing or invalid GEMINI_API_KEY
+   - Missing or invalid `OPENROUTER_API_KEY`
    - Vector database not accessible
    - LLM client initialization failure
 ```
@@ -1244,7 +1244,7 @@ After developing and testing locally:
 5. **Troubleshoot Issues:**
    - Review error messages from test script
    - Check Space logs in Hugging Face dashboard
-   - Verify environment variables (GEMINI_API_KEY, etc.)
+   - Verify environment variables (`OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_MAX_TOKENS`, etc.)
    - Confirm vector database is accessible
 
 ### Deployment Testing Workflow
@@ -1269,7 +1269,7 @@ After deploying to Hugging Face Spaces (see Deployment Workflow above):
 3. **Troubleshoot Issues:**
    - Review error messages from test script
    - Check Space logs in Hugging Face dashboard
-   - Verify environment variables (GEMINI_API_KEY, etc.)
+   - Verify environment variables (`OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_MAX_TOKENS`, etc.)
    - Confirm vector database is accessible
 
 ---

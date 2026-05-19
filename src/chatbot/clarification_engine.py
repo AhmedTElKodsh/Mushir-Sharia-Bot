@@ -50,6 +50,23 @@ QUESTION_TEMPLATES_AR = {
     "duration": "ما هي مدة العقد؟",
 }
 
+QUESTION_TEMPLATES_AR = {
+    "principal_amount": "ما هو المبلغ الأصلي للقرض أو التمويل؟",
+    "interest_rate": "ما هو معدل الفائدة أو الربح المطلوب، إن وجد؟",
+    "term_months": "ما هي مدة القرض بالأشهر؟",
+    "purpose": "ما هو الغرض من هذا القرض أو التمويل؟",
+    "company_activity": "ما هو نشاط الشركة أو المشروع المعني؟",
+    "non_compliant_revenue_percent": "ما النسبة المئوية للإيرادات التي مصدرها حرام أو غير متوافق مع الشريعة؟",
+    "item_type": "ما هو نوع السلعة أو الأصل المراد شراؤه؟",
+    "price": "ما هو سعر الشراء؟",
+    "payment_terms": "ما هي شروط الدفع؟",
+    "delivery_terms": "هل تملك البنك السيارة وقبضها أو تحمل مخاطرها قبل بيعها لك؟",
+    "contract_type": "ما نوع العقد المطلوب تقييمه؟",
+    "parties": "من هم أطراف العقد؟",
+    "obligations": "ما هي الالتزامات الرئيسية في هذا العقد؟",
+    "duration": "ما هي مدة العقد؟",
+}
+
 
 class ClarificationEngine:
     """Collects the minimum facts needed before sending a query to RAG."""
@@ -60,7 +77,7 @@ class ClarificationEngine:
             # English keywords
             "loan": ["loan", "borrow", "lend", "credit", "financing"],
             "investment": ["invest", "investment", "shares", "stock", "equity", "mudarabah"],
-            "purchase": ["buy", "purchase", "acquire", "sell", "murabahah"],
+            "purchase": ["buy", "bought", "purchase", "acquire", "sell", "murabahah", "installment", "instalment"],
             "contract": ["contract", "agreement", "ijarah", "lease"],
         }
         # Arabic keywords including Modern Standard Arabic and common عامية
@@ -73,6 +90,21 @@ class ClarificationEngine:
             "purchase": [
                 "بيع", "شراء", "اقتناء", "مرابحة", "تقسيط", "بضاعة",
                 "سلعة", "عقار",
+            ],
+            "contract": [
+                "عقد", "اتفاقية", "إجارة", "أجرة", "إيجار", "تأجير",
+                "وكالة", "مقاولة",
+            ],
+        }
+        self.operation_keywords_ar = {
+            "loan": ["قرض", "قروض", "اقتراض", "تمويل", "ائتمان", "دين"],
+            "investment": [
+                "استثمار", "استثمارات", "مضاربة", "أسهم", "حصص",
+                "صناديق", "ملكية", "شراكة", "مشاركة",
+            ],
+            "purchase": [
+                "بيع", "شراء", "اشتريت", "أشتري", "اشتري", "اقتناء", "مرابحة", "تقسيط",
+                "بالتقسيط", "سيارة", "عربية", "بضاعة", "سلعة", "عقار",
             ],
             "contract": [
                 "عقد", "اتفاقية", "إجارة", "أجرة", "إيجار", "تأجير",
@@ -141,7 +173,10 @@ class ClarificationEngine:
                 variables.setdefault("price", price)
             elif any(marker in text_lower for marker in ["disclosed markup", "disclosed mark-up", "known markup", "known mark-up"]):
                 variables.setdefault("price", "disclosed markup")
-            if any(word in text_lower for word in ["deferred", "installment", "instalment", "cash", "credit", "payable", "payment"]):
+            if any(word in text_lower for word in [
+                "deferred", "installment", "instalment", "cash", "credit", "payable", "payment",
+                "تقسيط", "بالتقسيط", "دفعة", "دفعات", "السداد", "قسط", "أقساط", "اقساط",
+            ]):
                 variables.setdefault("payment_terms", text_clean)
             if self._mentions_delivery_or_resale_sequence(text_lower):
                 variables.setdefault("delivery_terms", text_clean)
@@ -189,6 +224,8 @@ class ClarificationEngine:
                 clarify_msg = "ما نوع المعاملة المطلوب تقييمها: قرض، استثمار، شراء، أم عقد؟"
             else:
                 clarify_msg = "What type of transaction is this: loan, investment, purchase, or contract?"
+            if lang == "ar":
+                clarify_msg = "ما نوع المعاملة المطلوب تقييمها: قرض، استثمار، شراء، أم عقد؟"
             session_state.clarifying_questions = [clarify_msg]
             session_state.metadata["awaiting_variable"] = "operation_type"
             session_state.metadata["response_language"] = lang
@@ -293,7 +330,7 @@ class ClarificationEngine:
         return None
 
     def _extract_percent(self, text: str) -> Optional[float]:
-        match = re.search(r"(\d+(?:\.\d+)?)\s*(?:%|percent|percentage)", text, re.IGNORECASE)
+        match = re.search(r"(\d+(?:\.\d+)?)\s*(?:%|percent|percentage|بالمئة|في\s*المئة)", text, re.IGNORECASE)
         return float(match.group(1)) if match else None
 
     def _extract_amount(self, text: str) -> Optional[float]:
@@ -308,10 +345,27 @@ class ClarificationEngine:
 
     def _extract_months(self, text: str) -> Optional[int]:
         match = re.search(r"(\d+)\s*(?:months?|mos?)", text, re.IGNORECASE)
-        return int(match.group(1)) if match else None
+        if match:
+            return int(match.group(1))
+        years = re.search(r"(\d+)\s*(?:years?|yrs?)", text, re.IGNORECASE)
+        if years:
+            return int(years.group(1)) * 12
+        arabic_digit_years = re.search(r"(\d+)\s*(?:سنوات|سنة|عام|أعوام|اعوام)", text)
+        if arabic_digit_years:
+            return int(arabic_digit_years.group(1)) * 12
+        arabic_number_words = {
+            "سنة": 1, "سنتين": 2, "ثلاث": 3, "ثلاثة": 3, "اربع": 4, "أربع": 4,
+            "خمسة": 5, "خمس": 5, "ست": 6, "ستة": 6, "سبع": 7, "سبعة": 7,
+            "ثمان": 8, "ثمانية": 8, "تسع": 9, "تسعة": 9, "عشر": 10, "عشرة": 10,
+        }
+        for word, value in arabic_number_words.items():
+            if re.search(rf"\b{word}\s*(?:سنوات|سنة|عام|أعوام|اعوام)\b", text):
+                return value * 12
+        return None
 
     def _extract_purchase_item(self, text: str) -> Optional[str]:
         patterns = (
+            r"\bbought\s+(?:a|an|the)?\s*([a-z][a-z -]{1,40}?)(?:\s+from\b|\s+and\b|,|\.|$)",
             r"\bbuys?\s+(?:a|an|the)?\s*([a-z][a-z -]{1,40}?)(?:\s+and\b|,|\.|$)",
             r"\bpurchases?\s+(?:a|an|the)?\s*([a-z][a-z -]{1,40}?)(?:\s+and\b|,|\.|$)",
             r"\bsells?\s+(?:a|an|the)?\s*([a-z][a-z -]{1,40}?)(?:\s+to\b|,|\.|$)",
@@ -322,6 +376,8 @@ class ClarificationEngine:
                 item = match.group(1).strip(" .,-")
                 if item and item.lower() not in {"it", "this", "that"}:
                     return item
+        if any(term in text for term in ["سيارة", "عربية"]):
+            return "car"
         return None
 
     def _is_informational_query(self, query: str) -> bool:
@@ -337,9 +393,30 @@ class ClarificationEngine:
             "valid",
             "can i",
             "should i",
+            "حلال",
+            "حرام",
+            "يجوز",
+            "جائز",
+            "متوافق",
+            "حكم",
         )
         if any(term in text for term in judgment_terms):
             return False
+        informational_domains = (
+            "accounting",
+            "recognition",
+            "measurement",
+            "presentation",
+            "disclosure",
+            "reporting",
+            "journal entry",
+            "governance",
+            "audit",
+            "policy",
+            "sharia board",
+        )
+        if any(term in text for term in informational_domains):
+            return True
         starters = (
             "what is ",
             "what are ",
@@ -359,22 +436,25 @@ class ClarificationEngine:
             "عرف ",
             "اشرح ",
         )
+        arabic_starters = arabic_starters + ("ما هي ", "ما هو ", "ما معنى ", "عرف ", "اشرح ")
         return query.strip().startswith(arabic_starters)
 
     @staticmethod
     def _detect_language(query: str) -> str:
         arabic_chars = sum(1 for c in query if '\u0600' <= c <= '\u06ff')
-        return "ar" if arabic_chars / max(len(query), 1) > 0.30 else "en"
+        ratio = arabic_chars / max(len(query), 1)
+        return "ar" if arabic_chars >= 12 or ratio > 0.30 else "en"
 
     def _has_specific_transaction_structure(self, query: str) -> bool:
         text = query.strip().lower()
         if len(text.split()) < 8:
             return False
-        known_structures = ("murabahah", "murabaha", "ijarah", "mudarabah", "musharakah", "sukuk")
-        judgment_terms = ("compliant", "permissible", "allowed", "valid", "ruling")
+        known_structures = ("murabahah", "murabaha", "ijarah", "mudarabah", "musharakah", "sukuk", "مرابحة", "تقسيط")
+        judgment_terms = ("compliant", "permissible", "allowed", "valid", "ruling", "حلال", "يجوز", "جائز", "متوافق")
         concrete_terms = (
             "disclosed markup",
             "disclosed mark-up",
+            "markup",
             "payable",
             "deferred",
             "installment",
@@ -383,7 +463,18 @@ class ClarificationEngine:
             "possession",
             "risk transfer",
             "delivery",
+            "ثمن",
+            "سعر",
+            "ربح",
+            "قيمة مضافة",
+            "دفعة",
+            "السداد",
         )
+        if self._contains_late_payment_penalty(text) and any(term in text for term in known_structures):
+            return True
+        has_arabic = any("\u0600" <= char <= "\u06ff" for char in query)
+        if has_arabic and not self._mentions_delivery_or_resale_sequence(text):
+            return False
         return (
             any(term in text for term in known_structures)
             and any(term in text for term in judgment_terms)
@@ -393,7 +484,7 @@ class ClarificationEngine:
     def _mentions_price(self, text_lower: str) -> bool:
         return any(
             marker in text_lower
-            for marker in ["price", "cost", "amount", "markup", "mark-up", "profit", "usd", "$"]
+            for marker in ["price", "cost", "amount", "markup", "mark-up", "profit", "usd", "$", "سعر", "ثمن", "ربح", "جنيه"]
         )
 
     def _extract_price_amount(self, text: str) -> Optional[float]:
@@ -401,6 +492,8 @@ class ClarificationEngine:
             r"\b(?:price|cost|amount)\s*(?:is|of|:)?\s*(?:usd|eur|gbp|sar|aed|egp|\$)?\s*(\d+(?:,\d{3})*(?:\.\d+)?)",
             r"(?:usd|eur|gbp|sar|aed|egp|\$)\s*(\d+(?:,\d{3})*(?:\.\d+)?)",
             r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:dinar|dollars?|usd|eur|gbp|sar|aed|egp)\b",
+            r"(?:سعر|ثمن|قيم(?:ة|ته|تها))\s*(?:السيارة|العربية)?\s*(?:هو|هي|:)?\s*(\d+(?:,\d{3})*(?:\.\d+)?)",
+            r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:جنيه|ريال|درهم|دينار)\b",
         )
         for pattern in patterns:
             match = re.search(pattern, text, re.IGNORECASE)
@@ -409,12 +502,24 @@ class ClarificationEngine:
         return None
 
     def _mentions_delivery_or_resale_sequence(self, text_lower: str) -> bool:
-        delivery_markers = ["delivery", "deliver", "possession", "ownership", "risk transfer"]
+        delivery_markers = [
+            "delivery", "deliver", "possession", "ownership", "risk transfer",
+            "قبض", "تسليم", "تملك", "ملك", "حيازة", "مخاطر", "ضمان",
+        ]
         if any(marker in text_lower for marker in delivery_markers):
             return True
         return (
             any(marker in text_lower for marker in ["bank buys", "seller buys", "institution buys"])
             and any(marker in text_lower for marker in ["sells it", "resells", "sells to"])
+        )
+
+    def _contains_late_payment_penalty(self, text_lower: str) -> bool:
+        return any(
+            marker in text_lower
+            for marker in [
+                "late fee", "late payment", "penalty", "default charge",
+                "غرامة", "غرامه", "تأخير", "تاخير", "التأخير", "التاخير",
+            ]
         )
 
     def _mentions_non_compliant_revenue(self, text_lower: str) -> bool:

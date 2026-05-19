@@ -51,6 +51,33 @@ DOMAIN_QUERY_EXPANSIONS = {
     "real estate": ("real estate", "investment in real estate", "rental income", "capital appreciation"),
 }
 
+DOMAIN_QUERY_EXPANSIONS.update(
+    {
+        "murabaha": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "installment sale", "resale", "sale"),
+        "murabahah": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "installment sale", "resale", "sale"),
+        "مرابحة": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "installment sale", "resale", "sale"),
+        "المرابحة": ("murabaha", "murabahah", "مرابحة", "المرابحة", "deferred payment sale", "installment sale", "resale", "sale"),
+        "تقسيط": ("installment sale", "deferred payment sale", "murabaha", "murabahah", "مرابحة", "بيع بالتقسيط"),
+        "بالتقسيط": ("installment sale", "deferred payment sale", "murabaha", "murabahah", "مرابحة", "بيع بالتقسيط"),
+        "غرامة": ("late payment", "late fee", "default charge", "penalty", "charity clause", "غرامة تأخير"),
+        "تأخير": ("late payment", "late fee", "default charge", "penalty", "charity clause", "غرامة تأخير"),
+        "ijarah": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
+        "ijara": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
+        "إجارة": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
+        "الإجارة": ("ijarah", "ijara", "إجارة", "الإجارة", "lease", "usufruct"),
+        "\u0645\u0631\u0627\u0628\u062d\u0647": ("murabaha", "murabahah", "\u0645\u0631\u0627\u0628\u062d\u0629", "\u0627\u0644\u0645\u0631\u0627\u0628\u062d\u0629", "deferred payment sale", "installment sale", "resale", "sale"),
+        "\u0627\u0644\u0645\u0631\u0627\u0628\u062d\u0647": ("murabaha", "murabahah", "\u0645\u0631\u0627\u0628\u062d\u0629", "\u0627\u0644\u0645\u0631\u0627\u0628\u062d\u0629", "deferred payment sale", "installment sale", "resale", "sale"),
+        "\u0627\u0642\u0633\u0627\u0637": ("installment sale", "deferred payment sale", "murabaha", "murabahah", "\u0645\u0631\u0627\u0628\u062d\u0629", "\u0628\u064a\u0639 \u0628\u0627\u0644\u062a\u0642\u0633\u064a\u0637"),
+        "\u063a\u0631\u0627\u0645\u0647": ("late payment", "late fee", "default charge", "penalty", "charity clause", "\u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631"),
+        "\u062a\u0627\u062e\u064a\u0631": ("late payment", "late fee", "default charge", "penalty", "charity clause", "\u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631"),
+        "\u0641\u0648\u0627\u0626\u062f": ("riba", "interest", "late payment", "late fee", "default charge", "penalty"),
+        "\u062a\u0639\u0648\u064a\u0636": ("late payment", "late fee", "default charge", "penalty", "collection cost"),
+        "riba": ("riba", "interest", "\u0631\u0628\u0627", "\u0641\u0648\u0627\u0626\u062f"),
+        "ta2seet": ("installment sale", "deferred payment sale", "murabaha", "murabahah", "\u062a\u0642\u0633\u064a\u0637"),
+        "taqseet": ("installment sale", "deferred payment sale", "murabaha", "murabahah", "\u062a\u0642\u0633\u064a\u0637"),
+    }
+)
+
 
 class QueryPreprocessor:
     """Handles query normalization, expansion, and language detection."""
@@ -94,7 +121,12 @@ class QueryPreprocessor:
         
         for trigger, expansions in DOMAIN_QUERY_EXPANSIONS.items():
             # Token-level matching prevents false-positives like "lease" inside "please"
-            if any(token == trigger or token.startswith(trigger + "/") for token in terms):
+            if any(
+                token == trigger
+                or token.startswith(trigger + "/")
+                or (QueryPreprocessor.contains_arabic(trigger) and trigger in token)
+                for token in terms
+            ):
                 terms.update(term.lower() for term in expansions)
         
         return frozenset(term for term in terms if len(term) >= 3)

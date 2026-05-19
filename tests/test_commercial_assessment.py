@@ -1,0 +1,214 @@
+import pytest
+
+from src.chatbot.commercial_assessment import (
+    EvidenceFamilyDetector,
+    ScenarioExtractor,
+    StandardsRouter,
+    should_fail_closed_for_source_gap,
+)
+from src.models.commercial import ContractFamily, QuestionType, SourceFamily
+from src.models.schema import AAOIFICitation, SemanticChunk
+from src.rag.query_preprocessor import QueryPreprocessor
+
+
+pytestmark = pytest.mark.service
+
+
+def test_scenario_extractor_structures_late_payment_murabaha_question():
+    scenario = ScenarioExtractor().extract(
+        "Is a murabaha car installment sale with a 5% late payment penalty permissible?"
+    )
+
+    assert scenario.question_type == QuestionType.PERMISSIBILITY
+    assert scenario.contract_family == ContractFamily.MURABAHA
+    assert scenario.asset == "car"
+    assert scenario.late_payment_terms
+    assert "penalty_beneficiary" in scenario.missing_facts
+    assert "late_payment_penalty_requires_dedicated_rule_check" in scenario.uncertainties
+
+
+def test_standards_router_uses_sharia_first_for_permissibility():
+    scenario = ScenarioExtractor().extract("Is this murabaha structure halal?")
+    route = StandardsRouter().route(scenario)
+
+    assert route.primary == [SourceFamily.SHARIA_STANDARD]
+    assert SourceFamily.FAS in route.secondary
+    assert route.requires_rule_evaluation is True
+
+
+def test_standards_router_uses_fas_first_for_accounting():
+    scenario = ScenarioExtractor().extract("How should murabaha profit be recognized for accounting?")
+    route = StandardsRouter().route(scenario)
+
+    assert scenario.question_type == QuestionType.ACCOUNTING
+    assert route.primary == [SourceFamily.FAS]
+    assert route.requires_rule_evaluation is False
+
+
+def test_source_gap_guard_blocks_permissibility_without_sharia_evidence():
+    scenario = ScenarioExtractor().extract(
+        "Is a murabaha car installment sale with a late payment penalty permissible?"
+    )
+    route = StandardsRouter().route(scenario)
+
+    assert should_fail_closed_for_source_gap(scenario, route, {SourceFamily.FAS}) is True
+    assert should_fail_closed_for_source_gap(scenario, route, {SourceFamily.SHARIA_STANDARD}) is False
+
+
+def test_source_gap_guard_blocks_plain_installment_permissibility_without_sharia_evidence():
+    scenario = ScenarioExtractor().extract(
+        "Is a car installment sale with a 20% markup halal?"
+    )
+    route = StandardsRouter().route(scenario)
+
+    assert should_fail_closed_for_source_gap(scenario, route, {SourceFamily.FAS}) is True
+
+
+def test_source_gap_guard_does_not_block_non_permissibility_late_wording():
+    scenario = ScenarioExtractor().extract(
+        "My app default setting sends late reminder notifications."
+    )
+    route = StandardsRouter().route(scenario)
+
+    assert should_fail_closed_for_source_gap(scenario, route, {SourceFamily.FAS}) is False
+
+
+def test_generic_compliance_wording_without_commercial_context_stays_unknown():
+    scenario = ScenarioExtractor().extract("Is this compliant?")
+    route = StandardsRouter().route(scenario)
+
+    assert scenario.question_type == QuestionType.UNKNOWN
+    assert route.primary == [SourceFamily.FAS]
+    assert should_fail_closed_for_source_gap(scenario, route, {SourceFamily.FAS}) is False
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Is this allowed?",
+        "Can we do this?",
+        "Is it valid?",
+        "Does this meet the standard?",
+        "\u0647\u0644 \u0647\u0630\u0627 \u062c\u0627\u0626\u0632\u061f",
+        "\u0647\u0644 \u064a\u0646\u0641\u0639\u061f",
+        "\u0647\u0644 \u0647\u0630\u0627 \u0645\u0637\u0627\u0628\u0642\u061f",
+    ],
+)
+def test_generic_permissibility_wording_without_commercial_context_does_not_source_gap(query):
+    scenario = ScenarioExtractor().extract(query)
+    route = StandardsRouter().route(scenario)
+
+    assert scenario.question_type == QuestionType.UNKNOWN
+    assert route.primary == [SourceFamily.FAS]
+    assert should_fail_closed_for_source_gap(scenario, route, {SourceFamily.FAS}) is False
+
+
+@pytest.mark.parametrize(
+    ("query", "family"),
+    [
+        ("Can we charge 2% monthly penalty if the customer delays ijara payments?", ContractFamily.IJARAH),
+        ("Is a sukuk with purchase undertaking at face value permissible?", ContractFamily.SUKUK),
+        ("Can the bank guarantee capital in mudarabah?", ContractFamily.MUDARABA),
+        ("Based only on the accounting standard, tell me if this murabaha is permissible.", ContractFamily.MURABAHA),
+        ("We donate late fees to charity, so is the murabaha clause allowed?", ContractFamily.MURABAHA),
+        ("Can we trade receivables from murabaha at a discount?", ContractFamily.MURABAHA),
+        ("Is buy now pay later halal?", ContractFamily.MURABAHA),
+        ("The bank gives cash and I repay more monthly. Is it halal?", ContractFamily.UNKNOWN),
+        (
+            "\u0647\u0644 \u064a\u062c\u0648\u0632 \u0641\u0631\u0636 \u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631 \u0639\u0644\u0649 \u0627\u0644\u0639\u0645\u064a\u0644\u061f",
+            ContractFamily.UNKNOWN,
+        ),
+        (
+            "\u0647\u0644 \u0627\u0644\u0648\u0639\u062f \u0627\u0644\u0645\u0644\u0632\u0645 \u0641\u064a \u0627\u0644\u0645\u0631\u0627\u0628\u062d\u0647 \u0634\u0631\u0639\u064a\u061f",
+            ContractFamily.MURABAHA,
+        ),
+        (
+            "\u0644\u0648 \u0639\u0646\u062f\u064a ijara contract \u0648\u0641\u064a\u0647 late payment penalty, compliant \u0648\u0644\u0627 \u0644\u0627?",
+            ContractFamily.IJARAH,
+        ),
+    ],
+)
+def test_commercial_permissibility_boundary_cases_route_to_sharia_family(query, family):
+    scenario = ScenarioExtractor().extract(query)
+    route = StandardsRouter().route(scenario)
+
+    assert scenario.question_type == QuestionType.PERMISSIBILITY
+    assert scenario.contract_family == family
+    assert route.primary == [SourceFamily.SHARIA_STANDARD]
+    assert should_fail_closed_for_source_gap(scenario, route, {SourceFamily.FAS}) is True
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "\u0645\u0631\u0627\u0628\u062d\u0647",
+        "\u0627\u0644\u0645\u0631\u0627\u0628\u062d\u0647",
+        "\u062a\u0642\u0633\u064a\u0637 \u0633\u064a\u0627\u0631\u0629",
+        "\u0627\u0642\u0633\u0627\u0637 \u0633\u064a\u0627\u0631\u0629",
+        "\u063a\u0631\u0627\u0645\u0647 \u062a\u0627\u062e\u064a\u0631",
+        "\u0641\u0648\u0627\u0626\u062f \u062a\u0623\u062e\u064a\u0631",
+        "hal el ta2seet da halal?",
+        "riba on late payment",
+    ],
+)
+def test_query_expansion_handles_arabic_dialect_spelling_and_transliteration(query):
+    terms = QueryPreprocessor.expand_terms(query)
+
+    assert terms & {"murabaha", "murabahah", "installment sale", "late payment", "late fee", "riba", "interest"}
+
+
+def test_evidence_family_detector_classifies_fas_chunk():
+    chunk = SemanticChunk(
+        chunk_id="fas-28",
+        text="Murabaha accounting excerpt",
+        citation=AAOIFICitation(
+            standard_id="FAS-28",
+            section=None,
+            page=8,
+            source_file="AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8.md",
+        ),
+        score=0.8,
+    )
+
+    assert EvidenceFamilyDetector.family_for_chunk(chunk) == SourceFamily.FAS
+
+
+def test_evidence_family_detector_does_not_trust_bare_sharia_family_metadata():
+    chunk = {
+        "metadata": {"source_family": "sharia_standard"},
+        "score": 0.8,
+    }
+
+    assert EvidenceFamilyDetector.family_for_chunk(chunk) == SourceFamily.UNKNOWN
+
+
+def test_evidence_family_detector_requires_minimum_relevance_for_sharia_source():
+    chunk = SemanticChunk(
+        chunk_id="ss-low",
+        text="Low-scoring Sharia standard excerpt",
+        citation=AAOIFICitation(
+            standard_id="SS-08",
+            section="1",
+            page=1,
+            source_file="AAOIFI_Sharia_Standard_08_Murabaha.md",
+        ),
+        score=0.1,
+    )
+
+    assert EvidenceFamilyDetector.family_for_chunk(chunk) == SourceFamily.UNKNOWN
+
+
+def test_evidence_family_detector_classifies_supported_sharia_standard_chunk():
+    chunk = SemanticChunk(
+        chunk_id="ss-08",
+        text="Sharia standard excerpt",
+        citation=AAOIFICitation(
+            standard_id="SS-08",
+            section="1",
+            page=1,
+            source_file="AAOIFI_Sharia_Standard_08_Murabaha.md",
+        ),
+        score=0.8,
+    )
+
+    assert EvidenceFamilyDetector.family_for_chunk(chunk) == SourceFamily.SHARIA_STANDARD

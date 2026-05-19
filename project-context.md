@@ -2,11 +2,11 @@
 
 This file is the working context for AI agents and developers making changes in this repository. Keep changes grounded in the current codebase, not in older roadmap language.
 
-Last refreshed: 2026-05-17
+Last refreshed: 2026-05-18
 
 ## Product Purpose
 
-Mushir is a Sharia compliance assistant for Islamic finance questions. It answers only from retrieved AAOIFI Financial Accounting Standards excerpts and must not issue binding fatwas, legal opinions, or financial advice.
+Mushir is a Sharia compliance assistant for Islamic finance questions. The current runtime answers only from retrieved AAOIFI corpus excerpts and must not issue binding fatwas, legal opinions, or financial advice.
 
 The product goal is a safe, citation-grounded chatbot that can:
 
@@ -17,6 +17,8 @@ The product goal is a safe, citation-grounded chatbot that can:
 - answer simple definition questions directly from citable retrieved excerpts when possible;
 - refuse or return `INSUFFICIENT_DATA` when the source material is not enough;
 - expose the same behavior through `/chat`, REST, and SSE APIs.
+
+The post-L5 planning goal is broader but still non-binding: a rules-first Sharia commercial-process assessment assistant. The first runtime scaffold is present in `src/chatbot/commercial_assessment.py` and `src/models/commercial.py`: deterministic scenario extraction, source-family routing, placeholder rule traces, source-family detection, and a fail-closed guard for late-payment/default permissibility questions when Shari'ah-standard evidence is absent. Do not present this as the full L6 evaluator until source acquisition, executable rules, and QA gates are complete.
 
 ## Current Architecture
 
@@ -80,7 +82,7 @@ Production target mode:
 ## Important Environment Variables
 
 - `OPENROUTER_API_KEY`: required for live answer generation.
-- `OPENROUTER_MODEL`: default model name used through OpenRouter.
+- `OPENROUTER_MODEL`: default model name used through OpenRouter. Keep `openrouter/free` for the demo path unless there is a deliberate provider upgrade.
 - `OPENROUTER_MAX_TOKENS`: max output tokens.
 - `CORPUS_DIR`: AAOIFI markdown corpus location.
 - `EMBED_MODEL`: embedding model. Keep multilingual for Arabic support.
@@ -90,6 +92,12 @@ Production target mode:
 - `REQUIRE_DISCLAIMER_ACK`: when true, API callers must pass `context.disclaimer_acknowledged=true`.
 - `RAG_EVAL_MODE`: bypasses response cache for retrieval evaluation.
 - `CORS_ORIGINS`: wildcard is local-only; release should use explicit origins.
+
+Provider-use rule: OpenRouter free routing is a constrained shared API path. Do
+not run bulk live generation matrices against it. Use fake LLM fixtures,
+retrieval-only probes, and `RAG_EVAL_MODE=true` for evaluation loops; keep live
+query smoke checks small, spaced out, and only after retrieval/clarification
+behavior has been verified locally.
 
 ## Development Commands
 
@@ -134,12 +142,13 @@ Smoke bilingual answer behavior:
 
 - `README.md`: public project overview and setup.
 - `docs/project-documentation.md`: current full technical documentation.
-- `docs/client-plain-language-logic.md`: simple client-facing report with visuals and graphs.
+- `docs/client-plain-language-logic.md`: client-facing report covering planning, implementation, current limits, L5 readiness, and L6 future direction.
 - `docs/chatbot-architecture.md`: detailed answer-generation architecture.
 - `docs/l5-production-readiness.md`: release/readiness runbook.
+- `docs/deep-research-report.md`: research input for the L6 rules-first evaluator direction.
 - `docs/ops/deployment.md`: deployment operations.
 - `docs/ops/huggingface-spaces.md`: Hugging Face Spaces deployment notes.
-- `.kiro/specs/sharia-compliance-chatbot/next-level-plans/`: historical L1-L4 plans and active L5 roadmap.
+- `.kiro/specs/sharia-compliance-chatbot/next-level-plans/`: historical L1-L4 plans, active L5 roadmap, and proposed L6 direction.
 
 ## Editing Guidance
 

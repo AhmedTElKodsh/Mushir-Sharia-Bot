@@ -2,9 +2,22 @@
 
 ## Introduction
 
-This document specifies the requirements for an AI-powered chatbot system that analyzes financial operations against AAOIFI (Accounting and Auditing Organization for Islamic Financial Institutions) Accounting Standards to determine Sharia compliance. The system uses Retrieval-Augmented Generation (RAG) architecture to ground all compliance rulings strictly in retrieved AAOIFI standards, and implements an interactive clarification loop to gather necessary details before making final determinations.
+This document specifies the requirements for an AI-powered assistant that analyzes financial operations against authoritative AAOIFI material and supporting reviewed sources. The current L0-L5 implementation path is an AAOIFI-grounded RAG chatbot focused on citation-backed guidance and release readiness. The post-L5 strategic direction is a rules-first Sharia commercial-process assessment assistant that distinguishes permissibility standards from accounting standards, extracts structured transaction facts, applies executable rule checks where available, and explains non-binding assessments with citations and uncertainty.
 
 The system progresses through five implementation layers (L0-L4), with **L0 already complete** as the foundational RAG loop. This document now focuses on requirements for L1-L4 based on L0 implementation learnings.
+
+## Strategic Research Update (2026-05-18)
+
+`docs/deep-research-report.md` and the BMAD party-mode review identified a key planning correction: AAOIFI FAS material alone is not a sufficient basis for broad halal/haram commercial-process evaluation. FAS is primarily an accounting, presentation, recognition, measurement, and disclosure layer. Permissibility and contract-validity questions require a Shari'ah-standards-first route, backed by explicit transaction facts, source hierarchy, rule checks, and human-review escalation.
+
+The active release path remains L5 quality, operations, and readiness. The L6 direction is future scope and must not be implemented until L5 trust gates are green and official source acquisition/versioning is verified.
+
+L6 must preserve these product boundaries:
+
+- Mushir provides non-binding assessment support, not formal fatwas.
+- The LLM explains validated evidence and rule outcomes; it must not be the primary judge.
+- Missing facts, weak retrieval, conflicting evidence, unsupported domains, or high-impact real-world decisions must fail closed to clarification, insufficient evidence, or qualified scholar/compliance review.
+- OpenRouter free-model usage must be throttled and queued conservatively so the project does not overload free API nodes or trigger provider blocking.
 
 ## L0 Implementation Status (COMPLETE ✅)
 
@@ -63,8 +76,14 @@ The system progresses through five implementation layers (L0-L4), with **L0 alre
 - **Document_Acquisition_Module**: The component responsible for acquiring and parsing AAOIFI standards from source URLs
 - **Vector_Database**: ChromaDB (L0-L2) or Qdrant (L3+) for storing semantically chunked AAOIFI standards
 - **Clarification_Engine**: The LLM-driven component that identifies missing information and prompts users for additional details (L1)
-- **LLM**: Gemini 1.5 Pro - generates compliance analysis responses with 1M context window
+- **LLM**: OpenRouter-compatible chat client. Gemini and other models may be selected by configuration; `openrouter/free` is allowed only with conservative throttling and monitoring.
 - **AAOIFI_Standards**: The authoritative Sharia compliance standards published by AAOIFI at https://aaoifi.com/accounting-standards-2/?lang=en
+- **Source_Family**: The category of authority being used, such as Shari'ah Standard, FAS, governance, ethics, auditing, fatwa, or local overlay
+- **Sharia_Standards_Layer**: The primary source layer for permissibility, contract validity, prohibited elements, required conditions, and commercial-process rules
+- **FAS_Accounting_Layer**: The source layer for accounting recognition, measurement, presentation, reporting, and disclosure after or alongside Sharia classification
+- **Transaction_Scenario**: A structured representation of the user's commercial process, including parties, asset, cash flows, ownership and possession sequence, risk bearing, profit basis, payment terms, penalties, agency roles, guarantees, and missing facts
+- **Executable_Rule_Layer**: Deterministic or decision-table logic that evaluates known Sharia/commercial conditions before the LLM explains the result
+- **Verdict_Contract**: A structured non-fatwa output schema with verdict status, confidence, evidence, standards used, rule path, limitations, and scholar-review flag
 - **Financial_Operation**: A user-described transaction or financial activity requiring Sharia compliance evaluation
 - **Compliance_Ruling**: The final determination with citations, confidence scores, and provenance (✅ L0 schema complete)
 - **Semantic_Chunk**: A 512-token segment of AAOIFI text with 50-token overlap (✅ L0 complete)
@@ -210,10 +229,10 @@ The system progresses through five implementation layers (L0-L4), with **L0 alre
 1. THE Chatbot_System SHALL support a configuration flag that distinguishes MVP mode from production mode
 2. WHERE the system is in MVP mode, THE Chatbot_System SHALL use lightweight components including embedded vector database and simplified document acquisition
 3. WHERE the system is in production mode, THE Chatbot_System SHALL use scalable components including distributed vector database and automated document acquisition
-4. THE Chatbot_System SHALL implement Phase 1 (research) by documenting existing open-source projects, RAG implementations, and Islamic finance AI repositories
-5. THE Chatbot_System SHALL implement Phase 2 (data acquisition) by supporting both manual and automated AAOIFI standard acquisition strategies
-6. THE Chatbot_System SHALL implement Phase 3 (RAG pipeline) by integrating semantic chunking, vector database, and retrieval mechanisms
-7. THE Chatbot_System SHALL implement Phase 4 (chatbot logic) by implementing the clarification loop state machine and system prompting
+4. THE Chatbot_System SHALL preserve historical L0-L4 planning artifacts as implementation context, not as the current active roadmap
+5. THE Chatbot_System SHALL treat L5 quality, operations, release readiness, and demo verification as the active implementation gate
+6. THE Chatbot_System SHALL treat L6 rules-first commercial-process evaluation as future scope until source acquisition, versioning, rules, and QA gates are defined
+7. THE Chatbot_System SHALL document which runtime capabilities are implemented, which are readiness gates, and which are future planning directions
 
 ### Requirement 11: Python-Based Implementation
 
@@ -361,13 +380,13 @@ The system progresses through five implementation layers (L0-L4), with **L0 alre
 
 #### Acceptance Criteria
 
-1. THE Chatbot_System SHALL explicitly scope its knowledge base to AAOIFI Accounting Standards (FAS series) from https://aaoifi.com/accounting-standards-2/?lang=en
-2. THE Chatbot_System SHALL clearly document that AAOIFI Sharia Standards, Governance Standards, and Ethics Standards are outside the current scope
+1. THE Chatbot_System SHALL explicitly scope the current L5 knowledge base to the acquired AAOIFI Accounting Standards (FAS series) and any other source families that have passed official-source acquisition and review
+2. THE Chatbot_System SHALL clearly document that AAOIFI Shari'ah Standards, Governance Standards, Ethics Standards, Auditing Standards, fatwa sources, and local overlays are outside the current runtime scope unless they have passed acquisition, versioning, and review gates
 3. WHEN a user query requires standards outside the defined scope, THE Chatbot_System SHALL inform the user that the relevant standard type is not covered
 4. THE Chatbot_System SHALL provide documentation listing which specific FAS standards have been acquired and indexed
 5. WHEN AAOIFI standards are provided in Arabic and English, THE Document_Acquisition_Module SHALL prioritize the English version for ingestion unless Arabic-capable embedding models are configured
 6. THE Chatbot_System SHALL note in all compliance rulings which AAOIFI standard series was used as the basis for the determination
-7. WHEN the user asks about a topic covered by a non-FAS AAOIFI standard, THE Chatbot_System SHALL acknowledge the limitation and recommend consulting the relevant AAOIFI standard directly
+7. WHEN the user asks a permissibility or contract-validity question that requires non-FAS sources, THE Chatbot_System SHALL acknowledge the limitation, avoid issuing a final verdict, and recommend qualified scholar/compliance review or the relevant AAOIFI Shari'ah Standard directly
 
 ### Requirement 20: Retrieval Quality Metrics
 
@@ -382,6 +401,96 @@ The system progresses through five implementation layers (L0-L4), with **L0 alre
 5. THE Chatbot_System SHALL support A/B testing of different chunking strategies by comparing retrieval quality metrics
 6. THE Chatbot_System SHALL provide a dashboard or report showing retrieval quality trends over time
 7. WHEN retrieval quality falls below a threshold, THE Chatbot_System SHALL alert administrators to investigate potential issues
+
+---
+
+## Post-L5 L6 Strategic Requirements
+
+These requirements are proposed for the rules-first Sharia commercial-process evaluator. They do not replace the L5 readiness work.
+
+### Requirement 50: Source Family Catalog and Versioning
+
+**User Story:** As a compliance maintainer, I want every source to be cataloged by authority family, version, language, and review status, so that the system can route questions to the right authority and avoid stale or weak evidence.
+
+#### Acceptance Criteria
+
+1. THE Source_Catalog SHALL store `source_family`, `standard_no`, titles, official URL, language, effective date, supersession metadata, currentness, source confidence, and review status for every acquired source.
+2. WHEN source metadata is incomplete or unverified, THE Chatbot_System SHALL NOT treat the source as decisive evidence.
+3. WHEN a source is superseded, THE Standards_Router SHALL prefer the current source and retain the older source only for historical/audit context.
+4. THE Source_Catalog SHALL distinguish Shari'ah Standards, FAS, governance, ethics, auditing, fatwa, and local overlay sources.
+5. THE acquisition plan SHALL verify source claims against official AAOIFI or approved reviewer-controlled sources before runtime use.
+
+### Requirement 51: Transaction Scenario Extraction
+
+**User Story:** As a user, I want the assistant to understand the structure of my commercial process before answering, so that missing facts are clarified instead of guessed.
+
+#### Acceptance Criteria
+
+1. THE Scenario_Extractor SHALL produce a validated Transaction_Scenario before standards retrieval for permissibility and commercial-process questions.
+2. THE Transaction_Scenario SHALL include question type, contract family, parties, asset, cash flows, asset flows, ownership sequence, possession sequence, risk bearing, profit basis, payment terms, late-payment terms, agency roles, guarantees, jurisdiction, missing facts, and uncertainties where available.
+3. WHEN required facts are missing, THE Chatbot_System SHALL ask focused follow-up questions or return `requires_clarification`.
+4. THE Scenario_Extractor output SHALL be testable with deterministic fixtures without requiring a live model call.
+5. THE system SHALL preserve the user's language, including Arabic answers for Arabic inputs unless the user requests otherwise.
+
+### Requirement 52: Standards Router
+
+**User Story:** As a compliance reviewer, I want permissibility questions routed to Shari'ah sources and accounting questions routed to FAS sources, so that answers are based on the correct authority layer.
+
+#### Acceptance Criteria
+
+1. WHEN a question asks whether a transaction is halal, permissible, valid, or Sharia-compliant, THE Standards_Router SHALL prioritize Shari'ah Standards or approved Sharia sources over FAS.
+2. WHEN a question asks about recognition, measurement, presentation, reporting, or disclosure, THE Standards_Router SHALL prioritize FAS and related accounting/governance sources.
+3. WHEN a question is mixed, THE Standards_Router SHALL evaluate permissibility before accounting treatment.
+4. WHEN the contract family is unsupported, THE Chatbot_System SHALL return `insufficient_evidence` or `refer_to_scholar` instead of forcing a verdict.
+5. THE router SHALL log selected source families, standard candidates, and reasons for routing decisions for audit and evaluation.
+
+### Requirement 53: Executable Rule Evaluation
+
+**User Story:** As a Sharia/compliance reviewer, I want known commercial-process conditions evaluated by explicit rules, so that the LLM cannot invent or override the decision logic.
+
+#### Acceptance Criteria
+
+1. THE Rule_Engine SHALL evaluate supported scenarios through deterministic rules, decision tables, or policy logic before final explanation.
+2. THE Rule_Engine SHALL return matched rules, required facts, missing facts, pass/fail/unknown outcomes, source IDs, conflict flags, and human-review flags.
+3. WHEN rules are incomplete, conflicting, or unsupported, THE Chatbot_System SHALL escalate to `insufficient_evidence` or `refer_to_scholar`.
+4. THE first implementation spike SHALL compare lightweight Python decision tables, OPA/Rego, DMN-style decision tables, and Catala/OpenFisca-style modeling for one Murabaha route before committing to the long-term rule layer.
+5. THE LLM SHALL explain only the rule result and evidence bundle; it SHALL NOT generate a verdict independently.
+
+### Requirement 54: Verdict Contract and Non-Fatwa Output
+
+**User Story:** As a user, I want a clear assessment with limitations and evidence, so that I understand what the system can and cannot conclude.
+
+#### Acceptance Criteria
+
+1. THE Verdict_Contract SHALL support statuses including `likely_permissible`, `likely_impermissible`, `conditionally_permissible`, `requires_clarification`, `insufficient_evidence`, and `refer_to_scholar`.
+2. THE Verdict_Contract SHALL include confidence, evidence, standards used, rule path, limitations, missing facts, and `requires_scholar_review`.
+3. THE Chatbot_System SHALL avoid claiming to issue a fatwa or final halal/haram ruling.
+4. THE Chatbot_System SHALL cite decisive evidence for every decisive claim.
+5. THE Chatbot_System SHALL fail closed when citations, rules, or required facts are missing.
+
+### Requirement 55: L6 Quality Gates
+
+**User Story:** As a release owner, I want scenario and rule evaluation gates, so that a plausible answer is not mistaken for a proven answer.
+
+#### Acceptance Criteria
+
+1. THE evaluation suite SHALL include supported, partially supported, unsupported, ambiguous, conflicting-evidence, insufficient-evidence, and scholar-review-required cases.
+2. THE evaluation suite SHALL measure citation recall, citation precision, answer faithfulness, rule correctness, schema validity, language preservation, and refusal consistency.
+3. THE system SHALL block release when citation-required queries answer without citations.
+4. THE system SHALL block release when known unanswerable cases produce confident verdicts.
+5. THE system SHALL maintain gold datasets versioned with the standards corpus and source catalog.
+
+### Requirement 56: Free-Model and API Node Protection
+
+**User Story:** As a system operator using OpenRouter free models, I want conservative throttling and request shaping, so that the app remains available and avoids provider blocking.
+
+#### Acceptance Criteria
+
+1. WHEN `OPENROUTER_MODEL` or equivalent configuration uses `openrouter/free`, THE Chatbot_System SHALL apply stricter concurrency, retry, and rate limits than paid model routes.
+2. THE Chatbot_System SHALL avoid parallel fan-out to free OpenRouter models unless explicitly enabled for controlled evaluation.
+3. THE Chatbot_System SHALL use backoff and circuit-breaking on HTTP 429, 5xx, provider overload, timeout, or quota signals.
+4. THE Chatbot_System SHALL cache safe retrieval and evaluation artifacts where appropriate so repeated tests do not overload the API node.
+5. THE documentation SHALL warn developers not to run large evaluation batches against `openrouter/free` without throttling, batching, and explicit monitoring.
 
 ---
 
@@ -1358,7 +1467,7 @@ The Sharia Compliance Chatbot system will be considered successful when:
 - AAOIFI standards are publicly accessible at the specified URL
 - Users can describe financial operations in English
 - Users have basic understanding of financial terminology
-- Gemini 1.5 Pro API is available and reliable (validated in L0)
+- OpenRouter-compatible model access is available. Free-model routes may be slow, unavailable, or rate limited and must not be treated as production capacity.
 - 512-token chunks with 50-token overlap are optimal for legal text (validated in L0)
 - all-mpnet-base-v2 embeddings provide sufficient retrieval quality (validated in L0)
 - ChromaDB is sufficient for L0-L2, Qdrant needed for L3+ scale
@@ -1371,7 +1480,7 @@ The Sharia Compliance Chatbot system will be considered successful when:
 - **Language**: English-only for L0-L4 (Arabic support future enhancement)
 - **Embedding Model**: all-mpnet-base-v2 (768-dim, English-only, runs locally)
 - **Vector DB**: ChromaDB (L0-L2), Qdrant (L3+)
-- **LLM**: Gemini 1.5 Pro (1M context window, temperature 0.1)
+- **LLM**: OpenRouter-compatible chat client. Production or sustained evaluation should use an explicitly selected model with known quota and latency. `openrouter/free` is allowed for constrained experiments only and must use strict throttling, low concurrency, backoff, and caching to avoid overloading shared free API nodes.
 - **Chunk Strategy**: 512 tokens, 50 overlap (validated in L0, don't change unless retrieval quality tanks)
 
 ### Technical Constraints
@@ -1383,7 +1492,7 @@ The Sharia Compliance Chatbot system will be considered successful when:
 - Qdrant for vectors (L3+)
 
 ### L0 Validated Decisions (DO NOT CHANGE without strong justification)
-1. **Gemini 1.5 Pro**: 1M context + cost-effective → KEEP
+1. **OpenRouter-compatible LLM boundary**: Keep the provider-swappable client boundary. Do not hard-code a single upstream model; select paid or free routes through configuration and rate-limit free routes conservatively.
 2. **all-mpnet-base-v2**: 768-dim, English-only, good quality → KEEP
 3. **512 token chunks, 50 overlap**: Standard for legal text → KEEP
 4. **Temperature 0.1**: Consistent, deterministic outputs → KEEP

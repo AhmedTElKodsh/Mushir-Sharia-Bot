@@ -4,16 +4,25 @@ import re
 from inspect import Parameter, signature
 from typing import Any, Dict, List, Optional
 
+from src.chatbot.commercial_assessment import (
+    CommercialRuleEvaluator,
+    EvidenceFamilyDetector,
+    ScenarioExtractor,
+    StandardsRouter,
+    should_fail_closed_for_source_gap,
+    source_gap_verdict,
+)
 from src.chatbot.citation_validator import CitationValidator
 from src.chatbot.constants import AUTHORITY_REQUEST_TERMS
 from src.chatbot.prompt_builder import PromptBuilder
 from src.models.ruling import AAOIFICitation, AnswerContract, ComplianceStatus
+from src.models.commercial import SourceFamily
 from src.rag.pipeline import RAGPipeline
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.storage.cache import CacheStore
 
 # ---------------------------------------------------------------------------
-# Arabic transliteration normalization map — common English misspellings
+# Arabic transliteration normalization map: common English misspellings
 # that users type when searching for Islamic finance terms.
 # ---------------------------------------------------------------------------
 _TRANSLITERATION_MAP = {
@@ -68,6 +77,9 @@ class ApplicationService:
         self.k = k
         self.threshold = threshold
         self.response_cache_ttl = int(os.getenv("RESPONSE_CACHE_TTL_SECONDS", "86400"))
+        self.scenario_extractor = ScenarioExtractor()
+        self.standards_router = StandardsRouter()
+        self.rule_evaluator = CommercialRuleEvaluator()
 
     def answer(
         self,
@@ -108,9 +120,14 @@ class ApplicationService:
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
 
-        cached = self._cached_answer(cleaned_query)
-        if cached:
-            return cached
+        scenario = self.scenario_extractor.extract(cleaned_query)
+        standards_route = self.standards_router.route(scenario)
+        rule_evaluation = self.rule_evaluator.evaluate(scenario, standards_route)
+
+        if SourceFamily.SHARIA_STANDARD not in standards_route.primary:
+            cached = self._cached_answer(cleaned_query)
+            if cached:
+                return cached
         clarification = self._clarification_question(cleaned_query, session_id)
         if clarification:
             clarification_answer = self._clarification_answer(clarification, response_language)
@@ -120,7 +137,14 @@ class ApplicationService:
                 clarification_question=clarification,
                 reasoning_summary=self._clarification_reason(clarification, response_language),
                 limitations=self._limitations(response_language),
-                metadata=self._metadata([], confidence=0.0, response_language=response_language),
+                metadata=self._metadata(
+                    [],
+                    confidence=0.0,
+                    response_language=response_language,
+                    scenario=scenario,
+                    standards_route=standards_route,
+                    rule_evaluation=rule_evaluation,
+                ),
             )
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
@@ -136,7 +160,14 @@ class ApplicationService:
                     citations=[],
                     reasoning_summary="Retrieval backend is not available.",
                     limitations=self._limitations(response_language),
-                    metadata=self._metadata([], confidence=0.0, response_language=response_language),
+                    metadata=self._metadata(
+                        [],
+                        confidence=0.0,
+                        response_language=response_language,
+                        scenario=scenario,
+                        standards_route=standards_route,
+                        rule_evaluation=rule_evaluation,
+                    ),
                 )
 
         try:
@@ -149,7 +180,14 @@ class ApplicationService:
                 citations=[],
                 reasoning_summary="Retrieval backend is not available.",
                 limitations=self._limitations(response_language),
-                metadata=self._metadata([], confidence=0.0, response_language=response_language),
+                metadata=self._metadata(
+                    [],
+                    confidence=0.0,
+                    response_language=response_language,
+                    scenario=scenario,
+                    standards_route=standards_route,
+                    rule_evaluation=rule_evaluation,
+                ),
             )
         if not chunks:
             contract = AnswerContract(
@@ -158,7 +196,40 @@ class ApplicationService:
                 citations=[],
                 reasoning_summary="No retrieved AAOIFI excerpts were available to ground an answer.",
                 limitations=self._limitations(response_language),
-                metadata=self._metadata([], confidence=0.0, response_language=response_language),
+                metadata=self._metadata(
+                    [],
+                    confidence=0.0,
+                    response_language=response_language,
+                    scenario=scenario,
+                    standards_route=standards_route,
+                    rule_evaluation=rule_evaluation,
+                ),
+            )
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
+
+        evidence_families = EvidenceFamilyDetector.families(chunks)
+        if should_fail_closed_for_source_gap(scenario, standards_route, evidence_families):
+            verdict = source_gap_verdict(scenario, standards_route, evidence_families)
+            contract = AnswerContract(
+                answer=self._source_family_gap_message(response_language),
+                status=ComplianceStatus.INSUFFICIENT_DATA,
+                citations=[],
+                reasoning_summary=(
+                    "The query asks about permissibility or contract validity, "
+                    "but retrieved evidence does not include Shari'ah-standard support."
+                ),
+                limitations=self._limitations(response_language),
+                metadata=self._metadata(
+                    chunks,
+                    confidence=self._confidence(chunks),
+                    response_language=response_language,
+                    scenario=scenario,
+                    standards_route=standards_route,
+                    rule_evaluation=rule_evaluation,
+                    verdict_contract=verdict,
+                    source_families=evidence_families,
+                ),
             )
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
@@ -220,7 +291,14 @@ class ApplicationService:
                 clarification_question=llm_clarification,
                 reasoning_summary=self._clarification_reason(llm_clarification, response_language),
                 limitations=self._limitations(response_language),
-                metadata=self._metadata(chunks, confidence=self._confidence(chunks), response_language=response_language),
+                metadata=self._metadata(
+                    chunks,
+                    confidence=self._confidence(chunks),
+                    response_language=response_language,
+                    scenario=scenario,
+                    standards_route=standards_route,
+                    rule_evaluation=rule_evaluation,
+                ),
             )
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
@@ -237,6 +315,9 @@ class ApplicationService:
                 chunks,
                 confidence=self._confidence(chunks),
                 response_language=response_language,
+                scenario=scenario,
+                standards_route=standards_route,
+                rule_evaluation=rule_evaluation,
             ),
         )
         self._audit(cleaned_query, contract, session_id, request_id)
@@ -371,14 +452,35 @@ class ApplicationService:
             metadata=data.get("metadata", {}),
         )
 
-    def _metadata(self, chunks: List[Any], confidence: float, response_language: str = "en") -> Dict[str, Any]:
-        return {
+    def _metadata(
+        self,
+        chunks: List[Any],
+        confidence: float,
+        response_language: str = "en",
+        scenario: Any = None,
+        standards_route: Any = None,
+        rule_evaluation: Any = None,
+        verdict_contract: Any = None,
+        source_families: Optional[set] = None,
+    ) -> Dict[str, Any]:
+        metadata: Dict[str, Any] = {
             "model_name": getattr(self.llm_client, "model_name", None),
             "prompt_version": getattr(self.prompt_builder, "prompt_version", None),
             "response_language": response_language,
             "retrieved_chunk_ids": [self._chunk_id(chunk) for chunk in chunks],
             "confidence": confidence,
         }
+        if scenario is not None:
+            metadata["transaction_scenario"] = scenario.to_dict()
+        if standards_route is not None:
+            metadata["standards_route"] = standards_route.to_dict()
+        if rule_evaluation is not None:
+            metadata["rule_evaluation"] = rule_evaluation.to_dict()
+        if verdict_contract is not None:
+            metadata["verdict_contract"] = verdict_contract.to_dict()
+        if source_families is not None:
+            metadata["source_families"] = sorted(family.value for family in source_families)
+        return metadata
 
     @staticmethod
     def _detect_language(query: str) -> str:
@@ -391,7 +493,7 @@ class ApplicationService:
             return "en"
         arabic_chars = sum(1 for c in query if '\u0600' <= c <= '\u06ff')
         ratio = arabic_chars / len(query)
-        return "ar" if ratio > 0.50 else "en"
+        return "ar" if arabic_chars >= 12 or ratio > 0.35 else "en"
 
     @staticmethod
     def _normalize_query(query: str) -> str:
@@ -477,7 +579,7 @@ class ApplicationService:
     def _authority_refusal_message(response_language: str) -> str:
         if response_language == "ar":
             return (
-                "مشير يقدم إرشادا معلوماتيا فقط بناءً على مقاطع معايير أيوفي المسترجعة. "
+                "مشير يقدم إرشادا معلوماتيا فقط بناء على مقاطع معايير أيوفي المسترجعة. "
                 "لا يصدر فتاوى ملزمة أو آراء قانونية أو نصائح مالية. "
                 "استشر عالما شرعيا مؤهلا للحصول على حكم شرعي ملزم."
             )
@@ -499,6 +601,20 @@ class ApplicationService:
             "INSUFFICIENT_DATA: The retrieved AAOIFI excerpts did not provide "
             "a safely citable basis for this answer. Please provide more details "
             "or consult a qualified Sharia scholar."
+        )
+
+    @staticmethod
+    def _source_family_gap_message(response_language: str) -> str:
+        if response_language == "ar":
+            return (
+                "INSUFFICIENT_DATA: هذا السؤال يتعلق بجواز أو صحة معاملة تجارية، "
+                "وهذا يحتاج إلى دليل من معايير شرعية وقواعد تقييم صريحة. "
+                "المقاطع المسترجعة حاليا لا تكفي لإصدار تقييم آمن؛ يرجى عرض العقد على عالم شرعي أو مراجع امتثال مؤهل."
+            )
+        return (
+            "INSUFFICIENT_DATA: This question asks about permissibility or contract validity. "
+            "Mushir needs Shari'ah-standard evidence and explicit rule checks before giving even a non-binding assessment. "
+            "The retrieved evidence is not enough; refer the contract to a qualified Sharia scholar or compliance reviewer."
         )
 
     @staticmethod
@@ -583,6 +699,7 @@ class ApplicationService:
             "عرف ",
             "اشرح ",
         )
+        arabic_starters = arabic_starters + ("ما هي ", "ما هو ", "ما معنى ", "عرف ", "اشرح ")
         return lowered.startswith(english_starters) or lowered.startswith(arabic_starters)
 
     def _best_definition_chunk(self, query: str, chunks: List[Any]) -> Optional[Any]:

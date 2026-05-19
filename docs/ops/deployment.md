@@ -13,11 +13,15 @@ docker compose build sharia-bot
 ## Run Locally
 
 ```powershell
-$env:GEMINI_API_KEY="..."
+$env:OPENROUTER_API_KEY="..."
+$env:OPENROUTER_MODEL="openrouter/free"
+$env:OPENROUTER_MAX_TOKENS="1024"
 docker compose up -d sharia-bot
 curl.exe http://127.0.0.1:8000/health
 curl.exe http://127.0.0.1:8000/ready
 ```
+
+`openrouter/free` is acceptable for a beta/demo smoke path, but do not use it for bulk live generation tests. Keep concurrency low, add backoff between smoke calls, and use retrieval-only or fake-LLM evaluation for larger scenario matrices.
 
 ## Hosting Shape
 

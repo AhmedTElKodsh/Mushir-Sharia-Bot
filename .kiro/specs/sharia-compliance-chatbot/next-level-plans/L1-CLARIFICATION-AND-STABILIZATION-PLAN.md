@@ -140,7 +140,7 @@ Acceptance:
 - [ ] Move the AAOIFI grounding prompt and chunk formatting into `PromptBuilder`.
 - [x] Create `GeminiClient` using `google-generativeai`; keep model `gemini-2.5-flash` and temperature `0.1` as defaults.
 - [ ] Add retries, timeout handling, missing API key errors, quota/rate-limit errors, and empty-response handling.
-- [ ] Tests must mock the Gemini transport and must not require `GEMINI_API_KEY`.
+- [ ] Tests must mock the OpenRouter-compatible LLM transport and must not require live provider credentials.
 - [ ] Add one skipped/marked `llm` smoke test for real Gemini only when a key is present.
 - [ ] Run: `.\.venv\Scripts\python.exe -m pytest tests/test_prompt_builder.py tests/test_llm_client.py -m unit -q`
 

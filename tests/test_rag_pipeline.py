@@ -138,3 +138,14 @@ def test_rag_pipeline_reranks_bilingual_chroma_candidates_with_domain_terms():
 
     assert collection.n_results == 3
     assert chunks[0].chunk_id == "chunk-murabaha"
+
+
+def test_query_preprocessor_expands_arabic_installment_and_late_penalty_terms():
+    from src.rag.query_preprocessor import QueryPreprocessor
+
+    query = "هل يجوز شراء سيارة بالتقسيط مع غرامة تأخير؟"
+    terms = QueryPreprocessor.expand_terms(query)
+
+    assert QueryPreprocessor.detect_language(query) == "ar"
+    assert "murabaha" in terms
+    assert "late fee" in terms

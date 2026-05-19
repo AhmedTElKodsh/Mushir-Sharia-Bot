@@ -4,7 +4,7 @@
 
 ### Purpose
 
-The Sharia Compliance Chatbot is an AI-powered system that analyzes financial operations against AAOIFI (Accounting and Auditing Organization for Islamic Financial Institutions) Accounting Standards to determine Sharia compliance. The system employs a Retrieval-Augmented Generation (RAG) architecture to ensure all compliance rulings are strictly grounded in authoritative AAOIFI standards, combined with an interactive clarification loop to gather complete information before making determinations.
+The Sharia Compliance Chatbot is an AI-powered system that analyzes financial operations against authoritative AAOIFI material and supporting reviewed sources. The current implementation path uses Retrieval-Augmented Generation (RAG) to produce citation-backed guidance and fail-closed answers. The post-L5 direction expands this into a rules-first Sharia commercial-process assessment assistant: structured scenario extraction, Shari'ah-standards-first routing for permissibility, executable rule checks, evidence retrieval, and non-binding explanation.
 
 ### L0 Implementation Status (COMPLETE ✅)
 
@@ -49,7 +49,7 @@ The Sharia Compliance Chatbot is an AI-powered system that analyzes financial op
 
 ### Design Philosophy
 
-The design prioritizes **accuracy and traceability** over speed, ensuring every compliance ruling is backed by specific AAOIFI standard citations. The system is built with a **progressive enhancement approach**, starting with L0 (minimal RAG loop) and evolving through L1-L4 to production-ready system.
+The design prioritizes **accuracy and traceability** over speed, ensuring every compliance answer is backed by specific authority, evidence, and audit metadata. The system is built with a **progressive enhancement approach**, starting with L0 (minimal RAG loop), evolving through L1-L5 to a trustworthy release substrate, and only then expanding into the proposed L6 rules-first commercial-process evaluator.
 
 Key design principles:
 - **Strict grounding**: Never generate speculative compliance advice; all rulings must be supported by retrieved AAOIFI standards (✅ validated in L0)
@@ -58,9 +58,27 @@ Key design principles:
 - **Modularity**: Design components with clear boundaries to support independent testing and evolution
 - **Progressive scaling**: L0 (proof of concept) → L1 (clarification) → L2 (API) → L3 (production infra) → L4 (advanced features)
 
+Additional post-L5 design principles:
+- **Authority hierarchy**: Use Shari'ah Standards first for permissibility and contract validity; use FAS for accounting, recognition, presentation, reporting, and disclosure.
+- **Rules before explanation**: For supported commercial-process domains, extract facts and run explicit rules before asking the LLM to explain the result.
+- **Non-fatwa boundary**: Provide assessment support, missing-fact identification, and evidence-backed explanation; do not claim to issue binding fatwas.
+- **Free-model restraint**: When using `openrouter/free`, keep low concurrency, backoff, and batching/caching safeguards so evaluation or demo traffic does not overload shared free API nodes.
+
 ### System Context
 
 The system operates in the Islamic finance domain, where compliance determinations must be authoritative and traceable. Users range from financial professionals to individuals seeking guidance on transaction compliance. The system provides **guidance based on AAOIFI standards** but explicitly disclaims that it does not replace qualified Islamic finance scholars for critical decisions.
+
+### Post-L5 L6 Research Update (2026-05-18)
+
+`docs/deep-research-report.md` changes the target architecture from "LLM over retrieved FAS PDFs" to a compositional evaluator. The report did not identify a mature open-source engine that already solves AAOIFI bilingual retrieval, Sharia permissibility assessment, executable rule checks, and safe verdict generation together. The design implication is to assemble proven parts:
+
+- **Document/RAG substrate:** hierarchy-preserving ingestion, multilingual dense retrieval, lexical/BM25 retrieval, reranking, citation packaging, and source versioning.
+- **Scenario intelligence:** a validated transaction schema that captures parties, asset, ownership/possession sequence, payment terms, late-payment terms, agency roles, guarantees, risk bearing, missing facts, and uncertainties.
+- **Policy/rule layer:** lightweight Python decision tables, OPA/Rego, DMN-style tables, or Catala/OpenFisca-style modeling, selected after a Murabaha/late-penalty spike.
+- **Explanation layer:** the LLM receives the scenario, rule result, and evidence bundle, then explains with citations and limitations.
+- **QA layer:** rule fixtures, citation recall/precision, faithfulness checks, red-team suites, versioning tests, and release gates that block plausible but unproven answers.
+
+The L6 architecture is tracked in `next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md`. It is future scope until L5 quality and runtime readiness gates are green.
 
 ### Open-Source References and Reusable Patterns
 
@@ -172,6 +190,28 @@ graph TB
     ComplianceAnalyzer -->|Ruling + Citations| ChatInterface
 ```
 
+### Post-L5 L6 Rules-First Architecture
+
+```mermaid
+flowchart TD
+    User["User commercial question"] --> Intent["Intent triage"]
+    Intent --> Scenario["Validated transaction scenario"]
+    Scenario --> Missing{"Missing required facts?"}
+    Missing -- "Yes" --> FollowUp["Focused clarification"]
+    FollowUp --> Scenario
+    Missing -- "No" --> Router["Standards router"]
+    Router --> Evidence["Hybrid evidence retrieval"]
+    Evidence --> Rules["Executable rule evaluation"]
+    Rules --> Conflict{"Conflict, weak evidence, or unsupported domain?"}
+    Conflict -- "Yes" --> Escalate["Insufficient evidence / scholar review"]
+    Conflict -- "No" --> Explain["LLM explanation from rule result and evidence"]
+    Escalate --> Explain
+    Explain --> Validate["Schema, citation, language, and red-line validation"]
+    Validate --> Output["Non-fatwa verdict contract + audit trace"]
+```
+
+In this architecture, RAG provides evidence and context; the rule layer provides deterministic assessment for supported domains; and the LLM is constrained to explanation. This is the target for L6 only, not a replacement for the L5 release-readiness plan.
+
 ### Component Design
 
 #### Document Acquisition Module
@@ -204,6 +244,17 @@ graph TB
   - OpenRouter API (supports Gemini, GPT-4, Claude, and other models) (✅ validated in L0)
   - Temperature 0.1 for consistent results
   - Strict adherence to citations and quotes (L4+)
+
+**OpenRouter free-model guardrail:** `openrouter/free` is acceptable for constrained demos and small eval probes only. It must use conservative request concurrency, backoff/circuit breaking, and caching; never run large parallel eval batches against free routes.
+
+#### L6 Scenario and Rule Evaluator
+- **Role**: Convert broad commercial-process questions into structured facts and explicit rule outcomes before explanation
+- **Implementation Direction**:
+  - Transaction scenario schema with validated required fields
+  - Standards router by question type and authority layer
+  - Rule engine spike over Python decision tables, OPA/Rego, DMN-style tables, and Catala/OpenFisca-style models
+  - Verdict contract with `likely_permissible`, `likely_impermissible`, `conditionally_permissible`, `requires_clarification`, `insufficient_evidence`, and `refer_to_scholar`
+- **Constraint**: L6 must not claim fatwa authority, infer missing transaction facts, or answer permissibility from FAS-only evidence.
 
 ### Data Strategy
 

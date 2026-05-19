@@ -252,3 +252,38 @@ Updated `requirements.md` and `design.md` based on:
 ## Status: READY FOR L1 IMPLEMENTATION ✅
 
 Both planning files are now comprehensive, aligned with L0 learnings, and provide clear guidance for L1-L4 implementation.
+
+---
+
+## 2026-05-18 Strategic Research Update: L6 Rules-First Evaluator
+
+### Input Reviewed
+
+- `docs/deep-research-report.md`
+- BMAD party-mode review across architecture, product, and test/QA perspectives
+- Existing Kiro planning files and next-level roadmap
+
+### Critique Applied
+
+The research shows that the older planning language was too FAS/RAG-centric for broad commercial-process permissibility questions. FAS remains valuable for accounting, reporting, presentation, measurement, and disclosure, but halal/haram and contract-validity questions require a Shari'ah-standards-first route.
+
+The plan now separates three concerns:
+
+1. **Sharia permissibility layer:** Shari'ah Standards and reviewed Sharia sources for contract validity, prohibited elements, required conditions, and commercial-process rules.
+2. **FAS accounting layer:** FAS and related standards for recognition, measurement, presentation, disclosure, and reporting implications.
+3. **Rules/evidence/explanation layer:** structured transaction extraction, executable rule checks, hybrid retrieval, citation validation, and LLM explanation after rule/evidence evaluation.
+
+### Files Updated
+
+- `next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` added as the proposed post-L5 product and architecture direction.
+- `next-level-plans/README.md` updated so L5 remains the active implementation gate while L6 is marked as future scope.
+- `requirements.md` updated with source-family cataloging, transaction scenario extraction, standards routing, executable rules, non-fatwa verdict contract, L6 quality gates, and OpenRouter/free API protection.
+- `design.md` updated with the L6 architecture pivot, rules-first flow, source hierarchy, and free-model throttling guidance.
+
+### Planning Decisions
+
+- Do not implement L6 until L5 quality, citation, runtime, and release-readiness gates are green.
+- Do not claim Mushir issues binding fatwas.
+- Do not answer permissibility questions from FAS-only evidence.
+- Do not expose broad "all commercial operations" support until each domain has sources, rules, gold cases, and refusal behavior.
+- Use `openrouter/free` only with conservative rate limits, low concurrency, backoff/circuit breaking, and small controlled eval batches.

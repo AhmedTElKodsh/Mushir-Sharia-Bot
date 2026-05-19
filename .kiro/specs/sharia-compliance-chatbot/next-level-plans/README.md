@@ -3,10 +3,13 @@
 **Created:** 2026-05-09  
 **Reviewed:** 2026-05-09 with BMAD party-mode perspectives from architecture, engineering, product, and test architecture.
 **Reconciled:** 2026-05-11 after L1-L4 runtime implementation and L5 readiness review.
+**Strategic research update:** 2026-05-18 after `docs/deep-research-report.md` and BMAD party-mode review.
 
 This folder contains the refreshed implementation review and phase plans for the Sharia Compliance Chatbot after comparing the Kiro planning files with the current codebase.
 
-The active roadmap is now `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md`. L1-L4 are retained as historical phase plans and implementation references; they no longer represent the next unbuilt workstream.
+The active implementation roadmap remains `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md`. L1-L4 are retained as historical phase plans and implementation references; they no longer represent the next unbuilt workstream.
+
+The post-L5 strategic direction is `L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md`. L6 is not an immediate implementation task. It reframes Mushir from a FAS-heavy RAG chatbot into a structured, non-fatwa Sharia commercial-process assessment assistant that uses Shari'ah standards, transaction schemas, executable rules, evidence retrieval, and human-review escalation.
 
 ## Files
 
@@ -16,6 +19,7 @@ The active roadmap is now `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md`. L1-L4 are 
 - `L3-PRODUCTION-INFRASTRUCTURE-PLAN.md` - Revised as persistence, evaluation, and observability with Qdrant gated by real need.
 - `L4-COMPLIANCE-QUALITY-AND-OPS-PLAN.md` - Revised as trust, access, caching, and operations with citation validation before caching.
 - `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md` - Active readiness plan for answer quality, citation trust, dependency-backed runtime behavior, and demo/release gates.
+- `L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` - Proposed post-L5 product/architecture pivot based on the deep research report: Shari'ah-standards-first routing, transaction ontology, executable rules, structured verdicts, and QA gates.
 - `PARTY-MODE-REVIEW-SUMMARY.md` - Consensus review notes and plan changes from BMAD party mode.
 
 ## Current Implementation State
@@ -31,3 +35,13 @@ The active roadmap is now `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md`. L1-L4 are 
 3. Add separately marked integration gates for Redis, PostgreSQL, and Qdrant runtime modes.
 4. Browser-test `/chat` and smoke-test stable public APIs under the demo configuration.
 5. Freeze feature expansion until the L5 trust and runtime gates are green.
+6. After L5 is green, verify official source acquisition for AAOIFI Shari'ah Standards, FAS, governance, ethics, auditing, and any scholar-reviewed fatwa sources before starting L6 implementation.
+7. Before enabling any L6 domain, define its transaction schema, source route, executable rules, gold cases, red-line refusals, and human-review criteria.
+
+## Research Critique Applied
+
+The deep research report changes the roadmap assumptions in three ways:
+
+- **FAS is not enough for permissibility.** FAS remains important for accounting, recognition, measurement, presentation, and disclosure. Halal/haram and contract-validity questions must route first to AAOIFI Shari'ah Standards or other reviewed Sharia sources.
+- **RAG is an evidence layer, not the judge.** The target system must extract structured facts, select standards, evaluate rules, validate citations, and only then use the LLM to explain the result.
+- **The product is assessment support, not fatwa issuance.** User-facing output must stay non-binding, fail closed when facts or evidence are missing, and escalate high-impact or disputed scenarios to qualified scholar/compliance review.

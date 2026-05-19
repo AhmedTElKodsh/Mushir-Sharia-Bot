@@ -11,18 +11,26 @@ This runbook defines the demo/release checks for the implemented Mushir runtime.
 | Rate limiting | `RATE_LIMIT_STORE_TYPE=memory` | `RATE_LIMIT_STORE_TYPE=redis`, `REDIS_URL` | App falls back to in-memory rate limiting if Redis setup fails. |
 | Audit | `NullAuditStore` | `AUDIT_DATABASE_URL` or `DATABASE_URL` | App falls back to null audit logging if PostgreSQL setup fails. |
 | Cache | `CACHE_STORE_TYPE=memory` | `CACHE_STORE_TYPE=redis`, `REDIS_URL` | App falls back to in-memory cache if Redis setup fails. |
-| LLM | `GEMINI_API_KEY`, `GEMINI_MODEL=gemini-2.5-flash` | Same | Missing Gemini key fails when generation is first needed. |
+| LLM | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL=openrouter/free`, `OPENROUTER_MAX_TOKENS=1024` | Explicit OpenRouter model with known quota/latency | Missing OpenRouter key fails when generation is first needed. Free routes must be used conservatively. |
 | Arabic answers and retrieval | Automatic Arabic query detection, `l1-aaoifi-grounded-bilingual-v1` prompt, `./chroma_db_multilingual` | Same model/index contract, or equivalent Qdrant collection | Arabic user questions receive Arabic safety/disclaimer language and are evaluated against Arabic retrieval rows. |
 
 ## Required Environment Variables
 
 For a live answer-generating demo:
 
-- `GEMINI_API_KEY`
-- `GEMINI_MODEL`
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_MODEL`
+- `OPENROUTER_MAX_TOKENS`
 - `CORPUS_DIR`
 - `EMBED_MODEL`
 - `CORS_ORIGINS` with explicit demo/release origins, not `["*"]`
+
+For OpenRouter free-model use:
+
+- Keep `OPENROUTER_MODEL=openrouter/free` only for demos, smoke tests, and constrained experiments.
+- Do not run bulk live generation matrices against free routes.
+- Prefer fake LLM fixtures, retrieval-only probes, and `RAG_EVAL_MODE=true` for evaluation loops.
+- Use low concurrency, backoff, and small spaced-out smoke calls to avoid overloading shared free API nodes.
 
 For Arabic support:
 

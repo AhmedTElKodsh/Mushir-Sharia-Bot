@@ -15,13 +15,16 @@ Use this checklist before exposing Mushir outside local development.
 
 ## Required Runtime Configuration
 
-- `GEMINI_API_KEY`
-- `GEMINI_MODEL=gemini-2.5-flash`
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_MODEL=openrouter/free` for demo or an explicit paid model for production
+- `OPENROUTER_MAX_TOKENS=1024`
 - `VECTOR_DB_TYPE=chroma`
 - `CHROMA_DIR=/app/chroma_db_multilingual`
 - `EMBED_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2`
 - `REQUIRE_ARABIC_RETRIEVAL=true`
 - `CORS_ORIGINS` set to the real public origin before production.
+
+Do not run large live generation batches against `openrouter/free`. Use fake LLM fixtures, retrieval-only checks, and `RAG_EVAL_MODE=true` for matrix evaluation; reserve live OpenRouter calls for small smoke checks with backoff.
 
 ## Post-Deploy Smoke
 

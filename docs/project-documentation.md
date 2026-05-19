@@ -2,9 +2,9 @@
 
 Mushir is a FastAPI-based Sharia compliance chatbot for Islamic finance questions. It uses retrieval-augmented generation (RAG) over AAOIFI Financial Accounting Standards excerpts, then validates that generated answers are grounded in retrieved citations.
 
-This document describes the current project as implemented in the repository.
+This document describes the current project as implemented in the repository and explains how the planning roadmap maps to the built system.
 
-Last refreshed: 2026-05-17
+Last refreshed: 2026-05-19
 
 Current published demo:
 
@@ -24,6 +24,36 @@ Mushir is built to:
 - refuse binding rulings, fatwas, legal opinions, and financial advice;
 - fail closed when retrieval, citations, or provider responses are not reliable;
 - expose the behavior through a browser chat UI, REST API, and SSE streaming API.
+
+## Planning And Implementation Summary
+
+The planning files under `.kiro/specs/sharia-compliance-chatbot/next-level-plans/` are now split into historical implementation levels, the active L5 readiness gate, and the proposed L6 product direction.
+
+| Level | Purpose | Current repository state |
+| --- | --- | --- |
+| L0 | Foundational RAG loop over AAOIFI material | Historical baseline; superseded by the current application service and API runtime |
+| L1 | Clarification, safer answer contract, provider error handling, and service orchestration | Implemented through `ApplicationService`, `ClarificationEngine`, prompt building, citation validation, and focused tests |
+| L2 | Browser/API transport, REST endpoint, SSE streaming, validation, and rate limiting | Implemented through `src/api/`, `/chat`, `/api/v1/query`, `/api/v1/query/stream`, sessions, and API schemas |
+| L3 | Production-style infrastructure options and observability | Implemented as selectable modes for Chroma/Qdrant, Redis-backed stores, PostgreSQL audit, readiness, and metrics |
+| L4 | Trust, citation quality, disclaimers, caching rules, and operational hardening | Implemented through citation-gated answers, disclaimer behavior, safe errors, cache rules, and deployment docs |
+| L5 | Quality, operations, release readiness, and demo gates | Active gate; tracked by `docs/l5-production-readiness.md` and `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md` |
+| L6 | Rules-first Sharia commercial-process evaluator | Proposed future direction; foundational runtime scaffolding is implemented, full evaluator is not active scope yet |
+
+The active implementation priority is L5. L6 full evaluator work should begin only after L5 quality and runtime gates are green and official-source acquisition/versioning decisions are complete. A small L6 foundation now exists in runtime code to extract scenario metadata, route by source family, detect retrieved source families, and fail closed for late-payment/default permissibility questions when Shari'ah-standard evidence is absent.
+
+## Current Vs Future Scope
+
+The current system is a citation-grounded assistant over the configured AAOIFI corpus, with strong fail-closed behavior. It is not yet a complete commercial-process evaluator.
+
+The proposed L6 direction widens the product in a controlled way:
+
+- permissibility and contract-validity questions should route first to AAOIFI Shari'ah Standards or approved Sharia sources;
+- FAS remains the accounting layer for recognition, measurement, presentation, reporting, and disclosure;
+- broad transaction questions should be converted into structured transaction scenarios before retrieval;
+- supported scenarios should run through executable rules before the LLM explains the result;
+- every output remains non-binding and must escalate when facts, sources, or rules are incomplete.
+
+This distinction matters. A RAG answer with FAS citations can support research and explanation, but it should not be presented as a full halal/haram decision for real-world contracts.
 
 ## Non-Goals
 
@@ -247,6 +277,74 @@ If no valid citation supports a compliance answer, the system falls back to insu
 
 When a retrieved chunk does not have section metadata, the validator can still accept a standard-level citation for that retrieved standard. When section metadata exists, mismatched sections remain rejected.
 
+## L6 Future Architecture
+
+L6 is documented in `.kiro/specs/sharia-compliance-chatbot/next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md`. It is still a planning direction for the full evaluator, but the first runtime foundation is now present in `src/chatbot/commercial_assessment.py` and `src/models/commercial.py`.
+
+The short version of the target architecture is:
+
+```text
+Scenario extraction -> standards/source router -> hybrid retrieval -> deterministic rule checks -> citation validation -> structured verdict -> LLM explanation -> evaluation/tracing
+```
+
+In simple engineering terms, L6 should stop treating the model as the judge. The system first converts the user's story into structured facts, finds the right source family, retrieves evidence, applies explicit rules where they exist, validates citations, and only then lets the LLM write the explanation. The LLM becomes the narrator of an audited decision path, not the hidden decision-maker.
+
+The target L6 pipeline is:
+
+```mermaid
+flowchart TD
+    User["Commercial-process question"] --> Scenario["1. Scenario extraction"]
+    Scenario --> Router["2. Standards/source router"]
+    Router --> Retrieval["3. Hybrid retrieval"]
+    Retrieval --> Rules["4. Deterministic rule checks"]
+    Rules --> Citations["5. Citation validation"]
+    Citations --> Verdict["6. Structured verdict"]
+    Verdict --> Explanation["7. LLM explanation"]
+    Explanation --> Tracing["8. Evaluation and tracing"]
+    Tracing --> Output["Non-fatwa assessment artifact"]
+```
+
+### What Each Stage Means
+
+| Stage | Plain meaning | Technical role | Failure behavior |
+| --- | --- | --- | --- |
+| Scenario extraction | Turn the user's paragraph into clear fields | Extract parties, asset, contract type, payment terms, ownership, possession, risk, late-payment terms, missing facts, and uncertainty flags | Ask a focused follow-up when required facts are absent |
+| Standards/source router | Decide which source family should answer the question | Route permissibility to Shari'ah Standards, accounting/reporting to FAS, governance to governance sources, and unsupported topics to a safe gap state | Do not answer halal/haram questions from FAS-only evidence |
+| Hybrid retrieval | Search with both meaning and exact terms | Combine semantic retrieval with lexical/metadata filtering for Arabic terms, English terms, standard numbers, contract names, and source-family filters | Return insufficient evidence when source coverage is weak |
+| Deterministic rule checks | Apply explicit rules to normalized facts | Use decision tables or a rule engine for supported structures such as Murabaha, late-payment clauses, Ijarah, or Wakala | Flag unsupported, ambiguous, or conflicting cases for review |
+| Citation validation | Prove every claim is tied to retrieved evidence | Verify cited standard, section, clause, or source metadata against retrieved chunks | Remove unsupported citations or downgrade to insufficient evidence |
+| Structured verdict | Produce a machine-checkable assessment record | Return status, confidence, applied rules, matched evidence, missing facts, limitations, and review flags | Prefer `requires_clarification`, `insufficient_evidence`, or `refer_to_scholar` over a weak verdict |
+| LLM explanation | Make the audited result readable | Explain the structured verdict in the user's language without adding new authority or hidden reasoning | If explanation drifts beyond evidence, reject or regenerate |
+| Evaluation/tracing | Keep proof that the system behaved correctly | Log retrieval, routing, rule outcomes, citation checks, schema validity, and test metrics for regression review | Block release when gold cases, citation metrics, or rule correctness fail |
+
+### Representative Data Flow
+
+```mermaid
+flowchart LR
+    Question["Raw user question"] --> Facts["Structured scenario facts"]
+    Facts --> Route["Selected source route"]
+    Route --> Evidence["Retrieved evidence bundle"]
+    Evidence --> Decision["Rule outcomes"]
+    Decision --> Verdict["Structured verdict JSON"]
+    Verdict --> Answer["Client-facing explanation"]
+    Evidence --> Trace["Audit and evaluation trace"]
+    Decision --> Trace
+    Verdict --> Trace
+```
+
+The important boundary is between the verdict and the explanation. The verdict is the controlled artifact that can be tested. The explanation is user-facing language generated from that artifact and its citations.
+
+Required L6 components:
+
+- source-family catalog with Shari'ah Standards, FAS, governance, ethics, auditing, fatwa, and local-overlay metadata;
+- transaction scenario schema for parties, asset, cash flows, ownership, possession, risk bearing, payment terms, late-payment terms, agency roles, guarantees, missing facts, and uncertainties; the initial dataclass and deterministic extractor are implemented;
+- standards router that separates permissibility, accounting, governance, explanation, and unsupported questions; the initial router is implemented;
+- executable rule layer using a selected rules approach after a spike, such as Python decision tables, OPA/Rego, DMN-style tables, Catala, or OpenFisca-style modeling; the current runtime only returns a placeholder rule trace and human-review flags;
+- verdict contract with statuses such as `likely_permissible`, `likely_impermissible`, `conditionally_permissible`, `requires_clarification`, `insufficient_evidence`, and `refer_to_scholar`;
+- QA gates for source coverage, rule correctness, citation recall/precision, answer faithfulness, language preservation, and refusal consistency.
+
+L6 must not expose raw chain-of-thought. The auditable artifact should be a structured decision trace: extracted facts, matched rules, evidence IDs, limitations, and review flags.
+
 ## Browser Chat UI
 
 The browser interface lives in `src/static/`.
@@ -293,6 +391,13 @@ VECTOR_DB_TYPE=chroma
 CHROMA_DIR=./chroma_db_multilingual
 CORPUS_DIR=./gemini-gem-prototype/knowledge-base
 ```
+
+`OPENROUTER_MODEL=openrouter/free` is deliberate for demo and low-cost testing:
+OpenRouter routes to whatever free chat models are currently available. Do not
+stress that shared API node with large answer-generation loops. Use fake LLM
+fixtures, retrieval-only probes, and `RAG_EVAL_MODE=true` for scenario matrices;
+reserve live `/api/v1/query` checks for a small number of smoke calls with
+backoff between requests.
 
 Important release settings:
 

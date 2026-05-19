@@ -33,7 +33,7 @@ class FakePromptBuilder:
         return f"PROMPT: {query} :: {len(chunks)} chunks"
 
 
-def _chunk(chunk_id="chunk-1", standard_id="FAS-01", section="1", score=0.91):
+def _chunk(chunk_id="chunk-1", standard_id="FAS-01", section="1", score=0.91, source_file=None):
     return SemanticChunk(
         chunk_id=chunk_id,
         text="AAOIFI permits the transaction when ownership and risk transfer are clear.",
@@ -41,7 +41,7 @@ def _chunk(chunk_id="chunk-1", standard_id="FAS-01", section="1", score=0.91):
             standard_id=standard_id,
             section=section,
             page=None,
-            source_file=f"{standard_id}.md",
+            source_file=source_file or f"{standard_id}.md",
         ),
         score=score,
     )
@@ -59,7 +59,7 @@ def test_application_service_returns_canonical_answer_contract():
         citation_validator=CitationValidator(),
     )
 
-    result = service.answer("Is this murabaha structure compliant?", session_id="s-1")
+    result = service.answer("How should murabaha profit be recognized for accounting?", session_id="s-1")
 
     assert result.status == ComplianceStatus.COMPLIANT
     assert result.answer == "COMPLIANT: Supported by AAOIFI [FAS-01 §1]."
@@ -95,6 +95,89 @@ def test_application_service_returns_insufficient_data_without_retrieved_chunks(
 
 
 @pytest.mark.service
+def test_application_service_fails_closed_for_late_penalty_without_sharia_evidence():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    class FailingLLM(FakeLLM):
+        def generate(self, prompt, **kwargs):
+            raise AssertionError("late-payment source-family gaps should fail before LLM generation")
+
+    service = ApplicationService(
+        retriever=FakeRetriever([_chunk(standard_id="FAS-28", section=None)]),
+        llm_client=FailingLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    )
+
+    result = service.answer(
+        "Is a murabaha car installment sale with a 5% late payment penalty permissible?"
+    )
+
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.citations == []
+    assert "permissibility or contract validity" in result.answer
+    assert result.metadata["transaction_scenario"]["late_payment_terms"]
+    assert result.metadata["standards_route"]["primary"] == ["sharia_standard"]
+    assert result.metadata["source_families"] == ["fas"]
+    assert result.metadata["verdict_contract"]["verdict"] == "refer_to_scholar"
+    assert result.metadata["verdict_contract"]["requires_scholar_review"] is True
+
+
+@pytest.mark.service
+def test_application_service_fails_closed_for_plain_installment_permissibility_without_sharia_evidence():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    class FailingLLM(FakeLLM):
+        def generate(self, prompt, **kwargs):
+            raise AssertionError("source-family gaps should fail before LLM generation")
+
+    service = ApplicationService(
+        retriever=FakeRetriever([_chunk(standard_id="FAS-28", section=None)]),
+        llm_client=FailingLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    )
+
+    result = service.answer(
+        "I bought a car from the bank in installments with a 20% markup. Is it halal?"
+    )
+
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.citations == []
+    assert result.metadata["transaction_scenario"]["contract_family"] == "murabaha"
+    assert result.metadata["standards_route"]["primary"] == ["sharia_standard"]
+    assert result.metadata["verdict_contract"]["requires_scholar_review"] is True
+
+
+@pytest.mark.service
+def test_application_service_does_not_fail_source_gap_when_sharia_evidence_is_retrieved():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    llm = FakeLLM("INSUFFICIENT_DATA: More contract facts are needed.")
+    service = ApplicationService(
+        retriever=FakeRetriever([
+            _chunk(
+                standard_id="SS-08",
+                section="1",
+                source_file="AAOIFI_Sharia_Standard_08_Murabaha.md",
+            )
+        ]),
+        llm_client=llm,
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    )
+
+    result = service.answer("Is this murabaha car installment structure halal?")
+
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert len(llm.prompts) == 1
+    assert "verdict_contract" not in result.metadata
+
+
+@pytest.mark.service
 def test_application_service_converts_llm_uncertainty_to_one_followup_question():
     from src.chatbot.application_service import ApplicationService
     from src.chatbot.citation_validator import CitationValidator
@@ -111,7 +194,7 @@ PHASE 1: I need more information.
         citation_validator=CitationValidator(),
     )
 
-    result = service.answer("Can I invest in this company?")
+    result = service.answer("How should investment income be disclosed for accounting?")
 
     assert result.status == ComplianceStatus.CLARIFICATION_NEEDED
     assert result.clarification_question == "What is the company activity?"

@@ -106,6 +106,18 @@ def test_informational_murabaha_question_skips_transaction_clarification():
     )
 
 
+def test_accounting_research_question_skips_transaction_clarification():
+    engine = ClarificationEngine()
+
+    assert engine.ask_if_needed("How should murabaha profit be recognized for accounting?") is None
+
+
+def test_governance_research_question_skips_transaction_clarification():
+    engine = ClarificationEngine()
+
+    assert engine.ask_if_needed("What governance policy should the Sharia board follow for audit review?") is None
+
+
 def test_judgment_query_with_missing_facts_asks_one_targeted_question():
     engine = ClarificationEngine()
 
@@ -137,4 +149,28 @@ def test_arabic_transaction_clarification_uses_arabic_question():
 
     question = engine.ask_if_needed("أريد شراء سيارة بالمرابحة")
 
-    assert question == "ما هو نوع السلعة أو الأصل المراد شراؤه؟"
+    assert question == "ما هو سعر الشراء؟"
+
+
+def test_arabic_car_installment_without_ownership_sequence_asks_relevant_followup():
+    engine = ClarificationEngine()
+
+    question = engine.ask_if_needed(
+        "اشتريت عربية من بنك مصر يع سيارة بالتقسيط ثمنها 700 الف جنيه، "
+        "في الأول هناك دفعة قيمتها 300 الف والباقي على مدة سبع سنوات "
+        "بقيمة مضافة 20% من ثمن السيارة، هل ده حلال"
+    )
+
+    assert question == "هل تملك البنك السيارة وقبضها أو تحمل مخاطرها قبل بيعها لك؟"
+
+
+def test_arabic_car_installment_with_late_penalty_reaches_retrieval():
+    engine = ClarificationEngine()
+
+    question = engine.ask_if_needed(
+        "اشتريت عربية من بنك مصر يع سيارة بالتقسيط ثمنها 700 الف جنيه، "
+        "دفعة 300 الف والباقي على سبع سنوات بربح 20%، "
+        "وفي حالة التأخير في السداد تضاف غرامة تأخير 5% من قيمة القسط.. هل ده يجوز"
+    )
+
+    assert question is None
