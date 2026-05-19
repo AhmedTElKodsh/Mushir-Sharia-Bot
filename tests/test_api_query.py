@@ -124,6 +124,9 @@ def test_rest_query_maps_validation_errors_to_controlled_payload():
 
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert response.json()["error"]["message"] == (
+        "Invalid request: query cannot be empty. Please enter a Sharia compliance question."
+    )
     assert response.json()["error"]["request_id"] == response.headers["X-Request-ID"]
 
 

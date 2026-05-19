@@ -240,7 +240,7 @@ def create_app() -> FastAPI:
             status_code=422,
             content=ErrorResponse.create(
                 "VALIDATION_ERROR",
-                "Request validation failed",
+                _validation_error_message(exc),
                 request_id,
             ),
         )
@@ -302,6 +302,24 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router, prefix="/api/v1")
     return app
+
+
+def _validation_error_message(exc: RequestValidationError) -> str:
+    """Return a concise user-facing validation error without exposing internals."""
+    for error in exc.errors():
+        loc = tuple(error.get("loc", ()))
+        message = str(error.get("msg", "Invalid value")).strip()
+        field = str(loc[-1]) if loc else "request"
+        if field == "query":
+            if "cannot be empty" in message.lower() or "at least 1 character" in message.lower():
+                return "Invalid request: query cannot be empty. Please enter a Sharia compliance question."
+            if error.get("type") == "missing":
+                return "Invalid request: query is required. Please include a non-empty query field."
+        if field == "conversation_history":
+            return "Invalid request: conversation_history is too long. Send at most 20 messages."
+        if field != "body":
+            return f"Invalid request: {field} {message}."
+    return "Invalid request: check the request body and try again."
 
 
 app = create_app()
