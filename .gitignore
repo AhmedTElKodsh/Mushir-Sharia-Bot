@@ -57,8 +57,20 @@ uvicorn-*.out.log
 uvicorn-*.err.log
 
 # Data
-data/
+data/*
 !data/.gitkeep
+!data/source_registry/
+!data/source_registry/README.md
+!data/source_registry/*.yaml
+!data/source_registry/*.csv
+!data/fixtures/
+!data/fixtures/l6_scrape/
+!data/fixtures/l6_scrape/README.md
+
+# Runtime scrape artifacts
+artifacts/l6_scrape/**
+!artifacts/l6_scrape/
+!artifacts/l6_scrape/README.md
 
 # Chroma
 chroma_db/

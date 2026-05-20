@@ -37,11 +37,14 @@ def test_standards_router_uses_sharia_first_for_permissibility():
 
 
 def test_standards_router_uses_fas_first_for_accounting():
-    scenario = ScenarioExtractor().extract("How should murabaha profit be recognized for accounting?")
-    route = StandardsRouter().route(scenario)
+    query = "How should murabaha profit be recognized for accounting?"
+    scenario = ScenarioExtractor().extract(query)
+    route = StandardsRouter().route(scenario, query)
 
     assert scenario.question_type == QuestionType.ACCOUNTING
     assert route.primary == [SourceFamily.FAS]
+    assert route.route_id == "murabaha-accounting"
+    assert route.candidate_standards == ["FAS-28"]
     assert route.requires_rule_evaluation is False
 
 

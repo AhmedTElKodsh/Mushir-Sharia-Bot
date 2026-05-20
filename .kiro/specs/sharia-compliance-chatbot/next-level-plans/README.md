@@ -1,47 +1,129 @@
 # Next-Level Planning Index
 
-**Created:** 2026-05-09  
-**Reviewed:** 2026-05-09 with BMAD party-mode perspectives from architecture, engineering, product, and test architecture.
-**Reconciled:** 2026-05-11 after L1-L4 runtime implementation and L5 readiness review.
-**Strategic research update:** 2026-05-18 after `docs/deep-research-report.md` and BMAD party-mode review.
+**Created:** 2026-05-09
+**Reconciled:** 2026-05-11 after L1-L4 runtime implementation and L5 readiness review
+**Strategic update:** 2026-05-18 after L6 research
+**Project-logic rethink:** 2026-05-19 after BMAD party-mode review
+**Deep research integration:** 2026-05-19 after reviewing `../deep-research-report.md`
+**Egypt institutions corpus update:** 2026-05-20 after reviewing the Egyptian financial institutions refresh package
 
-This folder contains the refreshed implementation review and phase plans for the Sharia Compliance Chatbot after comparing the Kiro planning files with the current codebase.
+This folder contains historical phase plans and current next-level planning for Mushir. The maintained top-level planning source is now:
 
-The active implementation roadmap remains `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md`. L1-L4 are retained as historical phase plans and implementation references; they no longer represent the next unbuilt workstream.
+- `../requirements.md`
+- `../design.md`
+- `../tasks.md`
+- `../PROJECT-LOGIC-RETHINK-2026-05-19.md`
+- `../AGENT_ROUNDTABLE_SUMMARY.md`
 
-The post-L5 strategic direction is `L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md`. L6 is not an immediate implementation task. It reframes Mushir from a FAS-heavy RAG chatbot into a structured, non-fatwa Sharia commercial-process assessment assistant that uses Shari'ah standards, transaction schemas, executable rules, evidence retrieval, and human-review escalation.
+## Current Planning Position
+
+Mushir is a bilingual, source-governed AAOIFI standards assistant. It should not be described as a generic RAG bot.
+
+The core architecture is:
+
+source catalog -> structured ingestion -> concept normalization -> intent classification -> clarification -> source-family routing -> metadata-aware retrieval -> citation-gated answer -> evaluation.
+
+## Active Workstream
+
+The active near-term workstream remains L5 release readiness for the implemented runtime:
+
+- answer quality;
+- retrieval quality;
+- citation trust;
+- source-family fail-closed behavior;
+- dependency-backed runtime checks;
+- browser and API query-path smoke checks;
+- deployment hygiene;
+- documentation hygiene.
+
+Do not reopen solved REST/SSE/UI work unless a current test or runtime check proves a defect.
+
+## Post-L5 Direction
+
+After L5 is green, the next product-risk reductions are:
+
+1. Official source catalog and source freshness workflow.
+2. Verification of the first-release FAS router seed and supersession seed graph.
+3. Structured chunk metadata and parent/child chunking tied to catalog records.
+4. Governed bilingual financial concept map.
+5. Source-family and correct-standard retrieval gates.
+6. Clarification and refusal policy evaluation.
+7. Feedback/admin review loop and accepted-correction-to-gold-case workflow.
+8. Metadata-aware retrieval and hybrid search spikes measured against the gold set.
+9. L6 rules-first non-binding commercial-process assessment.
+10. Egypt financial institutions public-operations evidence corpus for supervised scholar-reviewed evaluation.
 
 ## Files
 
-- `00-L0-IMPLEMENTATION-REVIEW.md` - Current-state review of L0 and draft L1/L2 code.
-- `L1-CLARIFICATION-AND-STABILIZATION-PLAN.md` - Revised as core answer contract, stabilization, dependency injection, prompt/Gemini extraction, minimal clarification, and CLI preservation.
-- `L2-API-AND-STREAMING-PLAN.md` - Revised as minimal FastAPI API first, optional SSE second, WebSocket deferred.
-- `L3-PRODUCTION-INFRASTRUCTURE-PLAN.md` - Revised as persistence, evaluation, and observability with Qdrant gated by real need.
-- `L4-COMPLIANCE-QUALITY-AND-OPS-PLAN.md` - Revised as trust, access, caching, and operations with citation validation before caching.
-- `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md` - Active readiness plan for answer quality, citation trust, dependency-backed runtime behavior, and demo/release gates.
-- `L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` - Proposed post-L5 product/architecture pivot based on the deep research report: Shari'ah-standards-first routing, transaction ontology, executable rules, structured verdicts, and QA gates.
-- `PARTY-MODE-REVIEW-SUMMARY.md` - Consensus review notes and plan changes from BMAD party mode.
+- `00-L0-IMPLEMENTATION-REVIEW.md` - Historical review of early implementation state.
+- `L1-CLARIFICATION-AND-STABILIZATION-PLAN.md` - Historical L1 plan; much of this runtime is now implemented.
+- `L2-API-AND-STREAMING-PLAN.md` - Historical L2 plan; REST, SSE, and `/chat` are now implemented.
+- `L3-PRODUCTION-INFRASTRUCTURE-PLAN.md` - Historical infrastructure plan; selected adapters exist, but production dependency gates remain.
+- `L4-COMPLIANCE-QUALITY-AND-OPS-PLAN.md` - Historical trust/ops plan; useful for citation, cache, and operations context.
+- `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md` - Active readiness plan.
+- `L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` - Future rules-first assessment direction, now aligned to source catalog, concept map, source-family routing, and QA gates.
+- `L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md` - Future L6 data-acquisition workstream for public Egyptian institution operations, contracts, bounded discovery, ethical crawling, gap marking, and scholar-reviewed evaluation rows.
+- `PARTY-MODE-REVIEW-SUMMARY.md` - Earlier party-mode refinement of L1-L4, retained as history.
+- `../tasks.md` - Current implementation task backlog for source catalog, router seeds, parent/child chunking, concept map, retrieval evaluation, feedback, and L6 entry gates.
+- `../deep-research-report.md` - Research input reviewed on 2026-05-19; useful seed data must be catalog-verified before it becomes answer authority.
+- `../Egypt Financial Institutions Refresh for Sharia Screening.md` - Baseline Egypt institution refresh input; useful for source-universe planning but not final production authority without live regulator revalidation.
 
 ## Current Implementation State
 
-- **Implemented:** Shared answer service, prompt builder, Gemini client, citation validator, REST query, SSE stream, `/chat`, rate limiting, validation envelopes, readiness, metrics, Redis/Postgres/cache adapters, disclaimer handling, Qdrant ingest, and retrieval eval seed.
-- **Validated:** Fast unit/service/API gate currently covers the core app boundary, API schema behavior, streaming event order, rate limiting, cache behavior, citation metadata, and in-memory Qdrant adapter checks.
-- **Not yet production-ready:** The project still needs stronger gold-set coverage, explicit retrieval thresholds, real dependency integration runs, browser-visible demo gates, and documented runtime modes.
+Implemented:
 
-## Active Execution Order
+- shared answer service;
+- prompt builder;
+- OpenRouter-compatible LLM client;
+- citation validator;
+- REST query;
+- SSE stream;
+- browser `/chat`;
+- rate limiting;
+- validation envelopes;
+- readiness and metrics;
+- Redis/Postgres/cache adapters;
+- disclaimer handling;
+- Qdrant ingest support;
+- multilingual Chroma retrieval;
+- query preprocessing and domain reranking;
+- first commercial scenario/source-family scaffold.
+- tracked source-registry seed area for the Egypt institutions evidence-corpus workstream.
 
-1. Reconcile stale roadmap language with the implemented L1-L4 runtime.
-2. Complete L5 RAG quality and citation trust gates.
-3. Add separately marked integration gates for Redis, PostgreSQL, and Qdrant runtime modes.
-4. Browser-test `/chat` and smoke-test stable public APIs under the demo configuration.
-5. Freeze feature expansion until the L5 trust and runtime gates are green.
-6. After L5 is green, verify official source acquisition for AAOIFI Shari'ah Standards, FAS, governance, ethics, auditing, and any scholar-reviewed fatwa sources before starting L6 implementation.
-7. Before enabling any L6 domain, define its transaction schema, source route, executable rules, gold cases, red-line refusals, and human-review criteria.
+Still not complete:
 
-## Research Critique Applied
+- official source catalog;
+- verified first-release FAS router seed;
+- source freshness and supersession gate;
+- governed bilingual concept map;
+- parent/child chunking with citation roll-up;
+- feedback/admin review loop;
+- metadata-aware retrieval filtering;
+- correct-standard/source-family evaluation matrix;
+- full L6 source acquisition and executable rules.
+- full Egypt institution registry normalization, official-site discovery, public artifact capture, operations catalog, and scholar-review dataset implementation.
 
-The deep research report changes the roadmap assumptions in three ways:
+## Execution Order
 
-- **FAS is not enough for permissibility.** FAS remains important for accounting, recognition, measurement, presentation, and disclosure. Halal/haram and contract-validity questions must route first to AAOIFI Shari'ah Standards or other reviewed Sharia sources.
-- **RAG is an evidence layer, not the judge.** The target system must extract structured facts, select standards, evaluate rules, validate citations, and only then use the LLM to explain the result.
-- **The product is assessment support, not fatwa issuance.** User-facing output must stay non-binding, fail closed when facts or evidence are missing, and escalate high-impact or disputed scenarios to qualified scholar/compliance review.
+1. Finish L5 release-readiness evidence.
+2. Build the source catalog design and seed records for the active corpus.
+3. Verify the first-release FAS router seed and supersession graph against cataloged sources.
+4. Upgrade ingestion metadata, parent/child chunking, and index versioning.
+5. Extract term mappings into a governed concept map with tests.
+6. Add bilingual, mixed-language, colloquial, ambiguous, wrong-standard, and superseded-source eval cases.
+7. Add metadata-aware retrieval and source-family routing gates.
+8. Add feedback/admin review capture and accepted-correction evaluation flow.
+9. Implement L6 only one domain at a time, starting with the best-source-covered domain.
+10. Build the Egypt institutions evidence corpus as a data-acquisition and review program: registry, bounded discovery, ethical crawl, extraction, operations catalog, scholar-review dataset, then accepted gold cases.
+
+## Safety Rules For Future Planning
+
+- Do not answer permissibility from FAS-only evidence.
+- Do not treat retrieved text as official unless it has catalog provenance.
+- Do not silently use superseded sources for current answers.
+- Do not expose chain-of-thought.
+- Do not run large live eval batches against `openrouter/free`.
+- Do not treat tool/model suggestions from research as architecture until measured against Mushir's AAOIFI gold set.
+- Do not call L6 complete until source, route, rule, evidence, citation, and human-review gates exist.
+- Do not treat missing public institution details as compliance, non-compliance, or a reason to guess; record the bounded-search gap.
+- Do not bypass anti-bot controls, login walls, paywalls, CAPTCHA, or access restrictions.

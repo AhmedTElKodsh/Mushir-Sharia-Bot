@@ -1,84 +1,133 @@
 # L6 Rules-First Sharia Commercial Evaluator Plan
 
-**Status:** Proposed post-L5 direction
-**Created:** 2026-05-18
-**Primary input:** `docs/deep-research-report.md`
-**Scope:** Planning only; do not implement until L5 trust gates and source acquisition decisions are complete.
+**Status:** Future post-L5 direction
+**Originally created:** 2026-05-18
+**Reformulated:** 2026-05-19 after BMAD project-logic rethink
+**Scope:** Planning only. Do not implement until L5 trust gates, source catalog, and source acquisition decisions are complete.
 
 ## Purpose
 
-L6 moves Mushir from an AAOIFI-grounded RAG chatbot toward a structured Sharia commercial-process evaluator. The goal is not to create an autonomous fatwa engine. The goal is to produce auditable, non-binding assessments that extract transaction facts, route to the right standards, run explicit rule checks where available, retrieve supporting evidence, and explain the result with citations and uncertainty.
+L6 expands Mushir beyond the current AAOIFI evidence-backed assistant into a non-binding commercial-process assessment workflow.
 
-The report's strongest finding is that no mature open-source project currently combines authoritative AAOIFI retrieval, bilingual Arabic/English evidence handling, executable rule evaluation, and safe Sharia-style verdict generation. The planning implication is compositional: use proven building blocks by responsibility instead of looking for one monolithic Islamic-finance engine.
+It must not become an autonomous fatwa engine. Its purpose is to:
 
-## Planning Critique From The Research
+- extract structured transaction facts;
+- classify question type and contract family;
+- route to the right source family;
+- retrieve current and citable evidence;
+- run explicit rule checks where rules exist;
+- ask clarifying questions when facts or source support are missing;
+- explain the result with citations and limitations;
+- escalate uncertain or high-risk scenarios to qualified human review.
 
-Current planning language is too FAS/RAG-centric for broad halal/haram commercial-process evaluation. FAS material is still useful, especially for accounting, reporting, disclosure, Islamic windows, investment agency, sukuk, and ijarah. But permissibility questions require a Shari'ah-standards-first route. The system must distinguish:
+## Planning Correction
 
-- **Permissibility / halal questions:** prioritize AAOIFI Shari'ah Standards and scholar-reviewed Sharia sources.
-- **Accounting / recognition / disclosure questions:** prioritize FAS and related governance/accounting standards.
-- **Institutional structure questions:** combine FAS, governance, Shari'ah standards, and local/jurisdiction overlays.
+The earlier "RAG over FAS" framing is too weak for L6. FAS is valuable for accounting treatment, recognition, measurement, presentation, disclosure, Islamic windows, investment agency, sukuk reporting, ijarah accounting, and similar topics. But permissibility, contract validity, prohibited elements, and halal/haram questions require Shariah-standard evidence and explicit rule checks.
 
-The report also criticizes pure "LLM over retrieved PDFs" as insufficient. L6 should make the LLM the final explainer, not the primary judge.
+Therefore L6 is:
 
-## Critique Of The Report Itself
+> source catalog + concept map + scenario schema + source-family routing + evidence retrieval + executable rules + citation-gated explanation.
 
-Use the report as a planning input, not as runtime authority. Its research direction is strong, but several items must be verified before implementation:
+It is not:
 
-- Some repository metadata, release dates, star counts, and license notes can drift quickly and must be refreshed before dependency decisions.
-- The report's citation markers are not reusable project citations; official URLs, commit links, release pages, and package docs need to be captured directly in implementation tickets.
-- AAOIFI source-family claims, standard numbers, supersession relationships, and official language availability must be verified from official AAOIFI publications before they become source-catalog facts.
-- Libraries such as OpenFisca, Catala, Blawx, OPA/Rego, DMN engines, LlamaIndex, Haystack, RAGAS, TruLens, and Guardrails should be selected by a small spike and license/deployment review rather than adopted wholesale.
-- The report supports widening the product goal, but it does not justify claiming broad "all commercial processes" coverage. Each domain still needs source mapping, rules, fixtures, and reviewer approval.
+> bigger prompts over more PDFs.
+
+The 2026-05-19 deep research report adds useful accounting-standard router seeds and supersession seeds. L6 may use these for accounting support and standards routing, but it must not use FAS routes as permissibility authority. Any product-to-standard route or supersession edge remains candidate data until official catalog verification passes.
+
+## Pre-Implementation Gates
+
+L6 work must not start until these are true:
+
+1. L5 release-readiness gates are green.
+2. The active source catalog exists and covers all answer-supporting corpus files.
+3. Shariah Standards acquisition and licensing/access decisions are verified.
+4. Source currentness and supersession handling are defined.
+5. First-release accounting router and supersession seed records are either catalog-verified or explicitly marked unavailable for authority.
+6. Bilingual concept map exists for the first-wave domain.
+7. Evaluation cases exist for answer, clarify, refuse, wrong-standard, superseded-source, and source-gap behavior.
+8. A feedback/admin review workflow exists for reviewer corrections.
+9. A human-review policy exists for high-impact or uncertain cases.
+10. Any Egyptian institution operation pre-knowledge has source provenance, bounded discovery records, and scholar-review status before it can become supervised evaluation truth.
 
 ## Target Architecture
 
 ```mermaid
 flowchart TD
-    U["User commercial question"] --> I["Intent triage"]
-    I --> S["Structured scenario extractor"]
+    U["User commercial question"] --> N["Bilingual normalization"]
+    N --> S["Structured scenario extractor"]
     S --> M{"Missing required facts?"}
-    M -- "Yes" --> Q["Ask focused follow-up"]
-    Q --> S
-    M -- "No" --> R["Standards router"]
-    R --> E["Hybrid evidence retrieval"]
-    E --> P["Policy / rule candidate selector"]
+    M -- "Yes" --> Q["One focused clarification"]
+    Q --> N
+    M -- "No" --> R["Standards and source-family router"]
+    R --> A{"Required source family available and current?"}
+    A -- "No" --> H["Insufficient evidence / refer to scholar"]
+    A -- "Yes" --> E["Metadata-aware evidence retrieval"]
+    E --> P["Rule candidate selector"]
     P --> X["Deterministic evaluator"]
-    X --> C{"Conflict or weak evidence?"}
-    C -- "Yes" --> H["Human-review / insufficient-evidence path"]
-    C -- "No" --> L["LLM explanation from rule result + evidence"]
+    X --> C{"Conflict, unsupported rule, or weak evidence?"}
+    C -- "Yes" --> H
+    C -- "No" --> L["LLM explanation from scenario + rule trace + evidence"]
     H --> L
-    L --> V["Schema, citation, and red-line validation"]
-    V --> O["Verdict contract + audit trace"]
+    L --> V["Schema, citation, language, and safety validation"]
+    V --> O["Non-fatwa verdict contract + audit trace"]
 ```
 
-## Required New Components
+## Required Components
 
-### 1. Source Catalog And Versioning
+### 1. Source Catalog
 
-The source catalog must model AAOIFI source families explicitly:
+The catalog must model authority before ingestion.
 
-- `source_family`: `sharia_standard`, `fas`, `governance`, `ethics`, `auditing`, `fatwa`, `local_overlay`
-- `standard_no`
-- `title_ar`, `title_en`
+Minimum fields:
+
+- `source_id`
+- `source_family`
+- `standard_number`
+- `title_en`
+- `title_ar`
 - `official_url`
 - `language`
-- `effective_date`
+- `publication_or_effective_date`
+- `acquired_at`
+- `extraction_method`
 - `supersedes`
 - `superseded_by`
 - `is_current`
-- `source_confidence`
 - `review_status`
+- `source_confidence`
 
-The report notes that AAOIFI official pages expose separate Shari'ah standards and accounting/governance publications, and that some FAS items supersede earlier standards. Implementation must verify these claims from official AAOIFI sources before treating them as runtime facts.
+L6 cannot use unverified source records for permissibility answers.
 
-### 2. Transaction Scenario Schema
+Relationship edges should distinguish `supersedes`, `amends`, `replaces`, `clarifies`, and `contextualizes` when reviewers can verify the relationship. The deep research report's FAS supersession seed graph should be represented as candidate records first, not embedded in prompts.
 
-Add a structured case object before retrieval:
+### 2. Financial Concept Map
+
+The concept map links messy user language to canonical finance concepts.
+
+It should include:
+
+- canonical concept IDs;
+- English labels;
+- Arabic labels;
+- transliterations;
+- colloquial variants;
+- common misspellings;
+- source-family routes;
+- candidate standards;
+- required facts;
+- ambiguity warnings;
+- expected clarification questions;
+- eval cases.
+
+This map should replace scattered hard-coded term logic over time.
+
+### 3. Transaction Scenario Schema
+
+The scenario object should include:
 
 ```json
 {
-  "question_type": "permissibility | accounting | governance | explanation | unknown",
+  "question_type": "permissibility | accounting | governance | definition | standards_routing | comparison | unknown",
   "contract_family": "murabaha | ijarah | salam | istisna | tawarruq | qard | wakala | sukuk | musharaka | mudaraba | unknown",
   "parties": [],
   "asset": null,
@@ -101,56 +150,84 @@ Add a structured case object before retrieval:
 }
 ```
 
-The extractor may use a schema-first LLM library such as Instructor or Outlines, but its output must be validated and testable without live model calls.
+The extractor may use deterministic logic, schema-constrained LLM extraction, or both. Live LLM extraction must be testable with fixtures and must not be required for every unit test.
 
-### 3. Standards Router
+### 4. Standards Router
 
-The router decides which source families and standard IDs to search before generation. First-wave routing targets:
+The router decides source family before retrieval.
 
 | Scenario | Primary route | Secondary route |
 |---|---|---|
-| Murabaha / deferred sale permissibility | Shari'ah Standards, especially the relevant Murabaha standard after official verification | FAS 28 for accounting/reporting only |
-| Tawarruq / monetization | Shari'ah Standards for Tawarruq after official verification | Do not treat FAS 28 as the primary permissibility route |
-| Ijarah | Shari'ah Standards for Ijarah | FAS 32 for accounting/reporting |
-| Investment agency / wakala | Shari'ah Standards for agency | FAS 31 for accounting/reporting |
-| Sukuk / shares | Shari'ah Standards plus screening rules | FAS 33 for accounting/reporting |
-| Islamic windows / conventional bank products | Shari'ah Standards plus governance/accounting routes | FAS 18 and FAS 40 after official verification |
+| Murabaha accounting | FAS after official standard verification | Shariah Standard for permissibility subquestions |
+| Murabaha permissibility | Shariah Standard after official verification | FAS for accounting support only |
+| Ijarah accounting | FAS after official standard verification | Shariah Standard for validity questions |
+| Ijarah permissibility | Shariah Standard after official verification | FAS for accounting support only |
+| Qard / interest / riba | Shariah Standard and approved reviewed sources | FAS only for accounting presentation where relevant |
+| Wakala / investment agency | Shariah Standard for agency validity, FAS for accounting | Governance where institutional controls matter |
+| Sukuk / shares | Shariah Standard plus screening rules | FAS for investment/reporting treatment |
+| Islamic windows | Shariah Standard and governance where available | FAS for reporting and disclosure |
 
-### 4. Executable Rule Layer
+If the required source family is missing, the answer is not admissible.
 
-L6 should evaluate known patterns through explicit rules rather than free-form model reasoning.
+Accounting support router seed, pending catalog verification:
 
-Recommended first decision:
+| Operation or product family | Candidate FAS route | L6 boundary |
+|---|---|---|
+| Murabaha / deferred payment sale | FAS 28 | Accounting support only unless Shariah-standard evidence also exists |
+| Salam | FAS 7, FAS 52 | Accounting support; clarify validity/permissibility intent |
+| Istisna | FAS 10, FAS 52 | Accounting support; clarify construction/manufacturing facts |
+| Ijarah / leasing | FAS 32 | Accounting support; Shariah route needed for validity |
+| Mudaraba | FAS 3 | Accounting support; rules require Shariah source route |
+| Musharaka | FAS 4, FAS 51 | Accounting support; clarify partnership structure |
+| Wakala bi al-Istithmar | FAS 31 | Accounting support; clarify agency mandate |
+| Zakah | FAS 9, FAS 39 | Accounting/calculation support; obligation questions need proper source route |
+| Takaful | FAS 42, FAS 43 | Accounting support; distinguish operator and participant fund context |
+| Sukuk, shares, and similar instruments | FAS 33, FAS 34 | Accounting/reporting support; screening/permissibility needs Shariah evidence |
 
-- **Default MVP rule engine:** OPA/Rego or a small Python decision-table layer.
-- **Scholar/business-reviewable option:** GoRules/DMN-style decision tables.
-- **High-assurance future option:** Catala or OpenFisca-style rules-as-code for a smaller set of formalized clauses.
+### 5. Executable Rule Layer
 
-The rule layer must return:
+L6 should not rely on free-form LLM reasoning for supported domains.
 
-- matched rules
-- required facts
-- missing facts
-- pass/fail/unknown outcomes
-- source IDs that justify each rule
-- conflict flags
-- human-review flags
+Candidate approaches:
 
-### 5. Evidence Bundle
+- Python decision tables for MVP simplicity.
+- DMN-style tables for reviewer-friendly rule maintenance.
+- OPA/Rego for policy-oriented checks.
+- Catala/OpenFisca-style formal rules for future high-assurance domains.
 
-RAG becomes an evidence provider. It should retrieve:
+Rule evaluation must return:
 
-- clause-level evidence for final citations
-- section-level context for interpretation
-- source lineage and supersession metadata
-- similar canonical Q&A cases when available
-- source family and question-type filters
+- matched rules;
+- source IDs;
+- facts used;
+- required facts;
+- missing facts;
+- pass/fail/unknown outcome;
+- conflict flags;
+- human-review flags.
 
-Hybrid retrieval is required for broad commercial questions: dense multilingual retrieval plus lexical search over standard numbers, Arabic terms, contract names, and clause identifiers.
+### 6. Evidence Bundle
 
-### 6. Verdict Contract
+The evidence bundle should include:
 
-Replace broad `COMPLIANT` / `NON_COMPLIANT` language for fatwa-adjacent use with safer statuses:
+- retrieved chunks;
+- source catalog records;
+- source-family route;
+- currentness status;
+- supersession status;
+- section lineage;
+- citation anchors;
+- retrieval scores;
+- reranking rationale;
+- source gaps.
+
+The LLM receives the evidence bundle and rule trace for explanation only.
+
+For traceability, L6 evidence should retain parent/child chunk lineage, retrieval run ID, answer ID, citation IDs, and feedback links so later reviewer corrections can become gold cases.
+
+### 7. Verdict Contract
+
+L6 should move fatwa-adjacent outputs away from broad runtime statuses and into non-binding assessment statuses:
 
 - `likely_permissible`
 - `likely_impermissible`
@@ -159,48 +236,96 @@ Replace broad `COMPLIANT` / `NON_COMPLIANT` language for fatwa-adjacent use with
 - `insufficient_evidence`
 - `refer_to_scholar`
 
-Every answer must remain non-binding. User-facing language must say the result is based on provided facts and cited sources, not a formal fatwa.
+Every verdict must include:
+
+- confidence;
+- citations;
+- standards used;
+- rule path;
+- facts assumed;
+- missing facts;
+- limitations;
+- human-review flag.
 
 ## First-Wave Domains
 
-Do not attempt "all commercial processes" in one release. Start with:
+Do not attempt all commercial processes at once. Recommended order:
 
-1. Murabaha / deferred sale / installment purchase
-2. Late-payment penalties and default clauses
-3. Ijarah / lease and lease-to-own structures
-4. Qard / loan / interest-bearing finance detection
-5. Wakala / investment agency
+1. Murabaha / deferred sale / installment purchase.
+2. Late-payment penalties and default clauses.
+3. Ijarah / lease and lease-to-own structures.
+4. Qard / loan / interest-bearing finance detection.
+5. Wakala / investment agency.
 
-Each domain needs a schema extension, routing map, rule table, gold cases, evidence requirements, and red-line refusal behavior before it is exposed as supported.
+Each domain requires:
 
-## Evaluation Gates
+- source mapping;
+- concept-map entries;
+- scenario schema fields;
+- routing map;
+- rule table;
+- gold cases;
+- red-line refusals;
+- clarification questions;
+- human-review triggers.
 
-L6 cannot be called ready without these gates:
+## Egypt Institution Operations Corpus
 
-- **Scope gate:** classify query as supported, partially supported, or unsupported.
-- **Fact gate:** block or clarify when required scenario facts are missing.
-- **Source gate:** require current, relevant, official or reviewed source evidence.
-- **Rule trace gate:** show which rule checks fired and which facts triggered them.
-- **Citation-support gate:** every decisive claim must be backed by retrieved evidence.
-- **Contradiction gate:** escalate when sources, rules, or extracted facts disagree.
-- **Language gate:** Arabic input must preserve Arabic output unless the user requests otherwise.
-- **Adversarial gate:** resist prompt injection, forced halal labels, disguised riba, false source requests, and emotional pressure.
-- **Human-review gate:** refer large, high-impact, disputed, jurisdiction-specific, or liability-heavy cases to a qualified scholar or compliance reviewer.
+The Egyptian financial institutions scrape is a supporting data-acquisition workstream for L6, not the L6 evaluator itself. Its detailed plan is `L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md`.
 
-## Planning Deliverables Before Implementation
+The corpus should collect public evidence about institution products and operations from regulator records, official institution sites, tariffs, contracts, model contracts, prospectuses, annual reports, fund documents, sukuk documents, policy wordings, and rulebooks.
 
-1. Official-source acquisition plan for Shari'ah Standards, FAS, governance, ethics, auditing, and any accepted fatwa sources.
-2. Source catalog schema and versioning strategy.
-3. Transaction scenario schema and field glossary.
-4. Standards router design.
-5. Rule-engine spike comparing OPA/Rego, Python decision tables, GoRules/DMN, and Catala/OpenFisca for one Murabaha route.
-6. Gold evaluation matrix for the five first-wave domains.
-7. Human-review and red-line output policy.
+This data can support L6 in two ways:
+
+- supervised evaluation: the engine proposes AAOIFI mappings and initial risk labels, then a Sharia scholar accepts, corrects, or rejects them;
+- institution-aware retrieval: future answers about a named institution can retrieve documented public product details before asking for user-specific facts.
+
+Hard boundary:
+
+- machine-proposed labels are not ground truth;
+- unreviewed institution data is not a compliance verdict;
+- no-public-detail findings must be stored as explicit gaps;
+- user-supplied details override stored institution assumptions when answering.
+
+## Quality Gates
+
+L6 cannot be marked ready without:
+
+- source-family routing accuracy;
+- expected-standard hit rate;
+- bilingual and mixed-language recall;
+- colloquial Arabic handling;
+- superseded-source rejection;
+- fact extraction accuracy;
+- clarification precision and recall;
+- rule trace correctness;
+- citation support for every material claim;
+- contradiction and source-gap handling;
+- prompt-injection resistance;
+- human-review escalation for high-impact cases.
+- feedback capture and correction closure for disputed or unsafe outputs.
 
 ## Non-Goals
 
-- Do not claim Mushir issues binding fatwas.
-- Do not claim all commercial operations are supported before each domain has rules, sources, and evals.
-- Do not use FAS-only retrieval to answer permissibility questions.
-- Do not store or expose raw chain-of-thought as the decision artifact.
-- Do not allow the LLM to invent the verdict before rules and evidence are evaluated.
+- Do not claim Mushir issues fatwas.
+- Do not answer permissibility questions from FAS-only evidence.
+- Do not claim all commercial operations are supported.
+- Do not store or expose raw chain-of-thought.
+- Do not let the LLM invent verdicts before source, scenario, rule, and evidence gates.
+- Do not run bulk live generation against free OpenRouter routes.
+
+## Implementation Entry Checklist
+
+Before coding the first L6 domain, create:
+
+1. Source catalog records for required standards.
+2. Concept-map entries for the domain.
+3. Scenario schema extension.
+4. Source-family route.
+5. Rule table.
+6. Gold evaluation matrix.
+7. Red-line refusal list.
+8. Feedback/admin review workflow.
+9. Human-review criteria.
+10. Fixture-backed tests.
+11. Small live smoke plan.

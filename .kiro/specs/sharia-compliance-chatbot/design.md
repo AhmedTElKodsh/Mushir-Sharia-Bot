@@ -1,620 +1,654 @@
-# Design Document: Sharia Compliance Chatbot
+# Design Document: Mushir AAOIFI Standards Assistant
+
+**Last reformulated:** 2026-05-19
+**Status:** Maintained architecture plan
+**Scope:** Planning only. Runtime code should be changed only after this design is converted into implementation tickets and tests.
 
 ## Overview
 
-### Purpose
+Mushir should be designed as a source-governed, bilingual AAOIFI standards assistant. The architecture must not be framed as "ask an LLM over nearby chunks." It must be framed as a controlled advisory workflow:
 
-The Sharia Compliance Chatbot is an AI-powered system that analyzes financial operations against authoritative AAOIFI material and supporting reviewed sources. The current implementation path uses Retrieval-Augmented Generation (RAG) to produce citation-backed guidance and fail-closed answers. The post-L5 direction expands this into a rules-first Sharia commercial-process assessment assistant: structured scenario extraction, Shari'ah-standards-first routing for permissibility, executable rule checks, evidence retrieval, and non-binding explanation.
+1. govern official sources;
+2. ingest and chunk text with traceable metadata;
+3. normalize user wording into financial concepts;
+4. classify intent and source family;
+5. clarify when facts or routing are uncertain;
+6. retrieve current and relevant evidence;
+7. generate only citation-supported answers;
+8. validate answer admissibility before returning it.
 
-### L0 Implementation Status (COMPLETE ✅)
+The current implementation already contains a practical foundation: `ApplicationService`, multilingual retrieval, query preprocessing, deterministic clarification, citation validation, OpenRouter generation, REST/SSE/UI transports, and a first source-family gate. The next planning step is to make source governance, concept normalization, metadata-aware retrieval, and answer admissibility first-class architecture.
 
-**What was built and validated:**
-- ✅ **RAG Pipeline**: Query preprocessing → embedding → ChromaDB search → top-k retrieval → citation extraction
-- ✅ **Query Preprocessor**: Arabic diacritic normalization, transliteration mapping, domain term expansion, language detection
-- ✅ **OpenRouter Integration**: OpenAI-compatible API, supports multiple models (Gemini, GPT-4, Claude), temperature 0.1, cost-effective
-- ✅ **Data Models**: AAOIFICitation, SemanticChunk, ComplianceRuling
-- ✅ **CLI Chatbot**: Terminal interface with AAOIFI adherence system prompt
-- ✅ **Ingestion**: Markdown corpus → 512-token chunks (50 overlap) → all-mpnet-base-v2 embeddings → ChromaDB
-- ✅ **Tests**: Smoke tests for ingestion and retrieval
-- ✅ **26 files created**: 10 source, 4 tools, 3 samples, 6 docs
-- ✅ **~1,220 lines of code**: Clean, maintainable, well-structured
-- ✅ **52 English AAOIFI standards** ready to ingest
+The 2026-05-19 deep research report adds concrete seed data and implementation contracts. This design promotes the first-release accounting router, supersession seed graph, parent/child chunking model, retrieval trace schema, and feedback loop into architecture. It treats specific model, vector database, Arabic NLP, and observability products as spike candidates until measured on Mushir's own AAOIFI gold set.
 
-**Key architectural decisions validated:**
-1. **OpenRouter API**: Proven to follow AAOIFI adherence prompt, supports multiple LLM providers (Gemini, GPT-4, Claude), cost-effective → **KEEP**
-2. **ChromaDB embedded**: Works well for L0-L2 (<100K vectors) → **Migrate to Qdrant at L3**
-3. **all-mpnet-base-v2**: 768-dim, English-only, good retrieval quality, runs locally → **KEEP**
-4. **512 token chunks, 50 overlap**: Standard for legal text, validated → **KEEP** unless retrieval quality tanks
-5. **Temperature 0.1**: Consistent, deterministic outputs → **KEEP**
-6. **Clean module separation**: models, rag, chatbot → **No refactoring needed for L1-L4**
-7. **Dataclasses**: Type-safe, converts cleanly to Pydantic for FastAPI → **KEEP**
-
-**What L0 lacks (by design, to be added in L1-L4):**
-- ❌ No clarification loop (single-turn only) → **L1**
-- ❌ No conversation history → **L1**
-- ❌ No error handling/retry logic → **L1**
-- ❌ No structured logging (only print statements) → **L1**
-- ❌ No streaming → **L2**
-- ❌ No API (terminal only) → **L2**
-- ❌ No session management → **L1** (in-memory), **L3** (Redis)
-- ❌ No monitoring/observability → **L3**
-- ❌ No production infrastructure → **L3**
-
-**Technical Debt from L0 (to address in L1+):**
-1. **LLM call is brittle** - No error handling, no retries, assumes response.text always exists
-2. **No structured logging** - Only print() statements, need logging framework
-3. **Hardcoded prompt templates** - Should be in config file for A/B testing
-4. **No session management** - Need Session dataclass with state tracking
-5. **No observability** - Need metrics, tracing, monitoring
-
-### Design Philosophy
-
-The design prioritizes **accuracy and traceability** over speed, ensuring every compliance answer is backed by specific authority, evidence, and audit metadata. The system is built with a **progressive enhancement approach**, starting with L0 (minimal RAG loop), evolving through L1-L5 to a trustworthy release substrate, and only then expanding into the proposed L6 rules-first commercial-process evaluator.
-
-Key design principles:
-- **Strict grounding**: Never generate speculative compliance advice; all rulings must be supported by retrieved AAOIFI standards (✅ validated in L0)
-- **LLM-driven clarification**: Use LLM to identify missing information, not hand-coded state machines (L1)
-- **Auditability**: Maintain complete traceability from user queries through retrieval to final rulings (L3+)
-- **Modularity**: Design components with clear boundaries to support independent testing and evolution
-- **Progressive scaling**: L0 (proof of concept) → L1 (clarification) → L2 (API) → L3 (production infra) → L4 (advanced features)
-
-Additional post-L5 design principles:
-- **Authority hierarchy**: Use Shari'ah Standards first for permissibility and contract validity; use FAS for accounting, recognition, presentation, reporting, and disclosure.
-- **Rules before explanation**: For supported commercial-process domains, extract facts and run explicit rules before asking the LLM to explain the result.
-- **Non-fatwa boundary**: Provide assessment support, missing-fact identification, and evidence-backed explanation; do not claim to issue binding fatwas.
-- **Free-model restraint**: When using `openrouter/free`, keep low concurrency, backoff, and batching/caching safeguards so evaluation or demo traffic does not overload shared free API nodes.
-
-### System Context
-
-The system operates in the Islamic finance domain, where compliance determinations must be authoritative and traceable. Users range from financial professionals to individuals seeking guidance on transaction compliance. The system provides **guidance based on AAOIFI standards** but explicitly disclaims that it does not replace qualified Islamic finance scholars for critical decisions.
-
-### Post-L5 L6 Research Update (2026-05-18)
-
-`docs/deep-research-report.md` changes the target architecture from "LLM over retrieved FAS PDFs" to a compositional evaluator. The report did not identify a mature open-source engine that already solves AAOIFI bilingual retrieval, Sharia permissibility assessment, executable rule checks, and safe verdict generation together. The design implication is to assemble proven parts:
-
-- **Document/RAG substrate:** hierarchy-preserving ingestion, multilingual dense retrieval, lexical/BM25 retrieval, reranking, citation packaging, and source versioning.
-- **Scenario intelligence:** a validated transaction schema that captures parties, asset, ownership/possession sequence, payment terms, late-payment terms, agency roles, guarantees, risk bearing, missing facts, and uncertainties.
-- **Policy/rule layer:** lightweight Python decision tables, OPA/Rego, DMN-style tables, or Catala/OpenFisca-style modeling, selected after a Murabaha/late-penalty spike.
-- **Explanation layer:** the LLM receives the scenario, rule result, and evidence bundle, then explains with citations and limitations.
-- **QA layer:** rule fixtures, citation recall/precision, faithfulness checks, red-team suites, versioning tests, and release gates that block plausible but unproven answers.
-
-The L6 architecture is tracked in `next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md`. It is future scope until L5 quality and runtime readiness gates are green.
-
-### Open-Source References and Reusable Patterns
-
-**Key Finding:** No production-grade open-source AAOIFI/Sharia-finance RAG project exists. This is net-new domain and represents the moat. However, we can leverage patterns from legal RAG and production RAG systems.
-
-#### A. Islamic Finance / Sharia / Quran-Hadith RAG Chatbots
-
-**Verdict:** Small student/portfolio projects or Quran/Hadith Q&A — not financial-rulings against AAOIFI FAS. Study for patterns, but no direct code reuse.
-
-1. **dannycahyo/fin-islam** (1⭐, MIT, TypeScript/Hono/React)
-   - **Reusable Pattern**: Routing agent → knowledge (RAG) agent → calculation agent → Sharia-compliance agent
-   - **Tech**: pgvector, Ollama Llama 3.1 8B, MCP
-   - **Skip**: TypeScript, ~30 docs, no AAOIFI
-   - **Takeaway**: Multi-agent architecture pattern for Islamic finance
-
-2. **oshoura/IslamAI** (8⭐, Next.js + Pinecone + LangChain + GPT-3.5)
-   - **Reusable Pattern**: Classic citation pattern
-   - **Skip**: Stale, Quran/Hadith only
-   - **Takeaway**: Citation formatting approach
-
-3. **hammadali1805/Quran-Hadith-Chatbot** (6⭐, Streamlit + Chroma + MiniLM + OpenRouter)
-   - **Reusable Pattern**: Chroma + sentence-transformers wiring on Islamic corpora — direct stack mirror
-   - **Action**: Look at query-expansion code
-   - **Skip**: Notebook-grade, no eval
-   - **Takeaway**: OpenRouter + Chroma integration pattern
-
-4. **Shaheer66/Islam-GPT** (2⭐, Apache-2.0, Python)
-   - **Skip**: Tiny, no tests
-
-5. **arxiv 2512.16644 + LangChain fiqh-muamalah paper** (88.8% accuracy)
-   - **Reusable**: Citation/eval methodology
-   - **Skip**: No public repos
-
-#### B. Legal/Regulatory RAG (PRIMARY SOURCE FOR PATTERNS)
-
-**Verdict:** Legal domain is closest analog to AAOIFI compliance. Steal architecture, retrieval patterns, and evaluation approaches.
-
-1. **lawglance/lawglance** ⭐⭐⭐ (250⭐, Apache-2.0, active)
-   - **Tech**: LangChain + ChromaDB + Django + OpenAI + Streamlit + Redis
-   - **Reusable**: 
-     - End-to-end production layout
-     - Redis LLM cache pattern
-     - Indian-legal-codes corpus pattern → directly maps to FAS-1..FAS-N
-   - **Action**: Best legal reference for Mushir — lift L2 API + L3 ops layout
-   - **Use in**: L2 (API structure), L3 (Redis caching)
-
-2. **sougaaat/RAG-based-Legal-Assistant** ⭐⭐⭐ (8⭐)
-   - **Reusable**: 
-     - **Retrieval**: BM25 + FAISS dense + multi-query + multi-hop fused via Reciprocal Rank Fusion (RRF)
-     - **Classifier**: Query-complexity classifier to route simple vs. complex queries
-     - **Evaluation**: RAGAS evaluation framework integration
-   - **Action**: Copy BM25+dense+RRF+multi-hop+multi-query verbatim into L1 retrieval
-   - **Use in**: L1 (advanced retrieval)
-
-3. **NirDiamant/Controllable-RAG-Agent** ⭐⭐⭐ (1.6k⭐, Apache-2.0)
-   - **Verdict**: Closest end-to-end blueprint for grounded, hallucination-resistant RAG.
-   - **Reusable**: 
-     - Deterministic LangGraph routing
-     - Self-RAG verification (checks if answer is supported by context)
-     - Three-tier vector stores (chunks + summaries + quotes)
-     - Built-in RAGAS faithfulness/context-recall metrics
-   - **Action**: Adopt as the primary architectural blueprint for L1+
-   - **Use in**: L1 (verification), L3 (evaluation)
-
-4. **GiovanniPasq/agentic-rag-for-dummies** ⭐ (LangGraph)
-   - **Reusable**: Explicit Query Clarification stage that resolves references and splits multi-part queries.
-   - **Action**: Drop-in pattern for L1 clarification state machine.
-   - **Use in**: L1 (clarification loop)
-
-5. **onyx-dot-app/onyx** (formerly Danswer) (29.1k⭐, MIT)
-   - **Reusable**: Hybrid search (BM25+embed+rerank), 50+ connectors, RBAC, agents framework.
-   - **Action**: Study at L3+ for enterprise features like multi-tenancy and audit dashboards.
-
-6. **FareedKhan-dev/agentic-rag**
-   - **Reusable**: "Gatekeeper" pattern that refuses vague queries and demands clarification.
-   - **Use in**: L1 (refusal logic)
-
-7. **faerber-lab/RAGentA**
-   - **Reusable**: SIGIR LiveRAG Multi-Agent attributed-QA with Claim Judge doing claim-by-claim grounding analysis.
-   - **Use in**: L4 (citation validation)
-
-#### C. Tooling — Evaluation and Validation
-
-1. **explodinggradients/ragas** (13.8k⭐, v0.4.3)
-   - **Role**: Primary evaluation harness for faithfulness, answer-relevance, and context-precision.
-2. **confident-ai/deepeval**
-   - **Role**: Pytest-style CI/CD gates to block grounding regressions.
-3. **Stanford Legal RAG Hallucinations Paper**
-   - **Role**: Required reading for setting the refusal thresholds and grounding prompts.
-
-### High-Level Architecture
-
-```mermaid
-graph TB
-    User[User] -->|Natural Language Query| ChatInterface[Chat Interface]
-    ChatInterface --> ClarificationEngine[Clarification Engine]
-    
-    ClarificationEngine -->|Complete Query| RAGPipeline[RAG Pipeline]
-    ClarificationEngine -->|Missing Info| ChatInterface
-    
-    RAGPipeline --> QueryEmbedding[Query Embedding Generator]
-    QueryEmbedding --> VectorDB[(Vector Database)]
-    VectorDB -->|Top-K Chunks| RAGPipeline
-    
-    RAGPipeline --> PromptConstructor[Augmented Prompt Constructor]
-    PromptConstructor --> LLM[Large Language Model]
-    LLM --> ComplianceAnalyzer[Compliance Analyzer]
-    
-    ComplianceAnalyzer -->|Ruling + Citations| ChatInterface
-```
-
-### Post-L5 L6 Rules-First Architecture
+## Target Pipeline
 
 ```mermaid
 flowchart TD
-    User["User commercial question"] --> Intent["Intent triage"]
-    Intent --> Scenario["Validated transaction scenario"]
-    Scenario --> Missing{"Missing required facts?"}
-    Missing -- "Yes" --> FollowUp["Focused clarification"]
-    FollowUp --> Scenario
-    Missing -- "No" --> Router["Standards router"]
-    Router --> Evidence["Hybrid evidence retrieval"]
-    Evidence --> Rules["Executable rule evaluation"]
-    Rules --> Conflict{"Conflict, weak evidence, or unsupported domain?"}
-    Conflict -- "Yes" --> Escalate["Insufficient evidence / scholar review"]
-    Conflict -- "No" --> Explain["LLM explanation from rule result and evidence"]
-    Escalate --> Explain
-    Explain --> Validate["Schema, citation, language, and red-line validation"]
-    Validate --> Output["Non-fatwa verdict contract + audit trace"]
+    U["User question: English, Arabic, mixed, colloquial, or transliterated"] --> N["Language and term normalization"]
+    N --> C["Financial concept and intent classification"]
+    C --> A{"Ambiguity or missing facts?"}
+    A -- "Yes" --> Q["One focused clarification question"]
+    Q --> N
+    A -- "No" --> R["Source-family and standards router"]
+    R --> F{"Required source family available and current?"}
+    F -- "No" --> X["Clarify, insufficient evidence, or scholar-review path"]
+    F -- "Yes" --> E["Metadata-aware hybrid retrieval"]
+    E --> G{"Retrieval confidence and source correctness pass?"}
+    G -- "No" --> X
+    G -- "Yes" --> P["Prompt from evidence bundle only"]
+    P --> L["LLM explanation"]
+    L --> V["Citation and answer-admissibility validator"]
+    V -- "Pass" --> O["Non-binding answer with citations and limitations"]
+    V -- "Fail" --> X
 ```
 
-In this architecture, RAG provides evidence and context; the rule layer provides deterministic assessment for supported domains; and the LLM is constrained to explanation. This is the target for L6 only, not a replacement for the L5 release-readiness plan.
-
-### Component Design
-
-#### Document Acquisition Module
-- **Role**: Acquire and parse AAOIFI standards
-- **Implementation**: 
-  - Manual acquisition (L0): Copy markdown files to `data/aaoifi_md/`
-  - Automated acquisition (L3+): Scrape AAOIFI website and parse PDFs
-- **Validation**: Ensure standards are authoritative and correctly parsed
-
-#### RAG Pipeline
-- **Role**: Retrieve relevant AAOIFI standards and augment LLM prompt
-- **Implementation**: 
-  - Query Preprocessor: Normalizes Arabic diacritics, transliteration variants, and expands domain terms (✅ L0 complete)
-  - Embedding Generator: sentence-transformers (all-mpnet-base-v2) (✅ validated in L0)
-  - Vector Database: ChromaDB (L0-L2) or Qdrant (L3+)
-  - Prompt Constructor: strictly adhere to AAOIFI grounding prompt (✅ validated in L0)
-- **Retrieval Pattern**: BM25 + Dense + RRF (L1+)
-
-#### Clarification Engine
-- **Role**: Identify missing information and prompt user for details
-- **Implementation**: 
-  - LLM-driven variable identification
-  - State machine management (L1)
-  - Interactive multi-turn loop
-- **Pattern**: LangGraph clarification with human-in-loop (L1+)
-
-#### Compliance Analyzer
-- **Role**: Generate compliance rulings grounded in retrieved standards
-- **Implementation**: 
-  - OpenRouter API (supports Gemini, GPT-4, Claude, and other models) (✅ validated in L0)
-  - Temperature 0.1 for consistent results
-  - Strict adherence to citations and quotes (L4+)
-
-**OpenRouter free-model guardrail:** `openrouter/free` is acceptable for constrained demos and small eval probes only. It must use conservative request concurrency, backoff/circuit breaking, and caching; never run large parallel eval batches against free routes.
-
-#### L6 Scenario and Rule Evaluator
-- **Role**: Convert broad commercial-process questions into structured facts and explicit rule outcomes before explanation
-- **Implementation Direction**:
-  - Transaction scenario schema with validated required fields
-  - Standards router by question type and authority layer
-  - Rule engine spike over Python decision tables, OPA/Rego, DMN-style tables, and Catala/OpenFisca-style models
-  - Verdict contract with `likely_permissible`, `likely_impermissible`, `conditionally_permissible`, `requires_clarification`, `insufficient_evidence`, and `refer_to_scholar`
-- **Constraint**: L6 must not claim fatwa authority, infer missing transaction facts, or answer permissibility from FAS-only evidence.
-
-### Data Strategy
-
-#### Chunking Strategy
-- **Format**: 512-token semantic chunks with 50-token overlap (✅ validated in L0)
-- **Metadata**: document_id, section, page, version, provenance_id
-
-#### Vector Database
-- **L0-L2**: ChromaDB embedded for simplicity and local storage
-- **L3+**: Qdrant server for distributed scale and high performance
-
-#### Persistent Storage
-- **L3+**: PostgreSQL for document storage, audit logs, and user data
-- **L3+**: Redis for session storage and rate limit counters
-
-### Deployment Architecture (L3+)
-
-```mermaid
-graph LR
-    User[User] --> LB[Load Balancer]
-    LB --> API1[API Instance 1]
-    LB --> API2[API Instance 2]
-    
-    API1 --> Redis[Redis Sessions]
-    API2 --> Redis
-    
-    API1 --> Qdrant[Qdrant Vectors]
-    API2 --> Qdrant
-    
-    API1 --> Postgres[PostgreSQL Audit]
-    API2 --> Postgres
-```
-
-### Success Criteria & Roadmap
-
-**Total Timeline: 9 weeks (2.25 months)**
-
-| Layer | Focus | Duration | Key Deliverables |
-|-------|-------|----------|------------------|
-| L0 | Foundational RAG | ✅ COMPLETE | Terminal RAG loop, OpenRouter integration, ChromaDB, 52 standards |
-| L1 | Clarification Loop | 2 weeks | LangGraph state machine, error handling, structured logging, session management |
-| L2 | API + Streaming | 2 weeks | FastAPI REST API, SSE streaming, CORS, basic rate limiting |
-| L3 | Production Ready | 3 weeks | Qdrant, Redis, PostgreSQL, Ragas eval, monitoring (Prometheus/Grafana) |
-| L4 | Scale + Ops | 2 weeks | Authentication, tier-based rate limits, Docker, CI/CD, alerting |
-
-**Agent Roundtable Consensus:**
-
-**Winston (Architect):**
-- Clarification loop must be LLM-driven (LangGraph), not hand-coded state machine
-- Streaming is non-negotiable for L2 user experience
-- Citation quality is the moat, not the RAG tech
-- Rate limits must tie to actual costs ($0.011/query)
-
-**Amelia (Dev):**
-- L0 code is clean, no refactoring needed
-- Adopt LangGraph (L1), FastAPI+SSE (L2), Ragas+DeepEval (L3)
-- Add error handling, retry logic, structured logging in L1
-- Test coverage: 60% (L1), 70% (L2), 80% (L3)
-
-**John (PM):**
-- Stick to MVP scope - no scope creep
-- L1: 2-turn clarification max, 30min session expiry
-- L2: SSE only (no WebSocket), in-memory rate limiting
-- L3: Redis+Postgres+Qdrant, defer auth to L4
-- Success metrics: 80% queries complete in 2 turns (L1), <5s API response (L2), >0.8 faithfulness (L3)
-
-**Mary (Analyst):**
-- Track clarification effectiveness, API latency, retrieval quality, faithfulness
-- Cost model: $0.011/query → Free tier underwater, need lower limits or higher pricing
-- L3: Grafana dashboard, nightly Ragas eval
-- L4: Citation accuracy, cost tracking, user satisfaction
-
-**Key Risks & Mitigations:**
-- **L1 Risk**: Clarification loop is clunky → Test with 20 real users, add "skip clarification" button
-- **L2 Risk**: Streaming breaks on slow connections → Test on 3G, add timeout handling
-- **L3 Risk**: Qdrant migration breaks retrieval → Run ChromaDB and Qdrant in parallel for 1 week
-- **L4 Risk**: Rate limiting too strict/loose → Start generous, monitor 2 weeks, adjust based on data
-
----
-
-## L1 Design: Clarification Loop & Error Handling
-
-### LangGraph State Machine
-
-**Adopt Pattern:** GiovanniPasq/agentic-rag-for-dummies
-
-```python
-from langgraph.graph import StateGraph
-from typing import TypedDict, Literal, List, Dict
-
-class ClarificationState(TypedDict):
-    query: str
-    missing_vars: List[str]
-    clarifications: Dict[str, str]
-    status: Literal["incomplete", "clarifying", "complete"]
-    turn_count: int
-    max_turns: int
-
-def build_clarification_graph():
-    graph = StateGraph(ClarificationState)
-    graph.add_node("analyze", analyze_query)
-    graph.add_node("ask", generate_questions)
-    graph.add_node("parse", parse_user_response)
-    graph.add_conditional_edges("analyze", route_based_on_completeness)
-    return graph.compile()
-```
-
-### Error Handling & Retry Logic
-
-**Fix LLM Call Brittleness:**
-
-```python
-import logging
-import time
-from typing import Optional
-
-logger = logging.getLogger(__name__)
-
-def call_llm(
-    system_prompt: str, 
-    user_prompt: str, 
-    max_retries: int = 3
-) -> str:
-    for attempt in range(max_retries):
-        try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.1,
-                timeout=60
-            )
-            if not response.choices[0].message.content:
-                raise ValueError("Empty response from LLM")
-            return response.choices[0].message.content
-        except Exception as e:
-            logger.warning(
-                f"LLM call failed (attempt {attempt + 1}/{max_retries})",
-                exc_info=True
-            )
-            if attempt == max_retries - 1:
-                raise
-            time.sleep(2 ** attempt)  # Exponential backoff
-```
-
-### Structured Logging
-
-```python
-import logging
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('logs/mushir.log'),
-        logging.StreamHandler()
-    ]
-)
-
-logger = logging.getLogger(__name__)
-
-# Usage
-logger.info("Retrieved %d chunks", len(chunks))
-logger.warning("Low similarity score: %.2f", chunk.score)
-logger.error("LLM API error", exc_info=True)
-```
-
-### Session Management
-
-```python
-from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict
-
-@dataclass
-class Session:
-    session_id: str
-    user_id: Optional[str]
-    created_at: datetime
-    expires_at: datetime
-    conversation_history: List[Message]
-    clarification_state: Optional[ClarificationState]
-    
-    def is_expired(self) -> bool:
-        return datetime.now() > self.expires_at
-    
-    def extend_expiry(self, minutes: int = 30):
-        self.expires_at = datetime.now() + timedelta(minutes=minutes)
-
-# In-memory session store (L1-L2)
-sessions: Dict[str, Session] = {}
-```
-
----
-
-## L2 Design: FastAPI + SSE Streaming
-
-### API Structure
-
-**Adopt Pattern:** lawglance/lawglance
-
-```
-src/api/
-├── __init__.py
-├── main.py           # FastAPI app
-├── routes/
-│   ├── query.py      # POST /query
-│   └── stream.py     # GET /stream (SSE)
-├── middleware/
-│   ├── auth.py
-│   └── rate_limit.py
-└── schemas/
-    └── request.py    # Pydantic models
-```
-
-### SSE Streaming
-
-```python
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-
-app = FastAPI()
-
-class QueryRequest(BaseModel):
-    query: str
-    session_id: Optional[str] = None
-
-@app.post("/query/stream")
-async def stream_query(request: QueryRequest):
-    async def generate():
-        # Yield SSE events
-        yield f"data: {{\"type\": \"thinking\"}}\n\n"
-        
-        chunks = await rag.retrieve(request.query)
-        yield f"data: {{\"type\": \"retrieved\", \"count\": {len(chunks)}}}\n\n"
-        
-        # Stream LLM response
-        async for token in llm.stream(prompt):
-            yield f"data: {{\"type\": \"token\", \"text\": \"{token}\"}}\n\n"
-        
-        yield f"data: {{\"type\": \"done\"}}\n\n"
-    
-    return StreamingResponse(generate(), media_type="text/event-stream")
-```
-
----
-
-## L3 Design: Production Infrastructure
-
-### Architecture
-
-```mermaid
-graph LR
-    User[User] --> LB[Load Balancer]
-    LB --> API1[API Instance 1]
-    LB --> API2[API Instance 2]
-    
-    API1 --> Redis[Redis Sessions]
-    API2 --> Redis
-    
-    API1 --> Qdrant[Qdrant Vectors]
-    API2 --> Qdrant
-    
-    API1 --> Postgres[PostgreSQL Audit]
-    API2 --> Postgres
-```
-
-### Ragas Evaluation
-
-**Adopt Pattern:** sougaaat/RAG-based-Legal-Assistant
-
-```python
-from ragas import evaluate
-from ragas.metrics import faithfulness, answer_relevancy
-
-results = evaluate(
-    dataset=gold_eval_set,
-    metrics=[faithfulness, answer_relevancy],
-    llm=openrouter_model,
-    embeddings=sentence_transformer_model
-)
-
-print(f"Faithfulness: {results['faithfulness']}")
-print(f"Answer Relevancy: {results['answer_relevancy']}")
-```
-
-### DeepEval CI Gates
-
-```python
-# tests/test_eval.py
-from deepeval import assert_test
-from deepeval.metrics import FaithfulnessMetric
-
-def test_murabaha_ruling_faithfulness():
-    metric = FaithfulnessMetric(threshold=0.8)
-    assert_test({
-        "input": "What does AAOIFI require for murabaha cost disclosure?",
-        "actual_output": ruling.answer,
-        "retrieval_context": [chunk.text for chunk in ruling.chunks]
-    }, metric)
-```
-
----
-
-## L4 Design: Authentication & Tier-Based Rate Limiting
-
-### API Key Authentication
-
-```python
-from fastapi import Security, HTTPException
-from fastapi.security import APIKeyHeader
-
-api_key_header = APIKeyHeader(name="X-API-Key")
-
-async def verify_api_key(api_key: str = Security(api_key_header)):
-    user = await get_user_by_api_key(api_key)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    return user
-```
-
-### Tier-Based Rate Limiting
-
-```python
-from fastapi import Request, HTTPException
-from datetime import datetime, timedelta
-
-RATE_LIMITS = {
-    "free": 10,      # 10 queries/hour
-    "standard": 100,  # 100 queries/hour
-    "premium": 1000   # 1000 queries/hour
+## Current Runtime Component Map
+
+| Responsibility | Current code path | Current status | Planning gap |
+|---|---|---|---|
+| Orchestration | `src/chatbot/application_service.py` | Implemented | Needs docs to treat it as the answer boundary |
+| Clarification | `src/chatbot/clarification_engine.py` | Implemented deterministically | Needs formal uncertainty policy and eval gates |
+| Scenario and source routing | `src/chatbot/commercial_assessment.py`, `src/models/commercial.py` | Scaffold implemented | Needs catalog-backed source-family routing and rules |
+| Query normalization | `src/rag/query_preprocessor.py` | Implemented with handwritten maps | Needs governed concept map and tests |
+| Retrieval | `src/rag/pipeline.py`, `src/rag/qdrant_store.py` | Chroma default, Qdrant optional | Needs metadata filtering, hybrid search, source correctness metrics |
+| Ingestion | `scripts/ingest.py` | Markdown to Chroma with language metadata | Needs source catalog, section hierarchy, currentness, supersession metadata |
+| Prompting | `src/chatbot/prompt_builder.py` | Evidence-grounded prompt | Needs architecture language that LLM explains, not decides alone |
+| Citation validation | `src/chatbot/citation_validator.py` | Implemented | Needs answer-admissibility gate in planning |
+| Transport | `src/api/*`, `src/static/*` | REST, SSE, UI | Needs docs to require identical answer behavior across transports |
+| Provider | `src/chatbot/llm_client.py` | OpenRouter-compatible | Needs free-route throttling and eval separation |
+
+## Source Governance Design
+
+Downloaded text files must be treated as derived artifacts. The authoritative unit is a source catalog record.
+
+### Source Catalog Schema
+
+Minimum fields:
+
+```json
+{
+  "source_id": "aaoifi-fas-28-en",
+  "source_family": "fas",
+  "standard_number": "FAS-28",
+  "title_en": "Murabaha and Other Deferred Payment Sales",
+  "title_ar": null,
+  "language": "en",
+  "official_url": "https://aaoifi.com/accounting-standards-2/?lang=en",
+  "acquired_at": "2026-05-19",
+  "extraction_method": "manual | scraper | pdf_conversion | e_standards_export",
+  "is_current": true,
+  "supersedes": [],
+  "superseded_by": [],
+  "review_status": "unreviewed | machine_checked | human_reviewed",
+  "source_confidence": "official | derived_from_official | unverified"
 }
-
-async def check_rate_limit(request: Request, user: User):
-    key = f"rate_limit:{user.id}:{datetime.now().hour}"
-    count = await redis.incr(key)
-    
-    if count == 1:
-        await redis.expire(key, 3600)  # 1 hour
-    
-    limit = RATE_LIMITS[user.tier]
-    
-    if count > limit:
-        raise HTTPException(
-            status_code=429,
-            detail="Rate limit exceeded",
-            headers={"Retry-After": str(3600 - (datetime.now().minute * 60))}
-        )
-    
-    # Add rate limit headers
-    request.state.rate_limit_headers = {
-        "X-RateLimit-Limit": str(limit),
-        "X-RateLimit-Remaining": str(limit - count),
-        "X-RateLimit-Reset": str(datetime.now().replace(minute=0, second=0) + timedelta(hours=1))
-    }
 ```
 
----
+### Source Governance Rules
 
-*Note: This design document is a living document and will be updated as the system progresses through its implementation layers.*
+- Chunks without catalog records are not admissible for final answers.
+- Superseded sources can support historical answers only when the user asks historically.
+- Official AAOIFI source pages or accepted source records must be checked before marking a source current.
+- Source catalog versions must be tied to index versions and retrieval-evaluation results.
+- Router and supersession seeds from research reports are reviewable source data, not final authority, until catalog verification passes.
+
+### Relationship Edge Model
+
+Source relationships should be explicit records instead of free-text notes. Minimum edge types:
+
+- `supersedes`: later standard replaces earlier standard for current use.
+- `amends`: later source updates part of an earlier source.
+- `replaces`: broad replacement when the exact legal/accounting relationship needs reviewer confirmation.
+- `clarifies`: later source explains or interprets an earlier source.
+- `contextualizes`: related source that may help explain scope but does not replace authority.
+
+Seed supersession graph from the deep research report, pending official catalog verification:
+
+| Earlier standard | Candidate replacement or route |
+|---|---|
+| FAS 2 and FAS 20 | FAS 28 |
+| FAS 11 | FAS 30 and FAS 35 |
+| FAS 5 and FAS 6 | FAS 27 |
+| FAS 17 | FAS 25, FAS 26, and later FAS 33 context |
+
+### Planning Data Model
+
+The durable planning contract should use relational records for governance and traceability, even if the first implementation stores part of the data in files.
+
+```mermaid
+erDiagram
+    SOURCE_REGISTRY ||--o{ DOCUMENT_VERSIONS : has
+    DOCUMENT_VERSIONS ||--o{ SECTIONS : contains
+    SECTIONS ||--o{ CHUNKS : contains
+    CHUNKS ||--o{ RETRIEVAL_HITS : returned_as
+    RETRIEVAL_RUNS ||--o{ RETRIEVAL_HITS : includes
+    ANSWERS ||--o{ CITATIONS : cites
+    CHUNKS ||--o{ CITATIONS : supports
+    ANSWERS ||--o{ FEEDBACK : receives
+    EVAL_GOLDSET ||--o{ EVAL_CASES : contains
+    SOURCE_REGISTRY ||--o{ SOURCE_RELATIONSHIPS : relates
+    CANONICAL_TERMS ||--o{ TERM_VARIANTS : has
+```
+
+Minimum records:
+
+- `source_registry`: official source identity, source family, URL, language, title, review status, confidence.
+- `document_versions`: effective/version status, acquisition date, extraction method, corpus/index version.
+- `sections`: heading path, clause/page anchors, parent lineage.
+- `chunks`: retrieval text, embedding metadata, parent section, currentness, operation tags.
+- `canonical_terms` and `term_variants`: governed bilingual concept map.
+- `source_relationships`: supersession and related-source edges.
+- `retrieval_runs` and `retrieval_hits`: query normalization, route, filters, scores, reranking rationale.
+- `answers` and `citations`: answer status, material claims, evidence support.
+- `feedback`: reviewer/user correction workflow.
+- `eval_goldset` and `eval_cases`: expected route, source family, standard, behavior, and citation outcome.
+
+## Ingestion And Chunking Design
+
+The ingestion layer should preserve legal/accounting structure before it optimizes token count.
+
+### Chunk Metadata
+
+Every chunk should include:
+
+- catalog `source_id`;
+- source family;
+- standard number;
+- title;
+- language;
+- version or currentness status;
+- section or clause path;
+- source file;
+- chunk index;
+- parent chunk or section ID;
+- total chunks;
+- embedding model;
+- embedding normalization flag;
+- extraction date;
+- currentness and supersession status.
+
+Where available, include:
+
+- page number;
+- citation anchor;
+- section heading;
+- topic tags;
+- operation tags;
+- Arabic-English paired source ID;
+- aligned chunk ID for bilingual counterparts;
+- related standard references.
+
+### Chunking Rule
+
+Chunk by standards structure first:
+
+1. standard;
+2. part or chapter;
+3. section;
+4. numbered clause;
+5. paragraph;
+6. token-size fallback with overlap.
+
+This design reduces the risk of a chunk losing the clause context needed for citation and answer admissibility.
+
+The preferred retrieval unit is two-level:
+
+- Parent structural unit: standard, chapter, section, or clause range used for lineage and citation context.
+- Child retrieval unit: smaller text window optimized for dense/hybrid search.
+
+Child hits should roll up to parent lineage before answer generation so the answer can cite the authoritative standard and section context, not just an isolated window.
+
+## Query Understanding Design
+
+User questions should pass through a semantic understanding layer before retrieval.
+
+### Normalization Responsibilities
+
+- Strip Arabic diacritics and normalize Arabic letter variants.
+- Normalize common transliterations and misspellings.
+- Expand bilingual synonyms and colloquial terms.
+- Detect mixed Arabic-English phrasing.
+- Detect Arabizi/transliterated Arabic as input text that must map to reviewed canonical terms.
+- Preserve the original query for audit.
+- Produce a normalized query and candidate concept set.
+
+### Concept Map
+
+The concept map should be a data artifact rather than hard-coded scattered lists. It should connect:
+
+- canonical concept ID;
+- English label;
+- Arabic label;
+- transliterations;
+- colloquial variants;
+- accounting synonyms;
+- Shariah/permissibility synonyms;
+- candidate source families;
+- likely standards;
+- required facts;
+- ambiguity notes;
+- test cases.
+
+Example:
+
+```yaml
+concept_id: murabaha
+labels:
+  en: ["murabaha", "murabahah", "cost-plus sale", "deferred payment sale"]
+  ar: ["Ù…Ø±Ø§Ø¨Ø­Ø©", "Ø§Ù„Ù…Ø±Ø§Ø¨Ø­Ø©"]
+  colloquial_ar: ["Ø¨ÙŠØ¹ ØªÙ‚Ø³ÙŠØ·", "Ø¨Ø§Ù„ØªÙ‚Ø³ÙŠØ·"]
+candidate_source_families:
+  accounting: ["fas"]
+  permissibility: ["sharia_standard"]
+required_facts:
+  - asset
+  - price_or_markup
+  - ownership_sequence
+  - possession_or_risk_bearing
+ambiguity_warning: "Installment wording may describe a conventional loan, murabaha, or another deferred sale."
+```
+
+Candidate Arabic NLP helpers such as fastText, Lingua, PyArabic, CAMeL Tools, Farasa, and Arabizi transliteration libraries may be evaluated, but the architecture requirement is measured language robustness and governed term mapping rather than dependency adoption for its own sake.
+
+## Intent And Routing Design
+
+The router should classify both question type and source family.
+
+### Question Types
+
+- `accounting`: recognition, measurement, presentation, disclosure, reporting.
+- `permissibility`: halal/haram, valid/invalid, allowed/disallowed, fatwa-adjacent wording.
+- `governance`: board, policy, audit, institutional controls.
+- `definition`: "what is" or "define" questions.
+- `standards_routing`: "which standard covers" questions.
+- `comparison`: AAOIFI versus IFRS, old versus new, Arabic versus English.
+- `unknown`: unclear or unsupported.
+
+### Routing Rules
+
+- FAS is primary for accounting-treatment questions.
+- Shariah Standards or approved Shariah sources are primary for permissibility and validity questions.
+- Governance standards are primary for institutional-control questions.
+- Mixed questions should be split into answerable subparts or clarified.
+- If a required source family is unavailable, final answer generation is not admissible.
+
+### First-Release Accounting Router Seed
+
+The deep research report gives a useful accounting router seed. It should become catalog-backed routing data after official verification.
+
+| Operation or product family | Candidate accounting route | Router note |
+|---|---|---|
+| Murabaha / deferred payment sale | FAS 28 | May still need Shariah-standard route for validity or permissibility wording |
+| Salam | FAS 7, FAS 52 | Clarify if the question is contract validity, accounting treatment, or presentation |
+| Istisna | FAS 10, FAS 52 | Clarify construction/manufacturing facts when needed |
+| Ijarah / leasing | FAS 32 | Route validity or lease-to-own permissibility to Shariah standards when available |
+| Mudaraba | FAS 3 | Separate investment account/accounting questions from permissibility |
+| Musharaka | FAS 4, FAS 51 | Clarify diminishing partnership versus general participation when relevant |
+| Wakala bi al-Istithmar / investment agency | FAS 31 | Capture agency role and investment mandate facts |
+| Zakah | FAS 9, FAS 39 | Clarify whether the user asks accounting presentation, calculation, or obligation |
+| Takaful | FAS 42, FAS 43 | Clarify operator versus participant fund context |
+| Sukuk, shares, and similar instruments | FAS 33, FAS 34 | Clarify issuer, holder, classification, and screening/permissibility intent |
+
+The router output should include:
+
+- candidate standard IDs;
+- primary and secondary source families;
+- confidence and ambiguity flags;
+- missing facts;
+- whether the candidate map was catalog verified;
+- whether permissibility wording requires Shariah-standard evidence.
+
+## Clarification Design
+
+Clarification is a safety feature, not a UX afterthought.
+
+The clarification layer should trigger when:
+
+- multiple operation concepts are plausible;
+- accounting versus Shariah intent is unclear;
+- required transaction facts are missing;
+- candidate standards conflict;
+- retrieval confidence is low;
+- source-family evidence is missing;
+- the user asks for a ruling but only accounting evidence is available;
+- mixed or colloquial language creates material uncertainty.
+
+The clarification question should:
+
+- ask exactly one high-value question;
+- match the user's likely language;
+- avoid chain-of-thought;
+- avoid a list of questions;
+- record the missing fact or ambiguity class in metadata.
+
+Clarification should be preferred over retrieval when uncertainty is material:
+
+| Uncertainty class | Example handling |
+|---|---|
+| Low term-routing confidence | Ask which transaction/product the user means |
+| Cross-standard tie | Ask the fact that separates the standards |
+| Weak evidence | Return `INSUFFICIENT_DATA` or ask for the missing fact before answering |
+| Legacy/superseded reference ambiguity | Ask whether the user wants historical or current treatment |
+| Language mismatch | Ask or answer in the likely preferred language while preserving stable standard IDs |
+
+## Retrieval Design
+
+Retrieval should be evaluated in two layers:
+
+1. Did the system retrieve relevant text?
+2. Did the system retrieve the correct source family, standard, language, and version?
+
+### Retrieval Strategy
+
+- Dense multilingual retrieval remains the default semantic layer.
+- Hybrid lexical retrieval should be added for standard numbers, Arabic terms, English terms, titles, and clause markers.
+- Reranking should include semantic score, lexical hits, source-family match, currentness, language preference, and concept-tag match.
+- Retrieval should support filters by source family, standard number, language, currentness, and concept tags when catalog metadata exists.
+- Retrieval should return an evidence bundle, not raw chunks only.
+
+The architecture should stay backend-flexible. Qdrant named vectors and hybrid search, pgvector plus PostgreSQL full-text search, BGE-M3, multilingual-e5, FlagEmbedding rerankers, and Sentence Transformers are candidate variants to test. The contract is correct-standard retrieval, citation support, Arabic robustness, latency, and operational simplicity, not preselecting a tool before measurement.
+
+### Evidence Bundle
+
+```json
+{
+  "query": "normalized user query",
+  "intent": "accounting",
+  "concepts": ["murabaha"],
+  "source_route": {
+    "primary": ["fas"],
+    "secondary": ["governance"]
+  },
+  "chunks": [],
+  "confidence": 0.0,
+  "source_family_pass": true,
+  "currentness_pass": true,
+  "ambiguity_flags": [],
+  "missing_facts": []
+}
+```
+
+Every retrieval run should be traceable enough for debugging and evaluation:
+
+- original query and normalized query;
+- language detection result;
+- candidate concepts and term variants;
+- candidate source families and standards;
+- metadata filters;
+- dense, sparse, and reranked scores where available;
+- parent/child chunk IDs;
+- source currentness and supersession status;
+- reason for clarification or insufficient evidence when retrieval fails gates.
+
+## Answer Design
+
+The answer layer explains evidence; it does not create authority.
+
+### Admissibility Gate
+
+Before returning a final answer, the system must pass:
+
+- source-family eligibility;
+- currentness and supersession check;
+- retrieval confidence;
+- citation support;
+- ambiguity policy;
+- language policy;
+- safety/refusal policy.
+
+If any gate fails, return clarification, insufficient evidence, or referral language.
+
+### Output Contract
+
+The response should include:
+
+- status: `COMPLIANT`, `NON_COMPLIANT`, `PARTIALLY_COMPLIANT`, `INSUFFICIENT_DATA`, or `CLARIFICATION_NEEDED` for the current runtime;
+- answer text;
+- citations;
+- limitations;
+- clarification question when applicable;
+- metadata with intent, source route, confidence, source families, missing facts, and safety flags.
+
+For future L6, permissibility outputs should move toward safer non-fatwa statuses such as `likely_permissible`, `likely_impermissible`, `conditionally_permissible`, `requires_clarification`, `insufficient_evidence`, and `refer_to_scholar`.
+
+## Safety Design
+
+Mushir must fail closed under these conditions:
+
+- no retrieved evidence;
+- evidence from the wrong source family;
+- only superseded evidence for a current question;
+- citation validator cannot support material claims;
+- user asks for a binding ruling;
+- Shariah permissibility question lacks Shariah-standard evidence;
+- prompt injection asks the model to ignore sources;
+- provider failure or retrieval outage blocks evidence review.
+
+## Evaluation Design
+
+The evaluation suite should measure the actual product contract.
+
+### Required Case Types
+
+- English query to English standard.
+- Arabic query to Arabic or English source.
+- Mixed Arabic-English query.
+- Colloquial Arabic query.
+- Transliteration query.
+- Synonym-heavy query.
+- Ambiguous financial operation.
+- Accounting versus Shariah boundary trap.
+- Wrong-standard trap.
+- Superseded-standard trap.
+- Low-evidence refusal.
+- Citation validation failure.
+- Live query-path smoke after deployment.
+
+### Required Metrics
+
+- correct source-family rate;
+- expected-standard hit rate;
+- hit@k and recall@k for relevant chunks;
+- citation support rate;
+- clarification precision and recall;
+- refusal correctness for unsupported cases;
+- Arabic retrieval support;
+- language-preserving response behavior.
+
+Bulk evaluation should be retrieval-only or fixture-backed. Live OpenRouter calls should be small, throttled, and reserved for smoke tests.
+
+The primary gold set must be project-specific AAOIFI cases. External datasets and tools mentioned by the deep research report, such as ArBanking77, DarijaBanking, ArabicaQA, SAHM, Ragas, DeepEval, Promptfoo, Langfuse, and Phoenix, are candidate support tools. They should be adopted only after license, relevance, Arabic coverage, citation-fidelity, and hosting-complexity review.
+
+### Feedback And Admin Review
+
+Reviewer feedback should become part of evaluation governance:
+
+- capture answer ID, retrieval run ID, citation IDs, source IDs, language, and user-visible status;
+- classify corrections as correct, partially correct, unsupported, wrong standard, stale source, translation issue, unsafe answer, or needs scholar review;
+- require human review before corrections update source catalog, concept map, routing, rules, or prompt policy;
+- turn accepted corrections into gold-set cases where possible;
+- keep feedback audit trails separate from hidden reasoning.
+
+## Egypt Institution Evidence Corpus Design
+
+The Egypt financial institutions scrape is a public-source evidence-acquisition program for L6. It extends source governance; it does not replace AAOIFI authority and does not create binding Sharia rulings.
+
+The corpus design has five layers:
+
+```mermaid
+flowchart TD
+    R["Canonical institution registry"] --> D["Bounded official-source discovery"]
+    D --> C["Public crawl and artifact capture"]
+    C --> E["Extraction and evidence spans"]
+    E --> O["Operations and contracts catalog"]
+    O --> M["Machine-proposed AAOIFI mapping"]
+    M --> S["Scholar review dataset"]
+    S --> G["Accepted gold cases and future retrieval context"]
+```
+
+### Registry Layer
+
+The registry normalizes the uploaded Egypt financial institutions workbook, refresh report, and presentation into stable institution records. The workbook sheets `01_CBE_Banks`, `02_Capital_Market`, `03_Insurance`, and `04_NonBank_Financial` are baseline seeds only; every production row requires regulator revalidation.
+
+Required registry statuses:
+
+- `verified`
+- `official_site_not_found`
+- `site_unreachable`
+- `blocked_by_security`
+- `requires_login`
+- `document_not_public`
+- `insufficient_public_data`
+- `manual_review_required`
+- `inactive_or_superseded`
+
+### Discovery Layer
+
+Discovery must be bounded and auditable. A normal attempt budget is:
+
+- up to three regulator-source checks;
+- up to five web search queries across English, Arabic, legal-name, and sector variants;
+- up to three official website candidates;
+- up to two reachability retries;
+- up to two alternate public-document source attempts.
+
+When the budget is exhausted, the system records a gap. It does not infer a website, contract, product, or Sharia claim.
+
+### Crawl And Capture Layer
+
+The crawler captures only public material and records access barriers as data. It must respect robots.txt, site terms, rate limits, CAPTCHA, login walls, paywalls, and explicit access controls.
+
+Public artifact metadata includes URL, institution ID, source rank, document type, language, retrieval timestamp, HTTP status, content type, content hash, raw path, text path, extraction status, and citation-anchor strategy.
+
+Priority document types are tariffs, terms and conditions, contracts, model contracts, prospectuses, annual reports, fund documents, sukuk memoranda, policy wordings, rulebooks, product pages, and disclosures.
+
+### Operations Catalog Layer
+
+The operations catalog is structured evidence, not verdicts. It preserves the public text spans used to identify:
+
+- operation and contract family;
+- fees and charges;
+- payment terms;
+- late-payment clauses;
+- penalty beneficiary;
+- collateral and guarantees;
+- insurance or takaful linkage;
+- ownership, possession, or asset-flow terms;
+- Sharia-compliant marketing claims.
+
+Missing public details are first-class outcomes such as `not_publicly_available` or `insufficient_public_data`.
+
+### Scholar Review Layer
+
+The engine may generate candidate AAOIFI references and initial risk labels, but those records are marked `machine_proposed`. The scholar-review dataset is the only supervised ground-truth path.
+
+Reviewer outcomes are constrained to `compliant`, `non_compliant`, `conditional`, `insufficient_evidence`, `not_applicable`, and `needs_more_documents`. Accepted reviews may become gold-set cases for retrieval, routing, citation, and rule-evaluation tests.
+
+## Roadmap Design
+
+The roadmap should now be organized by product-risk reduction rather than old generic RAG phases.
+
+### Track A: L5 Release Readiness
+
+Purpose: prove the current runtime is trustworthy enough as a demo/beta assistant.
+
+Deliverables:
+
+- retrieval-quality gate;
+- citation-validation gate;
+- source-family fail-closed tests;
+- REST/SSE/UI query-path smoke;
+- deployment-readiness checks;
+- documentation refresh;
+- secret-safe operations.
+
+### Track B: Source Governance And Catalog
+
+Purpose: make official AAOIFI source identity and currentness enforceable.
+
+Deliverables:
+
+- source catalog schema;
+- catalog population for active corpus;
+- supersession model;
+- seed verification for the first-release FAS router and supersession graph;
+- ingestion metadata upgrade;
+- source freshness check process;
+- index versioning.
+
+### Track C: Concept Normalization And Routing
+
+Purpose: make bilingual financial-operation understanding durable and testable.
+
+Deliverables:
+
+- concept map data artifact;
+- Arabic/English/transliteration/colloquial term coverage;
+- intent classifier contract;
+- source-family router tests;
+- ambiguity and clarification policy tests.
+
+### Track D: Metadata-Aware Retrieval
+
+Purpose: retrieve the right authority, not just semantically nearby text.
+
+Deliverables:
+
+- hybrid search spike;
+- metadata filters;
+- parent/child chunk retrieval with citation roll-up;
+- currentness and source-family reranking;
+- evidence bundle contract;
+- correct-standard retrieval evaluation.
+
+### Track E: Feedback, Admin Review, And Evaluation Operations
+
+Purpose: convert expert review into safer releases without silent policy drift.
+
+Deliverables:
+
+- feedback capture schema;
+- admin correction statuses;
+- retrieval and answer trace inspection;
+- accepted-correction-to-gold-case workflow;
+- evaluation dashboard or report format;
+- release gate for unresolved high-risk feedback.
+
+### Track F: L6 Rules-First Assessment
+
+Purpose: support non-binding commercial-process assessment only after sources, routes, facts, and rules are explicit.
+
+Deliverables:
+
+- Shariah-standard acquisition and catalog verification;
+- transaction scenario schema;
+- first-wave domain rule tables;
+- gold cases and red-line refusals;
+- human-review criteria;
+- structured verdict contract.
+
+### Track G: Egypt Institution Evidence Corpus
+
+Purpose: build the public-source institution operations corpus that can feed supervised L6 evaluation and future institution-aware retrieval.
+
+Deliverables:
+
+- canonical Egypt institution registry from the refresh report, workbook, and presentation;
+- source-category and regulator-source configuration;
+- bounded official-source discovery protocol;
+- ethical crawler status taxonomy for blocked, gated, missing, stale, duplicate, and parser-failed sources;
+- raw artifact capture and normalized evidence records;
+- operations and contracts catalog with evidence spans;
+- machine-proposed AAOIFI mapping queue;
+- scholar-review export and accepted-gold-case workflow;
+- pilot report before full-registry scale-up.
+
+## Design Non-Goals
+
+- Do not rebuild solved REST/SSE/UI foundations for the planning reset.
+- Do not claim broad halal/haram coverage from FAS-only evidence.
+- Do not expose chain-of-thought.
+- Do not use provider fluency as a substitute for source correctness.
+- Do not treat historical L0-L4 plans as the active implementation roadmap.
+- Do not treat scraped institution data as authority without source provenance and scholar review.

@@ -1,0 +1,63 @@
+version: 2026-05-20
+status: planning_seed
+notes: >
+  Category seed for the planned Egypt financial institutions evidence corpus.
+  Live implementation must revalidate each institution against current regulator
+  sources before broad crawling.
+
+categories:
+  - id: cbe_banks
+    regulator: CBE
+    baseline_workbook_sheet: 01_CBE_Banks
+    priority_documents:
+      - tariff_sheet
+      - account_terms
+      - financing_terms
+      - card_terms
+      - annual_report
+      - sharia_board_report
+  - id: cbe_payment_services
+    regulator: CBE
+    baseline_workbook_sheet: null
+    priority_documents:
+      - payment_service_terms
+      - wallet_terms
+      - merchant_terms
+      - fee_schedule
+      - regulator_rulebook
+  - id: capital_market
+    regulator: FRA
+    baseline_workbook_sheet: 02_Capital_Market
+    priority_documents:
+      - brokerage_terms
+      - margin_terms
+      - custody_terms
+      - prospectus
+      - fund_document
+      - sukuk_information_memorandum
+  - id: insurance
+    regulator: FRA
+    baseline_workbook_sheet: 03_Insurance
+    priority_documents:
+      - policy_wording
+      - takaful_terms
+      - surplus_distribution_terms
+      - annual_report
+      - investment_policy
+  - id: nonbank_financial
+    regulator: FRA
+    baseline_workbook_sheet: 04_NonBank_Financial
+    priority_documents:
+      - consumer_finance_contract
+      - mortgage_terms
+      - leasing_contract
+      - factoring_contract
+      - microfinance_agreement
+      - model_contract
+  - id: regulator_model_contracts
+    regulator: FRA
+    baseline_workbook_sheet: null
+    priority_documents:
+      - model_contract
+      - decree
+      - rulebook

@@ -4,7 +4,7 @@ Mushir is a FastAPI-based Sharia compliance chatbot for Islamic finance question
 
 This document describes the current project as implemented in the repository and explains how the planning roadmap maps to the built system.
 
-Last refreshed: 2026-05-19
+Last refreshed: 2026-05-20
 
 Current published demo:
 
@@ -38,6 +38,7 @@ The planning files under `.kiro/specs/sharia-compliance-chatbot/next-level-plans
 | L4 | Trust, citation quality, disclaimers, caching rules, and operational hardening | Implemented through citation-gated answers, disclaimer behavior, safe errors, cache rules, and deployment docs |
 | L5 | Quality, operations, release readiness, and demo gates | Active gate; tracked by `docs/l5-production-readiness.md` and `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md` |
 | L6 | Rules-first Sharia commercial-process evaluator | Proposed future direction; foundational runtime scaffolding is implemented, full evaluator is not active scope yet |
+| L6 evidence corpus | Egypt financial institutions public operations and contracts corpus | Planned data-acquisition workstream; registry seed folders and docs are prepared, broad scraping is not implemented yet |
 
 The active implementation priority is L5. L6 full evaluator work should begin only after L5 quality and runtime gates are green and official-source acquisition/versioning decisions are complete. A small L6 foundation now exists in runtime code to extract scenario metadata, route by source family, detect retrieved source families, and fail closed for late-payment/default permissibility questions when Shari'ah-standard evidence is absent.
 
@@ -81,6 +82,9 @@ Mushir must not:
 | `docs/` | Current technical, operations, and stakeholder documentation |
 | `.kiro/specs/` | Historical planning files and active readiness plans |
 | `gemini-gem-prototype/knowledge-base/` | AAOIFI markdown corpus used for ingestion |
+| `data/source_registry/` | Small tracked source-category and regulator-source seeds for the planned Egypt institution corpus |
+| `data/fixtures/l6_scrape/` | Tiny fixtures for future scraper tests |
+| `artifacts/l6_scrape/` | Runtime scrape artifacts, ignored except the README |
 
 ## Main Runtime Flow
 
@@ -344,6 +348,37 @@ Required L6 components:
 - QA gates for source coverage, rule correctness, citation recall/precision, answer faithfulness, language preservation, and refusal consistency.
 
 L6 must not expose raw chain-of-thought. The auditable artifact should be a structured decision trace: extracted facts, matched rules, evidence IDs, limitations, and review flags.
+
+## Egypt Financial Institutions Evidence Corpus
+
+The next L6 data workstream is the Egypt financial institutions public-source evidence corpus. It is documented in `.kiro/specs/sharia-compliance-chatbot/next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md` and summarized in `docs/l6-egypt-institution-scrape/README.md`.
+
+The workstream starts from:
+
+- `.kiro/specs/sharia-compliance-chatbot/Egypt Financial Institutions Refresh for Sharia Screening.md`;
+- `.kiro/specs/sharia-compliance-chatbot/Egypt_Financial_Institutions_COMPLETE.xlsx`;
+- `.kiro/specs/sharia-compliance-chatbot/Egyptian_Financial_Institutions_Complete_Presentation.pdf`.
+
+The workbook and presentation are baseline inputs, not production authority. The implementation must revalidate institutions against current regulator sources before broad crawling.
+
+The intended corpus covers CBE banks, payment-service sources, capital-market institutions, insurance and takaful entities, mortgage finance, leasing, consumer finance, microfinance and SME finance, fintech licensees, Islamic funds, sukuk sources, and FRA model-contract sources.
+
+The data pipeline should separate:
+
+- canonical institution registry;
+- bounded official-source discovery;
+- public artifact capture;
+- text extraction and evidence spans;
+- operations and contracts catalog;
+- engine-proposed AAOIFI mapping;
+- scholar-review dataset;
+- accepted gold cases.
+
+The most important control is negative evidence handling. If an official site, contract, tariff, prospectus, or policy wording is not publicly found after the configured attempt budget, the record should say `official_site_not_found`, `not_publicly_available`, `document_not_public`, `blocked_by_security`, or another explicit status. It should not guess.
+
+The scraper must respect robots.txt, site terms, rate limits, login walls, CAPTCHA, paywalls, and access controls. Blocked or gated material is a dataset status, not a target for bypass.
+
+Machine-proposed AAOIFI mappings and initial compliance-risk labels are review candidates only. Scholar-reviewed records become the supervised truth used for evaluation. Future answers may use institution pre-knowledge as context, but user-supplied facts override stored assumptions and stale or conflicting public data must be flagged.
 
 ## Browser Chat UI
 

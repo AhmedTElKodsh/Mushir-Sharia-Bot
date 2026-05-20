@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable, List, Optional, Set
 
+from src.governance.router_seed import RouterSeedRegistry, default_router_seed_registry
 from src.models.commercial import (
     ContractFamily,
     QuestionType,
@@ -234,11 +235,17 @@ class ScenarioExtractor:
 class StandardsRouter:
     """Choose source-family routes from the extracted scenario."""
 
-    def route(self, scenario: TransactionScenario) -> StandardsRoute:
+    def __init__(self, seed_registry: Optional[RouterSeedRegistry] = None) -> None:
+        self._seed_registry = seed_registry or default_router_seed_registry()
+
+    def route(self, scenario: TransactionScenario, query: str = "") -> StandardsRoute:
+        seed = self._seed_registry.match(query) if query else None
         if scenario.question_type == QuestionType.ACCOUNTING:
             return StandardsRoute(
-                primary=[SourceFamily.FAS],
+                primary=seed.source_families if seed else [SourceFamily.FAS],
                 secondary=[SourceFamily.GOVERNANCE],
+                candidate_standards=seed.candidate_standards if seed else [],
+                route_id=seed.route_id if seed else None,
                 rationale="Accounting, recognition, measurement, presentation, or disclosure question.",
                 requires_rule_evaluation=False,
             )
@@ -246,12 +253,16 @@ class StandardsRouter:
             return StandardsRoute(
                 primary=[SourceFamily.SHARIA_STANDARD],
                 secondary=[SourceFamily.FAS, SourceFamily.GOVERNANCE],
+                candidate_standards=seed.candidate_standards if seed else [],
+                route_id=seed.route_id if seed else None,
                 rationale="Permissibility and contract-validity questions require Shari'ah-source routing before FAS accounting support.",
                 requires_rule_evaluation=scenario.contract_family != ContractFamily.UNKNOWN,
             )
         return StandardsRoute(
-            primary=[SourceFamily.FAS],
+            primary=seed.source_families if seed else [SourceFamily.FAS],
             secondary=[],
+            candidate_standards=seed.candidate_standards if seed else [],
+            route_id=seed.route_id if seed else None,
             rationale="Default informational route over the currently indexed corpus.",
             requires_rule_evaluation=False,
         )

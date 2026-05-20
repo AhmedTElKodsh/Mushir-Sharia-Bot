@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 
+from src.governance.chunk_metadata import ParentChildChunkMetadataBuilder
+
 DEFAULT_EMBED_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 DEFAULT_CHROMA_DIR = "./chroma_db_multilingual"
 DEFAULT_CORPUS_DIR = "./gemini-gem-prototype/knowledge-base"
@@ -61,6 +63,16 @@ def build_splitter() -> RecursiveCharacterTextSplitter:
     )
 
 
+def section_path_for_chunk(text: str, standard: str) -> List[str]:
+    """Infer a lightweight structural path for metadata lineage."""
+    headings = [
+        line.strip().lstrip("#").strip()
+        for line in text.splitlines()
+        if line.strip().startswith("#")
+    ]
+    return [standard] + headings[:3] if headings else [standard]
+
+
 def reset_collection(client, collection_name: str) -> None:
     try:
         client.delete_collection(collection_name)
@@ -93,18 +105,23 @@ def ingest_files(
                 hashlib.md5(f"{md_file.name}:{index}".encode("utf-8")).hexdigest()
                 for index, _ in enumerate(chunks)
             ]
+            standard = standard_number(md_file)
+            metadata_builder = ParentChildChunkMetadataBuilder(
+                source_file=md_file.name,
+                source_path=md_file.as_posix(),
+                standard_number=standard,
+                language=language,
+                source_language=source_language,
+                embedding_model=model_name,
+                embedding_normalized=True,
+                total_chunks=len(chunks),
+            )
             metadatas = [
-                {
-                    "source_file": md_file.name,
-                    "standard_number": standard_number(md_file),
-                    "language": language,
-                    "source_language": source_language,
-                    "embedding_model": model_name,
-                    "embedding_normalized": True,
-                    "chunk_idx": index,
-                    "total_chunks": len(chunks),
-                }
-                for index, _ in enumerate(chunks)
+                metadata_builder.child_metadata(
+                    chunk_index=index,
+                    section_path=section_path_for_chunk(chunk_text, standard),
+                )
+                for index, chunk_text in enumerate(chunks)
             ]
             collection.upsert(
                 ids=ids,

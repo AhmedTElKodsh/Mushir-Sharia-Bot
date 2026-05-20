@@ -1,289 +1,102 @@
-# Planning Files Update Summary
+# Planning Update Summary
 
-**Date**: 2026-05-08  
-**Status**: ✅ COMPLETE
+**Date:** 2026-05-20
+**Status:** Maintained planning docs reformulated and extended with Egypt institution evidence-corpus planning
+**Trigger:** BMAD party-mode rethink of Mushir's app logic against the current implementation, official AAOIFI accounting standards page, `deep-research-report.md`, and the Egypt financial institutions refresh package.
 
-## What Was Done
+## What Changed
 
-Updated `requirements.md` and `design.md` based on:
-1. **L0 implementation results** (complete RAG loop with Gemini)
-2. **Team feedback** from Winston (Architect), Amelia (Dev), and context transfer
-3. **Open-source library research** (legal RAG, production RAG, Islamic finance RAG)
+The planning has been reframed from:
 
----
+> A chatbot that downloads AAOIFI files, chunks them, and answers with RAG.
 
-## Key Changes to requirements.md
+to:
 
-### 1. Added L0 Implementation Status Section
-- Documented what was built and validated in L0
-- Listed key architectural decisions (Gemini 1.5 Pro, ChromaDB, all-mpnet-base-v2, 512-token chunks)
-- Identified what L0 lacks (by design, to be added in L1-L4)
+> A bilingual, source-governed AAOIFI standards assistant that normalizes financial-operation language, routes to the correct source family, retrieves current and citable evidence, clarifies uncertainty, and answers only when evidence is admissible.
 
-### 2. Updated Glossary
-- Added L0 completion status markers (✅)
-- Updated LLM definition to Gemini 1.5 Pro
-- Added Session and SSE definitions
-- Clarified Vector_Database evolution (ChromaDB → Qdrant)
+## Why The Change Was Needed
 
-### 3. Added Comprehensive L1-L4 Requirements
+The implementation is already ahead of the older L0-L4 narrative. The codebase includes FastAPI, REST, SSE, browser chat, multilingual retrieval, OpenRouter generation, clarification, citation validation, source-family routing metadata, and fail-closed behavior.
 
-#### L1 Requirements (Clarification Loop & Error Handling)
-- **Req 23**: Open-Source Library Research and Integration ⭐ NEW
-  - Top 5 repositories to study
-  - Integration plan for each layer
-  - Key findings (no production AAOIFI RAG exists = moat)
-- **Req 25**: LLM-Driven Clarification Loop (not hand-coded state machine)
-- **Req 26**: Session Management with Conversation History
-- **Req 27**: Comprehensive Error Handling (custom exception hierarchy)
-- **Req 28**: Structured Logging and Observability (JSON logs)
-- **Req 29**: Enhanced Data Models for L1 (provenance, confidence, quotes)
-- **Req 30**: Prompt Builder for Conversation History
-- **Req 31**: Integration Tests for L1
-- **Req 32**: Retrieval Quality Baseline for L1
+The old planning language still over-emphasized generic RAG milestones and older model assumptions. It did not make source governance, source-family routing, Arabic/English concept normalization, supersession, and answer admissibility explicit enough.
 
-#### L2 Requirements (FastAPI + Streaming)
-- **Req 33**: FastAPI REST API
-- **Req 34**: Server-Sent Events (SSE) Streaming
-- **Req 35**: API Authentication and Authorization (JWT)
-- **Req 36**: Rate Limiting with Tiered Access (Free/Standard/Premium)
-- **Req 37**: API Error Handling and Responses
-- **Req 38**: CORS and Security Headers
+## Evidence Reviewed
 
-#### L3 Requirements (Production Infrastructure)
-- **Req 39**: Migration to Qdrant Vector Database
-- **Req 40**: Redis Session Store
-- **Req 41**: PostgreSQL Document and Audit Store
-- **Req 42**: User Management and Tiered Access
-- **Req 43**: Monitoring and Alerting (Prometheus + Grafana)
-- **Req 44**: Horizontal Scaling and Load Balancing
+- Current code paths:
+  - `src/chatbot/application_service.py`
+  - `src/chatbot/clarification_engine.py`
+  - `src/chatbot/commercial_assessment.py`
+  - `src/rag/pipeline.py`
+  - `src/rag/query_preprocessor.py`
+  - `src/chatbot/citation_validator.py`
+  - `scripts/ingest.py`
+- Current planning docs:
+  - `requirements.md`
+  - `design.md`
+  - `next-level-plans/README.md`
+  - `next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md`
+- Official AAOIFI accounting standards page:
+  - bilingual standards list;
+  - supersession notes;
+  - warning that standards are regularly updated on the official site.
+- Deep research report:
+  - first-release FAS router seed;
+  - candidate supersession graph;
+  - parent/child chunking recommendation;
+  - source/retrieval/answer trace data model;
+  - Arabic NLP, retrieval, evaluation, and observability candidates.
+- Egypt financial institutions refresh package:
+  - `Egypt Financial Institutions Refresh for Sharia Screening.md`;
+  - `Egypt_Financial_Institutions_COMPLETE.xlsx`;
+  - `Egyptian_Financial_Institutions_Complete_Presentation.pdf`;
+  - baseline sectors for CBE banks, capital-market institutions, insurance, non-bank finance, payment services, funds, sukuk, and regulator model contracts.
 
-#### L4 Requirements (Advanced Features)
-- **Req 45**: Citation Quality Enhancement (direct quotes, confidence scores)
-- **Req 46**: Disclaimer and Legal Compliance (GDPR, audit logs)
-- **Req 47**: AAOIFI Standard Versioning
-- **Req 48**: Performance Optimization (caching, connection pooling)
-- **Req 49**: Advanced Testing and Evaluation (Ragas, DeepEval)
+## Core Planning Corrections
 
-### 4. Updated Success Criteria
-- Split into L0, L1, L2, L3, L4, and Overall success criteria
-- L0 marked as COMPLETE ✅
-- Clear metrics for each layer
+1. RAG is evidence retrieval, not the decision authority.
+2. Downloaded text is derived content; official source records need cataloging.
+3. Correct retrieval means correct source family, standard, language, currentness, and section, not just semantic similarity.
+4. Arabic, English, mixed-language, transliterated, and colloquial queries require a governed concept-normalization layer.
+5. Clarification is a product safety behavior and must be evaluated.
+6. FAS can support accounting-treatment answers, but FAS alone cannot support halal/haram or contract-validity conclusions.
+7. Final answers require an admissibility gate: source family, currentness, retrieval confidence, citation support, ambiguity handling, and safety policy.
+8. Free OpenRouter routes must not be used for large evaluation matrices.
+9. Research-proposed tool/model choices must stay as measured spikes until they pass Mushir-specific AAOIFI tests.
+10. Feedback/admin review should become part of governance before corrections influence routing, source catalog data, rules, prompts, or evaluations.
+11. Egypt institution scraping must be bounded, public-source, provenance-preserving, and scholar-reviewed before it can become supervised compliance truth.
 
-### 5. Updated Assumptions and Constraints
-- Added L0 validated decisions (DO NOT CHANGE without justification)
-- Added budget constraint ($0.011/query with Gemini)
-- Added L1-L4 evolution path
-- Clarified technical constraints (Python 3.9+, ChromaDB → Qdrant at L3)
+## Files Updated
 
----
+- `requirements.md` now defines the maintained product contract and requirements around source governance, ingestion metadata, concept normalization, routing, clarification, retrieval, answer admissibility, evaluation, and roadmap governance.
+- `requirements.md` now also includes the first-release router seed, supersession seed, parent/child chunking requirement, and admin feedback requirement.
+- `design.md` now maps the target architecture to the current codebase and defines the source-governed pipeline, data model, chunking model, router seed, retrieval trace, and feedback loop.
+- `tasks.md` now translates the rethink and research report into implementation slices.
+- `tasks.md` now includes an Egypt financial institutions evidence-corpus backlog for registry normalization, bounded discovery, public artifact capture, operations cataloging, and scholar-review data.
+- `PROJECT-LOGIC-RETHINK-2026-05-19.md` captures the full rethink, implementation gap analysis, research addendum, and open stakeholder decisions.
+- `AGENT_ROUNDTABLE_SUMMARY.md` now reflects the 2026-05-19 BMAD review and deep research follow-up.
+- `next-level-plans/README.md` now routes future planning through L5 readiness plus source-governed semantic understanding and research-seed verification.
+- `next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` now aligns L6 with source catalog, concept map, routing, rules, quality gates, and the accounting-support boundary for FAS routes.
+- `next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md` defines the public-source Egypt institution operations corpus, hard gap statuses, anti-bot/access-control policy, and scholar-review workflow.
 
-## Key Changes to design.md
+## Open Decisions To Confirm Before New Implementation
 
-### 1. Added L0 Implementation Status Section
-- What was built and validated
-- Key architectural decisions validated
-- What L0 lacks (by design)
+- Should the first production-grade corpus include only AAOIFI accounting standards or both accounting and Shariah standards?
+- May Mushir provide non-binding standards-based permissibility assessments when Shariah-standard evidence exists, or should all permissibility questions route to scholar review?
+- May future versions include non-AAOIFI sources?
+- What source refresh cadence is required?
+- Which user persona should drive tone and default risk posture?
+- Which Egypt institution sectors should be piloted first before the full registry crawl?
+- What review format does the Sharia scholar prefer for operation evidence and engine-proposed AAOIFI mappings?
 
-### 2. Updated Design Philosophy
-- Added "LLM-driven clarification" principle
-- Updated progressive scaling path (L0 → L1 → L2 → L3 → L4)
-- Emphasized L0 validation of core decisions
+## Current Roadmap After Reformulation
 
-### 3. Added Open-Source References Section ⭐ NEW
-- **A. Islamic Finance / Sharia / Quran-Hadith RAG Chatbots**
-  - 5 repositories analyzed
-  - Verdict: No production-grade AAOIFI RAG exists (net-new domain = moat)
-  - Reusable patterns identified
-
-- **B. Legal/Regulatory RAG (PRIMARY SOURCE)**
-  - 5 repositories analyzed
-  - lawglance/lawglance: Best legal reference
-  - sougaaat/RAG-based-Legal-Assistant: BM25+RRF retrieval pattern
-  - Verdict: Legal domain is closest analog
-
-- **C. Production-Grade RAG References**
-  - 9 repositories analyzed
-  - NirDiamant/Controllable-RAG-Agent: Top priority to study
-  - GiovanniPasq/agentic-rag-for-dummies: L1 clarification pattern
-  - onyx-dot-app/onyx: L3+ scaling patterns
-
-- **D. Tooling — Evaluation, Citation Validation**
-  - Ragas: Primary eval harness (L3+)
-  - DeepEval: CI/CD gates (L3+)
-  - TruLens: Dashboard option
-  - Citation validation approach (no standalone library)
-
-### 4. Top 5 Repositories to Clone and Study
-1. **NirDiamant/Controllable-RAG-Agent** ⭐⭐⭐⭐⭐
-2. **sougaaat/RAG-based-Legal-Assistant** ⭐⭐⭐⭐⭐
-3. **lawglance/lawglance** ⭐⭐⭐⭐
-4. **GiovanniPasq/agentic-rag-for-dummies** ⭐⭐⭐⭐
-5. **onyx-dot-app/onyx** ⭐⭐⭐
-
-### 5. Bonus Dependencies
-- Ragas: Nightly faithfulness golden eval
-- DeepEval: pytest CI gates
-- LangGraph: Clarification state machine
-- Reciprocal Rank Fusion: Multi-query retrieval fusion
-
----
-
-## Implementation Guidance from Team Feedback
-
-### From Winston (Architect)
-✅ **Keep Gemini 1.5 Pro**: 1M context + cost-effective  
-✅ **Keep ChromaDB for L0-L2**: Swap to Qdrant at L3  
-✅ **Keep all-mpnet-base-v2**: English-only but solid  
-✅ **Keep 512 token chunks, 50 overlap**: Don't change unless retrieval quality tanks  
-⚠️ **Clarification loop**: LLM-driven, not hand-coded state machine  
-⚠️ **Streaming**: Non-negotiable for L2 (SSE first, WebSocket later)  
-⚠️ **Rate limits**: Tie to actual costs ($0.011/query)  
-⚠️ **Citation quality**: Direct quotes, provenance, confidence scores  
-⚠️ **Audit logs, disclaimers, versioning**: Not optional
-
-### From Amelia (Dev)
-✅ **L0 code quality**: Clean data models, straightforward RAG pipeline  
-⚠️ **Add error handling**: Custom exceptions, try/catch everywhere  
-⚠️ **Add tests**: Integration tests, error tests, performance tests  
-⚠️ **Add logging**: Structured JSON logs for observability  
-⚠️ **Refactor prompt building**: PromptBuilder class for conversation history  
-⚠️ **Add clarification loop**: LLM-driven, not state machine  
-⚠️ **Add FastAPI + SSE**: Streaming is non-negotiable  
-⚠️ **Evolve data models**: Add Session, ClarificationTurn, User, AuditLog
-
-### Data Model Evolution
-**L0 (Complete)**:
-- AAOIFICitation
-- SemanticChunk
-- ComplianceRuling
-
-**L1 Additions**:
-- Session (with conversation history)
-- Enhanced AAOIFICitation (document_version, chunk_id, similarity_score, quote)
-
-**L3 Additions**:
-- User (with tier and rate limits)
-- AuditLog (full provenance)
-
----
-
-## Next Steps
-
-### For L1 Implementation
-1. **Study top 5 repositories** (especially NirDiamant/Controllable-RAG-Agent and GiovanniPasq/agentic-rag-for-dummies)
-2. **Implement LLM-driven clarification loop** (not state machine)
-3. **Add error handling** (custom exception hierarchy)
-4. **Add structured logging** (JSON format)
-5. **Add session management** (in-memory for L1)
-6. **Add PromptBuilder class** (conversation history)
-7. **Add integration tests** (80% coverage target)
-8. **Establish retrieval quality baseline** (precision@5, recall@5, MRR)
-
-### For L2 Implementation
-1. **Build FastAPI REST API** (study Zlash65/rag-bot-fastapi)
-2. **Implement SSE streaming** (Gemini streaming API)
-3. **Add JWT authentication**
-4. **Add rate limiting** (in-memory for L2)
-5. **Add CORS and security headers**
-
-### For L3 Implementation
-1. **Migrate to Qdrant** (from ChromaDB)
-2. **Migrate to Redis** (from in-memory sessions)
-3. **Add PostgreSQL** (documents, audit logs, users)
-4. **Add monitoring** (Prometheus + Grafana)
-5. **Add horizontal scaling** (load balancer + multiple instances)
-6. **Integrate Ragas** (nightly evaluation)
-7. **Integrate DeepEval** (CI/CD gates)
-
-### For L4 Implementation
-1. **Enhance citation quality** (direct quotes, confidence scores)
-2. **Add disclaimers and compliance** (GDPR, audit logs)
-3. **Add AAOIFI versioning** (track standard versions)
-4. **Add performance optimization** (caching, connection pooling)
-5. **Add advanced evaluation** (Ragas, DeepEval, hallucination prevention)
-
----
-
-## Files Modified
-
-1. **requirements.md**
-   - Added L0 status section
-   - Updated glossary
-   - Added 26 new requirements (Req 23-49)
-   - Updated success criteria
-   - Updated assumptions and constraints
-
-2. **design.md**
-   - Added L0 status section
-   - Updated design philosophy
-   - Added open-source references section (comprehensive)
-   - Added top 5 repositories to study
-   - Added bonus dependencies
-
----
-
-## Key Takeaways
-
-1. **L0 is complete and validated** ✅
-   - Gemini 1.5 Pro works well
-   - ChromaDB is sufficient for L0-L2
-   - 512-token chunks are optimal
-   - RAG loop works end-to-end
-
-2. **No production AAOIFI RAG exists** = **This is the moat**
-   - Net-new domain
-   - Legal RAG is closest analog
-   - Can leverage production RAG patterns
-
-3. **Clear path forward** (L1 → L2 → L3 → L4)
-   - L1: Clarification + error handling + tests
-   - L2: API + streaming + auth
-   - L3: Production infra + monitoring + eval
-   - L4: Advanced features + compliance
-
-4. **Top priorities for L1**:
-   - Study NirDiamant/Controllable-RAG-Agent
-   - Implement LLM-driven clarification (not state machine)
-   - Add comprehensive error handling and logging
-   - Establish retrieval quality baseline
-
----
-
-## Status: READY FOR L1 IMPLEMENTATION ✅
-
-Both planning files are now comprehensive, aligned with L0 learnings, and provide clear guidance for L1-L4 implementation.
-
----
-
-## 2026-05-18 Strategic Research Update: L6 Rules-First Evaluator
-
-### Input Reviewed
-
-- `docs/deep-research-report.md`
-- BMAD party-mode review across architecture, product, and test/QA perspectives
-- Existing Kiro planning files and next-level roadmap
-
-### Critique Applied
-
-The research shows that the older planning language was too FAS/RAG-centric for broad commercial-process permissibility questions. FAS remains valuable for accounting, reporting, presentation, measurement, and disclosure, but halal/haram and contract-validity questions require a Shari'ah-standards-first route.
-
-The plan now separates three concerns:
-
-1. **Sharia permissibility layer:** Shari'ah Standards and reviewed Sharia sources for contract validity, prohibited elements, required conditions, and commercial-process rules.
-2. **FAS accounting layer:** FAS and related standards for recognition, measurement, presentation, disclosure, and reporting implications.
-3. **Rules/evidence/explanation layer:** structured transaction extraction, executable rule checks, hybrid retrieval, citation validation, and LLM explanation after rule/evidence evaluation.
-
-### Files Updated
-
-- `next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` added as the proposed post-L5 product and architecture direction.
-- `next-level-plans/README.md` updated so L5 remains the active implementation gate while L6 is marked as future scope.
-- `requirements.md` updated with source-family cataloging, transaction scenario extraction, standards routing, executable rules, non-fatwa verdict contract, L6 quality gates, and OpenRouter/free API protection.
-- `design.md` updated with the L6 architecture pivot, rules-first flow, source hierarchy, and free-model throttling guidance.
-
-### Planning Decisions
-
-- Do not implement L6 until L5 quality, citation, runtime, and release-readiness gates are green.
-- Do not claim Mushir issues binding fatwas.
-- Do not answer permissibility questions from FAS-only evidence.
-- Do not expose broad "all commercial operations" support until each domain has sources, rules, gold cases, and refusal behavior.
-- Use `openrouter/free` only with conservative rate limits, low concurrency, backoff/circuit breaking, and small controlled eval batches.
+1. Keep the current runtime foundation.
+2. Complete L5 release readiness and query-path proof.
+3. Build an official source catalog and source freshness workflow.
+4. Verify first-release FAS router and supersession seed records against cataloged sources.
+5. Move handwritten bilingual term mappings into a governed concept map.
+6. Add parent/child chunking, source-family gates, and correct-standard retrieval evaluation.
+7. Add feedback/admin review and accepted-correction evaluation flow.
+8. Harden clarification and refusal policy with evaluation cases.
+9. Only then expand into L6 rules-first non-binding commercial-process assessment.
+10. Build the Egypt institutions evidence corpus through a pilot-first pipeline before any full-registry scrape.

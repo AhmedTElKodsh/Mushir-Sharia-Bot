@@ -1,0 +1,8 @@
+registry_source_id,source_kind,path_or_sheet,observed_range,planning_status,notes
+egypt-refresh-report,markdown,.kiro/specs/sharia-compliance-chatbot/Egypt Financial Institutions Refresh for Sharia Screening.md,,reviewed_input,"Narrative refresh with source universe, priority documents, gaps, and checklist."
+egypt-fi-workbook-summary,workbook_sheet,Summary,A1:E100,baseline_only,"Uploaded workbook baseline; revalidate before production use."
+egypt-fi-workbook-cbe-banks,workbook_sheet,01_CBE_Banks,A1:E100,baseline_only,"Bank seed list; revalidate against current CBE bank register."
+egypt-fi-workbook-capital-market,workbook_sheet,02_Capital_Market,A1:E798,baseline_only,"Capital-market seed list; segment and revalidate against live regulator sources."
+egypt-fi-workbook-insurance,workbook_sheet,03_Insurance,A1:E997,baseline_only,"Insurance seed list; split insurer, reinsurer, broker, takaful, and related entity types."
+egypt-fi-workbook-nonbank,workbook_sheet,04_NonBank_Financial,A1:E326,baseline_only,"Non-bank finance seed list; revalidate against FRA activity-filtered registers."
+egypt-fi-presentation,pdf,.kiro/specs/sharia-compliance-chatbot/Egyptian_Financial_Institutions_Complete_Presentation.pdf,,baseline_only,"Presentation input for stakeholder context; not a production authority by itself."

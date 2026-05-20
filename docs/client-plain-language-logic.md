@@ -306,6 +306,19 @@ L6 should start with limited domains instead of "all commercial processes" at on
 
 Each domain needs source mapping, transaction fields, rules, gold test cases, and human-review criteria before it can be called supported.
 
+### Egypt Institution Operations Corpus
+
+A new planned L6 data workstream prepares Mushir to understand public Egyptian financial-institution operations more concretely. The team will build a public-source corpus covering CBE banks, payment services, capital-market firms, insurers and takaful providers, non-bank finance companies, Islamic funds, sukuk sources, and FRA model contracts.
+
+The goal is not to scrape names only. The useful evidence is in tariffs, fees, product terms, contracts, model contracts, prospectuses, annual reports, fund documents, policy wordings, and regulator rulebooks.
+
+This corpus supports two client goals:
+
+- test Mushir against real public operations, then let a Sharia scholar review whether the engine selected the right AAOIFI references and initial risk label;
+- help future answers start from documented public product details when a user asks about a named institution or contract.
+
+The safety rule remains strict: if a contract or official source is not publicly found after bounded research, Mushir records the gap instead of guessing. Machine labels are provisional until scholar-reviewed, and user-supplied facts override stored institution assumptions.
+
 ## Recommended Client Positioning
 
 Use this wording:

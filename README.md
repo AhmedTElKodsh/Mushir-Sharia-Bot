@@ -37,6 +37,7 @@ The current implementation is a FastAPI application with browser chat, REST API,
 | Safe fatwa/legal/financial-advice refusal | Implemented |
 | L5 release readiness | Active gate |
 | L6 rules-first evaluator | Proposed future direction; foundational scenario/routing/source-gap scaffolding is implemented, full evaluator is not active runtime scope |
+| Egypt institution evidence corpus | Planned L6 data-acquisition workstream; registry seed folders and planning docs are prepared, live scraping is not implemented yet |
 
 ## Planning Direction
 
@@ -44,6 +45,7 @@ Older L0-L4 planning files are retained as historical implementation context. Th
 
 - **L5 now:** prove the implemented runtime through tests, retrieval evaluation, live smoke checks, readiness gates, documentation, and secret-safe deployment practices.
 - **L6 next:** widen Mushir into a rules-first commercial-process assessment assistant only after L5 is green. The first runtime scaffold now supports transaction-scenario metadata, standards routing metadata, source-family detection, and a fail-closed source-gap guard for late-payment/default permissibility questions. Full L6 still requires Shari'ah-source acquisition, executable rules, structured verdict exposure, and human-review workflows.
+- **L6 evidence corpus:** build a public-source Egypt financial institutions operations corpus for supervised evaluation and future institution-aware retrieval. The scraper must preserve source provenance, stop after bounded discovery attempts, respect access controls, record missing details explicitly, and keep machine-proposed AAOIFI labels separate from scholar-reviewed ground truth.
 
 Mushir must not be marketed as a fatwa engine. It provides evidence-backed, non-binding assistance.
 
@@ -93,6 +95,8 @@ src/
 +-- api/             # FastAPI REST endpoints
 +-- storage/         # Caching and persistence
 +-- config/          # Configuration management
++-- acquisition/     # Source acquisition primitives; future Egypt institution modules belong here
++-- governance/      # Source catalog, concept map, router seeds, chunk metadata
 
 scripts/
 +-- check_corpus.py                # Verify AAOIFI corpus exists and is ready
@@ -108,6 +112,11 @@ test_bot.py                       # End-to-end API testing script
 data/
 +-- raw/            # Raw AAOIFI PDF files
 +-- markdown/       # Converted Markdown documents
++-- source_registry/ # Tracked planning seeds for Egypt institution source categories
++-- fixtures/       # Small tracked scrape fixtures for tests only
+
+artifacts/
++-- l6_scrape/      # Local/runtime scrape output, ignored except README
 ```
 
 ## Environment Variables
@@ -254,6 +263,7 @@ For the current maintained documentation set, start with:
 - `docs/index.md` - Documentation map.
 - `docs/project-documentation.md` - Full current technical documentation.
 - `docs/client-plain-language-logic.md` - Simple client-facing explanation of the whole logic.
+- `docs/l6-egypt-institution-scrape/README.md` - Project-facing guide for the planned Egypt institution scraping/evidence corpus.
 - `project-context.md` - Implementation context and rules for AI agents and developers.
 
 ## Scripts
@@ -395,6 +405,7 @@ Use these docs as the current roadmap sources:
 - `docs/l5-production-readiness.md` - active L5 release/readiness runbook.
 - `.kiro/specs/sharia-compliance-chatbot/next-level-plans/README.md` - planning index.
 - `.kiro/specs/sharia-compliance-chatbot/next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` - proposed L6 future direction.
+- `.kiro/specs/sharia-compliance-chatbot/next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md` - Egypt financial institutions public-source scraping, gap handling, and scholar-review data plan.
 
 ## Deployment
 

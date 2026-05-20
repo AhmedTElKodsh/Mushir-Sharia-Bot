@@ -1,0 +1,57 @@
+version: 2026-05-20
+status: planning_seed
+
+authority_hierarchy:
+  - rank: 1
+    source_type: regulator_register
+    evidence_use: compliance_evidence_allowed
+  - rank: 2
+    source_type: official_institution_site
+    evidence_use: compliance_evidence_allowed_when_site_verified
+  - rank: 3
+    source_type: official_disclosure_or_prospectus
+    evidence_use: compliance_evidence_allowed
+  - rank: 4
+    source_type: official_annual_report
+    evidence_use: compliance_evidence_allowed
+  - rank: 5
+    source_type: third_party_search_result
+    evidence_use: discovery_only
+
+regulators:
+  - id: cbe
+    name: Central Bank of Egypt
+    sectors:
+      - cbe_banks
+      - cbe_payment_services
+    source_roles:
+      - registered_bank_list
+      - payment_rules
+      - mobile_wallet_framework
+      - ipn_rules
+  - id: fra
+    name: Financial Regulatory Authority
+    sectors:
+      - capital_market
+      - insurance
+      - nonbank_financial
+      - regulator_model_contracts
+    source_roles:
+      - registration_portal
+      - financing_register
+      - insurance_register
+      - prospectus_pages
+      - model_contract_pages
+  - id: egx
+    name: Egyptian Exchange
+    sectors:
+      - capital_market
+    source_roles:
+      - listed_security_reference
+      - disclosure_reference
+  - id: mcsd
+    name: Misr for Central Clearing, Depository and Registry
+    sectors:
+      - capital_market
+    source_roles:
+      - custody_or_depository_reference

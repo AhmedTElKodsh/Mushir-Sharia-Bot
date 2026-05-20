@@ -2,11 +2,11 @@
 
 This file is the working context for AI agents and developers making changes in this repository. Keep changes grounded in the current codebase, not in older roadmap language.
 
-Last refreshed: 2026-05-18
+Last refreshed: 2026-05-20
 
 ## Product Purpose
 
-Mushir is a Sharia compliance assistant for Islamic finance questions. The current runtime answers only from retrieved AAOIFI corpus excerpts and must not issue binding fatwas, legal opinions, or financial advice.
+Mushir is a source-governed AAOIFI standards assistant for Islamic finance questions. The current runtime answers only from retrieved AAOIFI corpus excerpts and must not issue binding fatwas, legal opinions, or financial advice.
 
 The product goal is a safe, citation-grounded chatbot that can:
 
@@ -19,6 +19,12 @@ The product goal is a safe, citation-grounded chatbot that can:
 - expose the same behavior through `/chat`, REST, and SSE APIs.
 
 The post-L5 planning goal is broader but still non-binding: a rules-first Sharia commercial-process assessment assistant. The first runtime scaffold is present in `src/chatbot/commercial_assessment.py` and `src/models/commercial.py`: deterministic scenario extraction, source-family routing, placeholder rule traces, source-family detection, and a fail-closed guard for late-payment/default permissibility questions when Shari'ah-standard evidence is absent. Do not present this as the full L6 evaluator until source acquisition, executable rules, and QA gates are complete.
+
+The 2026-05-19 planning rethink reframes Mushir as a controlled standards workflow rather than a generic RAG bot. The intended architecture is source catalog -> structured ingestion -> bilingual concept normalization -> intent classification -> clarification -> source-family routing -> metadata-aware retrieval -> citation-gated answer -> evaluation. Downloaded markdown is derived content; source currentness, supersession, source family, and citation traceability must become answer-admissibility gates.
+
+The spec-level `deep-research-report.md` was reviewed on 2026-05-19 and promoted into planning only where it creates useful contracts: first-release FAS router seed, supersession seed graph, parent/child chunking, source/retrieval/answer trace records, uncertainty classes, and feedback/admin review. Treat specific library/model/tool names from the report as spike candidates until they are measured against Mushir's AAOIFI gold set.
+
+The 2026-05-20 Egypt financial institutions workstream is a public-source evidence-corpus plan for post-L5/L6 evaluation. It covers CBE banks, CBE payment-service sources, capital-market institutions, insurance and takaful entities, mortgage finance, leasing, consumer finance, microfinance/SME finance, fintech licensees, Islamic funds, sukuk sources, and FRA model contracts. Treat the refresh markdown, workbook, and presentation as baseline inputs only. Before broad scraping, revalidate entities against current regulator sources, use bounded discovery, respect access controls, record missing details explicitly, and keep machine-proposed AAOIFI labels separate from scholar-reviewed ground truth.
 
 ## Current Architecture
 
@@ -45,9 +51,13 @@ The main runtime flow is:
 - If the question is unclear, ask exactly one focused follow-up question.
 - If retrieval or citations are weak, fail closed with `INSUFFICIENT_DATA`.
 - Definition questions may return `INSUFFICIENT_DATA` with citations because a definition is not a transaction-level compliance ruling.
-- Arabic citation support must stay validator-backed. Keep `[FAS-X]`, `[FAS-X §Y]`, and Arabic citation formats covered by tests.
+- Arabic citation support must stay validator-backed. Keep `[FAS-X]`, `[FAS-X Â§Y]`, and Arabic citation formats covered by tests.
 - Cache only validated non-clarification answers.
 - Keep docs secret-safe: use placeholders, not real keys or key-shaped examples.
+- Keep research-derived router and supersession seeds reviewable and catalog-verified before treating them as authority.
+- For Egypt institution scraping, do not infer official websites, contracts, or compliance status when public evidence is missing; record the bounded-search gap.
+- Respect robots.txt, rate limits, login walls, CAPTCHA, paywalls, and access controls. Do not bypass security barriers to collect contracts or terms.
+- Institution pre-knowledge is subordinate to user-supplied facts in future answers and must be flagged when stale, conflicting, or incomplete.
 
 ## Runtime Modes
 
@@ -143,11 +153,18 @@ Smoke bilingual answer behavior:
 - `README.md`: public project overview and setup.
 - `docs/project-documentation.md`: current full technical documentation.
 - `docs/client-plain-language-logic.md`: client-facing report covering planning, implementation, current limits, L5 readiness, and L6 future direction.
+- `docs/client-source-governed-aaoifi-roadmap.md`: visual client-facing roadmap for the updated source-governed AAOIFI assistant logic.
 - `docs/chatbot-architecture.md`: detailed answer-generation architecture.
 - `docs/l5-production-readiness.md`: release/readiness runbook.
 - `docs/deep-research-report.md`: research input for the L6 rules-first evaluator direction.
+- `.kiro/specs/sharia-compliance-chatbot/deep-research-report.md`: spec-level deep research input reviewed for router, supersession, chunking, schema, feedback, and evaluation planning.
+- `.kiro/specs/sharia-compliance-chatbot/tasks.md`: maintained implementation backlog for source-governed planning slices.
+- `.kiro/specs/sharia-compliance-chatbot/next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md`: post-L5/L6 data-acquisition plan for public Egyptian institution operations, contracts, bounded discovery, ethical crawling, gap marking, and scholar-reviewed evaluation rows.
+- `docs/l6-egypt-institution-scrape/README.md`: project-facing guide to the planned Egypt institutions scrape workstream and folder boundaries.
+- `data/source_registry/`: tracked source-category and regulator-source planning seeds for the Egypt institution corpus.
 - `docs/ops/deployment.md`: deployment operations.
 - `docs/ops/huggingface-spaces.md`: Hugging Face Spaces deployment notes.
+- `.kiro/specs/sharia-compliance-chatbot/PROJECT-LOGIC-RETHINK-2026-05-19.md`: current planning rethink and gap analysis.
 - `.kiro/specs/sharia-compliance-chatbot/next-level-plans/`: historical L1-L4 plans, active L5 roadmap, and proposed L6 direction.
 
 ## Editing Guidance

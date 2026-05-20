@@ -107,6 +107,8 @@ class StandardsRoute:
 
     primary: List[SourceFamily]
     secondary: List[SourceFamily] = field(default_factory=list)
+    candidate_standards: List[str] = field(default_factory=list)
+    route_id: Optional[str] = None
     rationale: str = ""
     requires_rule_evaluation: bool = False
     unsupported_reason: Optional[str] = None
@@ -115,6 +117,8 @@ class StandardsRoute:
         return {
             "primary": [family.value for family in self.primary],
             "secondary": [family.value for family in self.secondary],
+            "candidate_standards": self.candidate_standards,
+            "route_id": self.route_id,
             "rationale": self.rationale,
             "requires_rule_evaluation": self.requires_rule_evaluation,
             "unsupported_reason": self.unsupported_reason,
