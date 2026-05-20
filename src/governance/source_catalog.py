@@ -321,3 +321,25 @@ class SourceCatalog:
                 SourceRelationshipRecord.from_mapping(item) for item in relationships
             ),
         )
+
+
+def default_candidate_supersession_relationships() -> List[SourceRelationshipRecord]:
+    """Unverified supersession candidates from the 2026-05-19 research pass."""
+    return [
+        SourceRelationshipRecord(
+            relationship_id="candidate-fas-02-superseded-by-fas-28",
+            source_id="aaoifi-fas-02-en",
+            related_source_id="aaoifi-fas-28-en",
+            relationship_type=SourceRelationshipType.SUPERSEDES,
+            review_status=SourceReviewStatus.UNREVIEWED,
+            notes="Candidate Murabaha supersession edge from research report; catalog verification required.",
+        ),
+        SourceRelationshipRecord(
+            relationship_id="candidate-fas-20-contextualized-by-fas-32",
+            source_id="aaoifi-fas-20-en",
+            related_source_id="aaoifi-fas-32-en",
+            relationship_type=SourceRelationshipType.CONTEXTUALIZES,
+            review_status=SourceReviewStatus.UNREVIEWED,
+            notes="Candidate Ijarah relationship from research report; catalog verification required.",
+        ),
+    ]

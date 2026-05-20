@@ -2,10 +2,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Dict, Iterable, List, Optional, Set
 
 from src.models.commercial import ContractFamily, SourceFamily
 from src.rag.query_preprocessor import QueryPreprocessor
+
+
+class TerminologySeedSource(str, Enum):
+    FIBO = "fibo"
+    ARABTERM = "arabterm"
+    ARABIC_ONTOLOGY = "arabic_ontology"
+    INTERNAL_REVIEW = "internal_review"
+
+
+class TerminologySeedStatus(str, Enum):
+    REVIEWED_ACCEPTED = "reviewed_accepted"
+    REVIEWED_REJECTED = "reviewed_rejected"
+    PENDING_REVIEW = "pending_review"
 
 
 @dataclass(frozen=True)
@@ -67,6 +81,31 @@ class ConceptMap:
         for entry in self.match(query):
             families.update(entry.candidate_source_families)
         return families
+
+
+@dataclass(frozen=True)
+class TerminologySeedEvaluation:
+    """Review gate for external terminology before it enters the concept map."""
+
+    term: str
+    source: TerminologySeedSource
+    proposed_concept_id: str
+    status: TerminologySeedStatus
+    reviewer: str
+    rationale: str
+
+    def __post_init__(self) -> None:
+        if not self.term.strip():
+            raise ValueError("term is required")
+        if not self.proposed_concept_id.strip():
+            raise ValueError("proposed_concept_id is required")
+        if self.source != TerminologySeedSource.INTERNAL_REVIEW and self.status == TerminologySeedStatus.REVIEWED_ACCEPTED:
+            if not self.reviewer.strip() or not self.rationale.strip():
+                raise ValueError("accepted external terminology requires reviewer and rationale")
+
+    @property
+    def can_enter_concept_map(self) -> bool:
+        return self.status == TerminologySeedStatus.REVIEWED_ACCEPTED
 
 
 def default_concept_map() -> ConceptMap:
