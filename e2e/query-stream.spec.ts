@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("/query/stream — SSE", () => {
-  test("[P0] POST /query/stream returns SSE with done event", async ({ request }) => {
+  test("[P0] POST /query/stream returns SSE with done event for local scope refusal", async ({ request }) => {
     const res = await request.post("/api/v1/query/stream", {
-      data: { query: "What is ijara?", context: { disclaimer_acknowledged: true } },
+      data: { query: "Give me a binding fatwa", context: { disclaimer_acknowledged: true } },
     });
     expect(res.status()).toBe(200);
     expect(res.headers()["content-type"]).toContain("text/event-stream");

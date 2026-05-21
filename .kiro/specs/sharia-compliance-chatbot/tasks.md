@@ -94,16 +94,28 @@
 
 ### 11. Egypt Financial Institutions Evidence Corpus
 
+**Current implementation state (2026-05-20):** governance/data-contract foundation and fixture-safe pipeline helpers exist with focused tests. Full scraping is not ready. Do not start a full-registry scrape until a real mixed-institution pilot captures public artifacts, produces scholar-review exports, and passes the pilot gate.
+
 - [x] Treat `Egypt Financial Institutions Refresh for Sharia Screening.md`, `Egypt_Financial_Institutions_COMPLETE.xlsx`, and `Egyptian_Financial_Institutions_Complete_Presentation.pdf` as baseline inputs, not production authority.
 - [x] Normalize the CBE banks, capital-market, insurance, and non-bank finance workbook sheets into a canonical institution registry with stable IDs, regulator category, source provenance, and refresh status.
-- [x] Add registry validation that rejects institution rows missing regulator/source provenance.
-- [x] Implement bounded official-site discovery with attempt counts, source evidence, confidence scoring, and stop reasons.
+- [x] Add registry data contracts and validation that reject institution rows missing regulator/source provenance.
+- [x] Add a registry loader that reads the workbook and emits validated `InstitutionRegistryRecord` rows.
+- [x] Add bounded official-site discovery data contracts with attempt counts, source evidence, confidence scoring, and stop reasons.
+- [x] Implement the official-site discovery runner with configured search budgets and no inferred URLs.
 - [x] Define first-class gap statuses: `official_site_not_found`, `site_unreachable`, `blocked_by_security`, `requires_login`, `document_not_public`, `insufficient_public_data`, and `manual_review_required`.
-- [x] Respect robots.txt, terms, rate limits, CAPTCHA, login walls, paywalls, and access controls; blocked content SHALL become a status, not an evasion target.
-- [x] Capture public artifacts with URL, institution ID, document type, language, retrieval timestamp, HTTP status, content hash, raw path, extraction status, and citation-anchor strategy.
+- [x] Add access-control decision contracts for robots.txt, terms, rate limits, CAPTCHA, login walls, paywalls, and access controls.
+- [x] Wire access-control checks into the crawler/fetcher so blocked content becomes a status, not an evasion target.
+- [x] Add public-artifact metadata contracts for URL, institution ID, document type, language, retrieval timestamp, HTTP status, content hash, raw path, extraction status, and citation-anchor strategy.
+- [x] Implement public artifact fetching and storage under `artifacts/l6_scrape/`.
 - [x] Prioritize contract-level and economic-substance documents: tariffs, fees, terms, contracts, model contracts, annual reports, prospectuses, sukuk documents, fund documents, policy wordings, and regulator rulebooks.
-- [x] Build an operations catalog that preserves evidence spans for fees, payment terms, late-payment clauses, penalty beneficiaries, collateral, guarantees, insurance/takaful links, ownership or asset flow, and Sharia claims.
-- [x] Generate engine AAOIFI mappings and initial compliance-risk labels only as `machine_proposed` review candidates.
-- [x] Add scholar-review rows with reviewer decision, AAOIFI references, rationale, uncertainty flags, correction type, and accepted-gold-case flag.
-- [x] Ensure future user-answer behavior lets user-supplied facts override stored institution assumptions and flags stale or conflicting public corpus details.
-- [x] Run a pilot across mixed institution types and one no-details-found hard case before scaling to the full registry.
+- [x] Add operations-catalog contracts that preserve evidence spans for fees, payment terms, late-payment clauses, penalty beneficiaries, collateral, guarantees, insurance/takaful links, ownership or asset flow, and Sharia claims.
+- [x] Implement extraction/classification from captured artifacts into operations-catalog records.
+- [x] Add machine AAOIFI mapping contracts that keep initial compliance-risk labels as `machine_proposed` review candidates.
+- [x] Implement the engine mapping generator from operations and evidence spans.
+- [x] Add scholar-review record contracts with reviewer decision, AAOIFI references, rationale, uncertainty flags, correction type, and accepted-gold-case flag.
+- [x] Implement scholar-review export/import and accepted-gold-case generation.
+- [x] Add a user-fact override contract so user-supplied facts can override stored institution assumptions.
+- [x] Add a pilot-readiness gate that requires mixed institution coverage, at least one hard no-details/blocked case, captured artifacts, extracted operations, and accepted scholar-reviewed gold data.
+- [ ] Wire institution pre-knowledge and user-fact override behavior into runtime answer flow after reviewed corpus data exists.
+- [ ] Run a pilot across mixed institution types and one no-details-found hard case before scaling to the full registry.
+- [ ] Approve full-registry scraping only after the pilot proves discovery, crawl limits, blocked-site classification, raw capture, extraction, deduplication, gap marking, operations extraction, and scholar-review export.

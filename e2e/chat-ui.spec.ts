@@ -18,8 +18,10 @@ test.describe("/chat UI — smoke", () => {
     await expect(page.locator("button#send")).toBeEnabled();
   });
 
-  test("[P0] /chat page has disclaimer checkbox", async ({ page }) => {
-    await expect(page.locator("input#disclaimer")).toBeVisible();
+  test("[P0] /chat page has welcome guidance", async ({ page }) => {
+    const welcome = page.locator("#messages .welcome-card").first();
+    await expect(welcome).toBeVisible();
+    await expect(welcome).toContainText("Ask a Sharia");
   });
 
   test("[P1] /chat accepts input in textarea", async ({ page }) => {
@@ -27,23 +29,19 @@ test.describe("/chat UI — smoke", () => {
     await expect(page.locator("textarea#prompt")).toHaveValue("What is gharar?");
   });
 
-  test("[P1] /chat submit is disabled until disclaimer checked", async ({ page }) => {
-    await expect(page.locator("button#send")).toBeDisabled();
-    await page.locator("input#disclaimer").check();
+  test("[P1] /chat submit remains available for acknowledged demo flow", async ({ page }) => {
     await expect(page.locator("button#send")).toBeEnabled();
   });
 
-  test("[P1] /chat shows initial assistant message", async ({ page }) => {
-    const initial = page.locator("#messages .message.assistant").first();
+  test("[P1] /chat shows initial welcome card", async ({ page }) => {
+    const initial = page.locator("#messages .welcome-card").first();
     await expect(initial).toBeVisible();
-    await expect(initial).toContainText("Ask a Sharia");
+    await expect(initial).toContainText("AAOIFI-grounded assistant");
   });
 
   test("[P2] /chat submits query and shows user message", async ({ page }) => {
     await page.locator("textarea#prompt").fill("What is mudarabah?");
-    await page.locator("input#disclaimer").check();
     await page.locator("button#send").click();
-    await page.waitForTimeout(500);
     const userMsg = page.locator("#messages .message.user").first();
     await expect(userMsg).toBeVisible();
     await expect(userMsg).toContainText("What is mudarabah?");

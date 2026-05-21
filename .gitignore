@@ -91,6 +91,8 @@ dmypy.json
 
 # Playwright
 .playwright/
+playwright-report/
+test-results/
 
 # OS
 Thumbs.db

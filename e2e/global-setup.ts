@@ -1,10 +1,14 @@
-import { test asSetup, expect } from "@playwright/test";
+import { request, type FullConfig } from "@playwright/test";
 
 const BASE_URL = process.env.MUSHIR_API_URL || "http://127.0.0.1:8000";
 
-testSetup("global setup — verify API health", async ({ request }) => {
-  const res = await request.get(`${BASE_URL}/health`);
+export default async function globalSetup(config: FullConfig) {
+  const baseURL = String(config.projects[0]?.use?.baseURL || BASE_URL);
+  const context = await request.newContext({ baseURL });
+  const res = await context.get("/health");
   if (!res.ok()) {
-    throw new Error(`API not reachable at ${BASE_URL}/health (${res.status()}). Start the server first.`);
+    await context.dispose();
+    throw new Error(`API not reachable at ${baseURL}/health (${res.status()}). Start the server first.`);
   }
-});
+  await context.dispose();
+}

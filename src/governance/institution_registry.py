@@ -831,6 +831,12 @@ class InstitutionRegistry:
             if operation.institution_id == institution_id
         ]
 
+    def operation(self, operation_id: str) -> OperationCatalogRecord:
+        try:
+            return self._operations[operation_id]
+        except KeyError as exc:
+            raise KeyError(f"unknown operation_id: {operation_id}") from exc
+
     def add_machine_mapping(self, mapping: MachineAaoifiMappingCandidate) -> None:
         if mapping.operation_id not in self._operations:
             raise KeyError(f"unknown operation_id: {mapping.operation_id}")
@@ -838,12 +844,24 @@ class InstitutionRegistry:
             raise ValueError(f"duplicate mapping_id: {mapping.mapping_id}")
         self._mappings[mapping.mapping_id] = mapping
 
+    def machine_mappings(self) -> List[MachineAaoifiMappingCandidate]:
+        return list(self._mappings.values())
+
+    def mapping(self, mapping_id: str) -> MachineAaoifiMappingCandidate:
+        try:
+            return self._mappings[mapping_id]
+        except KeyError as exc:
+            raise KeyError(f"unknown mapping_id: {mapping_id}") from exc
+
     def add_scholar_review(self, review: ScholarReviewRecord) -> None:
         if review.mapping_id not in self._mappings:
             raise KeyError(f"unknown mapping_id: {review.mapping_id}")
         if review.review_id in self._reviews:
             raise ValueError(f"duplicate review_id: {review.review_id}")
         self._reviews[review.review_id] = review
+
+    def scholar_reviews(self) -> List[ScholarReviewRecord]:
+        return list(self._reviews.values())
 
     def accepted_gold_reviews(self) -> List[ScholarReviewRecord]:
         return [

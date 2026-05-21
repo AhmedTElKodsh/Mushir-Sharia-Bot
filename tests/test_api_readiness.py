@@ -151,5 +151,9 @@ def test_retrieval_error_log_does_not_include_raw_secret(capsys):
 
     captured = capsys.readouterr()
     assert answer.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert "could not reach the AAOIFI evidence index" in answer.answer
+    assert "retriever/index readiness" in answer.answer
     assert "sk-test-secret" not in captured.out
     assert "OPENROUTER_API_KEY" not in captured.out
+    assert "sk-test-secret" not in answer.answer
+    assert "OPENROUTER_API_KEY" not in answer.answer

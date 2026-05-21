@@ -121,7 +121,7 @@ class ApplicationService:
             return contract
 
         scenario = self.scenario_extractor.extract(cleaned_query)
-        standards_route = self.standards_router.route(scenario)
+        standards_route = self.standards_router.route(scenario, cleaned_query)
         rule_evaluation = self.rule_evaluator.evaluate(scenario, standards_route)
 
         if SourceFamily.SHARIA_STANDARD not in standards_route.primary:
@@ -155,7 +155,7 @@ class ApplicationService:
             except Exception as exc:
                 print(f"RAG retriever init failed: {type(exc).__name__}")
                 return AnswerContract(
-                    answer=self._not_addressed_message(response_language),
+                    answer=self._retrieval_unavailable_message(response_language),
                     status=ComplianceStatus.INSUFFICIENT_DATA,
                     citations=[],
                     reasoning_summary="Retrieval backend is not available.",
@@ -175,7 +175,7 @@ class ApplicationService:
         except Exception as exc:
             print(f"RAG retrieval failed: {type(exc).__name__}")
             return AnswerContract(
-                answer=self._not_addressed_message(response_language),
+                answer=self._retrieval_unavailable_message(response_language),
                 status=ComplianceStatus.INSUFFICIENT_DATA,
                 citations=[],
                 reasoning_summary="Retrieval backend is not available.",
@@ -545,6 +545,27 @@ class ApplicationService:
         if response_language == "ar":
             return "لا تتناول المقاطع المسترجعة من معايير أيوفي هذا السؤال بشكل كاف."
         return "Not addressed in retrieved AAOIFI standards."
+
+    @staticmethod
+    def _retrieval_unavailable_message(response_language: str) -> str:
+        if response_language == "ar":
+            return (
+                "INSUFFICIENT_DATA: \u062a\u0639\u0630\u0631 \u0627\u0644\u0648\u0635\u0648\u0644 "
+                "\u0625\u0644\u0649 \u0641\u0647\u0631\u0633 \u0623\u062f\u0644\u0629 \u0623\u064a\u0648\u0641\u064a "
+                "\u0641\u064a \u0647\u0630\u0627 \u0627\u0644\u0646\u0634\u0631. "
+                "\u0644\u0630\u0644\u0643 \u0644\u0627 \u064a\u0633\u062a\u0637\u064a\u0639 \u0645\u0634\u064a\u0631 "
+                "\u062a\u0642\u062f\u064a\u0645 \u0625\u062c\u0627\u0628\u0629 \u0645\u0633\u062a\u0646\u062f\u0629 "
+                "\u0622\u0645\u0646\u0629 \u0627\u0644\u0622\u0646. \u064a\u0631\u062c\u0649 \u0625\u0639\u0627\u062f\u0629 "
+                "\u0627\u0644\u0645\u062d\u0627\u0648\u0644\u0629 \u0644\u0627\u062d\u0642\u0627 \u0623\u0648 "
+                "\u0625\u0628\u0644\u0627\u063a \u0627\u0644\u0645\u0634\u063a\u0644 \u0628\u0623\u0646 "
+                "\u062e\u062f\u0645\u0629 \u0627\u0644\u0627\u0633\u062a\u0631\u062c\u0627\u0639 \u063a\u064a\u0631 "
+                "\u062c\u0627\u0647\u0632\u0629."
+            )
+        return (
+            "INSUFFICIENT_DATA: Mushir could not reach the AAOIFI evidence index in this deployment, "
+            "so it cannot provide a safely cited answer right now. Please try again later or ask the "
+            "operator to check the retriever/index readiness."
+        )
 
     @staticmethod
     def _is_authority_request(query: str) -> bool:

@@ -6,7 +6,9 @@ from src.chatbot.commercial_assessment import (
     StandardsRouter,
     should_fail_closed_for_source_gap,
 )
+from src.chatbot.application_service import ApplicationService
 from src.models.commercial import ContractFamily, QuestionType, SourceFamily
+from src.models.ruling import ComplianceStatus
 from src.models.schema import AAOIFICitation, SemanticChunk
 from src.rag.query_preprocessor import QueryPreprocessor
 
@@ -46,6 +48,20 @@ def test_standards_router_uses_fas_first_for_accounting():
     assert route.route_id == "murabaha-accounting"
     assert route.candidate_standards == ["FAS-28"]
     assert route.requires_rule_evaluation is False
+
+
+def test_application_service_passes_query_to_standards_router_seed():
+    class EmptyRetriever:
+        def retrieve(self, query, k=5, threshold=0.3):
+            return []
+
+    answer = ApplicationService(retriever=EmptyRetriever()).answer(
+        "How should murabaha profit be recognized for accounting?"
+    )
+
+    assert answer.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert answer.metadata["standards_route"]["route_id"] == "murabaha-accounting"
+    assert answer.metadata["standards_route"]["candidate_standards"] == ["FAS-28"]
 
 
 def test_source_gap_guard_blocks_permissibility_without_sharia_evidence():

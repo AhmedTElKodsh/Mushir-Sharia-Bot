@@ -38,14 +38,13 @@ test.describe("/query — non-streaming", () => {
     expect(body.answer).toMatch(/informational guidance|إرشاد/);
   });
 
-  test("[P1] POST /query returns empty-query response for whitespace query", async ({ request }) => {
+  test("[P1] POST /query rejects whitespace query during request validation", async ({ request }) => {
     const res = await request.post("/api/v1/query", {
       data: { query: "   ", context: { disclaimer_acknowledged: true } },
     });
-    expect(res.status()).toBe(200);
+    expect(res.status()).toBe(422);
     const body = await res.json();
-    expect(body.status).toBe("INSUFFICIENT_DATA");
-    expect(body.citations).toHaveLength(0);
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
   test("[P1] POST /query sets X-Request-ID header", async ({ request }) => {
