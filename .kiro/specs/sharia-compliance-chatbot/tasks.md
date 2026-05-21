@@ -94,7 +94,7 @@
 
 ### 11. Egypt Financial Institutions Evidence Corpus
 
-**Current implementation state (2026-05-20):** governance/data-contract foundation and fixture-safe pipeline helpers exist with focused tests. Full scraping is not ready. Do not start a full-registry scrape until a real mixed-institution pilot captures public artifacts, produces scholar-review exports, and passes the pilot gate.
+**Current implementation state (2026-05-21):** governance/data-contract foundation and fixture-safe pipeline helpers exist with focused tests. The crawl-first data layer should now focus on collecting public institution/operation evidence and exporting Mushir engine assessment rows. Human-scholar-review fields stay blank for now and are a later enhancement step, not a pre-scrape blocker.
 
 - [x] Treat `Egypt Financial Institutions Refresh for Sharia Screening.md`, `Egypt_Financial_Institutions_COMPLETE.xlsx`, and `Egyptian_Financial_Institutions_Complete_Presentation.pdf` as baseline inputs, not production authority.
 - [x] Normalize the CBE banks, capital-market, insurance, and non-bank finance workbook sheets into a canonical institution registry with stable IDs, regulator category, source provenance, and refresh status.
@@ -114,8 +114,9 @@
 - [x] Implement the engine mapping generator from operations and evidence spans.
 - [x] Add scholar-review record contracts with reviewer decision, AAOIFI references, rationale, uncertainty flags, correction type, and accepted-gold-case flag.
 - [x] Implement scholar-review export/import and accepted-gold-case generation.
+- [x] Export database-ready rows with institution name, operation/contract, Mushir engine review, AAOIFI references, and blank human-scholar-review fields.
 - [x] Add a user-fact override contract so user-supplied facts can override stored institution assumptions.
 - [x] Add a pilot-readiness gate that requires mixed institution coverage, at least one hard no-details/blocked case, captured artifacts, extracted operations, and accepted scholar-reviewed gold data.
 - [ ] Wire institution pre-knowledge and user-fact override behavior into runtime answer flow after reviewed corpus data exists.
-- [ ] Run a pilot across mixed institution types and one no-details-found hard case before scaling to the full registry.
-- [ ] Approve full-registry scraping only after the pilot proves discovery, crawl limits, blocked-site classification, raw capture, extraction, deduplication, gap marking, operations extraction, and scholar-review export.
+- [ ] Run a crawl-first pilot across mixed institution types and one no-details-found hard case before scaling to the full registry.
+- [ ] Approve broader scraping after the pilot proves discovery, crawl limits, blocked-site classification, raw capture, extraction, deduplication, gap marking, operations extraction, and Mushir engine assessment export. Scholar review remains blank until the later review/improvement layer.

@@ -36,6 +36,7 @@ from src.governance import (
     CorpusPilotPlan,
     DiscoveryEvidenceCandidate,
     DiscoveryEvidenceType,
+    EngineAssessmentCsvStore,
     FetchResponse,
     ExtractionStatus,
     InstitutionDiscoveryStatus,
@@ -79,6 +80,7 @@ def main() -> int:
     parser.add_argument("--timeout-seconds", type=float, default=20.0)
     parser.add_argument("--delay-seconds", type=float, default=1.0)
     parser.add_argument("--max-targets", type=int, default=36)
+    parser.add_argument("--max-pages-per-target", type=int, default=5)
     parser.add_argument(
         "--rerun-status",
         default="",
@@ -90,7 +92,7 @@ def main() -> int:
     parser.add_argument(
         "--review-file",
         default="",
-        help="CSV of real scholar decisions. Required before full-scrape can proceed.",
+        help="Optional CSV of later human scholar decisions; not required for scraping.",
     )
     args = parser.parse_args()
 
@@ -127,6 +129,7 @@ def main() -> int:
                 timeout_seconds=args.timeout_seconds,
                 delay_seconds=args.delay_seconds,
                 max_targets=args.max_targets,
+                max_pages_per_target=args.max_pages_per_target,
                 rerun_statuses=_split_statuses(args.rerun_status),
             )
         return gate_result
@@ -240,22 +243,10 @@ def run_full_scrape_gate(
     official_targets = [record for record in baseline_registry.records() if record.official_website]
     review_status = _real_review_status(review_file)
     blocked_reasons = []
-    if not review_status["review_workflow_ready"]:
-        blocked_reasons.append(
-            "scholar-review workflow is not ready"
-        )
-    if not review_status.get("has_real_accepted_review"):
-        blocked_reasons.append(
-            "full scrape requires a non-fixture accepted scholar-review file"
-        )
     if bank_discovery_targets is None:
-        bank_discovery_targets = (
-            []
-            if blocked_reasons
-            else _discover_bank_website_candidates(
-                baseline_registry.records(),
-                timeout_seconds=20.0,
-            )
+        bank_discovery_targets = _discover_bank_website_candidates(
+            baseline_registry.records(),
+            timeout_seconds=20.0,
         )
     if not official_targets and not bank_discovery_targets:
         blocked_reasons.append(
@@ -269,6 +260,7 @@ def run_full_scrape_gate(
         "bank_discovery_target_count": len(bank_discovery_targets),
         "review_file": str(review_file).replace("\\", "/") if review_file else "",
         "review_status": review_status,
+        "human_scholar_review_required_before_scrape": False,
         "allowed_to_scrape": not blocked_reasons,
         "blocked_reasons": blocked_reasons,
     }
@@ -287,7 +279,7 @@ def run_full_scrape_gate(
         for reason in blocked_reasons:
             print(f"  - {reason}")
         return 2
-    print("Full scrape gate passed. Live crawl adapter implementation can run next.")
+    print("Full scrape gate passed. Human scholar review will stay blank until a later enhancement step.")
     return 0
 
 
@@ -299,9 +291,10 @@ def run_live_bank_scrape(
     timeout_seconds: float,
     delay_seconds: float,
     max_targets: int,
+    max_pages_per_target: int,
     rerun_statuses: set[str] | None = None,
 ) -> int:
-    """Scrape public home pages for discovered official bank website candidates."""
+    """Scrape bounded public operation/product pages for discovered bank website candidates."""
     candidates = _discover_bank_website_candidates(
         baseline_registry.records(),
         timeout_seconds=timeout_seconds,
@@ -357,52 +350,89 @@ def run_live_bank_scrape(
             source=registry,
             target=registry.with_discovery_result(discovery),
         )
-        request = ArtifactFetchRequest(
-            institution_id=record.institution_id,
-            url=url,
-            authority_rank=PublicArtifactAuthorityRank.OFFICIAL_INSTITUTION,
-            artifact_type=PublicArtifactType.PRODUCT_PAGE,
-            language="unknown",
-        )
+        page_urls = [url]
+        fetched_pages = 0
+        extracted_operations = 0
+        notes = []
         try:
-            artifact = fetcher.fetch(
-                request,
-                AccessControlDecision.evaluate(url=url, checked_at=run_date),
-                retrieved_at=run_date,
-            )
-            registry.add_artifact(artifact)
-            if artifact.extraction_status == ExtractionStatus.EXTRACTED and artifact.text_path:
-                text = (artifact_root / artifact.text_path).read_text(encoding="utf-8")
-                if _has_useful_evidence_text(text):
-                    operation = extractor.extract(
-                        institution_id=record.institution_id,
-                        artifact=artifact,
-                        text=text,
-                        operation_name=f"{record.name_en} public website",
+            page_index = 0
+            while page_index < len(page_urls) and fetched_pages < max_pages_per_target:
+                page_url = page_urls[page_index]
+                page_index += 1
+                if fetched_pages > 0:
+                    time.sleep(max(delay_seconds, 0.0))
+                page_robots = _check_robots(page_url, timeout_seconds)
+                if not page_robots["allowed"]:
+                    notes.append(f"{page_url}: {page_robots['reason']}")
+                    continue
+                request = ArtifactFetchRequest(
+                    institution_id=record.institution_id,
+                    url=page_url,
+                    authority_rank=PublicArtifactAuthorityRank.OFFICIAL_INSTITUTION,
+                    artifact_type=PublicArtifactType.PRODUCT_PAGE,
+                    language="unknown",
+                )
+                artifact = fetcher.fetch(
+                    request,
+                    AccessControlDecision.evaluate(url=page_url, checked_at=run_date),
+                    retrieved_at=run_date,
+                )
+                fetched_pages += 1
+                registry.add_artifact(artifact)
+                if artifact.raw_path and page_url == url:
+                    raw_html = (artifact_root / artifact.raw_path).read_bytes().decode(
+                        "utf-8",
+                        errors="replace",
                     )
-                    registry.add_operation(operation)
-                    registry.add_machine_mapping(mapper.generate(operation))
-                    rows.append(_scrape_result_row(record, url, "extracted", artifact.notes))
-                else:
-                    rows.append(
-                        _scrape_result_row(
-                            record,
-                            url,
-                            "insufficient_text",
-                            f"Extracted text below useful evidence threshold: {len(text.strip())} chars.",
-                        )
-                    )
-            else:
-                status = artifact.extraction_status.value
-                notes = artifact.notes
-                if artifact.text_path and artifact.extraction_status == ExtractionStatus.FAILED:
+                    for discovered_url in _candidate_operation_links(
+                        page_url,
+                        raw_html,
+                        limit=max_pages_per_target - len(page_urls),
+                    ):
+                        if discovered_url not in page_urls:
+                            page_urls.append(discovered_url)
+                if artifact.extraction_status == ExtractionStatus.EXTRACTED and artifact.text_path:
                     text = (artifact_root / artifact.text_path).read_text(encoding="utf-8")
-                    if not text.strip():
-                        status = "insufficient_text"
-                        notes = "Fetched response produced empty extracted text."
-                rows.append(_scrape_result_row(record, url, status, notes))
+                    if _has_useful_evidence_text(text):
+                        operation = extractor.extract(
+                            institution_id=record.institution_id,
+                            artifact=artifact,
+                            text=text,
+                            operation_name=_operation_name_from_page(page_url, text, record.name_en),
+                        )
+                        registry.add_operation(operation)
+                        registry.add_machine_mapping(mapper.generate(operation))
+                        extracted_operations += 1
+                    else:
+                        notes.append(
+                            f"{page_url}: extracted text below useful evidence threshold ({len(text.strip())} chars)"
+                        )
+                else:
+                    notes.append(f"{page_url}: {artifact.extraction_status.value}")
+            status = "extracted" if extracted_operations else "insufficient_text"
+            rows.append(
+                _scrape_result_row(
+                    record,
+                    url,
+                    status,
+                    "; ".join(notes) or (
+                        f"Fetched {fetched_pages} page(s); extracted {extracted_operations} operation(s)."
+                    ),
+                    pages_fetched=fetched_pages,
+                    operations_extracted=extracted_operations,
+                )
+            )
         except Exception as exc:
-            rows.append(_scrape_result_row(record, url, "failed", str(exc)))
+            rows.append(
+                _scrape_result_row(
+                    record,
+                    url,
+                    "partial_extracted" if extracted_operations else "failed",
+                    str(exc),
+                    pages_fetched=fetched_pages,
+                    operations_extracted=extracted_operations,
+                )
+            )
 
     output_dir = (
         artifact_root / "full_scrape_rerun" / run_date.isoformat() / run_label
@@ -412,7 +442,15 @@ def run_live_bank_scrape(
     output_dir.mkdir(parents=True, exist_ok=True)
     _write_rows(
         output_dir / "bank_scrape_results.csv",
-        ["institution_id", "name_en", "official_website", "status", "notes"],
+        [
+            "institution_id",
+            "name_en",
+            "official_website",
+            "status",
+            "pages_fetched",
+            "operations_extracted",
+            "notes",
+        ],
         rows,
     )
     review_dir = (
@@ -424,19 +462,28 @@ def run_live_bank_scrape(
         review_dir / "machine_mapping_candidates.csv",
         registry.machine_mappings(),
     )
+    assessment_rows_path = output_dir / "engine_assessment_rows.csv"
+    EngineAssessmentCsvStore.export_assessments(assessment_rows_path, registry)
     manifest = {
         "mode": "full_scrape_bank_slice_rerun" if rerun_statuses else "full_scrape_bank_slice",
         "run_date": run_date.isoformat(),
         "rerun_statuses": sorted(rerun_statuses or []),
         "candidate_count": len(candidates),
-        "scraped_count": sum(1 for row in rows if row["status"] == "extracted"),
-        "failed_or_blocked_count": sum(1 for row in rows if row["status"] != "extracted"),
+        "max_pages_per_target": max_pages_per_target,
+        "scraped_count": sum(1 for row in rows if row["status"] in {"extracted", "partial_extracted"}),
+        "failed_or_blocked_count": sum(
+            1 for row in rows if row["status"] not in {"extracted", "partial_extracted"}
+        ),
+        "pages_fetched": sum(int(row.get("pages_fetched") or 0) for row in rows),
+        "operations_extracted": sum(int(row.get("operations_extracted") or 0) for row in rows),
         "machine_mapping_count": len(registry.machine_mappings()),
+        "engine_assessment_rows": str(assessment_rows_path).replace("\\", "/"),
         "review_candidates": str(review_dir / "machine_mapping_candidates.csv").replace("\\", "/"),
         "scope_boundary": (
             "Full scrape completed only for bank official-site candidates discoverable "
             "from public bank directory data. Non-bank sectors still require official "
-            "website discovery before crawling."
+            "website discovery before crawling. Human scholar review columns are exported "
+            "blank for later completion."
         ),
     }
     manifest_path = output_dir / "manifest.json"
@@ -445,7 +492,10 @@ def run_live_bank_scrape(
     print(f"Discovered bank candidates: {len(candidates)}")
     print(f"Scraped: {manifest['scraped_count']}")
     print(f"Failed or blocked: {manifest['failed_or_blocked_count']}")
+    print(f"Pages fetched: {manifest['pages_fetched']}")
+    print(f"Operations extracted: {manifest['operations_extracted']}")
     print(f"Machine mappings exported: {manifest['machine_mapping_count']}")
+    print(f"Engine assessment rows: {assessment_rows_path}")
     print(f"Manifest: {manifest_path}")
     if rerun_statuses:
         return 0
@@ -755,6 +805,90 @@ def _official_website_from_banksegypt_detail(detail_html: str) -> str:
     return ""
 
 
+def _candidate_operation_links(base_url: str, html_text: str, *, limit: int) -> List[str]:
+    if limit <= 0:
+        return []
+    base = urllib.parse.urlparse(base_url)
+    seen = {base_url.rstrip("/")}
+    scored: list[tuple[int, str]] = []
+    for raw_href in re.findall(r'href=["\']([^"\']+)["\']', html_text, flags=re.IGNORECASE):
+        href = html.unescape(raw_href).strip()
+        if not href or href.startswith(("#", "mailto:", "tel:", "javascript:")):
+            continue
+        absolute = _safe_url(urllib.parse.urljoin(base_url, href).split("#", 1)[0].rstrip("/"))
+        parsed = urllib.parse.urlparse(absolute)
+        if parsed.scheme not in {"http", "https"}:
+            continue
+        if parsed.netloc.lower().lstrip("www.") != base.netloc.lower().lstrip("www."):
+            continue
+        if absolute in seen:
+            continue
+        score = _operation_link_score(absolute)
+        if score <= 0:
+            continue
+        seen.add(absolute)
+        scored.append((score, absolute))
+    scored.sort(key=lambda item: (-item[0], item[1]))
+    return [url for _, url in scored[:limit]]
+
+
+def _safe_url(url: str) -> str:
+    parsed = urllib.parse.urlsplit(url)
+    return urllib.parse.urlunsplit(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            urllib.parse.quote(parsed.path, safe="/:%"),
+            urllib.parse.quote(parsed.query, safe="=&%?/:"),
+            "",
+        )
+    )
+
+
+def _operation_link_score(url: str) -> int:
+    text = urllib.parse.unquote(url).lower()
+    score = 0
+    weighted_terms = {
+        "murabaha": 20,
+        "ijara": 20,
+        "ijarah": 20,
+        "islamic": 15,
+        "sharia": 15,
+        "finance": 12,
+        "financing": 12,
+        "loan": 8,
+        "loans": 8,
+        "card": 5,
+        "cards": 5,
+        "deposit": 5,
+        "account": 4,
+        "sme": 4,
+        "corporate": 4,
+        "retail": 4,
+        "tariff": 12,
+        "fees": 12,
+        "terms": 8,
+    }
+    for term, value in weighted_terms.items():
+        if term in text:
+            score += value
+    if any(skip in text for skip in ("/about", "/career", "/contact", "/news", "/media")):
+        score -= 20
+    return score
+
+
+def _operation_name_from_page(url: str, text: str, institution_name: str) -> str:
+    first_line = next((line.strip() for line in text.splitlines() if line.strip()), "")
+    if first_line and len(first_line) <= 120:
+        return first_line
+    path = urllib.parse.urlparse(url).path.strip("/")
+    if path:
+        slug = re.sub(r"[-_/]+", " ", path).strip()
+        if slug:
+            return slug.title()
+    return f"{institution_name} public website"
+
+
 def _looks_like_official_site(url: str) -> bool:
     host = urllib.parse.urlparse(url).netloc.lower()
     return bool(host) and not host.endswith("banksegypt.com")
@@ -801,12 +935,17 @@ def _scrape_result_row(
     url: str,
     status: str,
     notes: str,
+    *,
+    pages_fetched: int = 0,
+    operations_extracted: int = 0,
 ) -> dict[str, object]:
     return {
         "institution_id": record.institution_id,
         "name_en": record.name_en,
         "official_website": url,
         "status": status,
+        "pages_fetched": pages_fetched,
+        "operations_extracted": operations_extracted,
         "notes": notes,
     }
 

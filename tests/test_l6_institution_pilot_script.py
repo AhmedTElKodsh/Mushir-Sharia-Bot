@@ -4,6 +4,7 @@ from datetime import date
 
 from scripts.run_l6_institution_pilot import (
     _access_block_reason,
+    _candidate_operation_links,
     _has_useful_evidence_text,
     _load_banksegypt_official_sites,
     run_fixture_pilot,
@@ -70,7 +71,7 @@ def test_fixture_pilot_loads_registry_writes_artifacts_and_passes_gate(tmp_path)
     assert (artifact_root / "review" / "test-pilot" / "accepted_gold_cases.fixture.csv").exists()
 
 
-def test_full_scrape_gate_blocks_without_real_scholar_review_before_discovery(tmp_path, capsys):
+def test_full_scrape_gate_allows_targets_without_human_scholar_review(tmp_path, capsys):
     workbook = tmp_path / "institutions.xlsx"
     artifact_root = tmp_path / "artifacts" / "l6_scrape"
     _write_minimal_xlsx(
@@ -96,15 +97,16 @@ def test_full_scrape_gate_blocks_without_real_scholar_review_before_discovery(tm
             encoding="utf-8"
         )
     )
-    assert exit_code == 2
-    assert manifest["allowed_to_scrape"] is False
+    assert exit_code == 0
+    assert manifest["allowed_to_scrape"] is True
     assert manifest["bank_discovery_target_count"] == 1
     assert manifest["review_status"]["review_workflow_ready"] is False
-    assert "full scrape requires a non-fixture accepted scholar-review file" in manifest["blocked_reasons"]
-    assert "Allowed to scrape: False" in capsys.readouterr().out
+    assert manifest["human_scholar_review_required_before_scrape"] is False
+    assert manifest["blocked_reasons"] == []
+    assert "Allowed to scrape: True" in capsys.readouterr().out
 
 
-def test_full_scrape_gate_allows_injected_targets_after_real_scholar_review(tmp_path, capsys):
+def test_full_scrape_gate_keeps_review_file_optional_metadata(tmp_path, capsys):
     workbook = tmp_path / "institutions.xlsx"
     artifact_root = tmp_path / "artifacts" / "l6_scrape"
     review_file = tmp_path / "reviews.csv"
@@ -197,6 +199,27 @@ def test_bank_directory_discovery_respects_robots_before_reading(monkeypatch):
 
     assert _load_banksegypt_official_sites(timeout_seconds=1.0) == {}
     assert calls == []
+
+
+def test_candidate_operation_links_are_same_domain_and_prioritized():
+    html = """
+    <a href="/about">About</a>
+    <a href="/retail/murabaha-finance">Murabaha Finance</a>
+    <a href="/SMEs/islamic banking/Kenana business/Micro Financing Murabaha">Islamic SME</a>
+    <a href="https://evil.example/cards">External Cards</a>
+    <a href="/fees-and-tariffs">Fees</a>
+    """
+
+    links = _candidate_operation_links(
+        "https://bank.example/",
+        html,
+        limit=2,
+    )
+
+    assert links == [
+        "https://bank.example/SMEs/islamic%20banking/Kenana%20business/Micro%20Financing%20Murabaha",
+        "https://bank.example/retail/murabaha-finance",
+    ]
 
 
 def test_useful_evidence_gate_rejects_empty_or_tiny_text():

@@ -627,6 +627,67 @@ class ScholarReviewCsvStore:
         return rows
 
 
+class EngineAssessmentCsvStore:
+    """Export database-ready Mushir engine assessment rows with blank human review fields."""
+
+    @staticmethod
+    def export_assessments(path: str | Path, registry: InstitutionRegistry) -> None:
+        mappings_by_operation = {
+            mapping.operation_id: mapping for mapping in registry.machine_mappings()
+        }
+        rows = []
+        for record in registry.records():
+            for operation in registry.operations_for(record.institution_id):
+                mapping = mappings_by_operation.get(operation.operation_id)
+                rows.append(
+                    {
+                        "institution_id": record.institution_id,
+                        "financial_institution_name": record.name_en,
+                        "regulator": record.regulator.value,
+                        "sector": record.sector.value,
+                        "operation_id": operation.operation_id,
+                        "contract_operation_name": operation.operation_name,
+                        "artifact_ids": "|".join(operation.artifact_ids),
+                        "evidence_fields": "|".join(
+                            field.value for field in operation.fields_present()
+                        ),
+                        "mushir_engine_status": (
+                            mapping.status.value
+                            if mapping
+                            else "operation_extracted_without_mapping"
+                        ),
+                        "mushir_engine_review": mapping.rationale if mapping else "",
+                        "mushir_engine_aaoifi_references": (
+                            "|".join(mapping.candidate_standards) if mapping else ""
+                        ),
+                        "mushir_engine_risk_label": (
+                            mapping.risk_label.value if mapping else ""
+                        ),
+                        "human_scholar_review": "",
+                        "human_scholar_review_references": "",
+                        "human_scholar_review_notes": "",
+                    }
+                )
+        fields = [
+            "institution_id",
+            "financial_institution_name",
+            "regulator",
+            "sector",
+            "operation_id",
+            "contract_operation_name",
+            "artifact_ids",
+            "evidence_fields",
+            "mushir_engine_status",
+            "mushir_engine_review",
+            "mushir_engine_aaoifi_references",
+            "mushir_engine_risk_label",
+            "human_scholar_review",
+            "human_scholar_review_references",
+            "human_scholar_review_notes",
+        ]
+        _write_csv(path, fields, rows)
+
+
 @dataclass(frozen=True)
 class CorpusPilotGateReport:
     pilot_id: str

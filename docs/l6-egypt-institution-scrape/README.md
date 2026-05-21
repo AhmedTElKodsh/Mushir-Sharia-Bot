@@ -17,7 +17,7 @@ The scraper should collect:
 - tariffs, fees, product pages, terms, contracts, model contracts, annual reports, prospectuses, sukuk documents, fund documents, and policy wordings;
 - source URLs, timestamps, content hashes, extraction status, and evidence spans.
 
-The engine may propose AAOIFI mappings and initial risk labels, but those labels remain `machine_proposed` until reviewed by a qualified Sharia scholar.
+The engine may propose AAOIFI mappings and initial risk labels. For the crawl-first phase, these become Mushir engine assessment rows with blank human-scholar-review fields; scholar review is a later improvement step, not a blocker before public crawling.
 
 ## Implementation Folders
 
@@ -33,7 +33,7 @@ Runtime output:
 Future code should extend the existing acquisition/governance direction:
 
 - `src/governance/institution_registry.py` - canonical data contracts, registry indexes, access decisions, artifact records, operation records, machine mappings, scholar reviews, and user-fact override contracts.
-- `src/governance/institution_pipeline.py` - fixture-safe executable helpers for workbook loading, bounded discovery, access-controlled artifact fetching, local artifact storage, text extraction, operation extraction, AAOIFI mapping candidate generation, scholar-review CSV import/export, accepted-gold-case export, and pilot gating.
+- `src/governance/institution_pipeline.py` - fixture-safe executable helpers for workbook loading, bounded discovery, access-controlled artifact fetching, local artifact storage, text extraction, operation extraction, AAOIFI mapping candidate generation, database-ready Mushir engine assessment export, scholar-review CSV import/export, accepted-gold-case export, and pilot gating.
 - `src/acquisition/` - still reserved for future live crawl adapters once the pilot gate is ready.
 
 ## Current Code Status
@@ -45,8 +45,9 @@ Implemented and covered by focused tests:
 - access-control-first public artifact fetcher and local store under an `artifacts/l6_scrape` compatible layout;
 - deterministic HTML/text extraction and evidence-span operation extraction;
 - machine-only AAOIFI mapping candidates that remain review inputs, not truth;
-- scholar-review CSV import/export plus accepted-gold-case projection;
-- pilot gate that blocks full scrape approval until mixed coverage, hard-case gap handling, captured artifacts, extracted operations, and scholar-reviewed gold data exist.
+- database-ready engine assessment export with institution name, operation/contract, Mushir engine review, AAOIFI references, and blank human-scholar-review columns;
+- scholar-review CSV import/export plus accepted-gold-case projection for the later improvement layer;
+- pilot gate that blocks full scrape approval until mixed coverage, hard-case gap handling, captured artifacts, and extracted operations exist.
 
 ## Safe Pilot Command
 
@@ -71,25 +72,25 @@ This checks the known regulator/source URLs from the workbook through robots.txt
 Run the full-scrape gate:
 
 ```powershell
-python scripts\run_l6_institution_pilot.py --mode full-scrape --today 2026-05-20 --timeout-seconds 20 --delay-seconds 1 --max-targets 36 --review-file artifacts/l6_scrape/review/<pilot-id>/real_scholar_reviews.csv
+python scripts\run_l6_institution_pilot.py --mode full-scrape --today 2026-05-20 --timeout-seconds 20 --delay-seconds 1 --max-targets 36 --max-pages-per-target 5
 ```
 
-The gate refuses broad scraping unless a real, non-fixture accepted scholar-review file exists and official or reviewed-discovery institution URLs are available. For the bank slice, public bank-directory profile pages may only be discovery aids; they do not make a URL authoritative by themselves. The output includes crawl results and a machine-mapping CSV for the next real scholar-review pass.
+The gate refuses broad scraping unless official or reviewed-discovery institution URLs are available. For the bank slice, public bank-directory profile pages may only be discovery aids; they do not make a URL authoritative by themselves. The live crawl then fetches a bounded number of same-domain operation/product pages per institution. The output includes crawl results, machine-mapping CSV, and `engine_assessment_rows.csv` with human-scholar-review columns intentionally blank.
 
 Any exploratory bank-slice output remains review input only. Non-bank sectors still require official website discovery before crawling.
 
 Rerun only failed or low-quality bank targets:
 
 ```powershell
-python scripts\run_l6_institution_pilot.py --mode full-scrape --today 2026-05-20 --timeout-seconds 20 --delay-seconds 1 --max-targets 36 --rerun-status failed,insufficient_text --review-file artifacts/l6_scrape/review/<pilot-id>/real_scholar_reviews.csv
+python scripts\run_l6_institution_pilot.py --mode full-scrape --today 2026-05-20 --timeout-seconds 20 --delay-seconds 1 --max-targets 36 --max-pages-per-target 5 --rerun-status failed,insufficient_text
 ```
 
 Reruns write to `artifacts/l6_scrape/full_scrape_rerun/` and keep the primary full-scrape ledger intact.
 
 Still not approved:
 
-- live full-registry crawling across every sector;
-- runtime answer-flow use of institution pre-knowledge before reviewed corpus data exists;
+- live full-registry crawling across every sector before the crawl-first bank slice is stable;
+- runtime answer-flow use of institution pre-knowledge before the crawled corpus is reviewed and promoted;
 - any attempt to bypass blocked, gated, login-only, or anti-bot-protected content.
 
 ## Safety Rules

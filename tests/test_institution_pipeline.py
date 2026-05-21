@@ -12,6 +12,7 @@ from src.governance import (
     DiscoveryBudget,
     DiscoveryEvidenceCandidate,
     DiscoveryEvidenceType,
+    EngineAssessmentCsvStore,
     ExtractionStatus,
     FetchResponse,
     InstitutionDiscoveryStatus,
@@ -275,6 +276,40 @@ def test_scholar_review_csv_import_and_gold_case_generation(tmp_path):
     assert reviews[0].accepted_gold_case is True
     assert gold_cases[0]["operation_name"] == operation.operation_name
     assert gold_cases[0]["aaoifi_references"] == ["FAS-28", "SS-08"]
+
+
+def test_engine_assessment_export_keeps_human_scholar_review_blank(tmp_path):
+    record = InstitutionRegistryRecord.baseline(
+        name_en="Faisal Islamic Bank of Egypt",
+        regulator=InstitutionRegulator.CBE,
+        sector=InstitutionSector.BANK,
+        registry_source="CBE bank register",
+        registry_source_url="https://www.cbe.org.eg/en/banking-supervision",
+    )
+    artifact = _artifact("art-1", record.institution_id)
+    operation = OperationExtractor().extract(
+        institution_id=record.institution_id,
+        artifact=artifact,
+        text="Murabaha terms include bank purchases and ownership transfer.",
+    )
+    mapping = AaoifiMappingGenerator().generate(operation)
+    registry = InstitutionRegistry([record])
+    registry.add_artifact(artifact)
+    registry.add_operation(operation)
+    registry.add_machine_mapping(mapping)
+    output = tmp_path / "engine_assessment_rows.csv"
+
+    EngineAssessmentCsvStore.export_assessments(output, registry)
+
+    rows = list(csv.DictReader(output.open(newline="", encoding="utf-8")))
+    assert rows[0]["financial_institution_name"] == "Faisal Islamic Bank of Egypt"
+    assert rows[0]["contract_operation_name"] == operation.operation_name
+    assert rows[0]["mushir_engine_status"] == "machine_proposed"
+    assert rows[0]["mushir_engine_review"] == "Evidence suggests murabaha/deferred sale mechanics or asset ownership flow."
+    assert rows[0]["mushir_engine_aaoifi_references"] == "FAS-28|SS-08"
+    assert rows[0]["human_scholar_review"] == ""
+    assert rows[0]["human_scholar_review_references"] == ""
+    assert rows[0]["human_scholar_review_notes"] == ""
 
 
 def test_exported_scholar_review_template_can_be_completed_and_imported(tmp_path):
