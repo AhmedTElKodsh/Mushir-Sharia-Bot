@@ -51,6 +51,7 @@ from src.governance import (
     PublicArtifactType,
     ReviewCandidateStatus,
     ScholarReviewCsvStore,
+    ScholarReviewListCsvStore,
     ScholarReviewRecord,
     WorkbookRegistryLoader,
 )
@@ -464,6 +465,7 @@ def run_live_bank_scrape(
     )
     assessment_rows_path = output_dir / "engine_assessment_rows.csv"
     EngineAssessmentCsvStore.export_assessments(assessment_rows_path, registry)
+    scholar_review_paths = ScholarReviewListCsvStore.export_lists(output_dir, registry)
     manifest = {
         "mode": "full_scrape_bank_slice_rerun" if rerun_statuses else "full_scrape_bank_slice",
         "run_date": run_date.isoformat(),
@@ -478,6 +480,10 @@ def run_live_bank_scrape(
         "operations_extracted": sum(int(row.get("operations_extracted") or 0) for row in rows),
         "machine_mapping_count": len(registry.machine_mappings()),
         "engine_assessment_rows": str(assessment_rows_path).replace("\\", "/"),
+        "scholar_review_list_bilingual": str(scholar_review_paths["bilingual"]).replace("\\", "/"),
+        "scholar_review_list_en": str(scholar_review_paths["english"]).replace("\\", "/"),
+        "scholar_review_list_ar": str(scholar_review_paths["arabic"]).replace("\\", "/"),
+        "scholar_review_item_count": len(EngineAssessmentCsvStore.rows(registry)),
         "review_candidates": str(review_dir / "machine_mapping_candidates.csv").replace("\\", "/"),
         "scope_boundary": (
             "Full scrape completed only for bank official-site candidates discoverable "
@@ -496,6 +502,7 @@ def run_live_bank_scrape(
     print(f"Operations extracted: {manifest['operations_extracted']}")
     print(f"Machine mappings exported: {manifest['machine_mapping_count']}")
     print(f"Engine assessment rows: {assessment_rows_path}")
+    print(f"Scholar review bilingual list: {scholar_review_paths['bilingual']}")
     print(f"Manifest: {manifest_path}")
     if rerun_statuses:
         return 0

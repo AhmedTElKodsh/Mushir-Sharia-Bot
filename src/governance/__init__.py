@@ -53,6 +53,7 @@ from src.governance.institution_pipeline import (
     OperationExtractor,
     PublicArtifactFetcher,
     RegistrySheetConfig,
+    ScholarReviewListCsvStore,
     ScholarReviewCsvStore,
     WorkbookRegistryLoader,
 )
@@ -161,6 +162,7 @@ __all__ = [
     "RetrievalTraceRecord",
     "ScholarReviewRecord",
     "ScholarReviewCsvStore",
+    "ScholarReviewListCsvStore",
     "UserFactOverrideDecision",
     "ParentChildChunkMetadataBuilder",
     "RouterSeedRecord",

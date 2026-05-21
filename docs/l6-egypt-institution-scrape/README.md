@@ -33,7 +33,7 @@ Runtime output:
 Future code should extend the existing acquisition/governance direction:
 
 - `src/governance/institution_registry.py` - canonical data contracts, registry indexes, access decisions, artifact records, operation records, machine mappings, scholar reviews, and user-fact override contracts.
-- `src/governance/institution_pipeline.py` - fixture-safe executable helpers for workbook loading, bounded discovery, access-controlled artifact fetching, local artifact storage, text extraction, operation extraction, AAOIFI mapping candidate generation, database-ready Mushir engine assessment export, scholar-review CSV import/export, accepted-gold-case export, and pilot gating.
+- `src/governance/institution_pipeline.py` - fixture-safe executable helpers for workbook loading, bounded discovery, access-controlled artifact fetching, local artifact storage, text extraction, operation extraction, AAOIFI mapping candidate generation, database-ready Mushir engine assessment export, bilingual scholar-review list export, scholar-review CSV import/export, accepted-gold-case export, and pilot gating.
 - `src/acquisition/` - still reserved for future live crawl adapters once the pilot gate is ready.
 
 ## Current Code Status
@@ -46,6 +46,7 @@ Implemented and covered by focused tests:
 - deterministic HTML/text extraction and evidence-span operation extraction;
 - machine-only AAOIFI mapping candidates that remain review inputs, not truth;
 - database-ready engine assessment export with institution name, operation/contract, Mushir engine review, AAOIFI references, and blank human-scholar-review columns;
+- scholar-facing bilingual review lists, including `scholar_review_list_bilingual.csv`, `scholar_review_list_en.csv`, and `scholar_review_list_ar.csv`, with the same `review_item_number` and `operation_id` in Arabic and English so reviewers can connect matching entities;
 - scholar-review CSV import/export plus accepted-gold-case projection for the later improvement layer;
 - pilot gate that blocks full scrape approval until mixed coverage, hard-case gap handling, captured artifacts, and extracted operations exist.
 
@@ -75,7 +76,7 @@ Run the full-scrape gate:
 python scripts\run_l6_institution_pilot.py --mode full-scrape --today 2026-05-20 --timeout-seconds 20 --delay-seconds 1 --max-targets 36 --max-pages-per-target 5
 ```
 
-The gate refuses broad scraping unless official or reviewed-discovery institution URLs are available. For the bank slice, public bank-directory profile pages may only be discovery aids; they do not make a URL authoritative by themselves. The live crawl then fetches a bounded number of same-domain operation/product pages per institution. The output includes crawl results, machine-mapping CSV, and `engine_assessment_rows.csv` with human-scholar-review columns intentionally blank.
+The gate refuses broad scraping unless official or reviewed-discovery institution URLs are available. For the bank slice, public bank-directory profile pages may only be discovery aids; they do not make a URL authoritative by themselves. The live crawl then fetches a bounded number of same-domain operation/product pages per institution. The output includes crawl results, machine-mapping CSV, `engine_assessment_rows.csv` with human-scholar-review columns intentionally blank, and bilingual scholar-review lists where Arabic and English rows share the same review number and operation ID.
 
 Any exploratory bank-slice output remains review input only. Non-bank sectors still require official website discovery before crawling.
 

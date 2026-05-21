@@ -115,6 +115,7 @@
 - [x] Add scholar-review record contracts with reviewer decision, AAOIFI references, rationale, uncertainty flags, correction type, and accepted-gold-case flag.
 - [x] Implement scholar-review export/import and accepted-gold-case generation.
 - [x] Export database-ready rows with institution name, operation/contract, Mushir engine review, AAOIFI references, and blank human-scholar-review fields.
+- [x] Export bilingual scholar-facing review lists in Arabic and English with the same review item numbers and stable operation IDs for human scholar handoff.
 - [x] Add a user-fact override contract so user-supplied facts can override stored institution assumptions.
 - [x] Add a pilot-readiness gate that requires mixed institution coverage, at least one hard no-details/blocked case, captured artifacts, extracted operations, and accepted scholar-reviewed gold data.
 - [ ] Wire institution pre-knowledge and user-fact override behavior into runtime answer flow after reviewed corpus data exists.

@@ -30,6 +30,7 @@ from src.governance import (
     PublicArtifactType,
     ReviewCandidateStatus,
     ScholarReviewCsvStore,
+    ScholarReviewListCsvStore,
     ScholarReviewRecord,
     WorkbookRegistryLoader,
 )
@@ -310,6 +311,42 @@ def test_engine_assessment_export_keeps_human_scholar_review_blank(tmp_path):
     assert rows[0]["human_scholar_review"] == ""
     assert rows[0]["human_scholar_review_references"] == ""
     assert rows[0]["human_scholar_review_notes"] == ""
+
+
+def test_scholar_review_lists_keep_arabic_and_english_rows_linked(tmp_path):
+    record = InstitutionRegistryRecord.baseline(
+        name_en="Faisal Islamic Bank of Egypt",
+        name_ar="\u0628\u0646\u0643 \u0641\u064a\u0635\u0644 \u0627\u0644\u0625\u0633\u0644\u0627\u0645\u064a \u0627\u0644\u0645\u0635\u0631\u064a",
+        regulator=InstitutionRegulator.CBE,
+        sector=InstitutionSector.BANK,
+        registry_source="CBE bank register",
+        registry_source_url="https://www.cbe.org.eg/en/banking-supervision",
+    )
+    artifact = _artifact("art-1", record.institution_id)
+    operation = OperationExtractor().extract(
+        institution_id=record.institution_id,
+        artifact=artifact,
+        text="Murabaha terms include bank purchases and ownership transfer.",
+    )
+    mapping = AaoifiMappingGenerator().generate(operation)
+    registry = InstitutionRegistry([record])
+    registry.add_artifact(artifact)
+    registry.add_operation(operation)
+    registry.add_machine_mapping(mapping)
+
+    paths = ScholarReviewListCsvStore.export_lists(tmp_path, registry)
+
+    bilingual = list(csv.DictReader(paths["bilingual"].open(newline="", encoding="utf-8")))
+    english = list(csv.DictReader(paths["english"].open(newline="", encoding="utf-8")))
+    arabic = list(csv.DictReader(paths["arabic"].open(newline="", encoding="utf-8")))
+    assert bilingual[0]["review_item_number"] == english[0]["review_item_number"] == arabic[0]["review_item_number"]
+    assert bilingual[0]["operation_id"] == english[0]["operation_id"] == arabic[0]["operation_id"]
+    assert english[0]["institution_name"] == "Faisal Islamic Bank of Egypt"
+    assert arabic[0]["institution_name"] == "\u0628\u0646\u0643 \u0641\u064a\u0635\u0644 \u0627\u0644\u0625\u0633\u0644\u0627\u0645\u064a \u0627\u0644\u0645\u0635\u0631\u064a"
+    assert "\u0645\u0631\u0627\u0628\u062d\u0629" in arabic[0]["mushir_engine_review"]
+    assert arabic[0]["human_scholar_review"] == ""
+    assert arabic[0]["human_scholar_review_references"] == ""
+    assert "\u0631\u0642\u0645 \u0627\u0644\u0628\u0646\u062f" in arabic[0]["matching_note"]
 
 
 def test_exported_scholar_review_template_can_be_completed_and_imported(tmp_path):

@@ -630,12 +630,30 @@ class ScholarReviewCsvStore:
 class EngineAssessmentCsvStore:
     """Export database-ready Mushir engine assessment rows with blank human review fields."""
 
+    FIELDS = [
+        "institution_id",
+        "financial_institution_name",
+        "regulator",
+        "sector",
+        "operation_id",
+        "contract_operation_name",
+        "artifact_ids",
+        "evidence_fields",
+        "mushir_engine_status",
+        "mushir_engine_review",
+        "mushir_engine_aaoifi_references",
+        "mushir_engine_risk_label",
+        "human_scholar_review",
+        "human_scholar_review_references",
+        "human_scholar_review_notes",
+    ]
+
     @staticmethod
-    def export_assessments(path: str | Path, registry: InstitutionRegistry) -> None:
+    def rows(registry: InstitutionRegistry) -> List[Dict[str, object]]:
         mappings_by_operation = {
             mapping.operation_id: mapping for mapping in registry.machine_mappings()
         }
-        rows = []
+        rows: List[Dict[str, object]] = []
         for record in registry.records():
             for operation in registry.operations_for(record.institution_id):
                 mapping = mappings_by_operation.get(operation.operation_id)
@@ -668,24 +686,223 @@ class EngineAssessmentCsvStore:
                         "human_scholar_review_notes": "",
                     }
                 )
-        fields = [
-            "institution_id",
-            "financial_institution_name",
-            "regulator",
-            "sector",
-            "operation_id",
-            "contract_operation_name",
-            "artifact_ids",
-            "evidence_fields",
-            "mushir_engine_status",
-            "mushir_engine_review",
-            "mushir_engine_aaoifi_references",
-            "mushir_engine_risk_label",
-            "human_scholar_review",
-            "human_scholar_review_references",
-            "human_scholar_review_notes",
-        ]
-        _write_csv(path, fields, rows)
+        return rows
+
+    @classmethod
+    def export_assessments(cls, path: str | Path, registry: InstitutionRegistry) -> None:
+        _write_csv(path, cls.FIELDS, cls.rows(registry))
+
+
+class ScholarReviewListCsvStore:
+    """Export bilingual review lists with matching numbers for human scholars."""
+
+    BILINGUAL_FIELDS = [
+        "review_item_number",
+        "institution_id",
+        "operation_id",
+        "artifact_ids",
+        "institution_name_en",
+        "institution_name_ar",
+        "institution_name_ar_status",
+        "operation_name_en",
+        "operation_name_ar",
+        "operation_name_ar_status",
+        "regulator",
+        "sector",
+        "evidence_fields",
+        "mushir_engine_status",
+        "mushir_engine_review_en",
+        "mushir_engine_review_ar",
+        "mushir_engine_aaoifi_references",
+        "mushir_engine_risk_label",
+        "human_scholar_review",
+        "human_scholar_review_references",
+        "human_scholar_review_notes",
+    ]
+    LANGUAGE_FIELDS = [
+        "review_item_number",
+        "institution_id",
+        "operation_id",
+        "artifact_ids",
+        "institution_name",
+        "operation_name",
+        "regulator",
+        "sector",
+        "evidence_fields",
+        "mushir_engine_status",
+        "mushir_engine_review",
+        "mushir_engine_aaoifi_references",
+        "mushir_engine_risk_label",
+        "human_scholar_review",
+        "human_scholar_review_references",
+        "human_scholar_review_notes",
+        "matching_note",
+    ]
+    _ARABIC_REVIEW_BY_ENGLISH = {
+        "Evidence suggests murabaha/deferred sale mechanics or asset ownership flow.": (
+            "\u062a\u0634\u064a\u0631 \u0627\u0644\u0623\u062f\u0644\u0629 "
+            "\u0625\u0644\u0649 \u0645\u0631\u0627\u0628\u062d\u0629 "
+            "\u0623\u0648 \u0628\u064a\u0639 \u0645\u0624\u062c\u0644 "
+            "\u0623\u0648 \u0627\u0646\u062a\u0642\u0627\u0644 "
+            "\u0645\u0644\u0643\u064a\u0629 \u0623\u0635\u0644."
+        ),
+        "Evidence suggests lease/ijarah mechanics.": (
+            "\u062a\u0634\u064a\u0631 \u0627\u0644\u0623\u062f\u0644\u0629 "
+            "\u0625\u0644\u0649 \u0622\u0644\u064a\u0629 \u0625\u062c\u0627\u0631\u0629 "
+            "\u0623\u0648 \u062a\u0623\u062c\u064a\u0631."
+        ),
+        "Evidence suggests sukuk or investment certificate documentation.": (
+            "\u062a\u0634\u064a\u0631 \u0627\u0644\u0623\u062f\u0644\u0629 "
+            "\u0625\u0644\u0649 \u0635\u0643\u0648\u0643 \u0623\u0648 "
+            "\u0648\u062b\u0627\u0626\u0642 \u0634\u0647\u0627\u062f\u0627\u062a "
+            "\u0627\u0633\u062a\u062b\u0645\u0627\u0631."
+        ),
+        "Evidence mentions insurance or takaful-linked obligations.": (
+            "\u062a\u0630\u0643\u0631 \u0627\u0644\u0623\u062f\u0644\u0629 "
+            "\u0627\u0644\u062a\u0632\u0627\u0645\u0627\u062a "
+            "\u0645\u0631\u062a\u0628\u0637\u0629 \u0628\u0627\u0644\u062a\u0623\u0645\u064a\u0646 "
+            "\u0623\u0648 \u0627\u0644\u062a\u0643\u0627\u0641\u0644."
+        ),
+        "Late payment/default clauses require focused Sharia review.": (
+            "\u062a\u062a\u0637\u0644\u0628 \u0628\u0646\u0648\u062f "
+            "\u0627\u0644\u062a\u0623\u062e\u0631 \u0641\u064a "
+            "\u0627\u0644\u0633\u062f\u0627\u062f \u0623\u0648 "
+            "\u0627\u0644\u062a\u0639\u062b\u0631 \u0645\u0631\u0627\u062c\u0639\u0629 "
+            "\u0634\u0631\u0639\u064a\u0629 \u0645\u0631\u0643\u0632\u0629."
+        ),
+        "No recognized operation family found; scholar review must classify from evidence.": (
+            "\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u062a\u0639\u0631\u0641 "
+            "\u0639\u0644\u0649 \u0646\u0648\u0639 \u0627\u0644\u0639\u0645\u0644\u064a\u0629\u061b "
+            "\u064a\u062d\u062a\u0627\u062c \u0627\u0644\u0645\u0631\u0627\u062c\u0639 "
+            "\u0625\u0644\u0649 \u0627\u0644\u062a\u0635\u0646\u064a\u0641 "
+            "\u0645\u0646 \u0627\u0644\u0623\u062f\u0644\u0629."
+        ),
+    }
+    _OPERATION_TRANSLATION_NOTE = (
+        "\u0644\u0645 \u062a\u062a\u0645 \u062a\u0631\u062c\u0645\u0629 "
+        "\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u064a\u0629 "
+        "\u0622\u0644\u064a\u0627\u061b \u0627\u0633\u062a\u062e\u062f\u0645 "
+        "\u0631\u0642\u0645 \u0627\u0644\u0628\u0646\u062f "
+        "\u0648\u0645\u0639\u0631\u0641 \u0627\u0644\u0639\u0645\u0644\u064a\u0629 "
+        "\u0644\u0644\u0645\u0637\u0627\u0628\u0642\u0629."
+    )
+    _MATCHING_NOTE_EN = "Match Arabic and English rows by review_item_number and operation_id."
+    _MATCHING_NOTE_AR = (
+        "\u0637\u0627\u0628\u0642 \u0627\u0644\u0635\u0641\u0648\u0641 "
+        "\u0627\u0644\u0639\u0631\u0628\u064a\u0629 \u0648\u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629 "
+        "\u0628\u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0631\u0642\u0645 "
+        "\u0627\u0644\u0628\u0646\u062f \u0648\u0645\u0639\u0631\u0641 "
+        "\u0627\u0644\u0639\u0645\u0644\u064a\u0629."
+    )
+
+    @classmethod
+    def export_lists(
+        cls,
+        output_dir: str | Path,
+        registry: InstitutionRegistry,
+    ) -> Dict[str, Path]:
+        target = Path(output_dir)
+        target.mkdir(parents=True, exist_ok=True)
+        bilingual_rows = cls.rows(registry)
+        english_rows = [cls._language_row(row, "en") for row in bilingual_rows]
+        arabic_rows = [cls._language_row(row, "ar") for row in bilingual_rows]
+        paths = {
+            "bilingual": target / "scholar_review_list_bilingual.csv",
+            "english": target / "scholar_review_list_en.csv",
+            "arabic": target / "scholar_review_list_ar.csv",
+        }
+        _write_csv(paths["bilingual"], cls.BILINGUAL_FIELDS, bilingual_rows)
+        _write_csv(paths["english"], cls.LANGUAGE_FIELDS, english_rows)
+        _write_csv(paths["arabic"], cls.LANGUAGE_FIELDS, arabic_rows)
+        return paths
+
+    @classmethod
+    def rows(cls, registry: InstitutionRegistry) -> List[Dict[str, object]]:
+        records = {record.institution_id: record for record in registry.records()}
+        rows: List[Dict[str, object]] = []
+        for number, assessment in enumerate(EngineAssessmentCsvStore.rows(registry), start=1):
+            record = records[str(assessment["institution_id"])]
+            institution_name_ar = record.name_ar or record.name_en
+            institution_name_ar_status = (
+                "provided" if record.name_ar else "missing_arabic_name_uses_english"
+            )
+            operation_name = str(assessment["contract_operation_name"])
+            rows.append(
+                {
+                    "review_item_number": number,
+                    "institution_id": assessment["institution_id"],
+                    "operation_id": assessment["operation_id"],
+                    "artifact_ids": assessment["artifact_ids"],
+                    "institution_name_en": assessment["financial_institution_name"],
+                    "institution_name_ar": institution_name_ar,
+                    "institution_name_ar_status": institution_name_ar_status,
+                    "operation_name_en": operation_name,
+                    "operation_name_ar": operation_name,
+                    "operation_name_ar_status": "needs_human_translation",
+                    "regulator": assessment["regulator"],
+                    "sector": assessment["sector"],
+                    "evidence_fields": assessment["evidence_fields"],
+                    "mushir_engine_status": assessment["mushir_engine_status"],
+                    "mushir_engine_review_en": assessment["mushir_engine_review"],
+                    "mushir_engine_review_ar": cls._arabic_review(
+                        str(assessment["mushir_engine_review"])
+                    ),
+                    "mushir_engine_aaoifi_references": assessment[
+                        "mushir_engine_aaoifi_references"
+                    ],
+                    "mushir_engine_risk_label": assessment["mushir_engine_risk_label"],
+                    "human_scholar_review": "",
+                    "human_scholar_review_references": "",
+                    "human_scholar_review_notes": "",
+                }
+            )
+        return rows
+
+    @classmethod
+    def _language_row(cls, row: Mapping[str, object], language: str) -> Dict[str, object]:
+        if language == "ar":
+            return {
+                "review_item_number": row["review_item_number"],
+                "institution_id": row["institution_id"],
+                "operation_id": row["operation_id"],
+                "artifact_ids": row["artifact_ids"],
+                "institution_name": row["institution_name_ar"],
+                "operation_name": row["operation_name_ar"],
+                "regulator": row["regulator"],
+                "sector": row["sector"],
+                "evidence_fields": row["evidence_fields"],
+                "mushir_engine_status": row["mushir_engine_status"],
+                "mushir_engine_review": row["mushir_engine_review_ar"],
+                "mushir_engine_aaoifi_references": row["mushir_engine_aaoifi_references"],
+                "mushir_engine_risk_label": row["mushir_engine_risk_label"],
+                "human_scholar_review": "",
+                "human_scholar_review_references": "",
+                "human_scholar_review_notes": "",
+                "matching_note": cls._MATCHING_NOTE_AR,
+            }
+        return {
+            "review_item_number": row["review_item_number"],
+            "institution_id": row["institution_id"],
+            "operation_id": row["operation_id"],
+            "artifact_ids": row["artifact_ids"],
+            "institution_name": row["institution_name_en"],
+            "operation_name": row["operation_name_en"],
+            "regulator": row["regulator"],
+            "sector": row["sector"],
+            "evidence_fields": row["evidence_fields"],
+            "mushir_engine_status": row["mushir_engine_status"],
+            "mushir_engine_review": row["mushir_engine_review_en"],
+            "mushir_engine_aaoifi_references": row["mushir_engine_aaoifi_references"],
+            "mushir_engine_risk_label": row["mushir_engine_risk_label"],
+            "human_scholar_review": "",
+            "human_scholar_review_references": "",
+            "human_scholar_review_notes": "",
+            "matching_note": cls._MATCHING_NOTE_EN,
+        }
+
+    @classmethod
+    def _arabic_review(cls, review: str) -> str:
+        return cls._ARABIC_REVIEW_BY_ENGLISH.get(review, review or cls._OPERATION_TRANSLATION_NOTE)
 
 
 @dataclass(frozen=True)
