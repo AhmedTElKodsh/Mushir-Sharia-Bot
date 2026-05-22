@@ -477,6 +477,232 @@ def test_evaluate_retrieval_thresholds_can_fail_unanswerable_retrieval_rate():
 
 
 @pytest.mark.unit
+def test_evaluate_retrieval_reports_research_gated_baseline_metrics():
+    from scripts.evaluate_rag import evaluate_retrieval
+
+    class Pipeline:
+        def classify(self, query):
+            if query == "needs clarification":
+                return {"behavior": "clarification"}
+            if query == "unsupported":
+                return {"behavior": "refusal"}
+            return {"behavior": "answer"}
+
+        def retrieve(self, query, k=5, threshold=0.0):
+            if query == "needs clarification":
+                return []
+            if query == "unsupported":
+                return []
+            return [
+                {
+                    "chunk_id": "murabaha-1",
+                    "metadata": {
+                        "standard_number": "FAS-28",
+                        "source_family": "FAS",
+                        "citation_supported": True,
+                    },
+                    "content": "",
+                    "similarity": 0.9,
+                }
+            ]
+
+    report = evaluate_retrieval(
+        [
+            {
+                "query": "murabaha ownership",
+                "answerable": True,
+                "required_source_ids": ["FAS-28"],
+                "expected_source_family": "FAS",
+                "language": "en",
+            },
+            {
+                "query": "needs clarification",
+                "answerable": False,
+                "expected_behavior": "clarification",
+                "language": "mixed",
+            },
+            {
+                "query": "unsupported",
+                "answerable": False,
+                "expected_behavior": "refusal",
+                "language": "ar",
+            },
+        ],
+        k=1,
+        pipeline=Pipeline(),
+    )
+
+    assert report["expected_standard_hit_rate"] == 1.0
+    assert report["source_family_accuracy"] == 1.0
+    assert report["citation_support_rate"] == 1.0
+    assert report["unsupported_answer_rate"] == 0.0
+    assert report["refusal_correctness"] == 1.0
+    assert report["clarification_precision"] == 1.0
+    assert report["arabic_mixed_language_pass_rate"] == 1.0
+    assert report["latency"]["average_ms"] >= 0.0
+
+
+@pytest.mark.unit
+def test_evaluate_retrieval_counts_answer_without_citation_support_as_unsupported():
+    from scripts.evaluate_rag import evaluate_retrieval
+
+    class Pipeline:
+        def classify(self, query):
+            return {"behavior": "answer"}
+
+        def retrieve(self, query, k=5, threshold=0.0):
+            return [
+                {
+                    "chunk_id": "murabaha-1",
+                    "metadata": {
+                        "standard_number": "FAS-28",
+                        "source_family": "FAS",
+                        "citation_supported": False,
+                    },
+                    "content": "",
+                    "similarity": 0.9,
+                }
+            ]
+
+    report = evaluate_retrieval(
+        [
+            {
+                "query": "murabaha ownership",
+                "answerable": True,
+                "required_source_ids": ["FAS-28"],
+                "expected_source_family": "FAS",
+            }
+        ],
+        k=1,
+        pipeline=Pipeline(),
+    )
+
+    assert report["expected_standard_hit_rate"] == 1.0
+    assert report["citation_support_rate"] == 0.0
+    assert report["unsupported_answer_rate"] == 1.0
+    assert report["results"][0]["case_passed"] is False
+
+
+@pytest.mark.unit
+def test_fixture_retrieval_pipeline_runs_without_live_vector_index():
+    from scripts.evaluate_rag import FixtureRetrievalPipeline, evaluate_retrieval
+
+    cases = [
+        {
+            "query": "fixture murabaha",
+            "answerable": True,
+            "required_source_ids": ["FAS-28"],
+            "expected_source_family": "FAS",
+            "fixture_retrieved_chunks": [
+                {
+                    "chunk_id": "fixture-1",
+                    "metadata": {
+                        "standard_number": "FAS-28",
+                        "source_family": "FAS",
+                        "citation_supported": True,
+                    },
+                }
+            ],
+        },
+        {
+            "query": "fixture refusal",
+            "answerable": False,
+            "expected_behavior": "refusal",
+            "fixture_behavior": "refusal",
+            "fixture_retrieved_chunks": [],
+        },
+    ]
+
+    report = evaluate_retrieval(cases, k=1, pipeline=FixtureRetrievalPipeline(cases))
+
+    assert report["case_count"] == 2
+    assert report["expected_standard_hit_rate"] == 1.0
+    assert report["refusal_correctness"] == 1.0
+    assert report["baseline_mode"] == "fixture_backed_retrieval_only"
+
+
+@pytest.mark.unit
+def test_bm25_fixture_retriever_ranks_lexical_standard_match():
+    from scripts.evaluate_rag import BM25FixtureRetriever
+
+    retriever = BM25FixtureRetriever(
+        [
+            {
+                "chunk_id": "fas-28",
+                "content": "Murabaha resale requires ownership and risk transfer before sale.",
+                "metadata": {"standard_number": "FAS-28", "source_family": "FAS"},
+            },
+            {
+                "chunk_id": "fas-40",
+                "content": "Investment real estate is held for rental income.",
+                "metadata": {"standard_number": "FAS-40", "source_family": "FAS"},
+            },
+        ]
+    )
+
+    results = retriever.retrieve("murabaha ownership before resale", k=1)
+
+    assert results[0]["chunk_id"] == "fas-28"
+    assert results[0]["metadata"]["retrieval_method"] == "bm25_fixture"
+    assert results[0]["similarity"] > 0
+
+
+@pytest.mark.unit
+def test_hybrid_fixture_pipeline_can_measure_bm25_plus_dense_improvement():
+    from scripts.evaluate_rag import HybridFixtureRetrievalPipeline, compare_hybrid_fixture_spike, evaluate_retrieval
+
+    class DenseMissPipeline:
+        baseline_mode = "dense_fixture"
+
+        def retrieve(self, query, k=5, threshold=0.0):
+            return [
+                {
+                    "chunk_id": "wrong",
+                    "content": "Unrelated leasing text.",
+                    "metadata": {"standard_number": "FAS-02", "source_family": "FAS"},
+                    "similarity": 0.95,
+                }
+            ]
+
+    cases = [
+        {
+            "query": "murabaha ownership before resale",
+            "answerable": True,
+            "required_source_ids": ["FAS-28"],
+            "expected_source_family": "FAS",
+            "fixture_corpus_chunks": [
+                {
+                    "chunk_id": "fas-28",
+                    "content": "Murabaha resale requires ownership and risk transfer before sale.",
+                    "metadata": {
+                        "standard_number": "FAS-28",
+                        "source_family": "FAS",
+                        "citation_supported": True,
+                    },
+                }
+            ],
+        }
+    ]
+
+    dense_report = evaluate_retrieval(cases, k=1, pipeline=DenseMissPipeline())
+    hybrid_report = evaluate_retrieval(
+        cases,
+        k=1,
+        pipeline=HybridFixtureRetrievalPipeline(DenseMissPipeline(), cases),
+    )
+
+    assert dense_report["expected_standard_hit_rate"] == 0.0
+    assert hybrid_report["expected_standard_hit_rate"] == 1.0
+    assert hybrid_report["baseline_mode"] == "hybrid_fixture_bm25_plus_dense"
+    assert hybrid_report["results"][0]["retrieved_ids"] == ["fas-28"]
+
+    comparison = compare_hybrid_fixture_spike(cases, DenseMissPipeline(), k=1)
+    assert comparison["adopt_next"] is True
+    assert comparison["dense"]["expected_standard_hit_rate"] == 0.0
+    assert comparison["hybrid"]["expected_standard_hit_rate"] == 1.0
+
+
+@pytest.mark.unit
 def test_retrieval_coordinator_skips_for_authority_and_underspecified_queries():
     from src.chatbot.retrieval_coordinator import RetrievalCoordinator
 

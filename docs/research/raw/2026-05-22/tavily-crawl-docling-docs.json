@@ -1,0 +1,27 @@
+{
+  "base_url": "https://docling-project.github.io/docling/",
+  "results": [
+    {
+      "url": "https://docling-project.github.io/docling/examples",
+      "raw_content": "# Examples\n\nIn this space, you can explore numerous Docling application recipes & end-to-end workflows!\n\nHere some of our picks to get you started:\n\n* 🔀 conversion examples ranging from [simple conversion to Markdown](https://docling-project.github.io/docling/examples/minimal/) and export of [figures](https://docling-project.github.io/docling/examples/export_figures/) & [tables](https://docling-project.github.io/docling/examples/export_tables/), to [VLM](https://docling-project.github.io/docling..."
+    },
+    {
+      "url": "https://docling-project.github.io/docling/integrations",
+      "raw_content": "# Integrations\n\nIn this space, you can explore various Docling integrations with leading frameworks and tools!\n\nHere some of our picks to get you started:\n\n* [🦜️🔗 LangChain](https://docling-project.github.io/docling/integrations/langchain/)\n* [༄ Langflow](https://docling-project.github.io/docling/integrations/langflow/)\n* [🦙 LlamaIndex](https://docling-project.github.io/docling/integrations/llamaindex/)\n* [🌀 Metaxy](https://docling-project.github.io/docling/integrations/metaxy/)\n* [🧠 Semantica](..."
+    },
+    {
+      "url": "https://github.com/docling-project/docling",
+      "raw_content": "## Latest commit\n\n## History\n\n## Repository files navigation\n\nDocling\n\nDocling\n\n# Docling\n\nDS4SD%2Fdocling | Trendshift\n\nDS4SD%2Fdocling | Trendshift\n\narXiv\nDocs\nPyPI version\nPyPI - Python Version\nuv\nRuff\nPydantic v2\nprek\nLicense MIT\nPyPI Downloads\nDocling Actor\nChat with Dosu\nDiscord\nOpenSSF Best Practices\nLF AI & Data\n\narXiv\nDocs\nPyPI version\nPyPI - Python Version\nuv\nRuff\nPydantic v2\nprek\nLicense MIT\nPyPI Downloads\nDocling Actor\nChat with Dosu\nDiscord\nOpenSSF Best Practices\nLF AI & Data\n\n## Wh..."
+    },
+    {
+      "url": "https://huggingface.co/ibm-granite/granite-docling-258M",
+      "raw_content": "## Collection including ibm-granite/granite-docling-258M\n\n#### Granite Docling Collection Models for parsing complex PDFs and structured documents, designed to complement Docling.•4 items•Updated 20 days ago• 63\n\n## Papers for ibm-granite/granite-docling-258M\n\n#### SmolDocling: An ultra-compact vision-language model for end-to-end multi-modal document conversion Paper • 2503.11576 •Published Mar 14, 2025• 158#### Docling: An Efficient Open-Source Toolkit for AI-driven Document Conversion Paper •..."
+    },
+    {
+      "url": "https://pypi.org/project/docling",
+      "raw_content": null
+    }
+  ],
+  "response_time": 2.0,
+  "request_id": "32d21aa9-e670-4608-8fc4-a9fd8d6cf6ff"
+}

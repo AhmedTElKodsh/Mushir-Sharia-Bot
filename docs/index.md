@@ -12,6 +12,10 @@ This index points to the current documentation set for Mushir. Older L0 and plan
 - [Architecture](chatbot-architecture.md): deeper component-level architecture of the answer-generation path.
 - [Production Readiness](l5-production-readiness.md): runtime modes, release gates, and operational checks.
 - [Deep Research Report](deep-research-report.md): research synthesis for the post-L5 rules-first Sharia commercial-process evaluator direction.
+- [Research Evidence Index](research/README.md): canonical research syntheses and raw evidence inventory.
+- [RAG and Model Intelligence OSS Research](research/rag-model-intelligence-open-source-research-2026-05-22.md): refreshed OSS/GitHub research matrix for improving retrieval, evaluation, ingestion, observability, structured outputs, Arabic NLP, and rules-first intelligence.
+- [Official-Source Crawler Research](research/deep_research_official_source_crawler_2026-05-22.md): CBE/FRA official-source crawler and provenance plan for the L6 evidence corpus.
+- [RAG and Crawler Implementation Plan](research/rag-model-intelligence-implementation-plan-2026-05-22.md): ordered implementation slices merging RAG/model intelligence with official-source crawler evidence gates.
 - [Spec Deep Research Report](../.kiro/specs/sharia-compliance-chatbot/deep-research-report.md): 2026-05-19 research input used to seed router, supersession, chunking, data-model, and evaluation planning.
 - [Project Logic Rethink](../.kiro/specs/sharia-compliance-chatbot/PROJECT-LOGIC-RETHINK-2026-05-19.md): current source-governed planning reset and implementation gap analysis.
 
@@ -44,5 +48,8 @@ This index points to the current documentation set for Mushir. Older L0 and plan
 | Run or deploy the app | [Deployment](ops/deployment.md) |
 | Verify production readiness | [Production Readiness](l5-production-readiness.md) |
 | Debug answer generation | [Architecture](chatbot-architecture.md) |
+| Inspect research evidence | [Research Evidence Index](research/README.md) |
+| Research RAG/model intelligence upgrades | [RAG and Model Intelligence OSS Research](research/rag-model-intelligence-open-source-research-2026-05-22.md) |
+| Plan official-source crawler and RAG upgrades | [RAG and Crawler Implementation Plan](research/rag-model-intelligence-implementation-plan-2026-05-22.md) |
 | Plan source-governed implementation slices | [Maintained Tasks](../.kiro/specs/sharia-compliance-chatbot/tasks.md) |
 | Prepare Egypt institution scraping | [L6 Egypt Institution Scrape Workstream](l6-egypt-institution-scrape/README.md) |

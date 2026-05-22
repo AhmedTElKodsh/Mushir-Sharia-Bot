@@ -110,6 +110,13 @@ Supersession seed records:
 
 These seed maps SHALL NOT be treated as final authority until catalog records confirm source URLs, titles, language coverage, version status, and supersession notes.
 
+The 2026-05-22 research package adds two planning inputs:
+
+- OSS RAG/model intelligence candidates for evaluation, hybrid retrieval, reranking, ingestion quality, tracing, structured extraction, and later rules-first tooling. These remain candidates until they improve Mushir's own gold-set metrics.
+- Official-source crawler guidance for the Egypt evidence corpus. This guidance changes the L6 data order: complete CBE/FRA regulator-backed institution identity and immutable provenance first, then crawl product and contract evidence under reviewed institutions.
+
+Official-source crawler research SHALL NOT promote third-party snippets into evidence. Search results may create discovery leads only; compliance evidence must come from official regulator pages, official institution pages, official PDFs, prospectuses, disclosures, contracts, or reviewed primary documents.
+
 ## Requirements
 
 ### Requirement 1: Authoritative Source Governance
@@ -360,6 +367,30 @@ Acceptance criteria:
 11. Engine-produced AAOIFI mappings and compliance-risk labels SHALL be stored as `machine_proposed` review candidates until a qualified Sharia scholar reviews them.
 12. Scholar-review records SHALL capture reviewer decision, cited AAOIFI references, rationale, uncertainty flags, correction type, and whether the item becomes an accepted gold case.
 13. Future answers using institution pre-knowledge SHALL treat user-supplied details as higher priority than stored public corpus assumptions and SHALL flag stale, conflicting, or incomplete institutional evidence.
+14. The first crawler implementation slice SHALL complete regulator-backed institution identity before broad product crawling.
+15. CBE/FRA regulator snapshots SHALL preserve row-level source URL, source type, retrieved timestamp, raw artifact hash, parse status, and duplicate linkage to baseline workbook rows.
+16. Institution identity SHALL include canonical name, English name, Arabic name when available, aliases, regulator, sector, license ID, license date, official website confidence, and review status.
+17. Source discovery records SHALL classify search or sitemap leads as official regulator, official institution, official PDF, reviewed primary document, or `DISCOVERY_ONLY`.
+18. Evidence artifacts SHALL preserve raw HTTP response or PDF bytes, headers where available, content type, raw path, text path, screenshot path when browser fallback is used, SHA-256 hash, language, extraction method, extraction status, and evidence quality.
+19. No operation SHALL become assessment-ready from a title-only product record; the allowed status is `insufficient_contractual_evidence`.
+20. Browser automation SHALL be an explicit fallback after static fetch fails or misses official links; it SHALL capture rendered DOM/screenshot evidence without bypassing access controls.
+21. Search expansion SHALL have configured budgets for query count, result count, crawl depth, source class, and retries.
+22. pdf/table extraction for CBE/FRA registry sources SHALL validate Arabic/English directionality and table structure before records are treated as registry evidence.
+
+### Requirement 18: Research-Gated Tool Adoption
+
+**User story:** As a maintainer, I want OSS crawler, RAG, model, and evaluation tools adopted only through measured experiments, so that Mushir improves without losing traceability or becoming a framework collection.
+
+Acceptance criteria:
+
+1. The system SHALL keep custom project metrics as the first evaluation baseline before adopting Ragas, DeepEval, RAGChecker, Phoenix, Langfuse, TruLens, or equivalent tools.
+2. Candidate retrieval or reranking tools SHALL be compared against the same gold set before production adoption.
+3. Hybrid retrieval candidates SHALL improve expected-standard hit rate or source-family accuracy without reducing citation support or refusal correctness.
+4. Embedding and reranker candidates SHALL use separate temporary indexes during experiments and SHALL preserve source IDs, chunk IDs, and citation anchors.
+5. Ingestion tools such as Docling, pdfplumber, PyMuPDF/PyMuPDF4LLM, Unstructured, or Marker SHALL be evaluated on source-structure preservation and license acceptability before production use.
+6. Observability tools SHALL not store secrets, raw credentials, hidden reasoning, or unredacted provider payloads.
+7. Structured extraction tools SHALL support scenario facts and schemas only; they SHALL NOT replace citation validation or source-family gates.
+8. Rules engines such as OPA or Catala SHALL remain L6 candidates until one source-covered domain has reviewed rules, evidence, and gold cases.
 
 ## Success Criteria
 
@@ -372,5 +403,6 @@ Mushir is ready to expand beyond the current demo only when all of these are tru
 - Accounting and Shariah-permissibility boundaries are enforced.
 - Citation validation blocks unsupported claims.
 - Feedback and reviewer corrections can be captured without bypassing governance.
+- Official-source crawler evidence can distinguish official artifacts from discovery-only leads.
 - Live deployment checks prove `/health`, `/ready`, and query-path behavior.
 - Bulk evaluation avoids overloading constrained provider routes.

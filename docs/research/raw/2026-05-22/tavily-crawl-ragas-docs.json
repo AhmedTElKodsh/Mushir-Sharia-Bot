@@ -1,0 +1,27 @@
+{
+  "base_url": "https://docs.ragas.io/",
+  "results": [
+    {
+      "url": "https://docs.ragas.io/concepts/test_data_generation",
+      "raw_content": null
+    },
+    {
+      "url": "https://docs.ragas.io/references",
+      "raw_content": null
+    },
+    {
+      "url": "https://docs.ragas.io/concepts/datasets",
+      "raw_content": null
+    },
+    {
+      "url": "https://docs.ragas.io/concepts",
+      "raw_content": null
+    },
+    {
+      "url": "https://docs.ragas.io/references/evaluate",
+      "raw_content": null
+    }
+  ],
+  "response_time": 3.94,
+  "request_id": "ceb92eec-ee4d-460b-b0c2-1ae9c3ac3d80"
+}

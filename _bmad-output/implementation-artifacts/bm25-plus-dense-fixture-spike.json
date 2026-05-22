@@ -1,0 +1,236 @@
+{
+  "mode": "bm25_plus_dense_fixture_spike",
+  "dense": {
+    "baseline_mode": "fixture_backed_retrieval_only",
+    "case_count": 7,
+    "answerable_case_count": 3,
+    "unanswerable_case_count": 4,
+    "unanswerable_with_retrieval_count": 0,
+    "hit_at_k": 1.0,
+    "recall_at_k": 1.0,
+    "expected_standard_hit_rate": 1.0,
+    "mrr": 1.0,
+    "unanswerable_retrieval_rate": 0.0,
+    "unsupported_answer_rate": 0.0,
+    "source_family_accuracy": 1.0,
+    "citation_support_rate": 1.0,
+    "refusal_correctness": 1.0,
+    "clarification_precision": 1.0,
+    "arabic_mixed_language_pass_rate": 1.0,
+    "latency": {
+      "average_ms": 0.0028142863551953007,
+      "max_ms": 0.009599985787644982
+    },
+    "results": [
+      {
+        "query": "What does AAOIFI require before resale in a murabaha transaction?",
+        "answerable": true,
+        "expected": [
+          "AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8"
+        ],
+        "retrieved_ids": [
+          "AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8"
+        ],
+        "matched": true,
+        "expected_behavior": "answer",
+        "predicted_behavior": "answer",
+        "case_passed": true,
+        "reciprocal_rank": 1.0
+      },
+      {
+        "query": "How should investment real estate held for rental income be recognized?",
+        "answerable": true,
+        "expected": [
+          "AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"
+        ],
+        "retrieved_ids": [
+          "AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"
+        ],
+        "matched": true,
+        "expected_behavior": "answer",
+        "predicted_behavior": "answer",
+        "case_passed": true,
+        "reciprocal_rank": 1.0
+      },
+      {
+        "query": "Arabic murabaha resale ownership question",
+        "answerable": true,
+        "expected": [
+          "AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8"
+        ],
+        "retrieved_ids": [
+          "AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8"
+        ],
+        "matched": true,
+        "expected_behavior": "answer",
+        "predicted_behavior": "answer",
+        "case_passed": true,
+        "reciprocal_rank": 1.0
+      },
+      {
+        "query": "Can Mushir give me a binding fatwa for this investment?",
+        "answerable": false,
+        "expected": [],
+        "retrieved_ids": [],
+        "matched": false,
+        "expected_behavior": "refusal",
+        "predicted_behavior": "refusal",
+        "case_passed": true,
+        "reciprocal_rank": 0.0
+      },
+      {
+        "query": "Can I invest without business activity or debt ratio details?",
+        "answerable": false,
+        "expected": [],
+        "retrieved_ids": [],
+        "matched": false,
+        "expected_behavior": "clarification",
+        "predicted_behavior": "clarification",
+        "case_passed": true,
+        "reciprocal_rank": 0.0
+      },
+      {
+        "query": "Arabic investment question missing company activity details",
+        "answerable": false,
+        "expected": [],
+        "retrieved_ids": [],
+        "matched": false,
+        "expected_behavior": "clarification",
+        "predicted_behavior": "clarification",
+        "case_passed": true,
+        "reciprocal_rank": 0.0
+      },
+      {
+        "query": "What if the answer cites FAS-99 but retrieved sources only contain FAS-01?",
+        "answerable": false,
+        "expected": [],
+        "retrieved_ids": [],
+        "matched": false,
+        "expected_behavior": "refusal",
+        "predicted_behavior": "refusal",
+        "case_passed": true,
+        "reciprocal_rank": 0.0
+      }
+    ]
+  },
+  "hybrid": {
+    "baseline_mode": "hybrid_fixture_bm25_plus_dense",
+    "case_count": 7,
+    "answerable_case_count": 3,
+    "unanswerable_case_count": 4,
+    "unanswerable_with_retrieval_count": 1,
+    "hit_at_k": 1.0,
+    "recall_at_k": 1.0,
+    "expected_standard_hit_rate": 1.0,
+    "mrr": 1.0,
+    "unanswerable_retrieval_rate": 0.25,
+    "unsupported_answer_rate": 0.0,
+    "source_family_accuracy": 1.0,
+    "citation_support_rate": 1.0,
+    "refusal_correctness": 0.5,
+    "clarification_precision": 0.0,
+    "arabic_mixed_language_pass_rate": 0.25,
+    "latency": {
+      "average_ms": 0.02351428598298558,
+      "max_ms": 0.061400001868605614
+    },
+    "results": [
+      {
+        "query": "What does AAOIFI require before resale in a murabaha transaction?",
+        "answerable": true,
+        "expected": [
+          "AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8"
+        ],
+        "retrieved_ids": [
+          "AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8"
+        ],
+        "matched": true,
+        "expected_behavior": "answer",
+        "predicted_behavior": "answer",
+        "case_passed": true,
+        "reciprocal_rank": 1.0
+      },
+      {
+        "query": "How should investment real estate held for rental income be recognized?",
+        "answerable": true,
+        "expected": [
+          "AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"
+        ],
+        "retrieved_ids": [
+          "AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"
+        ],
+        "matched": true,
+        "expected_behavior": "answer",
+        "predicted_behavior": "answer",
+        "case_passed": true,
+        "reciprocal_rank": 1.0
+      },
+      {
+        "query": "Arabic murabaha resale ownership question",
+        "answerable": true,
+        "expected": [
+          "AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8"
+        ],
+        "retrieved_ids": [
+          "AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8"
+        ],
+        "matched": true,
+        "expected_behavior": "answer",
+        "predicted_behavior": "answer",
+        "case_passed": true,
+        "reciprocal_rank": 1.0
+      },
+      {
+        "query": "Can Mushir give me a binding fatwa for this investment?",
+        "answerable": false,
+        "expected": [],
+        "retrieved_ids": [],
+        "matched": false,
+        "expected_behavior": "refusal",
+        "predicted_behavior": "refusal",
+        "case_passed": true,
+        "reciprocal_rank": 0.0
+      },
+      {
+        "query": "Can I invest without business activity or debt ratio details?",
+        "answerable": false,
+        "expected": [],
+        "retrieved_ids": [],
+        "matched": false,
+        "expected_behavior": "clarification",
+        "predicted_behavior": "refusal",
+        "case_passed": false,
+        "reciprocal_rank": 0.0
+      },
+      {
+        "query": "Arabic investment question missing company activity details",
+        "answerable": false,
+        "expected": [],
+        "retrieved_ids": [],
+        "matched": false,
+        "expected_behavior": "clarification",
+        "predicted_behavior": "refusal",
+        "case_passed": false,
+        "reciprocal_rank": 0.0
+      },
+      {
+        "query": "What if the answer cites FAS-99 but retrieved sources only contain FAS-01?",
+        "answerable": false,
+        "expected": [],
+        "retrieved_ids": [
+          "AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8",
+          "AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8",
+          "AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"
+        ],
+        "matched": false,
+        "expected_behavior": "refusal",
+        "predicted_behavior": "answer",
+        "case_passed": false,
+        "reciprocal_rank": 0.0
+      }
+    ]
+  },
+  "delta_expected_standard_hit_rate": 0.0,
+  "adopt_next": false,
+  "qdrant_hybrid_comparison_allowed": false
+}

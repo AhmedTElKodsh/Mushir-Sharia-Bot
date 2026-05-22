@@ -21,6 +21,8 @@ The current implementation already contains a practical foundation: `Application
 
 The 2026-05-19 deep research report adds concrete seed data and implementation contracts. This design promotes the first-release accounting router, supersession seed graph, parent/child chunking model, retrieval trace schema, and feedback loop into architecture. It treats specific model, vector database, Arabic NLP, and observability products as spike candidates until measured on Mushir's own AAOIFI gold set.
 
+The 2026-05-22 research package adds an official-source crawler correction. L6 institution data must be built as an official-source-first evidence pipeline: CBE/FRA regulator registry completion, immutable artifact capture, institution identity dedupe, bounded product/contract discovery, evidence-rich operation extraction, then scholar-review handoff. Search and third-party pages are discovery aids only, not compliance evidence.
+
 ## Target Pipeline
 
 ```mermaid
@@ -474,12 +476,14 @@ Reviewer feedback should become part of evaluation governance:
 
 The Egypt financial institutions scrape is a public-source evidence-acquisition program for L6. It extends source governance; it does not replace AAOIFI authority and does not create binding Sharia rulings.
 
-The corpus design has five layers:
+The corpus design now has seven layers:
 
 ```mermaid
 flowchart TD
-    R["Canonical institution registry"] --> D["Bounded official-source discovery"]
-    D --> C["Public crawl and artifact capture"]
+    B["Baseline workbooks"] --> R["Regulator registry snapshot: CBE/FRA"]
+    R --> I["Institution identity dedupe"]
+    I --> D["Bounded official-source discovery"]
+    D --> C["Immutable public artifact capture"]
     C --> E["Extraction and evidence spans"]
     E --> O["Operations and contracts catalog"]
     O --> M["Machine-proposed AAOIFI mapping"]
@@ -490,6 +494,40 @@ flowchart TD
 ### Registry Layer
 
 The registry normalizes the uploaded Egypt financial institutions workbook, refresh report, and presentation into stable institution records. The workbook sheets `01_CBE_Banks`, `02_Capital_Market`, `03_Insurance`, and `04_NonBank_Financial` are baseline seeds only; every production row requires regulator revalidation.
+
+The first implementation slice should complete the institution denominator before product crawling:
+
+- CBE bank PDF and licensing pages;
+- FRA capital-market register pages;
+- FRA insurance register pages and linked official PDFs;
+- FRA `company_records` detail pages, parsed by Arabic labels rather than CSS classes;
+- duplicate linkage between regulator rows and baseline workbook rows.
+
+Minimum `regulator_registry_snapshot` fields:
+
+- regulator;
+- source URL;
+- source type;
+- source last-modified value when available;
+- retrieved timestamp;
+- row hash;
+- raw artifact SHA-256;
+- parse status.
+
+Minimum `institution_identity` fields:
+
+- institution ID;
+- canonical name;
+- English name;
+- Arabic name when available;
+- aliases;
+- regulator;
+- sector;
+- license ID;
+- license date;
+- official website;
+- confidence;
+- review status.
 
 Required registry statuses:
 
@@ -515,6 +553,18 @@ Discovery must be bounded and auditable. A normal attempt budget is:
 
 When the budget is exhausted, the system records a gap. It does not infer a website, contract, product, or Sharia claim.
 
+Discovery records should classify each lead as:
+
+- official regulator page;
+- official institution page;
+- official PDF;
+- reviewed primary document;
+- sitemap lead;
+- search lead;
+- `DISCOVERY_ONLY`.
+
+Third-party pages may seed new official-domain queries or manual review. They cannot become RAG evidence, operation evidence, or compliance evidence without a corresponding official artifact.
+
 ### Crawl And Capture Layer
 
 The crawler captures only public material and records access barriers as data. It must respect robots.txt, site terms, rate limits, CAPTCHA, login walls, paywalls, and explicit access controls.
@@ -522,6 +572,21 @@ The crawler captures only public material and records access barriers as data. I
 Public artifact metadata includes URL, institution ID, source rank, document type, language, retrieval timestamp, HTTP status, content type, content hash, raw path, text path, extraction status, and citation-anchor strategy.
 
 Priority document types are tariffs, terms and conditions, contracts, model contracts, prospectuses, annual reports, fund documents, sukuk memoranda, policy wordings, rulebooks, product pages, and disclosures.
+
+The artifact layer should store immutable capture metadata:
+
+- raw HTTP response bytes and headers when available;
+- original PDF bytes;
+- extracted text path;
+- rendered DOM and screenshot only when browser fallback is required;
+- SHA-256 hash for raw artifacts;
+- extraction method and version;
+- OCR confidence where relevant;
+- access-control decision.
+
+Static fetch is the default. Browser automation is an explicit fallback for JavaScript-heavy official pages, official downloads that static fetch cannot reach, screenshots, and network capture. It must not bypass access controls.
+
+PDF/table extraction should use pdfplumber as the first registry-PDF extractor. PyMuPDF/PyMuPDF4LLM, Docling, Unstructured, and Marker remain license- and quality-gated candidates. Arabic/English directionality and table order must be checked before extracted rows become registry evidence.
 
 ### Operations Catalog Layer
 
@@ -538,6 +603,34 @@ The operations catalog is structured evidence, not verdicts. It preserves the pu
 - Sharia-compliant marketing claims.
 
 Missing public details are first-class outcomes such as `not_publicly_available` or `insufficient_public_data`.
+
+Title-only operations are not assessment-ready. They remain useful catalog entries only when marked `insufficient_contractual_evidence`.
+
+### Tooling Decision Model
+
+The crawler should keep extending the current bounded script path until it proves too large for maintainability. Candidate tools are scoped as follows:
+
+| Tool | Use | Adoption rule |
+|---|---|---|
+| Existing L6 pilot script | Current bounded crawler entrypoint | Keep extending for the next registry-completion slice |
+| Scrapy | Resumable multi-domain official crawls | Evaluate only when queues, throttling, and job resume are needed |
+| Crawlee for Python | Unified HTTP/browser crawler | Spike only without anti-bot bypass behavior |
+| Playwright | Browser fallback and screenshots | Use only after static fetch fails or misses official links |
+| Trafilatura | Official HTML main-text extraction | Candidate adapter after artifact capture exists |
+| pdfplumber | CBE/FRA born-digital PDF/table extraction | Preferred first registry PDF extractor |
+| PyMuPDF/PyMuPDF4LLM | Fast PDF conversion and rendering | License-gated candidate |
+
+### RAG And Model Intelligence Decision Model
+
+RAG/model improvements are measured experiments, not architecture replacements:
+
+- custom pytest/retrieval metrics are the first baseline;
+- Ragas, DeepEval, RAGChecker, Phoenix, TruLens, and Langfuse remain candidates until the trace and metric schema is stable;
+- `bm25s` is the first low-complexity hybrid retrieval spike;
+- Qdrant hybrid search is a production-target comparison after a local hybrid baseline wins;
+- BGE-M3 and BGE reranker experiments must use a separate temporary index;
+- Instructor/Pydantic may help structured scenario extraction but cannot replace `CitationValidator`;
+- OPA/Catala remain future L6 rules candidates after source coverage and reviewed rules exist.
 
 ### Scholar Review Layer
 

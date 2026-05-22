@@ -10,6 +10,8 @@ L1-L4 are now the baseline runtime, not future work. The application has a share
 
 L5 does not add major product features. It turns the current implementation into a measurable, demo-safe, dependency-aware system.
 
+The 2026-05-22 research cleanup does not change the L5 mission. Official-source crawler work, product/contract evidence collection, RAG/model library adoption, and rules-first evaluator work remain gated follow-on tracks. L5 may reference their plans, but it should only adopt work that improves release readiness without expanding product scope.
+
 ## Stable Public Interfaces
 
 Treat these interfaces as stable during L5:
@@ -74,6 +76,13 @@ Changes to these interfaces must be backward compatible unless a test or documen
 - Document setup, smoke, retrieval eval, integration, and browser verification commands.
 - Ensure logs, metrics, cache, and audit records do not expose secrets or raw credentials.
 
+### 7. Research-To-Plan Hygiene
+
+- Keep `docs/research/` organized into canonical syntheses and dated raw evidence.
+- Keep official-source crawler work as L6 evidence-corpus work, not as an L5 demo blocker.
+- Keep RAG/model intelligence upgrades behind baseline evaluation metrics.
+- Do not introduce new crawler, retrieval, observability, or rules-engine dependencies during L5 unless a failing readiness gate requires them and the change has a rollback path.
+
 ## Verification Commands
 
 Fast gate:
@@ -107,3 +116,4 @@ L5 is complete when:
 - Redis/PostgreSQL/Qdrant runtime modes have separately marked integration coverage.
 - `/chat` and stable public APIs pass documented smoke checks under the demo configuration.
 - Production readiness commands and environment variables are documented.
+- Research-derived follow-on work is linked from maintained docs without being treated as L5 completion scope.

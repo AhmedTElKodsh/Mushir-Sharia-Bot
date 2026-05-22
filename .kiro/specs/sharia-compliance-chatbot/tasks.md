@@ -1,8 +1,8 @@
 # Implementation Task Plan: Source-Governed AAOIFI Assistant
 
 **Created:** 2026-05-19
-**Status:** Implemented and test-covered governance contracts
-**Scope:** Convert the project-logic rethink and deep research report into implementation slices. Do not treat this as proof that runtime behavior already exists.
+**Status:** Maintained implementation truth table
+**Scope:** Convert the project-logic rethink, deep research reports, and crawler research into implementation slices. Do not treat planned or researched behavior as proof that runtime behavior already exists.
 
 ## Task Principles
 
@@ -10,6 +10,8 @@
 - Add source governance before expanding answer scope.
 - Verify router and supersession seed data against cataloged AAOIFI sources before using it as authority.
 - Keep tool/model choices behind measurement until they beat the current baseline on Mushir's gold set.
+- Complete official-source registry identity before broad L6 product crawling.
+- Treat third-party pages as discovery-only unless an official artifact confirms the fact.
 - Do not run bulk live generation against `openrouter/free`; use retrieval-only probes and fixtures for evaluation.
 
 ## Tasks
@@ -121,3 +123,30 @@
 - [ ] Wire institution pre-knowledge and user-fact override behavior into runtime answer flow after reviewed corpus data exists.
 - [ ] Run a crawl-first pilot across mixed institution types and one no-details-found hard case before scaling to the full registry.
 - [ ] Approve broader scraping after the pilot proves discovery, crawl limits, blocked-site classification, raw capture, extraction, deduplication, gap marking, operations extraction, and Mushir engine assessment export. Scholar review remains blank until the later review/improvement layer.
+
+### 12. Official-Source Crawler Research Integration
+
+**Current planning state (2026-05-22):** the official crawler research moved the next L6 data slice earlier in the workflow. Finish regulator-backed institution registry completion and immutable provenance before product crawling.
+
+- [x] Promote the curated crawler research and raw Tavily output into `docs/research/` with raw evidence under `docs/research/raw/2026-05-22/`.
+- [x] Add CBE bank PDF handling that records raw PDF hash, source URL, retrieved timestamp, parse status, and rejection/security-page status.
+- [x] Add FRA paginated register and detail-page parsers for capital-market, insurance, finance, fintech, and linked official PDFs.
+- [x] Parse FRA detail pages by visible Arabic/English labels, not brittle CSS-only assumptions.
+- [x] Export a normalized institution table with source metadata, duplicate scores, official website confidence, and `ready_for_product_crawl`.
+- [x] Preserve every old workbook row in a ledger, including rows that become official-source gaps.
+- [x] Add tests for CBE rejection pages, FRA pagination, detail-label parsing, workbook dedupe, and no fail-open product-crawl readiness.
+- [x] Keep `scripts/run_l6_institution_pilot.py` as the bounded entrypoint unless it becomes too large for maintainability; evaluate Scrapy/Crawlee only after that point.
+
+### 13. Research-Gated RAG And Model Intelligence Upgrades
+
+**Current planning state (2026-05-22):** RAG/model libraries are candidate tools, not architecture decisions. Adopt only after baseline metrics prove improvement.
+
+- [x] Create a retrieval-only and fixture-backed evaluation baseline before adopting Ragas, DeepEval, RAGChecker, or observability platforms.
+- [x] Report expected-standard hit rate, source-family accuracy, citation support, unsupported-answer rate, refusal correctness, clarification precision, Arabic/mixed-language pass rate, and latency.
+- [x] Spike `bm25s` plus current dense retrieval before Qdrant hybrid search.
+- [ ] Compare BGE-M3 and BGE reranker against the current multilingual MPNet baseline using a separate temporary index.
+- [ ] Test Docling on a controlled AAOIFI source sample and pdfplumber on CBE/FRA registry PDFs.
+- [ ] Keep PyMuPDF/PyMuPDF4LLM, Marker, and other GPL/AGPL candidates blocked until license review.
+- [ ] Add a lightweight trace schema before adopting Phoenix/OpenInference, TruLens, or Langfuse.
+- [ ] Use Instructor/Pydantic only for scenario extraction and schema enforcement; keep `CitationValidator` and source-family gates authoritative.
+- [ ] Defer OPA/Catala until one source-covered L6 domain has verified rules, evidence, and gold cases.

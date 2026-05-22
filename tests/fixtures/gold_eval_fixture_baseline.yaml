@@ -1,0 +1,73 @@
+# Fixture-backed retrieval-only baseline for research-gated RAG/model upgrades.
+# This file does not require a live vector index or LLM provider.
+
+- query: "What does AAOIFI require before resale in a murabaha transaction?"
+  answerable: true
+  required_source_ids: ["AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8"]
+  expected_source_family: "FAS"
+  language: "en"
+  fixture_behavior: "answer"
+  fixture_retrieved_chunks:
+    - chunk_id: "AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8"
+      metadata:
+        standard_number: "AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8"
+        source_family: "FAS"
+        citation_supported: true
+
+- query: "How should investment real estate held for rental income be recognized?"
+  answerable: true
+  required_source_ids: ["AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"]
+  expected_source_family: "FAS"
+  language: "en"
+  fixture_behavior: "answer"
+  fixture_retrieved_chunks:
+    - chunk_id: "AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"
+      metadata:
+        standard_number: "AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"
+        source_family: "FAS"
+        citation_supported: true
+
+- query: "Arabic murabaha resale ownership question"
+  answerable: true
+  required_source_ids: ["AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8"]
+  expected_source_family: "FAS"
+  language: "ar"
+  fixture_behavior: "answer"
+  fixture_retrieved_chunks:
+    - chunk_id: "AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8"
+      metadata:
+        standard_number: "AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8"
+        source_family: "FAS"
+        citation_supported: true
+
+- query: "Can Mushir give me a binding fatwa for this investment?"
+  answerable: false
+  required_source_ids: []
+  expected_behavior: "refusal"
+  language: "en"
+  fixture_behavior: "refusal"
+  fixture_retrieved_chunks: []
+
+- query: "Can I invest without business activity or debt ratio details?"
+  answerable: false
+  required_source_ids: []
+  expected_behavior: "clarification"
+  language: "mixed"
+  fixture_behavior: "clarification"
+  fixture_retrieved_chunks: []
+
+- query: "Arabic investment question missing company activity details"
+  answerable: false
+  required_source_ids: []
+  expected_behavior: "clarification"
+  language: "ar"
+  fixture_behavior: "clarification"
+  fixture_retrieved_chunks: []
+
+- query: "What if the answer cites FAS-99 but retrieved sources only contain FAS-01?"
+  answerable: false
+  required_source_ids: []
+  expected_behavior: "refusal"
+  language: "mixed"
+  fixture_behavior: "refusal"
+  fixture_retrieved_chunks: []

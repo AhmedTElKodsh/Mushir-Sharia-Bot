@@ -1,0 +1,19 @@
+{
+  "base_url": "https://qdrant.tech/documentation/",
+  "results": [
+    {
+      "url": "https://qdrant.tech/documentation/fastembed",
+      "raw_content": "![logo](https://qdrant.tech/img/qdrant-logo.svg)\n![logo](https://qdrant.tech/img/qdrant-logo.svg)\n\n### Getting Started\n\n### User Manual\n\n### Qdrant Tools\n\n### Tutorials\n\n### Support\n\n### Getting Started\n\n### User Manual\n\n### Qdrant Tools\n\n### Tutorials\n\n### Support\n\n# What is FastEmbed?\n\nFastEmbed is a lightweight Python library built for embedding generation. It supports popular embedding models and offers a user-friendly experience for embedding data into vector space.\n\nBy using FastEmbed, you..."
+    },
+    {
+      "url": "https://qdrant.tech/documentation/tutorials-develop",
+      "raw_content": "![logo](https://qdrant.tech/img/qdrant-logo.svg)\n![logo](https://qdrant.tech/img/qdrant-logo.svg)\n\n### Getting Started\n\n### User Manual\n\n### Qdrant Tools\n\n### Tutorials\n\n### Support\n\n### Getting Started\n\n### User Manual\n\n### Qdrant Tools\n\n### Tutorials\n\n### Support\n\n### Develop & Implement Tutorials\n\n*Core tools and APIs for building with Qdrant.*\n\n| Tutorial | Objective | Stack | Time | Level |\n| --- | --- | --- | --- | --- |\n| [Bulk Operations](https://qdrant.tech/documentation/tutorials-devel..."
+    },
+    {
+      "url": "https://qdrant.tech/documentation/search",
+      "raw_content": null
+    }
+  ],
+  "response_time": 2.75,
+  "request_id": "59b3fb77-c166-45f8-9fe7-918edc0abb8c"
+}
