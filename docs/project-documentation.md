@@ -79,7 +79,7 @@ Mushir must not:
 | `src/static/` | Browser chat UI |
 | `scripts/` | Corpus conversion, ingestion, evaluation, deployment, smoke checks |
 | `tests/` | Unit, service, API, integration, smoke, and readiness tests |
-| `docs/` | Current technical, operations, and stakeholder documentation |
+| `docs/` | Current technical, operations, stakeholder, research, and AI handoff documentation |
 | `.kiro/specs/` | Historical planning files and active readiness plans |
 | `gemini-gem-prototype/knowledge-base/` | AAOIFI markdown corpus used for ingestion |
 | `data/source_registry/` | Small tracked source-category and regulator-source seeds for the planned Egypt institution corpus |

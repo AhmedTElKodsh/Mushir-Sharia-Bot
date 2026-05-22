@@ -2,7 +2,7 @@
 
 This file is the working context for AI agents and developers making changes in this repository. Keep changes grounded in the current codebase, not in older roadmap language.
 
-Last refreshed: 2026-05-20
+Last refreshed: 2026-05-22
 
 ## Product Purpose
 
@@ -152,6 +152,7 @@ Smoke bilingual answer behavior:
 
 - `README.md`: public project overview and setup.
 - `docs/project-documentation.md`: current full technical documentation.
+- `docs/ai-project-brief.md`: detailed AI-agent handoff with runtime contracts, data authority ladder, L5/L6 status, commands, and safe edit rules.
 - `docs/client-plain-language-logic.md`: client-facing report covering planning, implementation, current limits, L5 readiness, and L6 future direction.
 - `docs/client-source-governed-aaoifi-roadmap.md`: visual client-facing roadmap for the updated source-governed AAOIFI assistant logic.
 - `docs/chatbot-architecture.md`: detailed answer-generation architecture.

@@ -5,6 +5,7 @@ This index points to the current documentation set for Mushir. Older L0 and plan
 ## Start Here
 
 - [Project Documentation](project-documentation.md): full current technical documentation for developers and maintainers.
+- [AI Project Brief](ai-project-brief.md): compact but detailed AI-agent handoff covering runtime contracts, source authority, L5/L6 status, commands, risks, and safe edit rules.
 - [Client Plain-Language Report](client-plain-language-logic.md): non-technical client explanation of project planning, implemented behavior, current limits, L5 readiness, and proposed L6 direction.
 - [Client Source-Governed Roadmap](client-source-governed-aaoifi-roadmap.md): visual client-facing explanation of the updated AAOIFI assistant logic, key terms, source governance, router plan, roadmap, risks, and acceptance checklist.
 - [L6 Egypt Institution Scrape Workstream](l6-egypt-institution-scrape/README.md): project-facing guide for the planned public-source Egypt institution operations corpus.
@@ -42,6 +43,7 @@ This index points to the current documentation set for Mushir. Older L0 and plan
 | Task | Best Doc |
 | --- | --- |
 | Understand the whole app | [Project Documentation](project-documentation.md) |
+| Brief a future AI agent | [AI Project Brief](ai-project-brief.md) |
 | Explain the system to a client | [Client Plain-Language Report](client-plain-language-logic.md) |
 | Explain the updated source-governed roadmap visually | [Client Source-Governed Roadmap](client-source-governed-aaoifi-roadmap.md) |
 | Give another AI agent the rules | [Project Context](../project-context.md) |
