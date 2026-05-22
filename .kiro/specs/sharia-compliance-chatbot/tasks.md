@@ -144,7 +144,7 @@
 - [x] Create a retrieval-only and fixture-backed evaluation baseline before adopting Ragas, DeepEval, RAGChecker, or observability platforms.
 - [x] Report expected-standard hit rate, source-family accuracy, citation support, unsupported-answer rate, refusal correctness, clarification precision, Arabic/mixed-language pass rate, and latency.
 - [x] Spike `bm25s` plus current dense retrieval before Qdrant hybrid search.
-- [ ] Compare BGE-M3 and BGE reranker against the current multilingual MPNet baseline using a separate temporary index.
+- [x] Compare BGE-M3 and BGE reranker against the current multilingual MPNet baseline using a separate temporary index.
 - [ ] Test Docling on a controlled AAOIFI source sample and pdfplumber on CBE/FRA registry PDFs.
 - [ ] Keep PyMuPDF/PyMuPDF4LLM, Marker, and other GPL/AGPL candidates blocked until license review.
 - [ ] Add a lightweight trace schema before adopting Phoenix/OpenInference, TruLens, or Langfuse.

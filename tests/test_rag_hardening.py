@@ -703,6 +703,93 @@ def test_hybrid_fixture_pipeline_can_measure_bm25_plus_dense_improvement():
 
 
 @pytest.mark.unit
+def test_embedding_candidate_fixture_comparison_uses_separate_temp_index_and_safety_gate():
+    from scripts.evaluate_rag import compare_embedding_candidate_fixture_spike, evaluate_retrieval
+
+    class CurrentMpnetBaseline:
+        baseline_mode = "current_mpnet_fixture"
+
+        def classify(self, query):
+            return {"behavior": "answer"}
+
+        def retrieve(self, query, k=5, threshold=0.0):
+            return [
+                {
+                    "chunk_id": "wrong",
+                    "content": "Unrelated leasing text.",
+                    "metadata": {
+                        "standard_number": "FAS-02",
+                        "source_family": "FAS",
+                        "citation_supported": True,
+                    },
+                    "similarity": 0.95,
+                }
+            ]
+
+    cases = [
+        {
+            "query": "Arabic murabaha ownership before resale",
+            "answerable": True,
+            "required_source_ids": ["FAS-28"],
+            "expected_source_family": "FAS",
+            "language": "mixed",
+            "candidate_retrieved_chunks_by_model": {
+                "bge-m3": [
+                    {
+                        "chunk_id": "fas-28",
+                        "content": "Murabaha resale requires ownership before sale.",
+                        "metadata": {
+                            "standard_number": "FAS-28",
+                            "source_family": "FAS",
+                            "citation_supported": True,
+                        },
+                    }
+                ],
+                "bge-reranker": [
+                    {
+                        "chunk_id": "wrong",
+                        "content": "Unrelated text.",
+                        "metadata": {
+                            "standard_number": "FAS-02",
+                            "source_family": "FAS",
+                            "citation_supported": True,
+                            "rerank_score": 0.1,
+                        },
+                    },
+                    {
+                        "chunk_id": "fas-28",
+                        "content": "Murabaha resale requires ownership before sale.",
+                        "metadata": {
+                            "standard_number": "FAS-28",
+                            "source_family": "FAS",
+                            "citation_supported": True,
+                            "rerank_score": 0.9,
+                        },
+                    },
+                ],
+            },
+        }
+    ]
+
+    baseline_report = evaluate_retrieval(cases, k=1, pipeline=CurrentMpnetBaseline())
+    comparison = compare_embedding_candidate_fixture_spike(
+        cases,
+        baseline_pipeline=CurrentMpnetBaseline(),
+        k=1,
+        temp_index_id="tmp-test-bge-index",
+    )
+
+    assert baseline_report["expected_standard_hit_rate"] == 0.0
+    assert comparison["runtime_index_modified"] is False
+    assert comparison["live_model_downloads"] is False
+    assert comparison["temporary_index_id"] == "tmp-test-bge-index"
+    assert comparison["candidates"]["bge-m3"]["expected_standard_hit_rate"] == 1.0
+    assert comparison["candidates"]["bge-reranker"]["results"][0]["retrieved_ids"] == ["fas-28"]
+    assert comparison["candidates"]["bge-reranker"]["results"][0]["case_passed"] is True
+    assert comparison["recommendation"]["adopt_candidate"] in {"bge-m3", "bge-reranker"}
+
+
+@pytest.mark.unit
 def test_retrieval_coordinator_skips_for_authority_and_underspecified_queries():
     from src.chatbot.retrieval_coordinator import RetrievalCoordinator
 

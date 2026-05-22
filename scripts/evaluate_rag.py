@@ -109,6 +109,41 @@ class HybridFixtureRetrievalPipeline:
         return _fuse_ranked_results(dense_results, lexical_results, k)
 
 
+class CandidateFixtureRetrievalPipeline:
+    """Fixture-backed candidate index for embedding/reranker comparisons."""
+
+    def __init__(self, cases: List[Dict[str, Any]], *, candidate: str, temp_index_id: str):
+        self.baseline_mode = f"candidate_fixture_{candidate}"
+        self.candidate = candidate
+        self.temp_index_id = temp_index_id
+        self._cases = {
+            str(case.get("query") or case.get("question") or ""): case
+            for case in cases
+        }
+
+    def classify(self, query: str) -> Dict[str, str]:
+        case = self._cases.get(query, {})
+        behaviors = case.get("candidate_behaviors_by_model") or {}
+        behavior = behaviors.get(self.candidate) or case.get("fixture_behavior") or case.get("expected_behavior") or ""
+        return {"behavior": str(behavior)}
+
+    def retrieve(self, query: str, k: int = 5, threshold: float = 0.0) -> List[Dict[str, Any]]:
+        case = self._cases.get(query, {})
+        chunks_by_model = case.get("candidate_retrieved_chunks_by_model") or {}
+        chunks = list(chunks_by_model.get(self.candidate) or case.get("fixture_retrieved_chunks") or [])
+        if self.candidate == "bge-reranker":
+            chunks.sort(key=_rerank_score, reverse=True)
+        results = []
+        for chunk in chunks[:k]:
+            result = dict(chunk)
+            metadata = dict(result.get("metadata") or {})
+            metadata["candidate_model"] = self.candidate
+            metadata["temporary_index_id"] = self.temp_index_id
+            result["metadata"] = metadata
+            results.append(result)
+        return results
+
+
 def load_cases(path: Path) -> List[Dict[str, Any]]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if isinstance(data, dict):
@@ -268,6 +303,44 @@ def compare_hybrid_fixture_spike(
     }
 
 
+def compare_embedding_candidate_fixture_spike(
+    cases: List[Dict[str, Any]],
+    *,
+    baseline_pipeline: Any | None = None,
+    k: int,
+    threshold: float = 0.3,
+    temp_index_id: str = "tmp-fixture-bge-candidate-index",
+) -> Dict[str, Any]:
+    baseline = baseline_pipeline or FixtureRetrievalPipeline(cases)
+    baseline_report = evaluate_retrieval(cases, k, threshold=threshold, pipeline=baseline)
+    candidate_reports = {}
+    for candidate in ["bge-m3", "bge-reranker"]:
+        candidate_reports[candidate] = evaluate_retrieval(
+            cases,
+            k,
+            threshold=threshold,
+            pipeline=CandidateFixtureRetrievalPipeline(
+                cases,
+                candidate=candidate,
+                temp_index_id=temp_index_id,
+            ),
+        )
+    return {
+        "mode": "embedding_reranker_fixture_candidate_comparison",
+        "baseline_model": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
+        "candidate_models": {
+            "bge-m3": "BAAI/bge-m3",
+            "bge-reranker": "BAAI/bge-reranker family",
+        },
+        "temporary_index_id": temp_index_id,
+        "live_model_downloads": False,
+        "runtime_index_modified": False,
+        "baseline": baseline_report,
+        "candidates": candidate_reports,
+        "recommendation": _candidate_recommendation(baseline_report, candidate_reports),
+    }
+
+
 def apply_thresholds(
     report: Dict[str, Any],
     min_hit_at_k: float,
@@ -374,6 +447,16 @@ def _fuse_ranked_results(
     return [by_id[result_id] for result_id in ranked_ids[:k]]
 
 
+def _rerank_score(chunk: Dict[str, Any]) -> float:
+    metadata = chunk.get("metadata", {}) or {}
+    for key in ["rerank_score", "bge_rerank_score", "similarity"]:
+        try:
+            return float(metadata.get(key, chunk.get(key, 0.0)))
+        except (TypeError, ValueError):
+            continue
+    return 0.0
+
+
 def _retrieval_candidates(chunk: Any) -> set:
     if isinstance(chunk, dict):
         metadata = chunk.get("metadata", {})
@@ -464,6 +547,45 @@ def _case_passed(
     return bool(answerable and matched and citation_supported)
 
 
+def _candidate_recommendation(
+    baseline_report: Dict[str, Any],
+    candidate_reports: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    baseline_quality = float(baseline_report.get("expected_standard_hit_rate", 0.0))
+    baseline_unsupported = float(baseline_report.get("unsupported_answer_rate", 0.0))
+    baseline_unanswerable = float(baseline_report.get("unanswerable_retrieval_rate", 0.0))
+    baseline_clarification = float(baseline_report.get("clarification_precision", 0.0))
+    ranked = []
+    for name, report in candidate_reports.items():
+        quality = float(report.get("expected_standard_hit_rate", 0.0))
+        safety_ok = (
+            float(report.get("unsupported_answer_rate", 0.0)) <= baseline_unsupported
+            and float(report.get("unanswerable_retrieval_rate", 0.0)) <= baseline_unanswerable
+            and float(report.get("clarification_precision", 0.0)) >= baseline_clarification
+        )
+        ranked.append(
+            {
+                "candidate": name,
+                "delta_expected_standard_hit_rate": quality - baseline_quality,
+                "safety_ok": safety_ok,
+                "adopt_next": bool(quality > baseline_quality and safety_ok),
+            }
+        )
+    ranked.sort(
+        key=lambda item: (
+            item["adopt_next"],
+            item["delta_expected_standard_hit_rate"],
+            item["safety_ok"],
+        ),
+        reverse=True,
+    )
+    return {
+        "ranked_candidates": ranked,
+        "adopt_candidate": next((item["candidate"] for item in ranked if item["adopt_next"]), ""),
+        "decision": "candidate_ready_for_live_temp_index" if any(item["adopt_next"] for item in ranked) else "no_adoption_without_live_temp_index_gain",
+    }
+
+
 def _reciprocal_rank(retrieved: List[set], expected: set) -> float:
     if not expected:
         return 0.0
@@ -489,9 +611,25 @@ def main() -> int:
         action="store_true",
         help="Use fixture_retrieved_chunks from the gold file instead of loading the live vector index.",
     )
+    parser.add_argument(
+        "--compare-embedding-candidates",
+        action="store_true",
+        help="Compare BGE-M3 and BGE reranker fixture candidates against the fixture MPNet baseline.",
+    )
     args = parser.parse_args()
 
     cases = load_cases(Path(args.gold))
+    if args.compare_embedding_candidates:
+        report = compare_embedding_candidate_fixture_spike(
+            cases,
+            k=args.k,
+            threshold=args.threshold,
+        )
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(json.dumps(report, indent=2))
+        return 0
     pipeline = FixtureRetrievalPipeline(cases) if args.fixture_backed else None
     report = evaluate_retrieval(cases, args.k, threshold=args.threshold, pipeline=pipeline)
     try:
