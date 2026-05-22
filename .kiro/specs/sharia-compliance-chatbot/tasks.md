@@ -146,7 +146,7 @@
 - [x] Spike `bm25s` plus current dense retrieval before Qdrant hybrid search.
 - [x] Compare BGE-M3 and BGE reranker against the current multilingual MPNet baseline using a separate temporary index.
 - [ ] Test Docling on a controlled AAOIFI source sample and pdfplumber on CBE/FRA registry PDFs.
-- [ ] Keep PyMuPDF/PyMuPDF4LLM, Marker, and other GPL/AGPL candidates blocked until license review.
+- [x] Keep PyMuPDF/PyMuPDF4LLM, Marker, and other GPL/AGPL candidates blocked until license review.
 - [ ] Add a lightweight trace schema before adopting Phoenix/OpenInference, TruLens, or Langfuse.
 - [ ] Use Instructor/Pydantic only for scenario extraction and schema enforcement; keep `CitationValidator` and source-family gates authoritative.
 - [ ] Defer OPA/Catala until one source-covered L6 domain has verified rules, evidence, and gold cases.

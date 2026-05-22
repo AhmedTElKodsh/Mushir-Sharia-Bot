@@ -1,0 +1,40 @@
+{
+  "mode": "ingestion_candidate_probe",
+  "runtime_ingestion_modified": false,
+  "candidates": {
+    "docling": {
+      "tool": "Docling",
+      "status": "missing_optional_dependency",
+      "sample": "controlled_aaoifi_source_sample",
+      "evidence": "Docling is not installed in the active environment.",
+      "adopt_next": false
+    },
+    "pdfplumber": {
+      "tool": "pdfplumber",
+      "status": "missing_optional_dependency",
+      "sample": "cbe_fra_registry_pdf_sample",
+      "evidence": "pdfplumber is not installed in the active environment.",
+      "adopt_next": false
+    },
+    "pymupdf": {
+      "tool": "PyMuPDF/PyMuPDF4LLM",
+      "status": "blocked_pending_license_review",
+      "evidence": "Candidate remains blocked until license review is recorded.",
+      "adopt_next": false
+    },
+    "marker": {
+      "tool": "Marker",
+      "status": "blocked_pending_license_review",
+      "evidence": "Candidate remains blocked until license review is recorded.",
+      "adopt_next": false
+    }
+  },
+  "summary": {
+    "docling_ready_for_controlled_aaoifi_sample": false,
+    "pdfplumber_ready_for_registry_pdf_sample": false,
+    "license_blocked_candidates": [
+      "pymupdf",
+      "marker"
+    ]
+  }
+}

@@ -790,6 +790,20 @@ def test_embedding_candidate_fixture_comparison_uses_separate_temp_index_and_saf
 
 
 @pytest.mark.unit
+def test_ingestion_candidate_probe_blocks_license_gated_pdf_candidates():
+    from scripts.evaluate_ingestion_candidates import evaluate_ingestion_candidates
+
+    report = evaluate_ingestion_candidates()
+
+    assert report["runtime_ingestion_modified"] is False
+    assert report["candidates"]["pymupdf"]["status"] == "blocked_pending_license_review"
+    assert report["candidates"]["marker"]["status"] == "blocked_pending_license_review"
+    assert report["summary"]["license_blocked_candidates"] == ["pymupdf", "marker"]
+    assert report["candidates"]["pymupdf"]["adopt_next"] is False
+    assert report["candidates"]["marker"]["adopt_next"] is False
+
+
+@pytest.mark.unit
 def test_retrieval_coordinator_skips_for_authority_and_underspecified_queries():
     from src.chatbot.retrieval_coordinator import RetrievalCoordinator
 
