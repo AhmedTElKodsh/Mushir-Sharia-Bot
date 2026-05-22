@@ -4,16 +4,17 @@
   "candidates": {
     "docling": {
       "tool": "Docling",
-      "status": "missing_optional_dependency",
+      "status": "install_blocked",
       "sample": "controlled_aaoifi_source_sample",
-      "evidence": "Docling is not installed in the active environment.",
+      "evidence": "Docling is not importable in the active Python 3.14 venv. Latest install timed out; docling==1.20.0 failed dependency resolution because deepsearch-glm<0.23.0,>=0.22.0 was unavailable.",
       "adopt_next": false
     },
     "pdfplumber": {
       "tool": "pdfplumber",
-      "status": "missing_optional_dependency",
+      "status": "probe_passed",
       "sample": "cbe_fra_registry_pdf_sample",
-      "evidence": "pdfplumber is not installed in the active environment.",
+      "evidence": "pdfplumber extracted controlled registry sample fields.",
+      "extracted_text_preview": "Arab Investment Bank | 1974-08-08 | CBE Registry",
       "adopt_next": false
     },
     "pymupdf": {
@@ -31,7 +32,7 @@
   },
   "summary": {
     "docling_ready_for_controlled_aaoifi_sample": false,
-    "pdfplumber_ready_for_registry_pdf_sample": false,
+    "pdfplumber_ready_for_registry_pdf_sample": true,
     "license_blocked_candidates": [
       "pymupdf",
       "marker"

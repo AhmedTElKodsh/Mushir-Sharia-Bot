@@ -796,6 +796,8 @@ def test_ingestion_candidate_probe_blocks_license_gated_pdf_candidates():
     report = evaluate_ingestion_candidates()
 
     assert report["runtime_ingestion_modified"] is False
+    assert report["candidates"]["pdfplumber"]["status"] == "probe_passed"
+    assert "Arab Investment Bank" in report["candidates"]["pdfplumber"]["extracted_text_preview"]
     assert report["candidates"]["pymupdf"]["status"] == "blocked_pending_license_review"
     assert report["candidates"]["marker"]["status"] == "blocked_pending_license_review"
     assert report["summary"]["license_blocked_candidates"] == ["pymupdf", "marker"]

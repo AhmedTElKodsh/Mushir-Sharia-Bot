@@ -17,6 +17,8 @@ from src.governance import (
     RetrievalEvalCase,
     RetrievalEvaluationReport,
     RetrievalTraceRecord,
+    RulesFirstEvaluatorPolicy,
+    StructuredExtractionPolicy,
     assess_answer_admissibility,
     feedback_to_gold_case,
 )
@@ -59,6 +61,7 @@ def test_clarification_policy_bypasses_clear_accounting_questions():
 
 def test_retrieval_trace_and_metrics_separate_standard_from_source_family():
     trace = RetrievalTraceRecord(
+        schema_version="mushir.retrieval_trace.v1",
         retrieval_run_id="run-1",
         original_query="How is murabaha profit recognized?",
         normalized_query="murabaha profit recognized",
@@ -91,9 +94,62 @@ def test_retrieval_trace_and_metrics_separate_standard_from_source_family():
     )
 
     assert trace.parent_chunk_ids == ["fas-28:recognition"]
+    assert trace.to_payload()["schema_version"] == "mushir.retrieval_trace.v1"
+    assert "observability_platform" not in trace.to_payload()
     assert report.metric_summary()["standard_accuracy"] == 0.5
     assert report.metric_summary()["source_family_accuracy"] == 1.0
     assert report.metric_summary()["trap_failure_rate"] == 0.0
+
+
+def test_retrieval_trace_schema_rejects_platform_specific_adoption():
+    with pytest.raises(ValueError, match="platform-neutral"):
+        RetrievalTraceRecord(
+            schema_version="mushir.retrieval_trace.v1",
+            retrieval_run_id="run-1",
+            original_query="q",
+            normalized_query="q",
+            candidate_concepts=[],
+            route_id="route",
+            filters={},
+            scores=[],
+            parent_chunk_ids=[],
+            child_chunk_ids=[],
+            observability_platform="phoenix",
+        )
+
+
+def test_structured_extraction_policy_keeps_citation_validator_authoritative():
+    policy = StructuredExtractionPolicy(["scenario_facts", "answer_schema"])
+
+    assert policy.can_use_schema_library("scenario_facts") is True
+    assert policy.can_use_schema_library("answer_schema") is True
+    assert policy.can_use_schema_library("citation_validation") is False
+
+    with pytest.raises(ValueError, match="CitationValidator"):
+        StructuredExtractionPolicy(["scenario_facts"], citation_validator_authoritative=False)
+
+    with pytest.raises(ValueError, match="unsupported structured extraction target"):
+        StructuredExtractionPolicy(["citation_validation"])
+
+
+def test_rules_first_evaluator_policy_defers_opa_and_catala_until_l6_domain_ready():
+    gate = L6EntryGate(
+        scope=L6Scope.ACCOUNTING_PLUS_SHARIAH,
+        permissibility_assessment_allowed=True,
+        shariah_sources_cataloged=False,
+        scenario_schema_ready=True,
+        rule_table_ready=False,
+        gold_cases_ready=False,
+        red_line_refusals_ready=True,
+        human_review_ready=False,
+    )
+
+    assert RulesFirstEvaluatorPolicy("opa", gate, source_covered_domain=False).decision() == (
+        "defer_until_source_covered_l6_domain"
+    )
+    assert RulesFirstEvaluatorPolicy("catala", gate, source_covered_domain=False).decision() == (
+        "defer_until_source_covered_l6_domain"
+    )
 
 
 def test_answer_admissibility_fails_closed_for_permissibility_without_sharia_source():

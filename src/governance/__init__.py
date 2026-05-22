@@ -83,6 +83,8 @@ from src.governance.release_controls import (
     RetrievalEvalCase,
     RetrievalEvaluationReport,
     RetrievalTraceRecord,
+    RulesFirstEvaluatorPolicy,
+    StructuredExtractionPolicy,
     assess_answer_admissibility,
     feedback_to_gold_case,
 )
@@ -160,6 +162,8 @@ __all__ = [
     "RetrievalEvalCase",
     "RetrievalEvaluationReport",
     "RetrievalTraceRecord",
+    "RulesFirstEvaluatorPolicy",
+    "StructuredExtractionPolicy",
     "ScholarReviewRecord",
     "ScholarReviewCsvStore",
     "ScholarReviewListCsvStore",

@@ -74,6 +74,7 @@ class ClarificationPolicy:
 
 @dataclass(frozen=True)
 class RetrievalTraceRecord:
+    schema_version: str
     retrieval_run_id: str
     original_query: str
     normalized_query: str
@@ -84,14 +85,34 @@ class RetrievalTraceRecord:
     parent_chunk_ids: List[str]
     child_chunk_ids: List[str]
     reranking_rationale: str = ""
+    observability_platform: str = ""
 
     def __post_init__(self) -> None:
+        if self.schema_version != "mushir.retrieval_trace.v1":
+            raise ValueError("unsupported retrieval trace schema_version")
         if not self.retrieval_run_id.strip():
             raise ValueError("retrieval_run_id is required")
         if not self.original_query.strip():
             raise ValueError("original_query is required")
         if len(self.scores) != len(self.child_chunk_ids):
             raise ValueError("scores must align with child_chunk_ids")
+        if self.observability_platform:
+            raise ValueError("retrieval trace schema must stay platform-neutral")
+
+    def to_payload(self) -> Dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "retrieval_run_id": self.retrieval_run_id,
+            "original_query": self.original_query,
+            "normalized_query": self.normalized_query,
+            "candidate_concepts": list(self.candidate_concepts),
+            "route_id": self.route_id,
+            "filters": dict(self.filters),
+            "scores": list(self.scores),
+            "parent_chunk_ids": list(self.parent_chunk_ids),
+            "child_chunk_ids": list(self.child_chunk_ids),
+            "reranking_rationale": self.reranking_rationale,
+        }
 
 
 @dataclass(frozen=True)
@@ -128,6 +149,28 @@ class RetrievalEvaluationReport:
             "source_family_accuracy": family_hits / total,
             "trap_failure_rate": trap_failures / len(trap_cases) if trap_cases else 0.0,
         }
+
+
+@dataclass(frozen=True)
+class StructuredExtractionPolicy:
+    """Limit schema libraries to extraction and response-shape boundaries."""
+
+    allowed_targets: List[str]
+    citation_validator_authoritative: bool = True
+    source_family_gates_authoritative: bool = True
+
+    def __post_init__(self) -> None:
+        allowed = {"scenario_facts", "answer_schema"}
+        unsupported = sorted(set(self.allowed_targets) - allowed)
+        if unsupported:
+            raise ValueError(f"unsupported structured extraction target: {', '.join(unsupported)}")
+        if not self.citation_validator_authoritative:
+            raise ValueError("CitationValidator must remain authoritative")
+        if not self.source_family_gates_authoritative:
+            raise ValueError("source-family gates must remain authoritative")
+
+    def can_use_schema_library(self, target: str) -> bool:
+        return target in self.allowed_targets
 
 
 class AnswerGateStatus(str, Enum):
@@ -369,3 +412,20 @@ class L6EntryGate:
     @property
     def can_start_domain_implementation(self) -> bool:
         return not self.unmet_requirements()
+
+
+@dataclass(frozen=True)
+class RulesFirstEvaluatorPolicy:
+    """Defer executable rules engines until L6 evidence gates are ready."""
+
+    candidate_engine: str
+    l6_gate: L6EntryGate
+    source_covered_domain: bool
+
+    def decision(self) -> str:
+        engine = self.candidate_engine.strip().lower()
+        if engine in {"opa", "catala"} and (
+            not self.source_covered_domain or not self.l6_gate.can_start_domain_implementation
+        ):
+            return "defer_until_source_covered_l6_domain"
+        return "eligible_for_spike"
