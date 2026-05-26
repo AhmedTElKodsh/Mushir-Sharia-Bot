@@ -8,8 +8,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import Counter
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -24,6 +25,32 @@ from scripts.evaluate_rag import (  # noqa: E402
 
 DEFAULT_GOLD = Path("tests/fixtures/gold_eval_fixture_baseline.yaml")
 DEFAULT_OUTPUT = Path("_bmad-output/implementation-artifacts/retrieval-baseline-report.json")
+ACCEPTED_SCHOLAR_REVIEW_STATUSES = {
+    "accepted",
+    "accepted_for_gold_set",
+    "accepted_with_correction",
+}
+
+
+def scholar_review_gold_gate(cases: List[Dict[str, Any]]) -> Dict[str, Any]:
+    tracked_statuses = [
+        str(case.get("scholar_review_status") or "").strip().lower()
+        for case in cases
+        if "scholar_review_status" in case
+    ]
+    status_counts = Counter(status or "missing" for status in tracked_statuses)
+    accepted_count = sum(status_counts.get(status, 0) for status in ACCEPTED_SCHOLAR_REVIEW_STATUSES)
+    pending_or_unreviewed = sum(
+        count for status, count in status_counts.items() if status not in ACCEPTED_SCHOLAR_REVIEW_STATUSES
+    )
+    return {
+        "tracked_case_count": len(tracked_statuses),
+        "accepted_gold_case_count": accepted_count,
+        "pending_or_unreviewed_case_count": pending_or_unreviewed,
+        "status_counts": dict(sorted(status_counts.items())),
+        "accepted_statuses": sorted(ACCEPTED_SCHOLAR_REVIEW_STATUSES),
+        "tuning_allowed": bool(tracked_statuses) and pending_or_unreviewed == 0,
+    }
 
 
 def run_retrieval_baseline(
@@ -37,8 +64,10 @@ def run_retrieval_baseline(
     min_mrr: float = 0.0,
     min_answerable_cases: int = 1,
     max_unanswerable_retrieval_rate: float = 1.0,
+    require_scholar_reviewed_gold: bool = False,
 ) -> Dict[str, Any]:
     cases = load_cases(gold)
+    scholar_gate = scholar_review_gold_gate(cases)
     report = evaluate_retrieval(
         cases,
         k=k,
@@ -59,8 +88,15 @@ def run_retrieval_baseline(
             "live_vector_index_used": False,
             "live_llm_used": False,
             "baseline_command": "scripts/run_retrieval_baseline.py",
+            "scholar_review_gold_gate": scholar_gate,
+            "requires_scholar_reviewed_gold": require_scholar_reviewed_gold,
         }
     )
+    if require_scholar_reviewed_gold and not scholar_gate["tuning_allowed"]:
+        report["passed"] = False
+        report.setdefault("failure_reasons", []).append(
+            "scholar-reviewed accepted gold cases are required before tuning or learning"
+        )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report
@@ -77,6 +113,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-mrr", type=float, default=0.0)
     parser.add_argument("--min-answerable-cases", type=int, default=1)
     parser.add_argument("--max-unanswerable-retrieval-rate", type=float, default=1.0)
+    parser.add_argument(
+        "--require-scholar-reviewed-gold",
+        action="store_true",
+        help="Fail when hard-case rows are still pending scholar review; use for tuning or learning runs.",
+    )
     return parser.parse_args()
 
 
@@ -92,6 +133,7 @@ def main() -> int:
         min_mrr=args.min_mrr,
         min_answerable_cases=args.min_answerable_cases,
         max_unanswerable_retrieval_rate=args.max_unanswerable_retrieval_rate,
+        require_scholar_reviewed_gold=args.require_scholar_reviewed_gold,
     )
     print(json.dumps(report, indent=2))
     return 0 if report["passed"] else 1

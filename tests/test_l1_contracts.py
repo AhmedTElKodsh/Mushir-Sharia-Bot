@@ -327,8 +327,8 @@ def test_application_service_rejects_wrong_sharia_standard_for_candidate_route()
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert result.citations == []
     assert result.metadata["standards_route"]["route_id"] == "istisna-penalty-clause"
-    assert result.metadata["standards_route"]["candidate_standards"] == ["SS-10"]
-    assert result.metadata["candidate_standard_filter"]["required"] == ["SS-10"]
+    assert result.metadata["standards_route"]["candidate_standards"] == ["SS-11"]
+    assert result.metadata["candidate_standard_filter"]["required"] == ["SS-11"]
     assert result.metadata["candidate_standard_filter"]["retrieved"] == ["SS-03"]
     assert result.metadata["source_families"] == ["sharia_standard"]
 
@@ -341,13 +341,13 @@ def test_application_service_allows_matching_candidate_sharia_standard_for_revie
     result = ApplicationService(
         retriever=FakeRetriever([
             _chunk(
-                chunk_id="ss-10-istisna",
-                standard_id="SS-10",
+                chunk_id="ss-11-istisna",
+                standard_id="SS-11",
                 section="2",
-                source_file="AAOIFI_Sharia_Standard_10_Salam_Istisna.md",
+                source_file="AAOIFI_Sharia_Standard_11_Istisna.md",
                 metadata={
                     "source_family": "sharia_standard",
-                    "standard_number": "SS-10",
+                    "standard_number": "SS-11",
                     "metadata_status": "cataloged",
                 },
             )
@@ -358,8 +358,8 @@ def test_application_service_allows_matching_candidate_sharia_standard_for_revie
     ).answer("Can we impose liquidated damages if the contractor is late delivering the project?")
 
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
-    assert result.citations[0].standard_number == "SS-10"
-    assert result.metadata["candidate_standard_filter"]["matched"] == ["SS-10"]
+    assert result.citations[0].standard_number == "SS-11"
+    assert result.metadata["candidate_standard_filter"]["matched"] == ["SS-11"]
     assert result.metadata["scholar_review_workflow"]["runtime_governance_update_allowed"] is False
 
 
@@ -371,13 +371,13 @@ def test_application_service_uses_session_clarification_answer_for_next_turn():
     session_store = MemorySessionStore()
     retriever = RecordingRetriever([
         _chunk(
-            chunk_id="ss-10-istisna",
-            standard_id="SS-10",
+            chunk_id="ss-11-istisna",
+            standard_id="SS-11",
             section="2",
-            source_file="AAOIFI_Sharia_Standard_10_Salam_Istisna.md",
+            source_file="AAOIFI_Sharia_Standard_11_Istisna.md",
             metadata={
                 "source_family": "sharia_standard",
-                "standard_number": "SS-10",
+                "standard_number": "SS-11",
                 "metadata_status": "cataloged",
             },
         )
@@ -398,7 +398,7 @@ def test_application_service_uses_session_clarification_answer_for_next_turn():
 
     assert first.status == ComplianceStatus.CLARIFICATION_NEEDED
     assert second.status == ComplianceStatus.INSUFFICIENT_DATA
-    assert second.citations[0].standard_number == "SS-10"
+    assert second.citations[0].standard_number == "SS-11"
     assert second.metadata["transaction_scenario"]["contract_family"] == "istisna"
     assert "clarification_answer" in retriever.calls[0]["query"]
 
@@ -564,10 +564,10 @@ def test_prompt_builder_is_aaoifi_source_family_aware_not_fas_only():
         "Is this construction penalty permissible?",
         [
             _chunk(
-                standard_id="SS-10",
+                standard_id="SS-11",
                 section="2",
-                source_file="AAOIFI_Sharia_Standard_10_Salam_Istisna.md",
-                metadata={"standard_number": "SS-10", "source_family": "sharia_standard"},
+                source_file="AAOIFI_Sharia_Standard_11_Istisna.md",
+                metadata={"standard_number": "SS-11", "source_family": "sharia_standard"},
             )
         ],
         response_language="en",
@@ -576,7 +576,7 @@ def test_prompt_builder_is_aaoifi_source_family_aware_not_fas_only():
     assert "sole function is to analyze financial operations against the AAOIFI" in prompt
     assert "source-family" in prompt
     assert "Financial Accounting Standards (FAS) documents provided to you" not in prompt
-    assert "[1] SS-10 §2 (score: 0.91)" in prompt
+    assert "[1] SS-11 §2 (score: 0.91)" in prompt
 
 
 @pytest.mark.unit

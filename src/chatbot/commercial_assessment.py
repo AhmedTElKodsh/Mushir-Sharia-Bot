@@ -366,7 +366,7 @@ class StandardsRouter:
     ) -> tuple[Optional[str], List[str]]:
         lowered = (query or "").lower()
         if scenario.late_payment_terms and scenario.contract_family == ContractFamily.ISTISNA:
-            return "istisna-penalty-clause", ["SS-10"]
+            return "istisna-penalty-clause", ["SS-11"]
         if scenario.late_payment_terms and scenario.contract_family == ContractFamily.MURABAHA:
             return "murabaha-late-payment-penalty", ["SS-03", "SS-08"]
         if scenario.late_payment_terms and scenario.contract_family == ContractFamily.QARD:
@@ -379,7 +379,7 @@ class StandardsRouter:
             ContractFamily.MURABAHA: ("murabaha-permissibility", ["SS-08"]),
             ContractFamily.IJARAH: ("ijarah-permissibility", ["SS-09"]),
             ContractFamily.SALAM: ("salam-permissibility", ["SS-10"]),
-            ContractFamily.ISTISNA: ("istisna-permissibility", ["SS-10"]),
+            ContractFamily.ISTISNA: ("istisna-permissibility", ["SS-11"]),
             ContractFamily.TAWARRUQ: ("tawarruq-permissibility", ["SS-30"]),
             ContractFamily.QARD: ("qard-permissibility", ["SS-19"]),
             ContractFamily.WAKALA: ("wakala-permissibility", ["SS-46"]),

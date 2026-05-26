@@ -380,7 +380,7 @@ def test_default_concept_map_routes_late_payment_to_sharia_family():
 @pytest.mark.parametrize(
     ("query", "concept_id", "expected_standard"),
     [
-        ("\u0639\u0642\u062f \u062a\u0648\u0631\u064a\u062f \u0648\u062a\u0635\u0646\u064a\u0639 \u0645\u0639 \u062a\u0633\u0644\u064a\u0645 \u0645\u0624\u062c\u0644", "istisna_supply", "SS-10"),
+        ("\u0639\u0642\u062f \u062a\u0648\u0631\u064a\u062f \u0648\u062a\u0635\u0646\u064a\u0639 \u0645\u0639 \u062a\u0633\u0644\u064a\u0645 \u0645\u0624\u062c\u0644", "istisna_supply", "SS-11"),
         ("Can we lock an FX rate and settle later?", "currency_sarf", "SS-01"),
         ("\u0639\u0645\u0648\u0644\u0629 \u062e\u0637\u0627\u0628 \u0636\u0645\u0627\u0646", "guarantee_kafalah", "SS-05"),
     ],

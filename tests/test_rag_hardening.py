@@ -679,6 +679,76 @@ def test_retrieval_baseline_command_uses_fixture_safe_defaults(tmp_path):
     assert "refusal_correctness" in report
     assert "arabic_mixed_language_pass_rate" in report
     assert "latency" in report
+    assert report["scholar_review_gold_gate"]["tuning_allowed"] is False
+
+
+@pytest.mark.unit
+def test_retrieval_baseline_blocks_tuning_on_pending_scholar_review(tmp_path):
+    from scripts.run_retrieval_baseline import run_retrieval_baseline
+
+    gold = tmp_path / "gold.yaml"
+    gold.write_text(
+        """
+- query: "pending hard case"
+  answerable: true
+  required_source_ids: ["HC-SS-11"]
+  expected_source_family: "sharia_standard"
+  fixture_behavior: "answer"
+  scholar_review_status: "pending"
+  fixture_retrieved_chunks:
+    - chunk_id: "HC-SS-11"
+      metadata:
+        standard_number: "SS-11"
+        source_family: "sharia_standard"
+        citation_supported: true
+""".strip(),
+        encoding="utf-8",
+    )
+
+    report = run_retrieval_baseline(
+        gold=gold,
+        output=tmp_path / "report.json",
+        require_scholar_reviewed_gold=True,
+    )
+
+    assert report["passed"] is False
+    assert report["scholar_review_gold_gate"]["tuning_allowed"] is False
+    assert report["scholar_review_gold_gate"]["pending_or_unreviewed_case_count"] == 1
+    assert "scholar-reviewed accepted gold cases" in report["failure_reasons"][0]
+
+
+@pytest.mark.unit
+def test_retrieval_baseline_allows_tuning_on_accepted_scholar_gold(tmp_path):
+    from scripts.run_retrieval_baseline import run_retrieval_baseline
+
+    gold = tmp_path / "gold.yaml"
+    gold.write_text(
+        """
+- query: "accepted hard case"
+  answerable: true
+  required_source_ids: ["HC-SS-11"]
+  expected_source_family: "sharia_standard"
+  fixture_behavior: "answer"
+  scholar_review_status: "accepted_for_gold_set"
+  fixture_retrieved_chunks:
+    - chunk_id: "HC-SS-11"
+      metadata:
+        standard_number: "SS-11"
+        source_family: "sharia_standard"
+        citation_supported: true
+""".strip(),
+        encoding="utf-8",
+    )
+
+    report = run_retrieval_baseline(
+        gold=gold,
+        output=tmp_path / "report.json",
+        require_scholar_reviewed_gold=True,
+    )
+
+    assert report["passed"] is True
+    assert report["scholar_review_gold_gate"]["tuning_allowed"] is True
+    assert report["scholar_review_gold_gate"]["accepted_gold_case_count"] == 1
 
 
 @pytest.mark.unit

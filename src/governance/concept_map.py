@@ -189,7 +189,7 @@ def default_concept_map() -> ConceptMap:
                 candidate_source_families=[SourceFamily.SHARIA_STANDARD],
                 required_facts=["manufactured_or_generic_goods", "payment_timing", "delivery_timing"],
                 ambiguity_warnings=["Supply wording can map to istisna, salam, or a prohibited debt-for-debt structure."],
-                expected_standards=["SS-10"],
+                expected_standards=["SS-11"],
             ),
             ConceptEntry(
                 concept_id="currency_sarf",

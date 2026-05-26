@@ -465,7 +465,7 @@ class ApplicationService:
     def _candidate_standard_chunks(cls, chunks: List[Any], standards_route: Any = None) -> List[Any]:
         """Keep only route-specific Shari'ah standards when the route names them.
 
-        Source-family filtering is necessary but not sufficient: an SS-10
+        Source-family filtering is necessary but not sufficient: an SS-11
         Istisna route must not be satisfied by generic SS-03 debt evidence.
         """
         if not cls._should_enforce_candidate_standards(standards_route):

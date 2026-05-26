@@ -360,7 +360,7 @@ records:
 - source_id: aaoifi-ss-11-ar
   source_family: sharia_standard
   standard_number: SS-11
-  title_en: AAOIFI Shari'ah Standard No. 11
+  title_en: AAOIFI Shari'ah Standard No. 11 Istisna'a and Parallel Istisna'a
   language: ar
   official_url: https://aaoifi.com/shariaa-standards/?lang=en
   acquired_at: '2026-05-25'
@@ -373,7 +373,7 @@ records:
 - source_id: aaoifi-ss-11-en
   source_family: sharia_standard
   standard_number: SS-11
-  title_en: AAOIFI Shari'ah Standard No. 11
+  title_en: AAOIFI Shari'ah Standard No. 11 Istisna'a and Parallel Istisna'a
   language: en
   official_url: https://aaoifi.com/shariaa-standards/?lang=en
   acquired_at: '2026-05-25'
@@ -382,7 +382,7 @@ records:
   currentness: current
   review_status: machine_checked
   source_confidence: derived_from_official
-  derived_path: gemini-gem-prototype/knowledge-base/AAOIFI_Standard_11_en_AAOIFI_Shari'ah_Standard_No._11.md
+  derived_path: gemini-gem-prototype/knowledge-base/AAOIFI_Standard_11_en_AAOIFI_Sharia_Standard_No._11_Istisnaa_and_Parallel_Istisnaa.md
 - source_id: aaoifi-fas-12-ar
   source_family: fas
   standard_number: FAS-12

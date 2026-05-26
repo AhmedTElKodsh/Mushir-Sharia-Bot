@@ -234,7 +234,7 @@ def test_arabic_construction_penalty_routes_to_istisna_not_debt_or_charity():
         "\u0647\u0644 \u0627\u0644\u0634\u0631\u0637 \u0627\u0644\u062c\u0632\u0627\u0626\u064a \u0641\u064a \u0639\u0642\u062f \u0645\u0642\u0627\u0648\u0644\u0629 \u0631\u0628\u0627\u061f",
     ],
 )
-def test_construction_delay_damage_variants_route_to_istisna_candidate_ss10(query):
+def test_construction_delay_damage_variants_route_to_istisna_candidate_ss11(query):
     scenario = ScenarioExtractor().extract(query)
     route = StandardsRouter().route(scenario, query)
 
@@ -242,7 +242,7 @@ def test_construction_delay_damage_variants_route_to_istisna_candidate_ss10(quer
     assert scenario.contract_family == ContractFamily.ISTISNA
     assert scenario.late_payment_terms
     assert route.route_id == "istisna-penalty-clause"
-    assert route.candidate_standards == ["SS-10"]
+    assert route.candidate_standards == ["SS-11"]
 
 
 def test_arabic_delay_word_does_not_trigger_charity_beneficiary():
@@ -282,7 +282,7 @@ def test_istisna_late_penalty_rule_outputs_review_requirements():
         (
             "Can we impose a penalty if the contractor is late delivering the project?",
             "istisna-penalty-clause",
-            {"SS-10"},
+            {"SS-11"},
         ),
         (
             "Can the bank charge a late fee on a cash loan?",

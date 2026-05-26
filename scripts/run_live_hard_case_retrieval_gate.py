@@ -1,8 +1,10 @@
-"""Run hard-case retrieval checks against the live vector index.
+"""Run hard-case answer-path checks against the live vector index.
 
-This gate is retrieval-only: it loads the configured vector index, applies the
-same source-family and candidate-standard routing boundaries used by the app,
-and never calls an LLM provider.
+This gate loads the configured vector index and executes ApplicationService.answer()
+for hard Shari'ah cases. The service path applies the same clarification,
+source-family, candidate-standard, citation, and deterministic review gates used
+by users. These cases are selected so the answer path fails closed before any
+LLM provider is needed.
 """
 from __future__ import annotations
 
@@ -10,7 +12,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, List
 
 import yaml
 
@@ -47,6 +49,8 @@ def run_live_hard_case_retrieval_gate(
     extractor = ScenarioExtractor()
     router = StandardsRouter()
     service = ApplicationService(retriever=pipeline)
+    service.k = k
+    service.threshold = threshold
     results = []
 
     for case in cases:
@@ -56,30 +60,35 @@ def run_live_hard_case_retrieval_gate(
         expected_behavior = str(case.get("expected_behavior") or "retrieval").strip()
         scenario = extractor.extract(query)
         route = router.route(scenario, query)
-        filters = ApplicationService._retrieval_filters(route)
-        chunks = pipeline.retrieve(query, k=k, threshold=threshold, filters=filters)
-        admissible = service._answer_admissible_chunks(chunks)
-        matched_chunks = service._candidate_standard_chunks(admissible, route)
-        candidate_trace = service._candidate_standard_trace(admissible, matched_chunks, route)
-        expected_standards = _normalise_list(case.get("expected_candidate_standards") or route.candidate_standards)
-        retrieved_standards = _chunk_standard_numbers(admissible)
-        matched_standards = _chunk_standard_numbers(matched_chunks)
+        answer = service.answer(query)
+        route_payload = answer.metadata.get("standards_route") or {}
+        candidate_trace = answer.metadata.get("candidate_standard_filter") or {}
+        expected_standards = _normalise_list(
+            case.get("expected_candidate_standards")
+            or route_payload.get("candidate_standards")
+            or route.candidate_standards
+        )
+        retrieved_standards = sorted(candidate_trace.get("retrieved") or [])
+        matched_standards = sorted(candidate_trace.get("matched") or [])
         expected_family = str(case.get("expected_source_family") or "").lower()
 
         failures: List[str] = []
         if expected_behavior == "retrieval":
-            if not matched_chunks:
+            if not matched_standards:
                 failures.append("no candidate-standard-matched chunks retrieved")
             missing = sorted(set(expected_standards) - set(matched_standards))
             if missing:
                 failures.append(f"missing expected standards: {', '.join(missing)}")
             if expected_family:
-                families = _chunk_source_families(matched_chunks)
+                families = sorted(answer.metadata.get("source_families") or [])
                 if expected_family not in families:
                     failures.append(f"missing expected source family: {expected_family}")
         elif expected_behavior == "clarification":
-            if route.candidate_standards and matched_chunks:
+            if matched_standards:
                 failures.append("clarification case unexpectedly retrieved candidate-standard evidence")
+            answer_status = str(answer.status.value).lower()
+            if answer_status != "clarification_needed":
+                failures.append(f"expected clarification, got {answer_status}")
         else:
             raise ValueError(f"unsupported expected_behavior: {expected_behavior}")
 
@@ -89,14 +98,16 @@ def run_live_hard_case_retrieval_gate(
                 "query": query,
                 "passed": not failures,
                 "failures": failures,
-                "route_id": route.route_id,
-                "candidate_standards": route.candidate_standards,
+                "answer_status": str(answer.status.value).lower(),
+                "route_id": route_payload.get("route_id"),
+                "candidate_standards": route_payload.get("candidate_standards") or [],
                 "expected_candidate_standards": expected_standards,
                 "retrieved_standards": retrieved_standards,
                 "matched_standards": matched_standards,
-                "filters": filters,
+                "filters": ApplicationService._retrieval_filters(route),
                 "candidate_standard_filter": candidate_trace,
-                "retrieved_chunk_ids": [ApplicationService._chunk_id(chunk) for chunk in admissible],
+                "application_metadata": answer.metadata,
+                "retrieved_chunk_ids": answer.metadata.get("retrieved_chunk_ids") or [],
             }
         )
 
@@ -105,6 +116,7 @@ def run_live_hard_case_retrieval_gate(
         "case_count": len(results),
         "live_vector_index_used": True,
         "live_llm_used": False,
+        "application_answer_used": True,
         "gate_command": "scripts/run_live_hard_case_retrieval_gate.py",
         "cases_file": cases_path.as_posix(),
         "results": results,
@@ -122,27 +134,8 @@ def _normalise_list(values: Any) -> List[str]:
     return sorted({ApplicationService._normalize_standard_id(str(value)) for value in values if str(value).strip()})
 
 
-def _chunk_standard_numbers(chunks: Iterable[Any]) -> List[str]:
-    return sorted({
-        standard
-        for chunk in chunks
-        for standard in [ApplicationService._chunk_standard_id(chunk)]
-        if standard
-    })
-
-
-def _chunk_source_families(chunks: Iterable[Any]) -> List[str]:
-    families = []
-    for chunk in chunks:
-        metadata = chunk.get("metadata", {}) if isinstance(chunk, dict) else getattr(chunk, "metadata", {}) or {}
-        family = str(metadata.get("source_family") or "").lower()
-        if family:
-            families.append(family)
-    return sorted(set(families))
-
-
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run live hard-case retrieval gate against the configured vector index.")
+    parser = argparse.ArgumentParser(description="Run live hard-case answer-path gate against the configured vector index.")
     parser.add_argument("--cases", type=Path, default=DEFAULT_HARD_CASES)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--k", type=int, default=8)
