@@ -20,6 +20,8 @@ The product goal is a safe, citation-grounded chatbot that can:
 
 The post-L5 planning goal is broader but still non-binding: a rules-first Sharia commercial-process assessment assistant. The first runtime scaffold is present in `src/chatbot/commercial_assessment.py` and `src/models/commercial.py`: deterministic scenario extraction, source-family routing, placeholder rule traces, source-family detection, and a fail-closed guard for late-payment/default permissibility questions when Shari'ah-standard evidence is absent. Do not present this as the full L6 evaluator until source acquisition, executable rules, and QA gates are complete.
 
+As of 2026-05-25, the hard-Sharia evidence target is source-tracked as at least 60 AAOIFI Shari'ah Standards: AAOIFI's complimentary-access announcement still states 59 Shari'ah standards, while a later AAOIFI announcement identifies Shari'ah Standard No. 60 on Waqf. Keep this mismatch visible in coverage reports and do not downgrade the target back to 59 without a fresh official-source review. The local governed catalog currently covers SS-01 through SS-54 from the official public English compendium plus SS-60 from AAOIFI's official Waqf PDF, and it retains Arabic source files for SS-02, SS-04, SS-09, SS-11, and SS-15. SS-55 through SS-59 remain missing until full official/licensed source text is acquired, and `hard_sharia_ready` must remain false until all target standards have governed source records plus retrieval, answerability, Arabic/English parity, and scholar-review gates.
+
 The 2026-05-19 planning rethink reframes Mushir as a controlled standards workflow rather than a generic RAG bot. The intended architecture is source catalog -> structured ingestion -> bilingual concept normalization -> intent classification -> clarification -> source-family routing -> metadata-aware retrieval -> citation-gated answer -> evaluation. Downloaded markdown is derived content; source currentness, supersession, source family, and citation traceability must become answer-admissibility gates.
 
 The spec-level `deep-research-report.md` was reviewed on 2026-05-19 and promoted into planning only where it creates useful contracts: first-release FAS router seed, supersession seed graph, parent/child chunking, source/retrieval/answer trace records, uncertainty classes, and feedback/admin review. Treat specific library/model/tool names from the report as spike candidates until they are measured against Mushir's AAOIFI gold set.
@@ -123,11 +125,19 @@ Fast targeted gate:
 .\.venv\Scripts\python.exe -m pytest -m "unit or service or api" -q --timeout=60
 ```
 
+High-risk source-governance slice:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q --basetemp=.tmp\pytest tests\test_l1_contracts.py tests\test_commercial_assessment.py tests\test_source_governance.py tests\test_ingest_bilingual.py tests\test_rag_pipeline.py tests\test_institution_pipeline.py tests\test_l6_institution_pilot_script.py tests\test_scholar_review.py tests\test_repo_layout.py
+```
+
 Rebuild multilingual Chroma index:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\ingest.py --reset --languages en,ar
+.\.venv\Scripts\python.exe scripts\ingest.py --reset --languages en,ar --source-catalog path\to\aaoifi-source-catalog.yaml
 ```
+
+Fresh source-governed ingests require `--source-catalog`. Use `--allow-uncataloged` only for explicit diagnostic indexes because those chunks are quarantined and cannot support answers.
 
 Run API locally:
 
@@ -148,25 +158,78 @@ Smoke bilingual answer behavior:
 .\.venv\Scripts\python.exe -m pytest tests\test_l1_contracts.py::test_application_service_answers_arabic_definition_with_validator_backed_citation tests\test_l1_contracts.py::test_application_service_expands_definition_retrieval_before_llm tests\test_clarification_engine.py::test_arabic_definition_question_skips_transaction_clarification -q
 ```
 
+Fixture-backed retrieval-only baseline:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_retrieval_baseline.py
+```
+
+This command must not touch the live vector index or LLM provider. Use it before adopting retrieval/model candidates.
+
+Shari'ah evidence coverage matrix:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\report_sharia_corpus_coverage.py --catalog data\source_registry\aaoifi-source-catalog.yaml --output _bmad-output\implementation-artifacts\sharia-corpus-coverage-2026-05-25.json --matrix-output _bmad-output\implementation-artifacts\sharia-standards-coverage-matrix-2026-05-25.json
+```
+
+This command is the current hard-Sharia release gate: it reports `hard_sharia_ready=false` while any target standard is missing, lacks Arabic/English parity, lacks retrieval smoke evidence, lacks seeded representative questions, or lacks scholar-review evidence.
+
+Accessible Shari'ah source extraction:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\extract_aaoifi_sharia_compendium.py
+.\.venv\Scripts\python.exe scripts\generate_aaoifi_source_catalog.py --corpus-dir gemini-gem-prototype\knowledge-base --output data\source_registry\aaoifi-source-catalog.yaml
+```
+
+The acquisition status and blockers for SS-55 through SS-59 are tracked in `data/source_registry/aaoifi-sharia-acquisition-manifest.yaml`.
+
+Scholar-review persistence:
+
+- Use `src.governance.ScholarReviewStore` for append-only JSONL review records tied to source IDs, citation IDs, reviewer identity, and optional rule metadata.
+- Review records can seed gold-case work, but they do not automatically update runtime governance, source catalog, prompts, or rule policy.
+
 ## Documentation Map
 
 - `README.md`: public project overview and setup.
-- `docs/project-documentation.md`: current full technical documentation.
-- `docs/ai-project-brief.md`: detailed AI-agent handoff with runtime contracts, data authority ladder, L5/L6 status, commands, and safe edit rules.
-- `docs/client-plain-language-logic.md`: client-facing report covering planning, implementation, current limits, L5 readiness, and L6 future direction.
-- `docs/client-source-governed-aaoifi-roadmap.md`: visual client-facing roadmap for the updated source-governed AAOIFI assistant logic.
-- `docs/chatbot-architecture.md`: detailed answer-generation architecture.
-- `docs/l5-production-readiness.md`: release/readiness runbook.
-- `docs/deep-research-report.md`: research input for the L6 rules-first evaluator direction.
-- `.kiro/specs/sharia-compliance-chatbot/deep-research-report.md`: spec-level deep research input reviewed for router, supersession, chunking, schema, feedback, and evaluation planning.
-- `.kiro/specs/sharia-compliance-chatbot/tasks.md`: maintained implementation backlog for source-governed planning slices.
-- `.kiro/specs/sharia-compliance-chatbot/next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md`: post-L5/L6 data-acquisition plan for public Egyptian institution operations, contracts, bounded discovery, ethical crawling, gap marking, and scholar-reviewed evaluation rows.
-- `docs/l6-egypt-institution-scrape/README.md`: project-facing guide to the planned Egypt institutions scrape workstream and folder boundaries.
+- `.planning/STATE.md`: canonical planning router for the consolidated `.planning/sharia-compliance-chatbot/` tree.
+- `.planning/sharia-compliance-chatbot/docs/index.md`: planning documentation index and best starting point while the public `docs/` tree is being cleaned.
+- `.planning/sharia-compliance-chatbot/docs/project-documentation.md`: current full technical documentation.
+- `.planning/sharia-compliance-chatbot/docs/ai-project-brief.md`: detailed AI-agent handoff with runtime contracts, data authority ladder, L5/L6 status, commands, and safe edit rules.
+- `.planning/sharia-compliance-chatbot/docs/client-plain-language-logic.md`: client-facing report covering planning, implementation, current limits, L5 readiness, and L6 future direction.
+- `.planning/sharia-compliance-chatbot/docs/client-source-governed-aaoifi-roadmap.md`: visual client-facing roadmap for the updated source-governed AAOIFI assistant logic.
+- `.planning/sharia-compliance-chatbot/docs/chatbot-architecture.md`: detailed answer-generation architecture.
+- `.planning/sharia-compliance-chatbot/docs/l5-production-readiness.md`: release/readiness runbook.
+- `.planning/sharia-compliance-chatbot/docs/deep-research-report.md`: research input for the L6 rules-first evaluator direction.
+- `.planning/sharia-compliance-chatbot/docs/requirements.md`: maintained source-governed requirements.
+- `.planning/sharia-compliance-chatbot/docs/design.md`: maintained source-governed design.
+- `.planning/sharia-compliance-chatbot/docs/tasks.md`: maintained implementation backlog for source-governed planning slices.
+- `.planning/sharia-compliance-chatbot/next-level-plans/`: historical L1-L4 plans, active L5 roadmap, and proposed L6 direction.
+- `.planning/sharia-compliance-chatbot/next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md`: post-L5/L6 data-acquisition plan for public Egyptian institution operations, contracts, bounded discovery, ethical crawling, gap marking, and scholar-reviewed evaluation rows.
+- `.planning/sharia-compliance-chatbot/docs/l6-egypt-institution-scrape/README.md`: project-facing guide to the planned Egypt institutions scrape workstream and folder boundaries.
 - `data/source_registry/`: tracked source-category and regulator-source planning seeds for the Egypt institution corpus.
-- `docs/ops/deployment.md`: deployment operations.
-- `docs/ops/huggingface-spaces.md`: Hugging Face Spaces deployment notes.
-- `.kiro/specs/sharia-compliance-chatbot/PROJECT-LOGIC-RETHINK-2026-05-19.md`: current planning rethink and gap analysis.
-- `.kiro/specs/sharia-compliance-chatbot/next-level-plans/`: historical L1-L4 plans, active L5 roadmap, and proposed L6 direction.
+- `.planning/sharia-compliance-chatbot/docs/ops/deployment.md`: deployment operations.
+- `.planning/sharia-compliance-chatbot/docs/ops/huggingface-spaces.md`: Hugging Face Spaces deployment notes.
+- `.planning/sharia-compliance-chatbot/docs/PROJECT-LOGIC-RETHINK-2026-05-19.md`: current planning rethink and gap analysis.
+- `_legacy/root-outline-docs/`: archived historical root markdown files from the L0, setup, deployment-status, and old report era.
+- `_legacy/root-smoke-screenshots/`: archived historical root screenshots.
+- `_legacy/browser-smoke/`: archived browser smoke screenshots and local smoke process evidence.
+- `_legacy/runtime-logs/`: archived root `logs/` output from before runtime logs moved under `data/runtime/logs/`.
+- `scripts/legacy/`: archived Windows batch wrappers moved out of the project root.
+
+## Root Folder Policy
+
+Keep these root folders because tools or runtime paths expect them:
+
+- `src/`, `tests/`, `scripts/`, `config/`, `data/`, `e2e/`: active project source, tests, configuration, data seeds, and end-to-end checks.
+- `.agents`, `.bob`, `.cline`, `.trae`, `.claude`, `.kiro`: agent/tool workspaces intentionally kept for compatibility.
+- `_bmad/` and `_bmad-output/`: BMAD configuration and generated BMAD artifacts; current BMAD config writes to `_bmad-output/`.
+- `gemini-gem-prototype/`: legacy name, active role. It contains the tracked AAOIFI markdown corpus used by `CORPUS_DIR=./gemini-gem-prototype/knowledge-base`.
+- `chroma_db_multilingual/`: ignored local multilingual Chroma index used by the demo runtime.
+- `chroma_db/`: ignored older/local Chroma index; keep until the active retrieval index history is fully reconciled.
+- `.venv/` and `node_modules/`: local dependency installs, ignored by git.
+- `superpowers/`, `.agent`, `.codex`, `.gsd`, `.planning`: local agent/planning/tooling context.
+
+Do not keep generated smoke screenshots, historical reports, runtime logs, or ad hoc temp folders in the project root. Archive them under `_legacy/` or write new runtime output under `data/runtime/`.
 
 ## Editing Guidance
 
@@ -174,5 +237,8 @@ Smoke bilingual answer behavior:
 - Preserve fail-closed behavior and citation validation.
 - Keep tests updated with every behavior change.
 - Do not rewrite historical planning docs unless explicitly asked; add current-state docs or clearly mark updates instead.
+- Keep `.agents`, `.bob`, `.cline`, `.trae`, `.claude`, and `.kiro` in place; do not collapse those agent folders during cleanup.
+- Keep new planning work inside `.planning/sharia-compliance-chatbot/` and use `.planning/STATE.md` as the routing file.
+- Keep the project root limited to essential entry/config files. Archive historical reports, screenshots, and legacy wrappers under `_legacy/` or `scripts/legacy/`.
 - Use `apply_patch` for manual file edits.
 - Avoid broad refactors unless they directly reduce risk or remove duplicated logic already visible in the codebase.

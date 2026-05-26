@@ -4,8 +4,10 @@ Retrieves relevant AAOIFI chunks for a given query.
 """
 import logging
 import os
-from typing import Any, List, Optional
+import re
+from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
+from src.governance.source_catalog import is_answer_admissible_metadata
 from src.models.schema import SemanticChunk, AAOIFICitation
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.rag.embedding_service import EmbeddingService
@@ -15,6 +17,13 @@ load_dotenv()
 DEFAULT_EMBED_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 DEFAULT_CHROMA_DIR = "./chroma_db_multilingual"
 REQUIRED_CHROMA_LANGUAGES = ("ar", "en")
+GOVERNED_CHROMA_METADATA_KEYS = (
+    "source_family",
+    "metadata_status",
+    "source_id",
+    "section_path",
+    "citation_anchor",
+)
 
 
 def _env_flag_enabled(name: str, default: bool = True) -> bool:
@@ -22,6 +31,11 @@ def _env_flag_enabled(name: str, default: bool = True) -> bool:
     if raw_value is None:
         return default
     return raw_value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _governed_metadata_required() -> bool:
+    production_default = (os.getenv("APP_ENV", "dev").strip().lower() or "dev") == "production"
+    return _env_flag_enabled("REQUIRE_GOVERNED_SOURCE_METADATA", production_default)
 
 
 def _collection_has_metadata(collection: Any, key: str, value: Any) -> bool:
@@ -61,6 +75,56 @@ def _domain_rerank_score(query: str, document: str, metadata: dict, similarity: 
     return min(similarity + min(lexical_hits, 4) * 0.035 + language_bonus, 1.0)
 
 
+def _metadata_matches_filters(metadata: Dict[str, Any], filters: Optional[Dict[str, Any]]) -> bool:
+    if not filters:
+        return True
+    for key, expected in filters.items():
+        actual = metadata.get(key)
+        if actual is None:
+            return False
+        if str(actual).lower() != str(expected).lower():
+            return False
+    return True
+
+
+def _chunk_metadata(chunk: Any) -> Dict[str, Any]:
+    if isinstance(chunk, dict):
+        return dict(chunk.get("metadata") or {})
+    return dict(getattr(chunk, "metadata", {}) or {})
+
+
+def _is_answer_admissible_metadata(metadata: Dict[str, Any]) -> bool:
+    """Reject unusable source metadata before answer support."""
+    return is_answer_admissible_metadata(
+        metadata,
+        require_governed_metadata=_governed_metadata_required(),
+    )
+
+
+def _tokenize_for_lexical_score(text: str) -> set:
+    return {
+        token
+        for token in re.split(r"[^0-9A-Za-z\u0600-\u06ff]+", text.lower())
+        if len(token) >= 3
+    }
+
+
+def _lexical_score(query: str, document: str, metadata: Dict[str, Any], expanded_terms: frozenset) -> float:
+    haystack = " ".join(
+        str(value)
+        for value in (
+            document,
+            metadata.get("standard_number", ""),
+            metadata.get("source_file", ""),
+            metadata.get("section_path", ""),
+        )
+    ).lower()
+    query_terms = _tokenize_for_lexical_score(query)
+    query_terms.update(term.lower() for term in expanded_terms)
+    hits = sum(1 for term in query_terms if term and term in haystack)
+    return min(hits / 6.0, 1.0)
+
+
 def validate_chroma_index_for_arabic_retrieval(collection: Any, model_name: str) -> None:
     """Fail closed when the configured Chroma index cannot support Arabic retrieval."""
     if not EmbeddingService.is_multilingual(model_name):
@@ -91,6 +155,41 @@ def validate_chroma_index_for_arabic_retrieval(collection: Any, model_name: str)
         raise RuntimeError(
             "Chroma collection is missing required Arabic/English corpus languages: "
             f"{', '.join(missing_languages)}. Rebuild it with scripts/ingest.py --reset --languages en,ar."
+        )
+
+
+def validate_chroma_index_for_governed_metadata(collection: Any) -> None:
+    """Fail closed when sampled Chroma chunks do not carry governed citation metadata."""
+    logger = logging.getLogger(__name__)
+    try:
+        results = collection.get(limit=25, include=["metadatas"])
+    except Exception as exc:
+        logger.error("ChromaDB governed metadata sample failed: %s", exc)
+        raise RuntimeError(
+            "Chroma collection governed source metadata could not be inspected. "
+            "Rebuild or quarantine the collection before using it for answer support."
+        ) from exc
+
+    metadatas = results.get("metadatas") or []
+    if not metadatas:
+        raise RuntimeError(
+            "Chroma collection has no sampled governed source metadata. "
+            "Rebuild or quarantine the collection before using it for answer support."
+        )
+
+    missing_keys = sorted(
+        {
+            key
+            for metadata in metadatas
+            for key in GOVERNED_CHROMA_METADATA_KEYS
+            if not str((metadata or {}).get(key) or "").strip()
+        }
+    )
+    if missing_keys:
+        raise RuntimeError(
+            "Chroma collection is missing governed source metadata keys: "
+            f"{', '.join(missing_keys)}. Rebuild chunks with source_family, metadata_status, "
+            "section_path, source_id, and citation_anchor before answer support."
         )
 
 
@@ -128,6 +227,8 @@ class RAGPipeline:
             self.collection = self.client.get_collection("aaoifi")
             if _env_flag_enabled("REQUIRE_ARABIC_RETRIEVAL", default=True):
                 validate_chroma_index_for_arabic_retrieval(self.collection, self.model_name)
+            if _governed_metadata_required():
+                validate_chroma_index_for_governed_metadata(self.collection)
             print(f"Collection contains {self.collection.count()} chunks")
 
     def embed_query(self, query: str) -> List[float]:
@@ -163,6 +264,8 @@ class RAGPipeline:
         query: str,
         k: int = 5,
         threshold: float = 0.3,
+        filters: Optional[Dict[str, Any]] = None,
+        mode: str = "dense",
         allow_low_confidence_fallback: bool = False,
     ) -> List[Any]:
         """Retrieve top-k relevant chunks for a query.
@@ -183,11 +286,23 @@ class RAGPipeline:
         if query_embedding is None or len(query_embedding) == 0:
             return []
 
+        mode = (mode or os.getenv("RETRIEVAL_MODE", "dense")).lower()
         if self.vector_store is not None:
-            chunks = self.vector_store.similarity_search(query_embedding, k=k, threshold=threshold)
+            chunks = self._vector_store_search(query_embedding, k=k, threshold=threshold, filters=filters)
+            chunks = [
+                chunk
+                for chunk in chunks
+                if _metadata_matches_filters(_chunk_metadata(chunk), filters)
+                and _is_answer_admissible_metadata(_chunk_metadata(chunk))
+            ]
             if chunks or not allow_low_confidence_fallback:
                 return chunks
-            return self.vector_store.similarity_search(query_embedding, k=k, threshold=0.0)[:k]
+            return [
+                chunk
+                for chunk in self._vector_store_search(query_embedding, k=k, threshold=0.0, filters=filters)
+                if _metadata_matches_filters(_chunk_metadata(chunk), filters)
+                and _is_answer_admissible_metadata(_chunk_metadata(chunk))
+            ][:k]
 
         # Precompute expanded terms once for reranking (performance optimization)
         expanded_terms = QueryPreprocessor.expand_terms(query)
@@ -197,10 +312,14 @@ class RAGPipeline:
             rerank_multiplier = int(os.getenv("RERANK_MULTIPLIER", "3"))
         except (ValueError, TypeError):
             rerank_multiplier = 3
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=max(k * rerank_multiplier, k),
-        )
+        query_kwargs = {
+            "query_embeddings": [query_embedding],
+            "n_results": max(k * rerank_multiplier, k),
+        }
+        try:
+            results = self.collection.query(**query_kwargs, where=filters or None)
+        except TypeError:
+            results = self.collection.query(**query_kwargs)
 
         # Convert to SemanticChunk objects
         chunks = []
@@ -208,9 +327,27 @@ class RAGPipeline:
         if results['documents'] and results['documents'][0]:
             for i, doc in enumerate(results['documents'][0]):
                 metadata = results['metadatas'][0][i]
+                if not _metadata_matches_filters(metadata, filters):
+                    continue
+                if not _is_answer_admissible_metadata(metadata):
+                    continue
                 distance = results['distances'][0][i]
                 similarity = 1 - distance  # Convert distance to similarity
                 rerank_score = _domain_rerank_score(query, doc, metadata, similarity, expanded_terms)
+                lexical_score = _lexical_score(query, doc, metadata, expanded_terms)
+                rrf_score = 0.0
+                if mode == "hybrid":
+                    rrf_score = (1.0 / (60 + i + 1)) + (1.0 / (60 + max(0, 10 - int(lexical_score * 10))))
+                    rerank_score = min((similarity * 0.60) + (lexical_score * 0.35) + rrf_score, 1.0)
+
+                traced_metadata = dict(metadata)
+                traced_metadata["retrieval_mode"] = mode
+                traced_metadata["score_components"] = {
+                    "dense_similarity": similarity,
+                    "domain_rerank_score": _domain_rerank_score(query, doc, metadata, similarity, expanded_terms),
+                    "lexical_score": lexical_score,
+                    "rrf_score": rrf_score,
+                }
 
                 citation = AAOIFICitation(
                     standard_id=metadata.get('source_file', 'Unknown').replace('.md', ''),
@@ -223,7 +360,8 @@ class RAGPipeline:
                     chunk_id=results['ids'][0][i],
                     text=doc,
                     citation=citation,
-                    score=rerank_score
+                    score=rerank_score,
+                    metadata=traced_metadata,
                 )
                 fallback_chunks.append(chunk)
 
@@ -234,6 +372,26 @@ class RAGPipeline:
         candidates = chunks if chunks or not allow_low_confidence_fallback else fallback_chunks
         ranked_chunks = sorted(candidates, key=lambda chunk: chunk.score, reverse=True)
         return ranked_chunks[:k]
+
+    def _vector_store_search(
+        self,
+        query_embedding: List[float],
+        *,
+        k: int,
+        threshold: float,
+        filters: Optional[Dict[str, Any]],
+    ) -> List[Any]:
+        try:
+            return self.vector_store.similarity_search(
+                query_embedding,
+                k=k,
+                threshold=threshold,
+                filters=filters,
+            )
+        except TypeError as exc:
+            if "filters" not in str(exc):
+                raise
+            return self.vector_store.similarity_search(query_embedding, k=k, threshold=threshold)
 
     def augment_prompt(self, query: str, chunks: List[Any]) -> str:
         """Build a grounded prompt from retrieved AAOIFI chunks."""

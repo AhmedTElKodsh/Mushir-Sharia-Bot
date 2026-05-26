@@ -5,7 +5,14 @@ from src.models.ruling import AAOIFICitation
 
 
 class Retriever(Protocol):
-    def retrieve(self, query: str, k: int = 5, threshold: float = 0.3) -> List[Any]:
+    def retrieve(
+        self,
+        query: str,
+        k: int = 5,
+        threshold: float = 0.3,
+        filters: Optional[Dict[str, Any]] = None,
+        mode: str = "dense",
+    ) -> List[Any]:
         ...
 
 

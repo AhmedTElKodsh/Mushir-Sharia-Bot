@@ -13,6 +13,7 @@ from src.governance.institution_registry import (
     AccessControlDecision,
     AccessControlSignal,
     AccessDecisionStatus,
+    ArtifactClass,
     ComplianceRiskLabel,
     CorpusPilotPlan,
     DiscoveryEvidenceType,
@@ -28,8 +29,10 @@ from src.governance.institution_registry import (
     OfficialSiteDiscoveryAttempt,
     OfficialSiteDiscoveryResult,
     OperationCatalogRecord,
+    OperationFamily,
     OperationEvidenceField,
     OperationEvidenceSpan,
+    PromotionStage,
     PublicArtifactAuthorityRank,
     PublicArtifactRecord,
     PublicArtifactType,
@@ -40,6 +43,7 @@ from src.governance.institution_registry import (
 )
 from src.governance.institution_pipeline import (
     AaoifiMappingGenerator,
+    ArtifactClassifier,
     ArtifactFetchRequest,
     ArtifactTextExtractor,
     CorpusPilotGate,
@@ -49,6 +53,7 @@ from src.governance.institution_pipeline import (
     EngineAssessmentCsvStore,
     FetchResponse,
     LocalArtifactStore,
+    NormalizedEvidenceText,
     OfficialSiteDiscoveryRunner,
     OperationExtractor,
     PublicArtifactFetcher,
@@ -56,12 +61,23 @@ from src.governance.institution_pipeline import (
     ScholarReviewListCsvStore,
     ScholarReviewCsvStore,
     WorkbookRegistryLoader,
+    normalize_evidence_text,
 )
 from src.governance.router_seed import (
     RouterSeedRecord,
     RouterSeedRegistry,
     RouterSeedStatus,
     default_router_seed_registry,
+)
+from src.governance.scholar_review import (
+    ScholarReviewDecision,
+    ScholarReviewEvidenceGate,
+    ScholarReviewPacket,
+    ScholarReviewPacketCsvStore,
+    ScholarReviewPacketMarkdownStore,
+    ScholarReviewStore,
+    ScholarReviewTargetType,
+    ScholarReviewWorkflowStatus,
 )
 from src.governance.release_controls import (
     AnswerAdmissibilityDecision,
@@ -99,6 +115,7 @@ from src.governance.source_catalog import (
     SourceReviewStatus,
     SourceType,
     default_candidate_supersession_relationships,
+    is_answer_admissible_metadata,
 )
 
 __all__ = [
@@ -111,6 +128,8 @@ __all__ = [
     "AnswerAdmissibilityDecision",
     "AnswerGateStatus",
     "AaoifiMappingGenerator",
+    "ArtifactClassifier",
+    "ArtifactClass",
     "ArtifactFetchRequest",
     "ArtifactTextExtractor",
     "ClarificationDecision",
@@ -149,8 +168,10 @@ __all__ = [
     "OfficialSiteDiscoveryRunner",
     "OperationCatalogRecord",
     "OperationExtractor",
+    "OperationFamily",
     "OperationEvidenceField",
     "OperationEvidenceSpan",
+    "PromotionStage",
     "PublicArtifactAuthorityRank",
     "PublicArtifactRecord",
     "PublicArtifactFetcher",
@@ -165,6 +186,14 @@ __all__ = [
     "RulesFirstEvaluatorPolicy",
     "StructuredExtractionPolicy",
     "ScholarReviewRecord",
+    "ScholarReviewDecision",
+    "ScholarReviewEvidenceGate",
+    "ScholarReviewPacket",
+    "ScholarReviewPacketCsvStore",
+    "ScholarReviewPacketMarkdownStore",
+    "ScholarReviewStore",
+    "ScholarReviewTargetType",
+    "ScholarReviewWorkflowStatus",
     "ScholarReviewCsvStore",
     "ScholarReviewListCsvStore",
     "UserFactOverrideDecision",
@@ -188,6 +217,9 @@ __all__ = [
     "default_concept_map",
     "default_router_seed_registry",
     "feedback_to_gold_case",
+    "is_answer_admissible_metadata",
     "stable_institution_id",
     "WorkbookRegistryLoader",
+    "NormalizedEvidenceText",
+    "normalize_evidence_text",
 ]

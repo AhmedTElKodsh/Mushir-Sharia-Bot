@@ -237,6 +237,43 @@ def test_chroma_index_validation_accepts_bilingual_multilingual_index():
     validate_chroma_index_for_arabic_retrieval(collection, model)
 
 
+@pytest.mark.unit
+def test_chroma_governed_metadata_validation_quarantines_legacy_chunks():
+    from src.rag.pipeline import validate_chroma_index_for_governed_metadata
+
+    collection = _FakeChromaCollection(
+        [
+            {
+                "standard_number": "SS-05",
+                "source_file": "AAOIFI_Sharia_Standard_05.md",
+                "source_language": "ar",
+            }
+        ]
+    )
+
+    with pytest.raises(RuntimeError, match="governed source metadata"):
+        validate_chroma_index_for_governed_metadata(collection)
+
+
+@pytest.mark.unit
+def test_chroma_governed_metadata_validation_accepts_source_governed_chunks():
+    from src.rag.pipeline import validate_chroma_index_for_governed_metadata
+
+    collection = _FakeChromaCollection(
+        [
+            {
+                "source_family": "sharia_standard",
+                "metadata_status": "governed",
+                "source_id": "iifa-resolution-109",
+                "section_path": "Resolution 109 > Fourth",
+                "citation_anchor": "https://iifa-aifi.org/en/32587.html#L118-L124",
+            }
+        ]
+    )
+
+    validate_chroma_index_for_governed_metadata(collection)
+
+
 @pytest.mark.service
 def test_application_service_bypasses_response_cache_in_eval_mode(monkeypatch):
     from src.chatbot.application_service import ApplicationService
@@ -309,7 +346,9 @@ def test_cached_answer_preserves_validated_citation_metadata():
     )
     cache = InMemoryCacheStore()
     service = ApplicationService(cache_store=cache)
-    cache.set_json("response", service._cache_key("Is this compliant?"), cached.to_dict(), 60)
+    scenario = service.scenario_extractor.extract("Is this compliant?")
+    standards_route = service.standards_router.route(scenario, "Is this compliant?")
+    cache.set_json("response", service._cache_key("Is this compliant?", standards_route), cached.to_dict(), 60)
 
     answer = service.answer("Is this compliant?")
 
@@ -619,6 +658,86 @@ def test_fixture_retrieval_pipeline_runs_without_live_vector_index():
     assert report["expected_standard_hit_rate"] == 1.0
     assert report["refusal_correctness"] == 1.0
     assert report["baseline_mode"] == "fixture_backed_retrieval_only"
+
+
+@pytest.mark.unit
+def test_retrieval_baseline_command_uses_fixture_safe_defaults(tmp_path):
+    from scripts.run_retrieval_baseline import run_retrieval_baseline
+
+    output = tmp_path / "retrieval-baseline-report.json"
+
+    report = run_retrieval_baseline(output=output)
+
+    assert output.exists()
+    assert report["baseline_mode"] == "fixture_backed_retrieval_only"
+    assert report["gold_file"].endswith("tests/fixtures/gold_eval_fixture_baseline.yaml")
+    assert report["live_vector_index_used"] is False
+    assert report["live_llm_used"] is False
+    assert "expected_standard_hit_rate" in report
+    assert "source_family_accuracy" in report
+    assert "citation_support_rate" in report
+    assert "refusal_correctness" in report
+    assert "arabic_mixed_language_pass_rate" in report
+    assert "latency" in report
+
+
+@pytest.mark.unit
+def test_sharia_corpus_coverage_report_marks_partial_catalog():
+    from scripts.report_sharia_corpus_coverage import build_sharia_coverage_matrix, sharia_coverage_report
+
+    records = [
+        {"source_family": "sharia_standard", "standard_number": "SS-02", "language": "ar", "source_id": "ss-02-ar"},
+        {"source_family": "sharia_standard", "standard_number": "SS-02", "language": "en", "source_id": "ss-02-en"},
+        {"source_family": "sharia_standard", "standard_number": "SS-05", "language": "en", "source_id": "ss-05-en"},
+        {"source_family": "fas", "standard_number": "FAS-28", "language": "en"},
+    ]
+
+    report = sharia_coverage_report(records, target_sharia_standard_count=60)
+    matrix = build_sharia_coverage_matrix(records, target_sharia_standard_count=5)
+
+    assert report["status"] == "partial"
+    assert report["covered_sharia_standard_count"] == 2
+    assert report["missing_sharia_standard_count"] == 58
+    assert report["hard_sharia_ready"] is False
+    assert report["release_gate"] == "fail"
+    assert report["release_gate_fail_count"] == 60
+    assert report["bilingual_sharia_standards"] == ["SS-02"]
+    assert report["missing_bilingual_sharia_standards"] == ["SS-05"]
+    assert report["target_inventory_sources"]
+    assert matrix[0]["standard_number"] == "SS-01"
+    assert matrix[0]["ingestion_status"] == "missing_source"
+    assert matrix[1]["standard_number"] == "SS-02"
+    assert matrix[1]["source_coverage_gate"] == "pass"
+    assert matrix[1]["release_gate"] == "fail"
+    assert matrix[4]["standard_number"] == "SS-05"
+    assert matrix[4]["missing_languages"] == ["ar"]
+    assert report["no_go_reasons"]
+
+
+@pytest.mark.unit
+def test_current_machine_catalog_is_not_complete_sharia_evidence_base():
+    from pathlib import Path
+    from scripts.report_sharia_corpus_coverage import load_acquisition_manifest, load_catalog, sharia_coverage_report
+
+    report = sharia_coverage_report(
+        load_catalog(Path("data/source_registry/aaoifi-source-catalog.yaml")),
+        acquisition_manifest=load_acquisition_manifest(
+            Path("data/source_registry/aaoifi-sharia-acquisition-manifest.yaml")
+        ),
+    )
+
+    assert report["status"] == "partial"
+    assert report["covered_sharia_standard_count"] == 55
+    assert report["covered_sharia_standards"][:5] == ["SS-01", "SS-02", "SS-03", "SS-04", "SS-05"]
+    assert report["covered_sharia_standards"][-1] == "SS-60"
+    assert report["covered_sharia_standard_count"] < report["target_sharia_standard_count"]
+    assert report["target_sharia_standard_count"] == 60
+    assert report["missing_sharia_standards"] == ["SS-55", "SS-56", "SS-57", "SS-58", "SS-59"]
+    assert report["missing_sharia_standard_count"] == 5
+    assert report["blocked_source_count"] == 5
+    assert report["blocked_source_standards"] == ["SS-55", "SS-56", "SS-57", "SS-58", "SS-59"]
+    assert report["release_gate_fail_count"] == 60
+    assert report["hard_sharia_ready"] is False
 
 
 @pytest.mark.unit

@@ -81,12 +81,13 @@ class QdrantVectorStore:
         query_embedding: List[float],
         k: int = 5,
         threshold: float = 0.7,
+        filters: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         try:
             results = self.client.query_points(
                 collection_name=self.collection_name,
                 query=query_embedding,
-                limit=k,
+                limit=self._query_limit(k, filters),
             )
         except Exception as exc:
             logger.error(f"Qdrant similarity search failed: {exc}")
@@ -98,6 +99,8 @@ class QdrantVectorStore:
             if score < threshold:
                 continue
             payload = dict(point.payload or {})
+            if filters and not self._metadata_matches_filters(payload, filters):
+                continue
             content = str(payload.pop("content", ""))
             chunk_id = str(payload.pop("chunk_id", point.id))
             chunks.append(
@@ -109,7 +112,21 @@ class QdrantVectorStore:
                 }
             )
         logger.info(f"Retrieved {len(chunks)} Qdrant chunks (threshold={threshold})")
-        return chunks
+        return chunks[:k]
+
+    @staticmethod
+    def _query_limit(k: int, filters: Optional[Dict[str, Any]]) -> int:
+        if not filters:
+            return k
+        return max(k * int(os.getenv("QDRANT_FILTER_OVERFETCH_MULTIPLIER", "5")), k)
+
+    @staticmethod
+    def _metadata_matches_filters(metadata: Dict[str, Any], filters: Dict[str, Any]) -> bool:
+        for key, expected in filters.items():
+            actual = metadata.get(key)
+            if actual is None or str(actual).lower() != str(expected).lower():
+                return False
+        return True
 
     def get_collection_stats(self) -> Dict[str, Any]:
         info = self.client.get_collection(self.collection_name)

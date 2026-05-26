@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from enum import Enum
 from typing import Dict, Iterable, List, Mapping, Optional
@@ -84,6 +84,45 @@ class PublicArtifactType(str, Enum):
     REGULATOR_RULEBOOK = "regulator_rulebook"
     PRODUCT_PAGE = "product_page"
     OTHER = "other"
+
+
+class ArtifactClass(str, Enum):
+    REGISTRY_PAGE = "registry_page"
+    PRODUCT_PAGE = "product_page"
+    TARIFF_OR_FEES = "tariff_or_fees"
+    TERMS_OR_CONTRACT = "terms_or_contract"
+    ANNUAL_REPORT = "annual_report"
+    PROSPECTUS = "prospectus"
+    SHARIA_CERTIFICATE_OR_REPORT = "sharia_certificate_or_report"
+    GOVERNANCE_PAGE = "governance_page"
+    MARKETING_ONLY = "marketing_only"
+    BLOCKED_OR_UNUSABLE = "blocked_or_unusable"
+    UNKNOWN = "unknown"
+
+
+class OperationFamily(str, Enum):
+    MURABAHA = "murabaha"
+    IJARAH = "ijarah"
+    MUDARABAH = "mudarabah"
+    MUSHARAKAH = "musharakah"
+    SUKUK = "sukuk"
+    TAKAFUL = "takaful"
+    WAKALA = "wakala"
+    SALAM = "salam"
+    ISTISNA = "istisna"
+    TAWARRUQ = "tawarruq"
+    UNKNOWN = "unknown"
+
+
+class PromotionStage(str, Enum):
+    DISCOVERED = "discovered"
+    FETCHED = "fetched"
+    CLASSIFIED = "classified"
+    EXTRACTED = "extracted"
+    MAPPED_MACHINE_PROPOSED = "mapped_machine_proposed"
+    SCHOLAR_REVIEW_PENDING = "scholar_review_pending"
+    SCHOLAR_ACCEPTED = "scholar_accepted"
+    RUNTIME_ELIGIBLE = "runtime_eligible"
 
 
 class OperationEvidenceField(str, Enum):
@@ -399,6 +438,7 @@ class PublicArtifactRecord:
     raw_path: Optional[str] = None
     text_path: Optional[str] = None
     notes: str = ""
+    artifact_class: ArtifactClass = ArtifactClass.UNKNOWN
 
     def __post_init__(self) -> None:
         if not self.artifact_id.strip():
@@ -430,6 +470,7 @@ class PublicArtifactRecord:
         data["authority_rank"] = PublicArtifactAuthorityRank(data["authority_rank"])
         data["artifact_type"] = PublicArtifactType(data["artifact_type"])
         data["extraction_status"] = ExtractionStatus(data["extraction_status"])
+        data["artifact_class"] = ArtifactClass(data.get("artifact_class", ArtifactClass.UNKNOWN.value))
         if isinstance(data.get("retrieved_at"), str):
             data["retrieved_at"] = date.fromisoformat(str(data["retrieved_at"]))
         return cls(**data)
@@ -451,6 +492,7 @@ class PublicArtifactRecord:
             "extraction_status": self.extraction_status.value,
             "citation_anchor_strategy": self.citation_anchor_strategy,
             "notes": self.notes,
+            "artifact_class": self.artifact_class.value,
         }
 
     @property
@@ -510,6 +552,19 @@ class OperationCatalogRecord:
     evidence_spans: List[OperationEvidenceSpan] = field(default_factory=list)
     user_supplied_override: bool = False
     stale_or_conflicting_public_data: bool = False
+    raw_text: str = ""
+    normalized_text: str = ""
+    artifact_class: ArtifactClass = ArtifactClass.UNKNOWN
+    detected_language: str = "unknown"
+    normalized_operation: str = ""
+    operation_family: OperationFamily = OperationFamily.UNKNOWN
+    confidence: float = 0.0
+    evidence_snippet: str = ""
+    matched_aliases: List[str] = field(default_factory=list)
+    needs_review_reason: str = ""
+    extractor_version: str = "operation-extractor-v1"
+    promotion_stage: PromotionStage = PromotionStage.EXTRACTED
+    runtime_eligible: bool = False
 
     def __post_init__(self) -> None:
         if not self.operation_id.strip():
@@ -525,9 +580,24 @@ class OperationCatalogRecord:
         }
         if missing_artifacts:
             raise ValueError(f"evidence span references unknown artifact_id: {sorted(missing_artifacts)[0]}")
+        if self.detected_language not in {"en", "ar", "mixed", "unknown"}:
+            raise ValueError("detected_language must be en, ar, mixed, or unknown")
+        if not 0.0 <= self.confidence <= 1.0:
+            raise ValueError("confidence must be between 0 and 1")
+        if self.runtime_eligible and self.promotion_stage != PromotionStage.RUNTIME_ELIGIBLE:
+            raise ValueError("runtime_eligible records must use runtime_eligible promotion stage")
+        if self.runtime_eligible and self.artifact_class in {
+            ArtifactClass.PRODUCT_PAGE,
+            ArtifactClass.MARKETING_ONLY,
+        }:
+            raise ValueError("scraped institution product pages are evaluation-only and not runtime eligible")
 
     def fields_present(self) -> List[OperationEvidenceField]:
         return sorted({span.field for span in self.evidence_spans}, key=lambda field: field.value)
+
+    @property
+    def evaluation_only(self) -> bool:
+        return self.artifact_class in {ArtifactClass.PRODUCT_PAGE, ArtifactClass.MARKETING_ONLY}
 
 
 @dataclass(frozen=True)
@@ -805,6 +875,7 @@ class InstitutionRegistry:
             if artifact.authority_rank
             != PublicArtifactAuthorityRank.THIRD_PARTY_DISCOVERY_ONLY
             and artifact.extraction_status in {ExtractionStatus.EXTRACTED, ExtractionStatus.PARTIAL}
+            and artifact.artifact_class != ArtifactClass.BLOCKED_OR_UNUSABLE
         ]
 
     def prioritized_artifacts_for(self, institution_id: str) -> List[PublicArtifactRecord]:
@@ -869,6 +940,36 @@ class InstitutionRegistry:
             for review in self._reviews.values()
             if review.accepted_gold_case and review.decision == ReviewCandidateStatus.SCHOLAR_ACCEPTED
         ]
+
+    def promote_operation_to_runtime(self, mapping_id: str) -> OperationCatalogRecord:
+        mapping = self.mapping(mapping_id)
+        accepted_review = next(
+            (
+                review
+                for review in self.accepted_gold_reviews()
+                if review.mapping_id == mapping_id
+            ),
+            None,
+        )
+        if accepted_review is None:
+            raise ValueError("operation requires scholar_accepted gold-case review before runtime promotion")
+        operation = self.operation(mapping.operation_id)
+        if not operation.evidence_spans:
+            raise ValueError("operation requires evidence spans before runtime promotion")
+        if not operation.evidence_snippet.strip():
+            raise ValueError("operation requires evidence snippet before runtime promotion")
+        if operation.operation_family == OperationFamily.UNKNOWN:
+            raise ValueError("operation requires known operation family before runtime promotion")
+        if operation.artifact_class in {ArtifactClass.BLOCKED_OR_UNUSABLE, ArtifactClass.UNKNOWN}:
+            raise ValueError("operation requires classified usable artifact before runtime promotion")
+        promoted = replace(
+            operation,
+            promotion_stage=PromotionStage.RUNTIME_ELIGIBLE,
+            runtime_eligible=True,
+            needs_review_reason="",
+        )
+        self._operations[promoted.operation_id] = promoted
+        return promoted
 
     def with_discovery_result(
         self,

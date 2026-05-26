@@ -56,7 +56,7 @@ class ParentChildChunkMetadataBuilder:
                 "operation_tags": _join_values(tags),
                 "embedding_model": self.embedding_model,
                 "embedding_normalized": self.embedding_normalized,
-                "metadata_status": "cataloged" if self.catalog_record else "quarantined_missing_catalog",
+                "metadata_status": self._metadata_status(),
             }
         )
         return base
@@ -84,3 +84,10 @@ class ParentChildChunkMetadataBuilder:
             "review_status": "unreviewed",
             "superseded_by": "",
         }
+
+    def _metadata_status(self) -> str:
+        if not self.catalog_record:
+            return "quarantined_missing_catalog"
+        if self.catalog_record.is_answer_admissible:
+            return "cataloged"
+        return "cataloged_not_answer_admissible"

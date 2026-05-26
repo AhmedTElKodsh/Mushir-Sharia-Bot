@@ -6,6 +6,8 @@ import hashlib
 import html
 import json
 import re
+import urllib.parse
+import unicodedata
 import xml.etree.ElementTree as ET
 import zipfile
 from dataclasses import dataclass, field
@@ -15,6 +17,8 @@ from typing import Callable, Dict, Iterable, List, Mapping, Optional, Sequence
 
 from src.governance.institution_registry import (
     AccessControlDecision,
+    AccessControlSignal,
+    ArtifactClass,
     ComplianceRiskLabel,
     CorpusPilotPlan,
     DiscoveryEvidenceType,
@@ -32,6 +36,8 @@ from src.governance.institution_registry import (
     OperationCatalogRecord,
     OperationEvidenceField,
     OperationEvidenceSpan,
+    OperationFamily,
+    PromotionStage,
     PublicArtifactAuthorityRank,
     PublicArtifactRecord,
     PublicArtifactType,
@@ -66,6 +72,13 @@ REGISTRY_WORKBOOK_DEFAULTS: Dict[str, Dict[str, object]] = {
         "source_url": "https://fra.gov.eg/",
     },
 }
+
+
+@dataclass(frozen=True)
+class NormalizedEvidenceText:
+    raw_text: str
+    normalized_text: str
+    detected_language: str
 
 
 @dataclass(frozen=True)
@@ -372,6 +385,17 @@ class PublicArtifactFetcher:
                 retrieved_at=retrieved_at,
             )
         response = self._fetch_bytes(request.url)
+        if response.final_url and not _same_fetch_host(request.url, response.final_url):
+            return self._store.blocked_record(
+                request=request,
+                access_decision=AccessControlDecision.evaluate(
+                    url=request.url,
+                    checked_at=retrieved_at,
+                    signals=[AccessControlSignal.SECURITY_BLOCK],
+                    reason=f"cross-domain redirect blocked: {response.final_url}",
+                ),
+                retrieved_at=retrieved_at,
+            )
         return self._store.store_response(request, response, retrieved_at=retrieved_at)
 
 
@@ -395,6 +419,12 @@ class LocalArtifactStore:
         meta_rel = Path("metadata") / request.institution_id / f"{artifact_id}.json"
         text = ArtifactTextExtractor.extract(response.body, response.content_type)
         extraction_status = ExtractionStatus.EXTRACTED if text.strip() else ExtractionStatus.FAILED
+        artifact_class = ArtifactClassifier().classify(
+            text=text,
+            artifact_type=request.artifact_type,
+            extraction_status=extraction_status,
+            url=response.final_url or request.url,
+        )
         _write_bytes(self._root_dir / raw_rel, response.body)
         _write_text(self._root_dir / text_rel, text)
         record = PublicArtifactRecord(
@@ -413,6 +443,7 @@ class LocalArtifactStore:
             extraction_status=extraction_status,
             citation_anchor_strategy="line_range",
             notes="Fetched after access-control allow decision.",
+            artifact_class=artifact_class,
         )
         _write_text(self._root_dir / meta_rel, json.dumps(record.to_dict(), indent=2, sort_keys=True))
         return record
@@ -442,6 +473,7 @@ class LocalArtifactStore:
             extraction_status=access_decision.to_extraction_status(),
             citation_anchor_strategy="not_available",
             notes=access_decision.reason,
+            artifact_class=ArtifactClass.BLOCKED_OR_UNUSABLE,
         )
         _write_text(self._root_dir / meta_rel, json.dumps(record.to_dict(), indent=2, sort_keys=True))
         return record
@@ -460,9 +492,52 @@ class ArtifactTextExtractor:
         return re.sub(r"[ \t\r\f\v]+", " ", text).strip()
 
 
+class ArtifactClassifier:
+    """Classify captured artifacts into review/retrieval-ready buckets."""
+
+    def classify(
+        self,
+        *,
+        text: str,
+        artifact_type: PublicArtifactType,
+        extraction_status: ExtractionStatus,
+        url: str,
+    ) -> ArtifactClass:
+        if extraction_status not in {ExtractionStatus.EXTRACTED, ExtractionStatus.PARTIAL}:
+            return ArtifactClass.BLOCKED_OR_UNUSABLE
+        lowered = f"{url} {text}".lower()
+        if _blocked_artifact_reason(lowered):
+            return ArtifactClass.BLOCKED_OR_UNUSABLE
+        if artifact_type == PublicArtifactType.PRODUCT_PAGE and _has_operation_signal(lowered):
+            return ArtifactClass.PRODUCT_PAGE
+        if artifact_type == PublicArtifactType.TARIFF or any(term in lowered for term in ("tariff", "fees", "charges")):
+            return ArtifactClass.TARIFF_OR_FEES
+        if artifact_type in {
+            PublicArtifactType.TERMS,
+            PublicArtifactType.CONTRACT,
+            PublicArtifactType.MODEL_CONTRACT,
+            PublicArtifactType.POLICY_WORDING,
+        } or any(term in lowered for term in ("terms", "conditions", "contract", "agreement", "policy wording")):
+            return ArtifactClass.TERMS_OR_CONTRACT
+        if artifact_type == PublicArtifactType.ANNUAL_REPORT or "annual report" in lowered:
+            return ArtifactClass.ANNUAL_REPORT
+        if artifact_type == PublicArtifactType.PROSPECTUS or "prospectus" in lowered:
+            return ArtifactClass.PROSPECTUS
+        if any(term in lowered for term in ("sharia certificate", "shariah certificate", "sharia report", "fatwa")):
+            return ArtifactClass.SHARIA_CERTIFICATE_OR_REPORT
+        if any(term in lowered for term in ("governance", "board", "committee")) and "sharia" in lowered:
+            return ArtifactClass.GOVERNANCE_PAGE
+        if artifact_type == PublicArtifactType.REGULATOR_RULEBOOK or "register" in lowered or "registry" in lowered:
+            return ArtifactClass.REGISTRY_PAGE
+        if artifact_type == PublicArtifactType.PRODUCT_PAGE:
+            return ArtifactClass.MARKETING_ONLY
+        return ArtifactClass.UNKNOWN
+
+
 class OperationExtractor:
     """Extract evidence-backed operation records from stored public artifacts."""
 
+    EXTRACTOR_VERSION = "operation-extractor-v2"
     FIELD_KEYWORDS: Dict[OperationEvidenceField, Sequence[str]] = {
         OperationEvidenceField.FEES: ("fee", "fees", "tariff", "charges", "commission"),
         OperationEvidenceField.PAYMENT_TERMS: ("installment", "payment schedule", "deferred payment"),
@@ -474,6 +549,18 @@ class OperationExtractor:
         OperationEvidenceField.OWNERSHIP_OR_ASSET_FLOW: ("ownership", "asset", "bank purchases"),
         OperationEvidenceField.SHARIA_CLAIMS: ("sharia", "shariah", "islamic"),
     }
+    FAMILY_ALIASES: Dict[OperationFamily, Sequence[str]] = {
+        OperationFamily.MURABAHA: ("murabaha", "\u0645\u0631\u0627\u0628\u062d\u0629", "deferred payment", "bank purchases", "known markup"),
+        OperationFamily.IJARAH: ("ijarah", "ijara", "\u0627\u062c\u0627\u0631\u0629", "lease", "leasing"),
+        OperationFamily.MUDARABAH: ("mudarabah", "mudaraba", "\u0645\u0636\u0627\u0631\u0628\u0629", "profit sharing"),
+        OperationFamily.MUSHARAKAH: ("musharakah", "musharaka", "\u0645\u0634\u0627\u0631\u0643\u0629", "partnership"),
+        OperationFamily.SUKUK: ("sukuk", "\u0635\u0643\u0648\u0643", "investment certificate", "prospectus"),
+        OperationFamily.TAKAFUL: ("takaful", "\u062a\u0643\u0627\u0641\u0644"),
+        OperationFamily.WAKALA: ("wakala", "\u0648\u0643\u0627\u0644\u0629", "agency investment"),
+        OperationFamily.SALAM: ("salam", "\u0633\u0644\u0645", "advance payment"),
+        OperationFamily.ISTISNA: ("istisna", "istisna'a", "\u0627\u0633\u062a\u0635\u0646\u0627\u0639", "manufacturing contract"),
+        OperationFamily.TAWARRUQ: ("tawarruq", "\u062a\u0648\u0631\u0642", "commodity monetization"),
+    }
 
     def extract(
         self,
@@ -483,9 +570,13 @@ class OperationExtractor:
         text: str,
         operation_name: str = "",
     ) -> OperationCatalogRecord:
+        normalized = normalize_evidence_text(text)
         spans: List[OperationEvidenceSpan] = []
         for field_name, keywords in self.FIELD_KEYWORDS.items():
-            snippet = _snippet_for_keywords(text, keywords)
+            snippet = _snippet_for_keywords(text, keywords) or _snippet_for_keywords(
+                normalized.normalized_text,
+                keywords,
+            )
             if snippet:
                 spans.append(
                     OperationEvidenceSpan(
@@ -495,13 +586,42 @@ class OperationExtractor:
                         citation_anchor="line_range",
                     )
                 )
+        family, matched_aliases = _operation_family_for_text(normalized.normalized_text)
+        evidence_snippet = _family_snippet(text, normalized.normalized_text, matched_aliases)
+        confidence = _operation_confidence(family, matched_aliases, spans, evidence_snippet)
+        artifact_class = artifact.artifact_class
+        if artifact_class == ArtifactClass.UNKNOWN:
+            artifact_class = ArtifactClassifier().classify(
+                text=text,
+                artifact_type=artifact.artifact_type,
+                extraction_status=artifact.extraction_status,
+                url=artifact.url,
+            )
         name = operation_name or _operation_name_from_text(text, artifact.artifact_type)
+        needs_review_reason = (
+            "machine_proposed_requires_scholar_review"
+            if family != OperationFamily.UNKNOWN
+            else "no_governed_operation_family_detected"
+        )
         return OperationCatalogRecord(
             operation_id=_operation_id(institution_id, name, artifact.artifact_id),
             institution_id=institution_id,
             operation_name=name,
             artifact_ids=[artifact.artifact_id],
             evidence_spans=spans,
+            raw_text=text,
+            normalized_text=normalized.normalized_text,
+            artifact_class=artifact_class,
+            detected_language=normalized.detected_language,
+            normalized_operation=family.value,
+            operation_family=family,
+            confidence=confidence,
+            evidence_snippet=evidence_snippet,
+            matched_aliases=matched_aliases,
+            needs_review_reason=needs_review_reason,
+            extractor_version=self.EXTRACTOR_VERSION,
+            promotion_stage=PromotionStage.MAPPED_MACHINE_PROPOSED,
+            runtime_eligible=False,
         )
 
 
@@ -509,23 +629,32 @@ class AaoifiMappingGenerator:
     """Generate machine-only AAOIFI mapping candidates for scholar review."""
 
     def generate(self, operation: OperationCatalogRecord) -> MachineAaoifiMappingCandidate:
-        text = " ".join([operation.operation_name] + [span.text for span in operation.evidence_spans]).lower()
+        text = " ".join(
+            [
+                operation.operation_name,
+                operation.normalized_text,
+                operation.operation_family.value,
+            ]
+            + [span.text for span in operation.evidence_spans]
+        ).lower()
         standards: List[str] = []
         risk = ComplianceRiskLabel.UNKNOWN
         rationale = "No recognized operation family found; scholar review must classify from evidence."
-        if any(term in text for term in ("murabaha", "deferred payment", "bank purchases", "ownership")):
+        if operation.operation_family == OperationFamily.MURABAHA or any(
+            term in text for term in ("murabaha", "deferred payment", "bank purchases", "ownership")
+        ):
             standards.extend(["FAS-28", "SS-08"])
             risk = ComplianceRiskLabel.MEDIUM
             rationale = "Evidence suggests murabaha/deferred sale mechanics or asset ownership flow."
-        if any(term in text for term in ("ijarah", "lease", "leasing")):
+        if operation.operation_family == OperationFamily.IJARAH or any(term in text for term in ("ijarah", "lease", "leasing")):
             standards.extend(["FAS-32", "SS-09"])
             risk = ComplianceRiskLabel.MEDIUM
             rationale = "Evidence suggests lease/ijarah mechanics."
-        if any(term in text for term in ("sukuk", "prospectus")):
+        if operation.operation_family == OperationFamily.SUKUK or any(term in text for term in ("sukuk", "prospectus")):
             standards.extend(["FAS-33", "FAS-34"])
             risk = ComplianceRiskLabel.MEDIUM
             rationale = "Evidence suggests sukuk or investment certificate documentation."
-        if any(term in text for term in ("takaful", "insurance")):
+        if operation.operation_family == OperationFamily.TAKAFUL or any(term in text for term in ("takaful", "insurance")):
             standards.extend(["FAS-42", "FAS-43"])
             risk = ComplianceRiskLabel.MEDIUM
             rationale = "Evidence mentions insurance or takaful-linked obligations."
@@ -638,6 +767,19 @@ class EngineAssessmentCsvStore:
         "operation_id",
         "contract_operation_name",
         "artifact_ids",
+        "artifact_class",
+        "detected_language",
+        "normalized_operation",
+        "operation_family",
+        "confidence",
+        "evidence_snippet",
+        "matched_aliases",
+        "source_url",
+        "artifact_path",
+        "extractor_version",
+        "promotion_stage",
+        "runtime_eligible",
+        "needs_review_reason",
         "evidence_fields",
         "mushir_engine_status",
         "mushir_engine_review",
@@ -657,6 +799,7 @@ class EngineAssessmentCsvStore:
         for record in registry.records():
             for operation in registry.operations_for(record.institution_id):
                 mapping = mappings_by_operation.get(operation.operation_id)
+                artifact = _primary_artifact_for_operation(registry, operation)
                 rows.append(
                     {
                         "institution_id": record.institution_id,
@@ -666,6 +809,19 @@ class EngineAssessmentCsvStore:
                         "operation_id": operation.operation_id,
                         "contract_operation_name": operation.operation_name,
                         "artifact_ids": "|".join(operation.artifact_ids),
+                        "artifact_class": operation.artifact_class.value,
+                        "detected_language": operation.detected_language,
+                        "normalized_operation": operation.normalized_operation,
+                        "operation_family": operation.operation_family.value,
+                        "confidence": f"{operation.confidence:.2f}",
+                        "evidence_snippet": operation.evidence_snippet,
+                        "matched_aliases": "|".join(operation.matched_aliases),
+                        "source_url": artifact.url if artifact else "",
+                        "artifact_path": artifact.text_path if artifact else "",
+                        "extractor_version": operation.extractor_version,
+                        "promotion_stage": operation.promotion_stage.value,
+                        "runtime_eligible": "true" if operation.runtime_eligible else "false",
+                        "needs_review_reason": operation.needs_review_reason,
                         "evidence_fields": "|".join(
                             field.value for field in operation.fields_present()
                         ),
@@ -709,6 +865,19 @@ class ScholarReviewListCsvStore:
         "operation_name_ar_status",
         "regulator",
         "sector",
+        "artifact_class",
+        "detected_language",
+        "normalized_operation",
+        "operation_family",
+        "confidence",
+        "evidence_snippet",
+        "matched_aliases",
+        "source_url",
+        "artifact_path",
+        "extractor_version",
+        "promotion_stage",
+        "runtime_eligible",
+        "needs_review_reason",
         "evidence_fields",
         "mushir_engine_status",
         "mushir_engine_review_en",
@@ -728,6 +897,19 @@ class ScholarReviewListCsvStore:
         "operation_name",
         "regulator",
         "sector",
+        "artifact_class",
+        "detected_language",
+        "normalized_operation",
+        "operation_family",
+        "confidence",
+        "evidence_snippet",
+        "matched_aliases",
+        "source_url",
+        "artifact_path",
+        "extractor_version",
+        "promotion_stage",
+        "runtime_eligible",
+        "needs_review_reason",
         "evidence_fields",
         "mushir_engine_status",
         "mushir_engine_review",
@@ -841,6 +1023,19 @@ class ScholarReviewListCsvStore:
                     "operation_name_ar_status": "needs_human_translation",
                     "regulator": assessment["regulator"],
                     "sector": assessment["sector"],
+                    "artifact_class": assessment["artifact_class"],
+                    "detected_language": assessment["detected_language"],
+                    "normalized_operation": assessment["normalized_operation"],
+                    "operation_family": assessment["operation_family"],
+                    "confidence": assessment["confidence"],
+                    "evidence_snippet": assessment["evidence_snippet"],
+                    "matched_aliases": assessment["matched_aliases"],
+                    "source_url": assessment["source_url"],
+                    "artifact_path": assessment["artifact_path"],
+                    "extractor_version": assessment["extractor_version"],
+                    "promotion_stage": assessment["promotion_stage"],
+                    "runtime_eligible": assessment["runtime_eligible"],
+                    "needs_review_reason": assessment["needs_review_reason"],
                     "evidence_fields": assessment["evidence_fields"],
                     "mushir_engine_status": assessment["mushir_engine_status"],
                     "mushir_engine_review_en": assessment["mushir_engine_review"],
@@ -870,6 +1065,19 @@ class ScholarReviewListCsvStore:
                 "operation_name": row["operation_name_ar"],
                 "regulator": row["regulator"],
                 "sector": row["sector"],
+                "artifact_class": row["artifact_class"],
+                "detected_language": row["detected_language"],
+                "normalized_operation": row["normalized_operation"],
+                "operation_family": row["operation_family"],
+                "confidence": row["confidence"],
+                "evidence_snippet": row["evidence_snippet"],
+                "matched_aliases": row["matched_aliases"],
+                "source_url": row["source_url"],
+                "artifact_path": row["artifact_path"],
+                "extractor_version": row["extractor_version"],
+                "promotion_stage": row["promotion_stage"],
+                "runtime_eligible": row["runtime_eligible"],
+                "needs_review_reason": row["needs_review_reason"],
                 "evidence_fields": row["evidence_fields"],
                 "mushir_engine_status": row["mushir_engine_status"],
                 "mushir_engine_review": row["mushir_engine_review_ar"],
@@ -889,6 +1097,19 @@ class ScholarReviewListCsvStore:
             "operation_name": row["operation_name_en"],
             "regulator": row["regulator"],
             "sector": row["sector"],
+            "artifact_class": row["artifact_class"],
+            "detected_language": row["detected_language"],
+            "normalized_operation": row["normalized_operation"],
+            "operation_family": row["operation_family"],
+            "confidence": row["confidence"],
+            "evidence_snippet": row["evidence_snippet"],
+            "matched_aliases": row["matched_aliases"],
+            "source_url": row["source_url"],
+            "artifact_path": row["artifact_path"],
+            "extractor_version": row["extractor_version"],
+            "promotion_stage": row["promotion_stage"],
+            "runtime_eligible": row["runtime_eligible"],
+            "needs_review_reason": row["needs_review_reason"],
             "evidence_fields": row["evidence_fields"],
             "mushir_engine_status": row["mushir_engine_status"],
             "mushir_engine_review": row["mushir_engine_review_en"],
@@ -1117,6 +1338,41 @@ def _write_csv(path: str | Path, fields: Sequence[str], rows: Iterable[Mapping[s
         writer.writerows(rows)
 
 
+def _primary_artifact_for_operation(
+    registry: InstitutionRegistry,
+    operation: OperationCatalogRecord,
+) -> Optional[PublicArtifactRecord]:
+    artifacts = {
+        artifact.artifact_id: artifact
+        for artifact in registry.artifacts_for(operation.institution_id)
+    }
+    for artifact_id in operation.artifact_ids:
+        artifact = artifacts.get(artifact_id)
+        if artifact:
+            return artifact
+    return None
+
+
+def _same_fetch_host(request_url: str, final_url: str) -> bool:
+    request_host = urllib.parse.urlparse(request_url).netloc.lower().lstrip("www.")
+    final_host = urllib.parse.urlparse(final_url).netloc.lower().lstrip("www.")
+    return bool(request_host) and request_host == final_host
+
+
+def _blocked_artifact_reason(text: str) -> str:
+    if "captcha" in text:
+        return "captcha"
+    if "request rejected" in text or "requested url was rejected" in text:
+        return "security"
+    if "access denied" in text:
+        return "security"
+    if "login required" in text or "log in to continue" in text or "please log in" in text:
+        return "login"
+    if "paywall" in text or "subscription required" in text or "subscribe to access" in text:
+        return "paywall"
+    return ""
+
+
 def _artifact_id(institution_id: str, url: str) -> str:
     digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:12]
     return f"art-{institution_id}-{digest}"
@@ -1137,6 +1393,85 @@ def _snippet_for_keywords(text: str, keywords: Sequence[str]) -> str:
             end = min(len(text), index + 160)
             return text[start:end].strip()
     return ""
+
+
+def normalize_evidence_text(text: str) -> NormalizedEvidenceText:
+    raw = text
+    normalized = unicodedata.normalize("NFKC", text)
+    normalized = "".join(char for char in normalized if unicodedata.category(char) != "Mn")
+    replacements = {
+        "\u0640": "",
+        "\u0623": "\u0627",
+        "\u0625": "\u0627",
+        "\u0622": "\u0627",
+        "\u0671": "\u0627",
+        "\u0649": "\u064a",
+    }
+    for source, target in replacements.items():
+        normalized = normalized.replace(source, target)
+    normalized = normalized.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789"))
+    normalized = re.sub(r"[ \t\r\f\v]+", " ", normalized).strip().lower()
+    has_arabic = re.search(r"[\u0600-\u06FF]", normalized) is not None
+    has_latin = re.search(r"[a-z]", normalized) is not None
+    if has_arabic and has_latin:
+        language = "mixed"
+    elif has_arabic:
+        language = "ar"
+    elif has_latin:
+        language = "en"
+    else:
+        language = "unknown"
+    return NormalizedEvidenceText(raw_text=raw, normalized_text=normalized, detected_language=language)
+
+
+def _operation_family_for_text(text: str) -> tuple[OperationFamily, List[str]]:
+    for family, aliases in OperationExtractor.FAMILY_ALIASES.items():
+        matched = [alias for alias in aliases if _alias_matches_text(alias, text)]
+        if matched:
+            canonical = family.value
+            return family, list(dict.fromkeys([canonical] + [alias.lower() for alias in matched]))
+    return OperationFamily.UNKNOWN, []
+
+
+def _alias_matches_text(alias: str, text: str) -> bool:
+    normalized_alias = alias.lower()
+    if re.search(r"[\u0600-\u06ff]", normalized_alias):
+        return normalized_alias in text
+    return re.search(
+        rf"(?<![0-9a-z]){re.escape(normalized_alias)}(?![0-9a-z])",
+        text,
+    ) is not None
+
+
+def _has_operation_signal(text: str) -> bool:
+    family, _matched = _operation_family_for_text(text)
+    return family != OperationFamily.UNKNOWN
+
+
+def _family_snippet(raw_text: str, normalized_text: str, aliases: Sequence[str]) -> str:
+    for alias in aliases:
+        if alias in normalized_text:
+            index = normalized_text.find(alias)
+            start = max(0, index - 80)
+            end = min(len(raw_text), index + 180)
+            return raw_text[start:end].strip() or normalized_text[start:end].strip()
+    return ""
+
+
+def _operation_confidence(
+    family: OperationFamily,
+    matched_aliases: Sequence[str],
+    spans: Sequence[OperationEvidenceSpan],
+    evidence_snippet: str,
+) -> float:
+    if family == OperationFamily.UNKNOWN:
+        return 0.0
+    score = 0.35 + min(len(matched_aliases), 3) * 0.10
+    if spans:
+        score += min(len(spans), 4) * 0.07
+    if evidence_snippet:
+        score += 0.10
+    return min(round(score, 2), 0.95)
 
 
 def _operation_name_from_text(text: str, artifact_type: PublicArtifactType) -> str:

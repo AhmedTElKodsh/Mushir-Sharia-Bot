@@ -9,8 +9,9 @@ class CitationValidator:
     """Extracts explicit answer citations and keeps only retrieved references."""
 
     citation_pattern = re.compile(
-        r"\[[^\]]*?(?:AAOIFI\s+)?FAS-?(\d+)"
-        r"(?:\s*(?:§|section|القسم)\s*([A-Za-z0-9.\-]+))?"
+        r"\[[^\]]*?(?:(?:AAOIFI\s+)?(?P<family>FAS|SS|GS)-?(?P<number>\d+)"
+        r"|(?:AAOIFI\s+)?(?:Shari'?ah|Sharia)\s+Standard\s*-?(?P<sharia_number>\d+))"
+        r"(?:\s*(?:§|section|القسم)\s*(?P<section>[A-Za-z0-9.\-]+))?"
         r"[^\]]*\]",
         re.IGNORECASE,
     )
@@ -22,9 +23,10 @@ class CitationValidator:
 
         # Find all FAS-XX references in the answer.
         for match in self.citation_pattern.finditer(answer):
-            standard_num = match.group(1)
-            cited_section = self._normalize_section(match.group(2))
-            standard = self._normalize_standard(f"FAS-{standard_num}")
+            family = (match.group("family") or "SS").upper()
+            standard_num = match.group("number") or match.group("sharia_number")
+            cited_section = self._normalize_section(match.group("section"))
+            standard = self._normalize_standard(f"{family}-{standard_num}")
 
             # Find chunks that match this standard.
             for chunk in chunks:
@@ -108,10 +110,16 @@ class CitationValidator:
 
     @staticmethod
     def _normalize_standard(standard: str) -> str:
-        """Normalize standard reference to FAS-XX format."""
-        match = re.search(r"[Ss]tandard[_\s]*(\d+)", standard) or re.search(r"FAS-?(\d+)", standard)
+        """Normalize standard references to AAOIFI family-number format."""
+        sharia_match = re.search(r"(?:[Ss]haria|[Ss]hari'?ah)[_\s-]*[Ss]tandard[_\s-]*(\d+)", standard)
+        if sharia_match:
+            return f"SS-{int(sharia_match.group(1)):02d}"
+        match = re.search(r"\b(FAS|SS|GS)-?(\d+)\b", standard, flags=re.IGNORECASE)
         if match:
-            return f"FAS-{int(match.group(1)):02d}"
+            return f"{match.group(1).upper()}-{int(match.group(2)):02d}"
+        legacy_match = re.search(r"[Ss]tandard[_\s]*(\d+)", standard)
+        if legacy_match:
+            return f"FAS-{int(legacy_match.group(1)):02d}"
         return standard
 
     def _document_id_for(self, ref: Tuple[str, str], chunks: List[Any]) -> str:

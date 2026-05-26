@@ -19,9 +19,16 @@ from src.chatbot.application_service import ApplicationService
 from src.chatbot.clarification_engine import ClarificationEngine
 from src.chatbot.session_manager import SessionManager
 from src.observability.metrics import MetricsRegistry
+from scripts.report_sharia_corpus_coverage import (
+    DEFAULT_ACQUISITION_MANIFEST,
+    load_acquisition_manifest,
+    load_catalog,
+    sharia_coverage_report,
+)
 
 
 INFRA_FALLBACK_MESSAGE = "configured backend unavailable; falling back to local runtime"
+DEFAULT_SOURCE_CATALOG_FILE = "data/source_registry/aaoifi-source-catalog.yaml"
 
 
 def parse_cors_origins(value: str) -> List[str]:
@@ -149,9 +156,12 @@ def _safe_fallback_message(component: str) -> str:
 def _readiness_status(app: FastAPI) -> Dict[str, Any]:
     level = os.getenv("APP_ENV", "dev").strip().lower() or "dev"
     infrastructure = app.state.infrastructure
+    sharia_corpus = _sharia_corpus_coverage_status()
     checks = {
         "retrieval_configured": infrastructure.get("vector_store") in {"chroma", "qdrant"},
         "retriever_ready": bool(infrastructure.get("retriever_ready")),
+        "sharia_corpus_complete": sharia_corpus.get("status") == "complete",
+        "hard_sharia_ready": sharia_corpus.get("hard_sharia_ready") is True,
         "provider_configured": bool(os.getenv("OPENROUTER_API_KEY")),
         "auth_configured": bool(os.getenv("AUTH_TOKEN")),
         "durable_session_store": infrastructure.get("session_store") != "SessionManager",
@@ -162,6 +172,7 @@ def _readiness_status(app: FastAPI) -> Dict[str, Any]:
     production_requirements = [
         "retrieval_configured",
         "retriever_ready",
+        "hard_sharia_ready",
         "provider_configured",
         "auth_configured",
         "durable_audit_store",
@@ -171,7 +182,59 @@ def _readiness_status(app: FastAPI) -> Dict[str, Any]:
         "status": "degraded" if degraded else "ready",
         "readiness_level": level,
         "checks": checks,
+        "evidence_coverage": {"sharia_corpus": sharia_corpus},
     }
+
+
+def _sharia_corpus_coverage_status() -> Dict[str, Any]:
+    catalog_path = Path(os.getenv("SOURCE_CATALOG_FILE", DEFAULT_SOURCE_CATALOG_FILE))
+    acquisition_manifest_path = Path(os.getenv("SHARIA_ACQUISITION_MANIFEST_FILE", DEFAULT_ACQUISITION_MANIFEST))
+    try:
+        report = sharia_coverage_report(
+            load_catalog(catalog_path),
+            acquisition_manifest=load_acquisition_manifest(acquisition_manifest_path),
+        )
+        return {
+            "status": report["status"],
+            "hard_sharia_ready": report["hard_sharia_ready"],
+            "release_gate": report["release_gate"],
+            "release_gate_fail_count": report["release_gate_fail_count"],
+            "target_sharia_standard_count": report["target_sharia_standard_count"],
+            "covered_sharia_standard_count": report["covered_sharia_standard_count"],
+            "missing_sharia_standard_count": report["missing_sharia_standard_count"],
+            "blocked_source_count": report["blocked_source_count"],
+            "blocked_source_standards": report["blocked_source_standards"],
+            "blocked_source_details": report["blocked_source_details"],
+            "coverage_ratio": report["coverage_ratio"],
+            "covered_sharia_standards": report["covered_sharia_standards"],
+            "missing_sharia_standards": report["missing_sharia_standards"],
+            "bilingual_sharia_standard_count": report["bilingual_sharia_standard_count"],
+            "language_counts": report["language_counts"],
+            "no_go_reasons": report["no_go_reasons"],
+            "catalog_path": catalog_path.as_posix(),
+            "acquisition_manifest_path": acquisition_manifest_path.as_posix(),
+        }
+    except Exception:
+        return {
+            "status": "unknown",
+            "hard_sharia_ready": False,
+            "release_gate": "fail",
+            "release_gate_fail_count": 60,
+            "target_sharia_standard_count": 60,
+            "covered_sharia_standard_count": 0,
+            "missing_sharia_standard_count": 60,
+            "blocked_source_count": 0,
+            "blocked_source_standards": [],
+            "blocked_source_details": [],
+            "coverage_ratio": 0.0,
+            "covered_sharia_standards": [],
+            "missing_sharia_standards": [],
+            "bilingual_sharia_standard_count": 0,
+            "language_counts": {},
+            "no_go_reasons": ["Sharia corpus coverage could not be inspected."],
+            "catalog_path": catalog_path.as_posix(),
+            "acquisition_manifest_path": acquisition_manifest_path.as_posix(),
+        }
 
 
 def create_app() -> FastAPI:
@@ -281,6 +344,7 @@ def create_app() -> FastAPI:
                 "timestamp": datetime.now(UTC).isoformat(),
                 "infrastructure": app.state.infrastructure,
                 "checks": readiness["checks"],
+                "evidence_coverage": readiness["evidence_coverage"],
             },
         )
 

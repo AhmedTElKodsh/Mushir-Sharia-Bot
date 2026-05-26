@@ -6,14 +6,16 @@ import hashlib
 import os
 import sys
 from pathlib import Path
-from typing import Iterable, List, Sequence
+from typing import Iterable, List, Optional, Sequence
 
 import chromadb
+import yaml
 from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 
 from src.governance.chunk_metadata import ParentChildChunkMetadataBuilder
+from src.governance.source_catalog import SourceCatalog, SourceCatalogRecord
 
 DEFAULT_EMBED_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 DEFAULT_CHROMA_DIR = "./chroma_db_multilingual"
@@ -73,11 +75,72 @@ def section_path_for_chunk(text: str, standard: str) -> List[str]:
     return [standard] + headings[:3] if headings else [standard]
 
 
+def citation_anchor_for_chunk(catalog_record: Optional[SourceCatalogRecord], chunk_index: int) -> str:
+    if catalog_record is None:
+        return ""
+    return f"{catalog_record.official_url}#chunk-{chunk_index:04d}"
+
+
 def reset_collection(client, collection_name: str) -> None:
     try:
         client.delete_collection(collection_name)
     except Exception:
         pass
+
+
+def load_source_catalog(path: str | Path | None) -> Optional[SourceCatalog]:
+    """Load a source catalog YAML file for answer-admissible ingestion metadata."""
+    if not path:
+        return None
+    catalog_path = Path(path)
+    if not catalog_path.exists():
+        raise SystemExit(f"Source catalog file not found: {catalog_path}")
+    payload = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+    return SourceCatalog.from_payload(
+        records=payload.get("records", ()),
+        document_versions=payload.get("document_versions", ()),
+        relationships=payload.get("relationships", ()),
+    )
+
+
+def catalog_record_for_file(
+    source_catalog: Optional[SourceCatalog],
+    md_file: Path,
+    corpus_dir: Optional[Path] = None,
+) -> Optional[SourceCatalogRecord]:
+    """Find catalog metadata by path, falling back to the markdown filename."""
+    if source_catalog is None:
+        return None
+    candidates = [md_file.as_posix(), md_file.name]
+    if corpus_dir:
+        try:
+            candidates.insert(0, md_file.relative_to(corpus_dir).as_posix())
+        except ValueError:
+            pass
+    try:
+        candidates.append(md_file.resolve().as_posix())
+    except OSError:
+        pass
+    for candidate in dict.fromkeys(candidates):
+        try:
+            return source_catalog.find_by_path(candidate)
+        except KeyError:
+            continue
+    return None
+
+
+def unmatched_catalog_files(
+    files: Iterable[Path],
+    source_catalog: Optional[SourceCatalog],
+    corpus_dir: Optional[Path] = None,
+) -> List[Path]:
+    if source_catalog is None:
+        return []
+    return [
+        md_file
+        for md_file in files
+        if catalog_record_for_file(source_catalog, md_file, corpus_dir=corpus_dir) is None
+    ]
 
 
 def ingest_files(
@@ -86,6 +149,8 @@ def ingest_files(
     collection,
     splitter: RecursiveCharacterTextSplitter,
     model_name: str,
+    source_catalog: Optional[SourceCatalog] = None,
+    corpus_dir: Optional[Path] = None,
 ) -> int:
     total_chunks = 0
     for md_file in files:
@@ -106,6 +171,7 @@ def ingest_files(
                 for index, _ in enumerate(chunks)
             ]
             standard = standard_number(md_file)
+            catalog_record = catalog_record_for_file(source_catalog, md_file, corpus_dir=corpus_dir)
             metadata_builder = ParentChildChunkMetadataBuilder(
                 source_file=md_file.name,
                 source_path=md_file.as_posix(),
@@ -115,11 +181,13 @@ def ingest_files(
                 embedding_model=model_name,
                 embedding_normalized=True,
                 total_chunks=len(chunks),
+                catalog_record=catalog_record,
             )
             metadatas = [
                 metadata_builder.child_metadata(
                     chunk_index=index,
                     section_path=section_path_for_chunk(chunk_text, standard),
+                    citation_anchor=citation_anchor_for_chunk(catalog_record, index),
                 )
                 for index, chunk_text in enumerate(chunks)
             ]
@@ -149,6 +217,19 @@ def parse_args() -> argparse.Namespace:
         help="Comma-separated language codes to ingest, for example: en,ar",
     )
     parser.add_argument("--reset", action="store_true", help="Delete and recreate the target collection first.")
+    parser.add_argument(
+        "--source-catalog",
+        default=os.getenv("SOURCE_CATALOG_FILE"),
+        help="Optional YAML source catalog. Matching records mark chunks as cataloged instead of quarantined.",
+    )
+    parser.add_argument(
+        "--allow-uncataloged",
+        action="store_true",
+        help=(
+            "Allow ingestion without a source catalog. Chunks will be quarantined "
+            "and will not support answers."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -170,6 +251,25 @@ def main() -> int:
     if not files:
         raise SystemExit(f"No markdown files found for languages {languages} in {corpus_dir}")
 
+    source_catalog = load_source_catalog(args.source_catalog)
+    if source_catalog:
+        print(f"Loaded source catalog: {args.source_catalog}")
+        unmatched = unmatched_catalog_files(files, source_catalog, corpus_dir=corpus_dir)
+        if unmatched and not args.allow_uncataloged:
+            preview = ", ".join(path.name for path in unmatched[:5])
+            more = f" and {len(unmatched) - 5} more" if len(unmatched) > 5 else ""
+            raise SystemExit(
+                "Source catalog did not match all selected markdown files; refusing "
+                f"to build a partially quarantined answer index. Unmatched: {preview}{more}. "
+                "Update derived_path entries or pass --allow-uncataloged for a diagnostic index."
+            )
+    elif not args.allow_uncataloged:
+        raise SystemExit(
+            "Refusing to ingest without --source-catalog because uncataloged chunks "
+            "are quarantined and cannot support answers. Pass --allow-uncataloged "
+            "only for explicit diagnostic indexes."
+        )
+
     print(f"Loading embedding model: {args.model}")
     model = SentenceTransformer(args.model)
 
@@ -183,7 +283,15 @@ def main() -> int:
     )
 
     print(f"Found {len(files)} AAOIFI standards to process for languages: {', '.join(languages)}")
-    total_chunks = ingest_files(files, model, collection, build_splitter(), args.model)
+    total_chunks = ingest_files(
+        files,
+        model,
+        collection,
+        build_splitter(),
+        args.model,
+        source_catalog=source_catalog,
+        corpus_dir=corpus_dir,
+    )
 
     print(f"\n{'=' * 60}")
     print("Ingestion complete!")

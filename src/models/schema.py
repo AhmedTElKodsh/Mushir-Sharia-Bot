@@ -3,7 +3,7 @@ Data models for L0 RAG pipeline.
 Minimal schema for proving the RAG loop works end-to-end.
 """
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -22,6 +22,7 @@ class SemanticChunk:
     text: str
     citation: AAOIFICitation
     score: float = 0.0
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

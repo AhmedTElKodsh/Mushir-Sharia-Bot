@@ -18,13 +18,36 @@ def test_citation_validator_adds_confidence_and_quote_offsets():
         score=0.87,
     )
 
-    citation = CitationValidator().validate("Supported by [FAS-01 Â§1].", [chunk])[0]
+    citation = CitationValidator().validate("Supported by [FAS-01 §1].", [chunk])[0]
 
     assert citation.confidence_score == pytest.approx(0.87)
     assert citation.excerpt.startswith("AAOIFI requires")
     assert citation.quote_start is not None
     assert citation.quote_end is not None
     assert citation.quote_end > citation.quote_start
+
+
+@pytest.mark.unit
+def test_citation_validator_accepts_sharia_standard_references():
+    from src.chatbot.citation_validator import CitationValidator
+    from src.models.schema import AAOIFICitation, SemanticChunk
+
+    chunk = SemanticChunk(
+        chunk_id="chunk-ss-08",
+        text="AAOIFI Sharia Standard 8 discusses murabaha evidence and ownership requirements.",
+        citation=AAOIFICitation(
+            standard_id="SS-08",
+            section="2",
+            page=None,
+            source_file="AAOIFI_Sharia_Standard_08_Murabaha.md",
+        ),
+        score=0.9,
+    )
+
+    citations = CitationValidator().validate("Supported by [SS-08 §2].", [chunk])
+
+    assert len(citations) == 1
+    assert citations[0].standard_number == "SS-08"
 
 
 @pytest.mark.service

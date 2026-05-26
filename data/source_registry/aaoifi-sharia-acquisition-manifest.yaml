@@ -1,0 +1,49 @@
+target_family: sharia_standard
+target_standard_count: 60
+updated_at: "2026-05-25"
+official_inventory_notes:
+  - "AAOIFI's complimentary-access standards announcement states 59 Shari'ah standards."
+  - "AAOIFI's later SS-60 Waqf announcement proves the hard-Sharia target is at least 60."
+accessible_sources:
+  - source_id: aaoifi-sharia-compendium-2015-en
+    covers: "SS-01..SS-54"
+    language: en
+    official_url: "https://aaoifi.com/shariaa-standards/?lang=en"
+    local_raw_path: "data/raw/aaoifi_sharia/Shariaa-Standards-ENG.pdf"
+    extraction_script: "scripts/extract_aaoifi_sharia_compendium.py"
+    status: acquired_machine_extracted
+    notes: "Official public English compendium exposed by the AAOIFI Shari'ah standards page."
+  - source_id: aaoifi-ss-60-waqf-en
+    covers: "SS-60"
+    language: en
+    official_url: "https://aaoifi.com/announcement/aaoifi-officially-issues-shariah-standard-no-60-waqf/?lang=en"
+    local_raw_path: "data/raw/aaoifi_sharia/AAOIFI-SS-60-Waqf-English.pdf"
+    extraction_script: "scripts/extract_aaoifi_sharia_compendium.py"
+    status: acquired_machine_extracted
+    notes: "Official AAOIFI Waqf PDF announced as the English translation of Shari'ah Standard No. 60."
+  - source_id: local-existing-bilingual-ss-subset
+    covers: "SS-02, SS-04, SS-09, SS-11, SS-15"
+    language: ar,en
+    official_url: "https://aaoifi.com/shariaa-standards/?lang=en"
+    local_raw_path: "gemini-gem-prototype/knowledge-base"
+    status: acquired_machine_checked
+    notes: "Existing local bilingual markdown corpus present before the 2026-05-25 compendium extraction."
+blocked_sources:
+  - standard_number: SS-55
+    status: missing_full_official_or_licensed_text
+    required_next_action: "Acquire full official/licensed AAOIFI source text before answer admission."
+  - standard_number: SS-56
+    status: missing_full_official_or_licensed_text
+    required_next_action: "Acquire full official/licensed AAOIFI source text before answer admission."
+  - standard_number: SS-57
+    status: missing_full_official_or_licensed_text
+    required_next_action: "Acquire full official/licensed AAOIFI source text before answer admission."
+  - standard_number: SS-58
+    status: missing_full_official_or_licensed_text
+    required_next_action: "Acquire full official/licensed AAOIFI source text before answer admission."
+  - standard_number: SS-59
+    status: missing_full_official_or_licensed_text
+    required_next_action: "Acquire full official/licensed AAOIFI source text before answer admission."
+release_policy:
+  hard_sharia_ready: false
+  reason: "SS-55 through SS-59 are missing, Arabic parity is incomplete for most standards, and retrieval/scholar-review gates are not complete."

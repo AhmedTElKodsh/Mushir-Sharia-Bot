@@ -2,11 +2,17 @@ from datetime import date
 import csv
 import zipfile
 
+import pytest
+
+pytestmark = pytest.mark.service
+
 from src.governance import (
     AccessControlDecision,
     AccessControlSignal,
     AaoifiMappingGenerator,
     ArtifactFetchRequest,
+    ArtifactClassifier,
+    ArtifactClass,
     CorpusPilotGate,
     CorpusPilotPlan,
     DiscoveryBudget,
@@ -22,8 +28,10 @@ from src.governance import (
     InstitutionSector,
     LocalArtifactStore,
     OfficialSiteDiscoveryRunner,
+    OperationFamily,
     OperationEvidenceField,
     OperationExtractor,
+    PromotionStage,
     PublicArtifactAuthorityRank,
     PublicArtifactRecord,
     PublicArtifactFetcher,
@@ -33,6 +41,7 @@ from src.governance import (
     ScholarReviewListCsvStore,
     ScholarReviewRecord,
     WorkbookRegistryLoader,
+    normalize_evidence_text,
 )
 
 
@@ -216,6 +225,165 @@ def test_operation_extractor_and_mapping_generator_prepare_scholar_review():
     assert mapping.risk_label.value == "high"
 
 
+def test_lightweight_evidence_normalization_preserves_arabic_and_english_signal():
+    raw = " مُرَابَحَة ١٢٣ ــ AL-Murabaha TERMS "
+
+    normalized = normalize_evidence_text(raw)
+
+    assert normalized.raw_text == raw
+    assert normalized.normalized_text == "مرابحة 123 al-murabaha terms"
+    assert normalized.detected_language == "mixed"
+
+
+def test_artifact_classifier_identifies_product_reports_blocked_and_unknown():
+    classifier = ArtifactClassifier()
+
+    assert classifier.classify(
+        text="Retail murabaha product finance terms and conditions",
+        artifact_type=PublicArtifactType.PRODUCT_PAGE,
+        extraction_status=ExtractionStatus.EXTRACTED,
+        url="https://bank.example/murabaha",
+    ) == ArtifactClass.PRODUCT_PAGE
+    assert classifier.classify(
+        text="Annual report audited financial statements",
+        artifact_type=PublicArtifactType.ANNUAL_REPORT,
+        extraction_status=ExtractionStatus.EXTRACTED,
+        url="https://bank.example/reports/annual-report.pdf",
+    ) == ArtifactClass.ANNUAL_REPORT
+    assert classifier.classify(
+        text="Site presents an anti-bot challenge",
+        artifact_type=PublicArtifactType.OTHER,
+        extraction_status=ExtractionStatus.BLOCKED_BY_SECURITY,
+        url="https://bank.example/contracts",
+    ) == ArtifactClass.BLOCKED_OR_UNUSABLE
+    assert classifier.classify(
+        text="Welcome to our website",
+        artifact_type=PublicArtifactType.OTHER,
+        extraction_status=ExtractionStatus.EXTRACTED,
+        url="https://bank.example/",
+    ) == ArtifactClass.UNKNOWN
+    assert classifier.classify(
+        text="Please log in to continue to this secure page",
+        artifact_type=PublicArtifactType.PRODUCT_PAGE,
+        extraction_status=ExtractionStatus.EXTRACTED,
+        url="https://bank.example/login",
+    ) == ArtifactClass.BLOCKED_OR_UNUSABLE
+    assert classifier.classify(
+        text="This content is behind a paywall and requires subscription",
+        artifact_type=PublicArtifactType.TERMS,
+        extraction_status=ExtractionStatus.PARTIAL,
+        url="https://bank.example/terms",
+    ) == ArtifactClass.BLOCKED_OR_UNUSABLE
+
+
+def test_operation_extractor_uses_ontology_fields_and_preserves_review_evidence():
+    artifact = _artifact("art-ontology", "cbe-bank-faisal-islamic-bank-of-egypt")
+    text = (
+        "تمويل مرابحة للسيارات. The bank purchases the asset before sale. "
+        "Late payment amounts go to charity."
+    )
+
+    operation = OperationExtractor().extract(
+        institution_id=artifact.institution_id,
+        artifact=artifact,
+        text=text,
+        operation_name="Car finance",
+    )
+
+    assert operation.raw_text == text
+    assert "مرابحة" in operation.normalized_text
+    assert operation.detected_language == "mixed"
+    assert operation.artifact_class == ArtifactClass.PRODUCT_PAGE
+    assert operation.operation_family == OperationFamily.MURABAHA
+    assert operation.normalized_operation == "murabaha"
+    assert operation.confidence > 0
+    assert "murabaha" in operation.matched_aliases
+    assert operation.evidence_snippet
+    assert operation.needs_review_reason == "machine_proposed_requires_scholar_review"
+    assert operation.runtime_eligible is False
+    assert operation.promotion_stage.value == "mapped_machine_proposed"
+
+
+def test_operation_extractor_routes_false_positive_to_unknown_review():
+    artifact = _artifact("art-news", "cbe-bank-faisal-islamic-bank-of-egypt")
+
+    operation = OperationExtractor().extract(
+        institution_id=artifact.institution_id,
+        artifact=artifact,
+        text="The finance department published investment news and careers updates.",
+    )
+
+    assert operation.operation_family == OperationFamily.UNKNOWN
+    assert operation.confidence == 0.0
+    assert operation.matched_aliases == []
+    assert operation.needs_review_reason == "no_governed_operation_family_detected"
+
+
+def test_operation_extractor_does_not_map_please_to_ijarah_lease():
+    artifact = _artifact("art-please", "cbe-bank-faisal-islamic-bank-of-egypt")
+
+    operation = OperationExtractor().extract(
+        institution_id=artifact.institution_id,
+        artifact=artifact,
+        text="Please contact customer service for product information and office hours.",
+    )
+
+    assert operation.operation_family == OperationFamily.UNKNOWN
+    assert "lease" not in operation.matched_aliases
+
+
+def test_public_artifact_fetcher_fails_closed_on_cross_domain_redirect(tmp_path):
+    request = ArtifactFetchRequest(
+        institution_id="cbe-bank-faisal-islamic-bank-of-egypt",
+        url="https://bank.example/murabaha",
+        authority_rank=PublicArtifactAuthorityRank.OFFICIAL_INSTITUTION,
+        artifact_type=PublicArtifactType.PRODUCT_PAGE,
+        language="en",
+    )
+    fetcher = PublicArtifactFetcher(
+        lambda url: FetchResponse(
+            status_code=200,
+            content_type="text/html",
+            body=b"<html>Murabaha deferred payment product</html>",
+            final_url="https://login.vendor.example/murabaha",
+        ),
+        LocalArtifactStore(tmp_path),
+    )
+
+    artifact = fetcher.fetch(
+        request,
+        AccessControlDecision.evaluate(url=request.url, checked_at=date(2026, 5, 24)),
+        retrieved_at=date(2026, 5, 24),
+    )
+
+    assert artifact.url == request.url
+    assert artifact.extraction_status == ExtractionStatus.BLOCKED_BY_SECURITY
+    assert artifact.artifact_class == ArtifactClass.BLOCKED_OR_UNUSABLE
+    assert "cross-domain redirect" in artifact.notes
+    assert artifact.raw_path is None
+
+
+def test_registry_excludes_blocked_artifacts_from_evidence_priority():
+    record = InstitutionRegistryRecord.baseline(
+        name_en="Faisal Islamic Bank of Egypt",
+        regulator=InstitutionRegulator.CBE,
+        sector=InstitutionSector.BANK,
+        registry_source="CBE bank register",
+        registry_source_url="https://www.cbe.org.eg/en/banking-supervision",
+    )
+    blocked = _artifact("art-blocked", record.institution_id)
+    blocked = PublicArtifactRecord.from_mapping(
+        {
+            **blocked.to_dict(),
+            "artifact_class": ArtifactClass.BLOCKED_OR_UNUSABLE.value,
+        }
+    )
+    registry = InstitutionRegistry([record])
+    registry.add_artifact(blocked)
+
+    assert registry.evidence_artifacts_for(record.institution_id) == []
+
+
 def test_scholar_review_csv_import_and_gold_case_generation(tmp_path):
     record = InstitutionRegistryRecord.baseline(
         name_en="Faisal Islamic Bank of Egypt",
@@ -224,7 +392,13 @@ def test_scholar_review_csv_import_and_gold_case_generation(tmp_path):
         registry_source="CBE bank register",
         registry_source_url="https://www.cbe.org.eg/en/banking-supervision",
     )
-    artifact = _artifact("art-1", record.institution_id)
+    artifact = PublicArtifactRecord.from_mapping(
+        {
+            **_artifact("art-1", record.institution_id).to_dict(),
+            "artifact_type": PublicArtifactType.CONTRACT.value,
+            "artifact_class": ArtifactClass.TERMS_OR_CONTRACT.value,
+        }
+    )
     operation = OperationExtractor().extract(
         institution_id=record.institution_id,
         artifact=artifact,
@@ -277,6 +451,54 @@ def test_scholar_review_csv_import_and_gold_case_generation(tmp_path):
     assert reviews[0].accepted_gold_case is True
     assert gold_cases[0]["operation_name"] == operation.operation_name
     assert gold_cases[0]["aaoifi_references"] == ["FAS-28", "SS-08"]
+
+
+def test_operation_runtime_promotion_requires_accepted_scholar_gold_case():
+    record = InstitutionRegistryRecord.baseline(
+        name_en="Faisal Islamic Bank of Egypt",
+        regulator=InstitutionRegulator.CBE,
+        sector=InstitutionSector.BANK,
+        registry_source="CBE bank register",
+        registry_source_url="https://www.cbe.org.eg/en/banking-supervision",
+    )
+    artifact = PublicArtifactRecord.from_mapping(
+        {
+            **_artifact("art-1", record.institution_id).to_dict(),
+            "artifact_type": PublicArtifactType.CONTRACT.value,
+            "artifact_class": ArtifactClass.TERMS_OR_CONTRACT.value,
+        }
+    )
+    operation = OperationExtractor().extract(
+        institution_id=record.institution_id,
+        artifact=artifact,
+        text="Murabaha terms include bank purchases and ownership transfer.",
+    )
+    mapping = AaoifiMappingGenerator().generate(operation)
+    registry = InstitutionRegistry([record])
+    registry.add_artifact(artifact)
+    registry.add_operation(operation)
+    registry.add_machine_mapping(mapping)
+
+    with pytest.raises(ValueError, match="scholar_accepted"):
+        registry.promote_operation_to_runtime(mapping.mapping_id)
+
+    registry.add_scholar_review(
+        ScholarReviewRecord(
+            review_id="review-accepted-1",
+            mapping_id=mapping.mapping_id,
+            reviewer="scholar-1",
+            decision=ReviewCandidateStatus.SCHOLAR_ACCEPTED,
+            aaoifi_references=["FAS-28", "SS-08"],
+            rationale="Accepted from reviewed public evidence.",
+            accepted_gold_case=True,
+        )
+    )
+
+    promoted = registry.promote_operation_to_runtime(mapping.mapping_id)
+
+    assert promoted.runtime_eligible is True
+    assert promoted.promotion_stage == PromotionStage.RUNTIME_ELIGIBLE
+    assert registry.operation(operation.operation_id).runtime_eligible is True
 
 
 def test_engine_assessment_export_keeps_human_scholar_review_blank(tmp_path):
@@ -452,7 +674,7 @@ def _artifact(artifact_id, institution_id):
         institution_id=institution_id,
         url=f"https://example.com/{artifact_id}",
         authority_rank=PublicArtifactAuthorityRank.OFFICIAL_INSTITUTION,
-        artifact_type=PublicArtifactType.TERMS,
+        artifact_type=PublicArtifactType.PRODUCT_PAGE,
         language="en",
         retrieved_at=date(2026, 5, 20),
         http_status=200,

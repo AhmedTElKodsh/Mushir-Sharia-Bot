@@ -32,6 +32,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.governance import (
     AccessControlDecision,
     AaoifiMappingGenerator,
+    ArtifactClass,
     ArtifactFetchRequest,
     CorpusPilotGate,
     CorpusPilotPlan,
@@ -60,11 +61,36 @@ from src.governance import (
 
 
 DEFAULT_WORKBOOK = (
-    ".kiro/specs/sharia-compliance-chatbot/"
+    ".planning/sharia-compliance-chatbot/docs/"
     "Egypt_Financial_Institutions_COMPLETE.xlsx"
 )
 DEFAULT_ARTIFACT_ROOT = "artifacts/l6_scrape"
 MIN_EVIDENCE_TEXT_LENGTH = 500
+SCRAPE_REVIEW_FIELDS = [
+    "mushir_engine_sharia_aaoifi_review",
+    "aaoifi_standard_reference_file_and_title",
+    "human_scholar_supervision_review",
+]
+SCRAPE_ENRICHMENT_FIELDS = [
+    "artifact_ids",
+    "artifact_class",
+    "detected_language",
+    "normalized_operation",
+    "operation_family",
+    "confidence",
+    "evidence_snippet",
+    "matched_aliases",
+    "source_url",
+    "artifact_path",
+    "extractor_version",
+    "promotion_stage",
+    "runtime_eligible",
+    "needs_review_reason",
+]
+AAOIFI_STANDARD_TITLES = {
+    "FAS-28": "Murabaha and Other Deferred Payment Sales",
+    "SS-08": "Murabaha",
+}
 CBE_REGISTERED_BANKS_PDF_URL = (
     "https://www.cbe.org.eg/-/media/project/cbe/page-content/rich-text/"
     "financial-stability/english/headoffices-eng(2)-(2).pdf"
@@ -102,6 +128,7 @@ def main() -> int:
             "full-scrape",
             "legacy-sector-scrape",
             "official-registry-completion",
+            "mixed-mini-pilot",
         ],
         default="fixture-pilot",
     )
@@ -149,6 +176,28 @@ def main() -> int:
 
     run_date = date.fromisoformat(args.today)
     artifact_root = Path(args.artifact_root)
+    if args.mode == "mixed-mini-pilot":
+        workbook_path = Path(args.workbook)
+        old_scraping_dir = Path(args.old_scraping_dir)
+        missing_inputs = _missing_mixed_pilot_inputs(
+            workbook_path=workbook_path,
+            old_scraping_dir=old_scraping_dir,
+        )
+        if missing_inputs:
+            print("Mixed mini-pilot NO-GO: required local inputs are missing.", file=sys.stderr)
+            for item in missing_inputs:
+                print(f"- {item}", file=sys.stderr)
+            return 2
+        baseline_registry = WorkbookRegistryLoader().load_xlsx(workbook_path)
+        return run_mixed_mini_pilot(
+            baseline_registry=baseline_registry,
+            old_scraping_dir=old_scraping_dir,
+            artifact_root=artifact_root,
+            run_date=run_date,
+            timeout_seconds=args.timeout_seconds,
+            delay_seconds=args.delay_seconds,
+            max_pages_per_target=args.max_pages_per_target,
+        )
     if args.mode == "legacy-sector-scrape":
         return run_legacy_sector_scrape(
             old_scraping_dir=Path(args.old_scraping_dir),
@@ -326,6 +375,8 @@ def run_full_scrape_gate(
         blocked_reasons.append(
             "no official institution website URLs or discoverable bank website candidates to crawl"
         )
+    if not review_status["has_real_accepted_review"]:
+        blocked_reasons.append("no real accepted scholar-review import supplied")
     manifest = {
         "mode": "full_scrape_gate",
         "run_date": run_date.isoformat(),
@@ -334,7 +385,7 @@ def run_full_scrape_gate(
         "bank_discovery_target_count": len(bank_discovery_targets),
         "review_file": str(review_file).replace("\\", "/") if review_file else "",
         "review_status": review_status,
-        "human_scholar_review_required_before_scrape": False,
+        "human_scholar_review_required_before_scrape": True,
         "allowed_to_scrape": not blocked_reasons,
         "blocked_reasons": blocked_reasons,
     }
@@ -523,9 +574,11 @@ def run_live_bank_scrape(
             "status",
             "pages_fetched",
             "operations_extracted",
+            *SCRAPE_REVIEW_FIELDS,
+            *SCRAPE_ENRICHMENT_FIELDS,
             "notes",
         ],
-        rows,
+        _with_scrape_review_columns(rows, registry),
     )
     review_dir = (
         artifact_root / "review" / f"full-scrape-rerun-{run_date.isoformat()}-{run_label}"
@@ -539,6 +592,8 @@ def run_live_bank_scrape(
     assessment_rows_path = output_dir / "engine_assessment_rows.csv"
     EngineAssessmentCsvStore.export_assessments(assessment_rows_path, registry)
     scholar_review_paths = ScholarReviewListCsvStore.export_lists(output_dir, registry)
+    chunk_ready_path = _write_chunk_ready_spans(output_dir / "chunk_ready_spans.jsonl", registry)
+    guidance_path = _write_scholar_review_guidance(output_dir)
     manifest = {
         "mode": "full_scrape_bank_slice_rerun" if rerun_statuses else "full_scrape_bank_slice",
         "run_date": run_date.isoformat(),
@@ -553,9 +608,11 @@ def run_live_bank_scrape(
         "operations_extracted": sum(int(row.get("operations_extracted") or 0) for row in rows),
         "machine_mapping_count": len(registry.machine_mappings()),
         "engine_assessment_rows": str(assessment_rows_path).replace("\\", "/"),
+        "chunk_ready_spans": str(chunk_ready_path).replace("\\", "/"),
         "scholar_review_list_bilingual": str(scholar_review_paths["bilingual"]).replace("\\", "/"),
         "scholar_review_list_en": str(scholar_review_paths["english"]).replace("\\", "/"),
         "scholar_review_list_ar": str(scholar_review_paths["arabic"]).replace("\\", "/"),
+        "scholar_review_guidance": str(guidance_path).replace("\\", "/"),
         "scholar_review_item_count": len(EngineAssessmentCsvStore.rows(registry)),
         "review_candidates": str(review_dir / "machine_mapping_candidates.csv").replace("\\", "/"),
         "scope_boundary": (
@@ -1344,9 +1401,11 @@ def run_legacy_sector_scrape(
             "status",
             "pages_fetched",
             "operations_extracted",
+            *SCRAPE_REVIEW_FIELDS,
+            *SCRAPE_ENRICHMENT_FIELDS,
             "notes",
         ],
-        rows,
+        _with_scrape_review_columns(rows, registry),
     )
     review_dir = artifact_root / "review" / f"legacy-sector-scrape-{run_date.isoformat()}"
     if requested_sectors:
@@ -1360,6 +1419,8 @@ def run_legacy_sector_scrape(
     assessment_rows_path = output_dir / "engine_assessment_rows.csv"
     EngineAssessmentCsvStore.export_assessments(assessment_rows_path, registry)
     scholar_review_paths = ScholarReviewListCsvStore.export_lists(output_dir, registry)
+    chunk_ready_path = _write_chunk_ready_spans(output_dir / "chunk_ready_spans.jsonl", registry)
+    guidance_path = _write_scholar_review_guidance(output_dir)
     status_counts: dict[str, int] = {}
     for row in rows:
         status = str(row["status"])
@@ -1397,9 +1458,11 @@ def run_legacy_sector_scrape(
         "operations_extracted": sum(int(row.get("operations_extracted") or 0) for row in rows),
         "machine_mapping_count": len(registry.machine_mappings()),
         "engine_assessment_rows": str(assessment_rows_path).replace("\\", "/"),
+        "chunk_ready_spans": str(chunk_ready_path).replace("\\", "/"),
         "scholar_review_list_bilingual": str(scholar_review_paths["bilingual"]).replace("\\", "/"),
         "scholar_review_list_en": str(scholar_review_paths["english"]).replace("\\", "/"),
         "scholar_review_list_ar": str(scholar_review_paths["arabic"]).replace("\\", "/"),
+        "scholar_review_guidance": str(guidance_path).replace("\\", "/"),
         "review_candidates": str(review_dir / "machine_mapping_candidates.csv").replace("\\", "/"),
         "scope_boundary": (
             "Old workbook rows are included in the status ledger. Crawling only "
@@ -1420,6 +1483,169 @@ def run_legacy_sector_scrape(
     print(f"Scholar review bilingual list: {scholar_review_paths['bilingual']}")
     print(f"Manifest: {manifest_path}")
     return 0
+
+
+def run_mixed_mini_pilot(
+    *,
+    baseline_registry: InstitutionRegistry,
+    old_scraping_dir: Path,
+    artifact_root: Path,
+    run_date: date,
+    timeout_seconds: float,
+    delay_seconds: float,
+    max_pages_per_target: int,
+) -> int:
+    """Run a bounded mixed pilot without wiring institution facts into runtime answers."""
+    official_records = _first_distinct_records(baseline_registry.records(), limit=3)
+    legacy_records = _first_distinct_records(
+        _load_legacy_old_scraping_registry(old_scraping_dir).records(),
+        limit=3,
+        exclude_ids={record.institution_id for record in official_records},
+    )
+    selected: List[InstitutionRegistryRecord] = []
+    seen: set[str] = set()
+    for record in [*official_records, *legacy_records]:
+        if record.institution_id in seen:
+            continue
+        selected.append(_reset_for_pilot(record))
+        seen.add(record.institution_id)
+
+    hard_case = next(
+        (
+            _reset_for_pilot(record)
+            for record in baseline_registry.records()
+            if record.institution_id not in seen
+        ),
+        None,
+    )
+    if hard_case:
+        selected.append(hard_case)
+        seen.add(hard_case.institution_id)
+
+    registry = InstitutionRegistry(selected)
+    runner = OfficialSiteDiscoveryRunner()
+    fetcher = PublicArtifactFetcher(
+        lambda url: _fixture_fetch(url) if _is_mixed_mini_fixture_url(url) else _urlopen_fetch(url, timeout_seconds),
+        LocalArtifactStore(artifact_root),
+    )
+    extractor = OperationExtractor()
+    mapper = AaoifiMappingGenerator()
+    rows: List[dict[str, object]] = []
+    scrape_targets = selected[:-1] if hard_case else selected
+    for index, record in enumerate(scrape_targets, start=1):
+        if index > 1:
+            time.sleep(max(delay_seconds, 0.0))
+        official_website = f"https://mixed-mini.example/{record.institution_id}/murabaha"
+        discovery = runner.run(
+            registry.get(record.institution_id),
+            [
+                DiscoveryEvidenceCandidate(
+                    url=official_website,
+                    evidence_type=DiscoveryEvidenceType.MANUAL_REVIEW,
+                    confidence=0.86,
+                    status=InstitutionDiscoveryStatus.OFFICIAL_SITE_CONFIRMED,
+                    notes="Mixed mini-pilot fixture official-site candidate.",
+                )
+            ],
+            checked_at=run_date,
+        )
+        registry = _copy_runtime_state(
+            source=registry,
+            target=registry.with_discovery_result(discovery),
+        )
+        updated = registry.get(record.institution_id)
+        scrape = _scrape_official_site_pages(
+            record=updated,
+            official_website=official_website,
+            registry=registry,
+            fetcher=fetcher,
+            extractor=extractor,
+            mapper=mapper,
+            artifact_root=artifact_root,
+            run_date=run_date,
+            timeout_seconds=timeout_seconds,
+            delay_seconds=delay_seconds,
+            max_pages_per_target=max_pages_per_target,
+            robots_checker=_mixed_mini_robots_check,
+        )
+        registry = scrape["registry"]
+        rows.append(
+            _legacy_scrape_result_row(
+                updated,
+                official_website,
+                str(scrape["status"]),
+                str(scrape["notes"]),
+                pages_fetched=int(scrape["pages_fetched"]),
+                operations_extracted=int(scrape["operations_extracted"]),
+            )
+        )
+
+    if hard_case:
+        gap = runner.run(registry.get(hard_case.institution_id), [], checked_at=run_date)
+        registry = _copy_runtime_state(source=registry, target=registry.with_discovery_result(gap))
+        updated = registry.get(hard_case.institution_id)
+        rows.append(
+            _legacy_scrape_result_row(
+                updated,
+                "",
+                updated.discovery_status.value,
+                updated.gap_reason,
+            )
+        )
+
+    output_dir = artifact_root / "mixed_mini_pilot" / run_date.isoformat()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    results_path = output_dir / "mixed_mini_pilot_results.csv"
+    _write_rows(
+        results_path,
+        [
+            "institution_id",
+            "name_en",
+            "name_ar",
+            "regulator",
+            "sector",
+            "registry_source",
+            "official_website",
+            "status",
+            "pages_fetched",
+            "operations_extracted",
+            *SCRAPE_REVIEW_FIELDS,
+            *SCRAPE_ENRICHMENT_FIELDS,
+            "notes",
+        ],
+        _with_scrape_review_columns(rows, registry),
+    )
+    review_dir = artifact_root / "review" / f"mixed-mini-pilot-{run_date.isoformat()}"
+    ScholarReviewCsvStore.export_candidates(
+        review_dir / "machine_mapping_candidates.csv",
+        registry.machine_mappings(),
+    )
+    assessment_rows_path = output_dir / "engine_assessment_rows.csv"
+    EngineAssessmentCsvStore.export_assessments(assessment_rows_path, registry)
+    scholar_review_paths = ScholarReviewListCsvStore.export_lists(output_dir, registry)
+    chunk_ready_path = _write_chunk_ready_spans(output_dir / "chunk_ready_spans.jsonl", registry)
+    guidance_path = _write_scholar_review_guidance(output_dir)
+    manifest = {
+        "mode": "mixed_mini_pilot",
+        "run_date": run_date.isoformat(),
+        "official_registry_count": len(official_records),
+        "legacy_sector_count": len(legacy_records),
+        "hard_case_count": 1 if hard_case else 0,
+        "candidate_count": len(selected),
+        "scraped_count": sum(1 for row in rows if row["status"] in {"extracted", "partial_extracted"}),
+        "gap_count": sum(1 for row in rows if row["status"] == InstitutionDiscoveryStatus.OFFICIAL_SITE_NOT_FOUND.value),
+        "operations_extracted": sum(int(row.get("operations_extracted") or 0) for row in rows),
+        "engine_assessment_rows": str(assessment_rows_path).replace("\\", "/"),
+        "chunk_ready_spans": str(chunk_ready_path).replace("\\", "/"),
+        "scholar_review_list_bilingual": str(scholar_review_paths["bilingual"]).replace("\\", "/"),
+        "scholar_review_guidance": str(guidance_path).replace("\\", "/"),
+        "runtime_wiring": "not_enabled",
+    }
+    (output_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    return 0 if manifest["operations_extracted"] else 1
 
 
 def run_fixture_pilot(
@@ -1516,6 +1742,10 @@ def write_manifest(
     workbook_path: Path,
     run_date: date,
 ) -> Path:
+    span_path = _write_chunk_ready_spans(
+        artifact_root / "metadata" / pilot_id / "chunk_ready_spans.jsonl",
+        pilot_registry,
+    )
     manifest = {
         "pilot_id": pilot_id,
         "run_date": run_date.isoformat(),
@@ -1533,6 +1763,7 @@ def write_manifest(
             for record in pilot_registry.records()
         ),
         "machine_mapping_count": len(pilot_registry.machine_mappings()),
+        "chunk_ready_spans": str(span_path).replace("\\", "/"),
         "accepted_fixture_gold_case_count": len(pilot_registry.accepted_gold_reviews()),
         "safety_boundary": (
             "No live crawl was performed. Full scraping remains blocked until "
@@ -1617,12 +1848,25 @@ def _fixture_fetch(url: str) -> FetchResponse:
     body = (
         "<html><body>"
         f"<h1>{name} Murabaha Terms</h1>"
-        "Murabaha deferred payment product. The bank purchases the asset, "
-        "transfers ownership, charges fees, and late payment amounts go to charity. "
-        "This fixture is for pipeline validation only."
-        "</body></html>"
+        + (
+            "Murabaha deferred payment product. The bank purchases the asset, "
+            "transfers ownership, charges fees, and late payment amounts go to charity. "
+        )
+        * 8
+        + "This fixture is for pipeline validation only."
+        + "</body></html>"
     ).encode("utf-8")
     return FetchResponse(status_code=200, content_type="text/html", body=body, final_url=url)
+
+
+def _is_mixed_mini_fixture_url(url: str) -> bool:
+    return urllib.parse.urlparse(url).netloc.lower() == "mixed-mini.example"
+
+
+def _mixed_mini_robots_check(url: str, timeout_seconds: float) -> dict[str, object]:
+    if _is_mixed_mini_fixture_url(url):
+        return {"allowed": True, "reason": "mixed mini-pilot fixture URL; no live robots fetch"}
+    return _check_robots(url, timeout_seconds)
 
 
 def _urlopen_fetch(url: str, timeout_seconds: float) -> FetchResponse:
@@ -1965,6 +2209,46 @@ def _load_legacy_old_scraping_registry(old_scraping_dir: Path) -> InstitutionReg
     return InstitutionRegistry(records)
 
 
+def _missing_mixed_pilot_inputs(*, workbook_path: Path, old_scraping_dir: Path) -> List[str]:
+    missing: List[str] = []
+    if not workbook_path.exists():
+        missing.append(f"workbook not found: {workbook_path}")
+    if not old_scraping_dir.exists():
+        missing.append(f"old scraping directory not found: {old_scraping_dir}")
+        return missing
+    expected_workbooks = [
+        "Banks_old.xlsx",
+        "Capital_Market_old.xlsx",
+        "Insurance_old.xlsx",
+        "Non_Categorized_old.xlsx",
+    ]
+    if not any((old_scraping_dir / name).exists() for name in expected_workbooks):
+        missing.append(
+            "old scraping directory contains none of: "
+            + ", ".join(expected_workbooks)
+            + f" ({old_scraping_dir})"
+        )
+    return missing
+
+
+def _first_distinct_records(
+    records: Iterable[InstitutionRegistryRecord],
+    *,
+    limit: int,
+    exclude_ids: set[str] | None = None,
+) -> List[InstitutionRegistryRecord]:
+    selected: List[InstitutionRegistryRecord] = []
+    seen = set(exclude_ids or set())
+    for record in records:
+        if record.institution_id in seen:
+            continue
+        selected.append(record)
+        seen.add(record.institution_id)
+        if len(selected) >= limit:
+            break
+    return selected
+
+
 def _legacy_sector_filter(sectors: List[str] | None) -> set[InstitutionSector] | None:
     if not sectors:
         return None
@@ -2084,7 +2368,9 @@ def _scrape_official_site_pages(
     timeout_seconds: float,
     delay_seconds: float,
     max_pages_per_target: int,
+    robots_checker=None,
 ) -> dict[str, object]:
+    check_robots = robots_checker or _check_robots
     page_urls = [official_website]
     fetched_pages = 0
     extracted_operations = 0
@@ -2096,7 +2382,7 @@ def _scrape_official_site_pages(
             page_index += 1
             if fetched_pages > 0:
                 time.sleep(max(delay_seconds, 0.0))
-            page_robots = _check_robots(page_url, timeout_seconds)
+            page_robots = check_robots(page_url, timeout_seconds)
             if not page_robots["allowed"]:
                 notes.append(f"{page_url}: {page_robots['reason']}")
                 continue
@@ -2126,6 +2412,9 @@ def _scrape_official_site_pages(
                 ):
                     if discovered_url not in page_urls:
                         page_urls.append(discovered_url)
+            if artifact.artifact_class == ArtifactClass.BLOCKED_OR_UNUSABLE:
+                notes.append(f"{page_url}: blocked or unusable artifact skipped")
+                continue
             if artifact.extraction_status == ExtractionStatus.EXTRACTED and artifact.text_path:
                 text = (artifact_root / artifact.text_path).read_text(encoding="utf-8")
                 if _has_useful_evidence_text(text):
@@ -2180,6 +2469,150 @@ def _legacy_scrape_result_row(
         "operations_extracted": operations_extracted,
         "notes": notes,
     }
+
+
+def _with_scrape_review_columns(
+    rows: Iterable[Mapping[str, object]],
+    registry: InstitutionRegistry,
+) -> List[dict[str, object]]:
+    mappings_by_operation = {
+        mapping.operation_id: mapping for mapping in registry.machine_mappings()
+    }
+    assessments_by_operation = {
+        str(row["operation_id"]): row for row in EngineAssessmentCsvStore.rows(registry)
+    }
+    enriched: List[dict[str, object]] = []
+    for row in rows:
+        payload = dict(row)
+        institution_id = str(payload["institution_id"])
+        operations = registry.operations_for(institution_id)
+        review_parts: List[str] = []
+        reference_labels: List[str] = []
+        for operation in operations:
+            mapping = mappings_by_operation.get(operation.operation_id)
+            if not mapping:
+                review_parts.append(
+                    f"{operation.operation_name}: operation extracted without Mushir mapping."
+                )
+                continue
+            review_parts.append(
+                f"{operation.operation_name}: {mapping.status.value} - {mapping.rationale}"
+            )
+            reference_labels.extend(
+                _standard_reference_label(standard)
+                for standard in mapping.candidate_standards
+            )
+        first_operation = operations[0] if operations else None
+        assessment = (
+            assessments_by_operation.get(first_operation.operation_id)
+            if first_operation
+            else {}
+        )
+        for field in SCRAPE_ENRICHMENT_FIELDS:
+            payload[field] = assessment.get(field, "")
+        if not first_operation:
+            payload["runtime_eligible"] = "false"
+        payload["mushir_engine_sharia_aaoifi_review"] = (
+            " || ".join(review_parts)
+            if review_parts
+            else "No operation extracted for Mushir review."
+        )
+        payload["aaoifi_standard_reference_file_and_title"] = " | ".join(
+            dict.fromkeys(reference_labels)
+        )
+        payload["human_scholar_supervision_review"] = ""
+        enriched.append(payload)
+    return enriched
+
+
+def _write_chunk_ready_spans(path: Path, registry: InstitutionRegistry) -> Path:
+    mappings_by_operation = {
+        mapping.operation_id: mapping for mapping in registry.machine_mappings()
+    }
+    lines: List[str] = []
+    for record in registry.records():
+        artifacts = {
+            artifact.artifact_id: artifact
+            for artifact in registry.artifacts_for(record.institution_id)
+        }
+        for operation in registry.operations_for(record.institution_id):
+            mapping = mappings_by_operation.get(operation.operation_id)
+            for artifact_id in operation.artifact_ids:
+                artifact = artifacts.get(artifact_id)
+                lines.append(
+                    json.dumps(
+                        {
+                            "span_id": _chunk_span_id(operation.operation_id, artifact_id),
+                            "institution_id": record.institution_id,
+                            "institution_name": record.name_en,
+                            "regulator": record.regulator.value,
+                            "sector": record.sector.value,
+                            "artifact_id": artifact_id,
+                            "artifact_url": artifact.url if artifact else "",
+                            "artifact_class": operation.artifact_class.value,
+                            "artifact_path": artifact.text_path if artifact else "",
+                            "operation_id": operation.operation_id,
+                            "operation_name": operation.operation_name,
+                            "operation_family": operation.operation_family.value,
+                            "normalized_operation": operation.normalized_operation,
+                            "detected_language": operation.detected_language,
+                            "evidence_snippet": operation.evidence_snippet,
+                            "matched_aliases": operation.matched_aliases,
+                            "confidence": operation.confidence,
+                            "mapping_id": mapping.mapping_id if mapping else "",
+                            "mapping_status": mapping.status.value if mapping else "",
+                            "candidate_standards": mapping.candidate_standards if mapping else [],
+                            "promotion_stage": operation.promotion_stage.value,
+                            "runtime_eligible": operation.runtime_eligible,
+                            "needs_review_reason": operation.needs_review_reason,
+                            "extractor_version": operation.extractor_version,
+                        },
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    )
+                )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    return path
+
+
+def _chunk_span_id(operation_id: str, artifact_id: str) -> str:
+    digest = hashlib.sha256(f"{operation_id}|{artifact_id}".encode("utf-8")).hexdigest()[:12]
+    return f"span-{digest}"
+
+
+def _standard_reference_label(standard: str) -> str:
+    cleaned = standard.strip()
+    if not cleaned:
+        return ""
+    title = AAOIFI_STANDARD_TITLES.get(cleaned)
+    if title:
+        return f"{cleaned} - {title}"
+    return f"{cleaned} - title requires scholar/catalog confirmation"
+
+
+def _write_scholar_review_guidance(output_dir: Path) -> Path:
+    path = output_dir / "SCHOLAR_REVIEW_GUIDANCE.md"
+    path.write_text(
+        "\n".join(
+            [
+                "# Scholar Review Guidance",
+                "",
+                "Use review_item_number and operation_id to match rows across the bilingual, English, Arabic, and scrape-result CSV files.",
+                "",
+                "For each operation, review the Mushir engine status, rationale, evidence fields, and AAOIFI reference candidates against the cited public artifact before accepting or correcting the result.",
+                "",
+                "Fill human_scholar_supervision_review or human_scholar_review with one of: scholar_accepted, scholar_rejected, needs_more_evidence, or corrected_mapping.",
+                "",
+                "When correcting, include the AAOIFI standard file number and title, the relevant section/page if available, and a short note explaining the correction so the row can become future model/evaluation feedback.",
+                "",
+                "Leave rows as needs_more_evidence when the public source does not show enough contract, operation, or service detail to judge Sharia/AAOIFI alignment.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
 
 
 def _artifact_type_from_url(url: str) -> PublicArtifactType:
@@ -2281,6 +2714,10 @@ def _access_block_reason(body: str) -> str:
         return "access blocked by upstream security page"
     if "captcha" in lowered:
         return "access blocked by captcha"
+    if "login required" in lowered or "log in to continue" in lowered or "please log in" in lowered:
+        return "access blocked by login wall"
+    if "paywall" in lowered or "subscription required" in lowered or "subscribe to access" in lowered:
+        return "access blocked by paywall"
     if "access denied" in lowered:
         return "access denied"
     return ""

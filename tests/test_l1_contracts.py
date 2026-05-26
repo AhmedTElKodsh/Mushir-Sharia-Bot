@@ -2,6 +2,7 @@ import pytest
 
 from src.models.ruling import ComplianceStatus
 from src.models.schema import AAOIFICitation, SemanticChunk
+from src.models.session import SessionState
 
 
 class FakeRetriever:
@@ -12,6 +13,43 @@ class FakeRetriever:
     def retrieve(self, query, k=5, threshold=0.3):
         self.queries.append((query, k, threshold))
         return self.chunks
+
+
+class RecordingRetriever:
+    def __init__(self, chunks):
+        self.chunks = chunks
+        self.calls = []
+
+    def retrieve(self, query, k=5, threshold=0.3, **kwargs):
+        self.calls.append({"query": query, "k": k, "threshold": threshold, **kwargs})
+        return self.chunks
+
+
+class HistoryPromptBuilder:
+    prompt_version = "history-prompt"
+
+    def __init__(self):
+        self.history = None
+
+    def build_messages(self, query, chunks, history=None, response_language="en"):
+        self.history = history
+        return "SYSTEM", f"USER: {query}"
+
+
+class MemorySessionStore:
+    def __init__(self):
+        self.sessions = {}
+
+    def create_session(self, session_id):
+        state = SessionState(session_id=session_id)
+        self.sessions[session_id] = state
+        return state
+
+    def get_session(self, session_id):
+        return self.sessions.get(session_id)
+
+    def update_session(self, state):
+        self.sessions[state.session_id] = state
 
 
 class FakeLLM:
@@ -33,7 +71,7 @@ class FakePromptBuilder:
         return f"PROMPT: {query} :: {len(chunks)} chunks"
 
 
-def _chunk(chunk_id="chunk-1", standard_id="FAS-01", section="1", score=0.91, source_file=None):
+def _chunk(chunk_id="chunk-1", standard_id="FAS-01", section="1", score=0.91, source_file=None, metadata=None):
     return SemanticChunk(
         chunk_id=chunk_id,
         text="AAOIFI permits the transaction when ownership and risk transfer are clear.",
@@ -44,6 +82,7 @@ def _chunk(chunk_id="chunk-1", standard_id="FAS-01", section="1", score=0.91, so
             source_file=source_file or f"{standard_id}.md",
         ),
         score=score,
+        metadata=metadata or {},
     )
 
 
@@ -125,6 +164,34 @@ def test_application_service_fails_closed_for_late_penalty_without_sharia_eviden
 
 
 @pytest.mark.service
+def test_application_service_passes_source_family_filter_and_strict_metadata_gate(monkeypatch):
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    retriever = RecordingRetriever([
+        _chunk(
+            standard_id="SS-08",
+            source_file="AAOIFI_Sharia_Standard_08_Murabaha.md",
+            metadata={},
+        )
+    ])
+    monkeypatch.setenv("REQUIRE_GOVERNED_SOURCE_METADATA", "1")
+    monkeypatch.setenv("RETRIEVAL_MODE", "hybrid")
+
+    result = ApplicationService(
+        retriever=retriever,
+        llm_client=FakeLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    ).answer("Is a murabaha car installment sale with a late payment penalty permissible?")
+
+    assert retriever.calls[0]["filters"] == {"source_family": "sharia_standard"}
+    assert retriever.calls[0]["mode"] == "hybrid"
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.metadata["source_families"] == []
+
+
+@pytest.mark.service
 def test_application_service_fails_closed_for_plain_installment_permissibility_without_sharia_evidence():
     from src.chatbot.application_service import ApplicationService
     from src.chatbot.citation_validator import CitationValidator
@@ -152,7 +219,29 @@ def test_application_service_fails_closed_for_plain_installment_permissibility_w
 
 
 @pytest.mark.service
-def test_application_service_does_not_fail_source_gap_when_sharia_evidence_is_retrieved():
+def test_application_service_source_gap_verdict_survives_empty_sharia_filter_result():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    service = ApplicationService(
+        retriever=FakeRetriever([]),
+        llm_client=FakeLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    )
+
+    result = service.answer(
+        "Is a murabaha car installment sale with a late payment penalty permissible?"
+    )
+
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.metadata["standards_route"]["primary"] == ["sharia_standard"]
+    assert result.metadata["source_families"] == []
+    assert result.metadata["verdict_contract"]["requires_scholar_review"] is True
+
+
+@pytest.mark.service
+def test_application_service_still_requires_rule_review_when_sharia_evidence_is_retrieved():
     from src.chatbot.application_service import ApplicationService
     from src.chatbot.citation_validator import CitationValidator
 
@@ -173,8 +262,197 @@ def test_application_service_does_not_fail_source_gap_when_sharia_evidence_is_re
     result = service.answer("Is this murabaha car installment structure halal?")
 
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
-    assert len(llm.prompts) == 1
+    assert len(llm.prompts) == 0
+    assert result.citations[0].standard_number == "SS-08"
     assert "verdict_contract" not in result.metadata
+    assert result.metadata["rule_evaluation"]["human_review_flags"]
+    assert result.metadata["scholar_review_workflow"]["path"] == "scholar_review_enhancement"
+    assert result.metadata["scholar_review_workflow"]["blocks_main_app"] is False
+    assert result.metadata["scholar_review_workflow"]["runtime_governance_update_allowed"] is False
+
+
+@pytest.mark.service
+def test_application_service_asks_targeted_arabic_penalty_clarification_before_retrieval():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    class FailingRetriever:
+        def retrieve(self, query, k=5, threshold=0.3, **kwargs):
+            raise AssertionError("ambiguous penalty routing should clarify before retrieval")
+
+    result = ApplicationService(
+        retriever=FailingRetriever(),
+        llm_client=FakeLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    ).answer(
+        "\u0647\u0644 \u0634\u0631\u0637 \u063a\u0631\u0627\u0645\u0629 \u0627\u0644\u062a\u0622\u062e\u064a\u0631 \u0641\u064a \u0639\u0642\u0648\u062f \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u0627\u062a \u0634\u0631\u0637 \u0631\u0628\u0648\u064a\u061f"
+    )
+
+    expected = "\u0647\u0644 \u0627\u0644\u063a\u0631\u0627\u0645\u0629 \u0628\u0633\u0628\u0628 \u062a\u0623\u062e\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0641\u064a \u0627\u0644\u062a\u0633\u0644\u064a\u0645 \u0623\u0645 \u0628\u0633\u0628\u0628 \u062a\u0623\u062e\u0631 \u0627\u0644\u0639\u0645\u064a\u0644 \u0641\u064a \u0627\u0644\u0633\u062f\u0627\u062f\u061f"
+    assert result.status == ComplianceStatus.CLARIFICATION_NEEDED
+    assert result.clarification_question == expected
+    assert result.answer == expected
+    assert result.metadata["transaction_scenario"]["contract_family"] == "istisna"
+
+
+@pytest.mark.service
+def test_application_service_rejects_wrong_sharia_standard_for_candidate_route():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    class FailingLLM(FakeLLM):
+        def generate(self, prompt, **kwargs):
+            raise AssertionError("wrong Shari'ah standard must fail before LLM generation")
+
+    result = ApplicationService(
+        retriever=FakeRetriever([
+            _chunk(
+                chunk_id="ss-03-debt",
+                standard_id="SS-03",
+                section="1",
+                source_file="AAOIFI_Sharia_Standard_03_Debt.md",
+                metadata={
+                    "source_family": "sharia_standard",
+                    "standard_number": "SS-03",
+                    "metadata_status": "cataloged",
+                },
+            )
+        ]),
+        llm_client=FailingLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    ).answer("Can we impose a liquidated damages clause if the contractor is late delivering the project?")
+
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.citations == []
+    assert result.metadata["standards_route"]["route_id"] == "istisna-penalty-clause"
+    assert result.metadata["standards_route"]["candidate_standards"] == ["SS-10"]
+    assert result.metadata["candidate_standard_filter"]["required"] == ["SS-10"]
+    assert result.metadata["candidate_standard_filter"]["retrieved"] == ["SS-03"]
+    assert result.metadata["source_families"] == ["sharia_standard"]
+
+
+@pytest.mark.service
+def test_application_service_allows_matching_candidate_sharia_standard_for_review_path():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    result = ApplicationService(
+        retriever=FakeRetriever([
+            _chunk(
+                chunk_id="ss-10-istisna",
+                standard_id="SS-10",
+                section="2",
+                source_file="AAOIFI_Sharia_Standard_10_Salam_Istisna.md",
+                metadata={
+                    "source_family": "sharia_standard",
+                    "standard_number": "SS-10",
+                    "metadata_status": "cataloged",
+                },
+            )
+        ]),
+        llm_client=FakeLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    ).answer("Can we impose liquidated damages if the contractor is late delivering the project?")
+
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.citations[0].standard_number == "SS-10"
+    assert result.metadata["candidate_standard_filter"]["matched"] == ["SS-10"]
+    assert result.metadata["scholar_review_workflow"]["runtime_governance_update_allowed"] is False
+
+
+@pytest.mark.service
+def test_application_service_uses_session_clarification_answer_for_next_turn():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    session_store = MemorySessionStore()
+    retriever = RecordingRetriever([
+        _chunk(
+            chunk_id="ss-10-istisna",
+            standard_id="SS-10",
+            section="2",
+            source_file="AAOIFI_Sharia_Standard_10_Salam_Istisna.md",
+            metadata={
+                "source_family": "sharia_standard",
+                "standard_number": "SS-10",
+                "metadata_status": "cataloged",
+            },
+        )
+    ])
+    service = ApplicationService(
+        retriever=retriever,
+        llm_client=FakeLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+        session_store=session_store,
+    )
+
+    first = service.answer(
+        "\u0647\u0644 \u0634\u0631\u0637 \u063a\u0631\u0627\u0645\u0629 \u0627\u0644\u062a\u0623\u062e\u064a\u0631 \u0641\u064a \u0639\u0642\u0648\u062f \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u0627\u062a \u0634\u0631\u0637 \u0631\u0628\u0648\u064a\u061f",
+        session_id="s-clarify",
+    )
+    second = service.answer("The contractor was late delivering the project.", session_id="s-clarify")
+
+    assert first.status == ComplianceStatus.CLARIFICATION_NEEDED
+    assert second.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert second.citations[0].standard_number == "SS-10"
+    assert second.metadata["transaction_scenario"]["contract_family"] == "istisna"
+    assert "clarification_answer" in retriever.calls[0]["query"]
+
+
+@pytest.mark.service
+def test_application_service_passes_role_content_history_to_prompt_builder():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    prompt_builder = HistoryPromptBuilder()
+    service = ApplicationService(
+        retriever=FakeRetriever([_chunk()]),
+        llm_client=FakeLLM("COMPLIANT: Supported by AAOIFI [FAS-01 \u00a71]."),
+        prompt_builder=prompt_builder,
+        citation_validator=CitationValidator(),
+    )
+
+    service.answer(
+        "How should murabaha profit be recognized for accounting?",
+        conversation_history=[
+            {"role": "user", "content": "Earlier question"},
+            {"role": "assistant", "content": "Earlier answer"},
+        ],
+    )
+
+    assert prompt_builder.history == [
+        {"role": "user", "content": "Earlier question"},
+        {"role": "assistant", "content": "Earlier answer"},
+    ]
+
+
+@pytest.mark.service
+def test_application_service_arabic_rule_review_response_is_not_mojibake():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    result = ApplicationService(
+        retriever=FakeRetriever([
+            _chunk(
+                standard_id="SS-08",
+                section="1",
+                source_file="AAOIFI_Sharia_Standard_08_Murabaha.md",
+            )
+        ]),
+        llm_client=FakeLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    ).answer("هل يجوز عقد مرابحة مع غرامة تأخير؟")
+
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.metadata["response_language"] == "ar"
+    assert "مراجعة قواعد شرعية" in result.answer
+    assert "Ã" not in result.answer
+    assert "Â" not in result.answer
 
 
 @pytest.mark.service
@@ -276,6 +554,29 @@ def test_prompt_builder_uses_single_clarification_guard_without_hidden_reasoning
     assert "PHASE 1" not in prompt
     assert "1. [Specific question" not in prompt
     assert "2. [Specific question" not in prompt
+
+
+@pytest.mark.unit
+def test_prompt_builder_is_aaoifi_source_family_aware_not_fas_only():
+    from src.chatbot.prompt_builder import PromptBuilder
+
+    prompt = PromptBuilder().build(
+        "Is this construction penalty permissible?",
+        [
+            _chunk(
+                standard_id="SS-10",
+                section="2",
+                source_file="AAOIFI_Sharia_Standard_10_Salam_Istisna.md",
+                metadata={"standard_number": "SS-10", "source_family": "sharia_standard"},
+            )
+        ],
+        response_language="en",
+    )
+
+    assert "sole function is to analyze financial operations against the AAOIFI" in prompt
+    assert "source-family" in prompt
+    assert "Financial Accounting Standards (FAS) documents provided to you" not in prompt
+    assert "[1] SS-10 §2 (score: 0.91)" in prompt
 
 
 @pytest.mark.unit
