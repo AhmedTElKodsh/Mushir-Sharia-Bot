@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Iterable, List, Optional, Sequence
@@ -51,6 +52,45 @@ def markdown_files(corpus_dir: Path, languages: Sequence[str]) -> List[Path]:
         for path in sorted(corpus_dir.rglob("*.md"))
         if path.name not in EXCLUDED_MARKDOWN and detect_language(path) in selected_languages
     ]
+
+
+def normalize_standard_selector(value: str) -> str:
+    text = (value or "").strip().upper()
+    match = re.search(r"\b(SS|FAS)[-_\s]*0*(\d{1,3})\b", text)
+    if match:
+        return f"{match.group(1)}-{int(match.group(2)):02d}"
+    return text
+
+
+def fallback_standard_number_for_file(path: Path) -> str:
+    name = path.name
+    match = re.search(r"AAOIFI_Standard_0*(\d{1,3})_", name, flags=re.IGNORECASE)
+    if not match:
+        return ""
+    prefix = "SS" if "Sharia_Standard" in name or "Shari'ah_Standard" in name else "FAS"
+    return f"{prefix}-{int(match.group(1)):02d}"
+
+
+def filter_files_by_standards(
+    files: Iterable[Path],
+    standards: Sequence[str],
+    source_catalog: Optional[SourceCatalog] = None,
+    corpus_dir: Optional[Path] = None,
+) -> List[Path]:
+    selected = {normalize_standard_selector(standard) for standard in standards if standard.strip()}
+    if not selected:
+        return list(files)
+    matched = []
+    for md_file in files:
+        catalog_record = catalog_record_for_file(source_catalog, md_file, corpus_dir=corpus_dir)
+        standard = (
+            normalize_standard_selector(catalog_record.standard_number)
+            if catalog_record is not None
+            else fallback_standard_number_for_file(md_file)
+        )
+        if standard in selected:
+            matched.append(md_file)
+    return matched
 
 
 def standard_number(path: Path) -> str:
@@ -223,6 +263,11 @@ def parse_args() -> argparse.Namespace:
         help="Optional YAML source catalog. Matching records mark chunks as cataloged instead of quarantined.",
     )
     parser.add_argument(
+        "--standards",
+        default=os.getenv("INGEST_STANDARDS", ""),
+        help="Optional comma-separated standard IDs to ingest, for example: SS-03,SS-19.",
+    )
+    parser.add_argument(
         "--allow-uncataloged",
         action="store_true",
         help=(
@@ -247,11 +292,16 @@ def main() -> int:
     if not corpus_dir.exists():
         raise SystemExit(f"Corpus directory not found: {corpus_dir}")
 
-    files = markdown_files(corpus_dir, languages)
-    if not files:
-        raise SystemExit(f"No markdown files found for languages {languages} in {corpus_dir}")
-
     source_catalog = load_source_catalog(args.source_catalog)
+
+    files = markdown_files(corpus_dir, languages)
+    standards = [standard.strip() for standard in args.standards.split(",") if standard.strip()]
+    if standards:
+        files = filter_files_by_standards(files, standards, source_catalog, corpus_dir=corpus_dir)
+    if not files:
+        scope = f" and standards {', '.join(standards)}" if standards else ""
+        raise SystemExit(f"No markdown files found for languages {languages}{scope} in {corpus_dir}")
+
     if source_catalog:
         print(f"Loaded source catalog: {args.source_catalog}")
         unmatched = unmatched_catalog_files(files, source_catalog, corpus_dir=corpus_dir)
@@ -282,7 +332,8 @@ def main() -> int:
         metadata={"hnsw:space": "cosine"},
     )
 
-    print(f"Found {len(files)} AAOIFI standards to process for languages: {', '.join(languages)}")
+    scope = f" and standards: {', '.join(standards)}" if standards else ""
+    print(f"Found {len(files)} AAOIFI standards to process for languages: {', '.join(languages)}{scope}")
     total_chunks = ingest_files(
         files,
         model,

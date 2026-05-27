@@ -446,7 +446,12 @@ class ApplicationService:
             return None
         primary = standards_route.primary[0]
         value = getattr(primary, "value", primary)
-        return {"source_family": value} if value else None
+        if not value:
+            return None
+        filters: Dict[str, Any] = {"source_family": value}
+        if ApplicationService._should_enforce_candidate_standards(standards_route):
+            filters["standard_number"] = ApplicationService._route_candidate_standard_ids(standards_route)
+        return filters
 
     @staticmethod
     def _answer_admissible_chunks(chunks: List[Any]) -> List[Any]:

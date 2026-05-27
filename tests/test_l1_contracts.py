@@ -185,10 +185,46 @@ def test_application_service_passes_source_family_filter_and_strict_metadata_gat
         citation_validator=CitationValidator(),
     ).answer("Is a murabaha car installment sale with a late payment penalty permissible?")
 
-    assert retriever.calls[0]["filters"] == {"source_family": "sharia_standard"}
+    assert retriever.calls[0]["filters"] == {
+        "source_family": "sharia_standard",
+        "standard_number": ["SS-03", "SS-08"],
+    }
     assert retriever.calls[0]["mode"] == "hybrid"
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert result.metadata["source_families"] == []
+
+
+@pytest.mark.service
+def test_application_service_retrieves_debt_late_fee_from_candidate_standards():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    retriever = RecordingRetriever([
+        _chunk(
+            standard_id="SS-03",
+            section="1",
+            source_file="AAOIFI_Sharia_Standard_03_Default.md",
+            metadata={
+                "source_family": "sharia_standard",
+                "standard_number": "SS-03",
+                "metadata_status": "cataloged",
+            },
+        )
+    ])
+
+    result = ApplicationService(
+        retriever=retriever,
+        llm_client=FakeLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    ).answer("Can the bank charge a late fee on a cash loan?")
+
+    assert retriever.calls[0]["filters"] == {
+        "source_family": "sharia_standard",
+        "standard_number": ["SS-03", "SS-19"],
+    }
+    assert result.metadata["standards_route"]["route_id"] == "debt-late-payment-penalty"
+    assert result.metadata["candidate_standard_filter"]["matched"] == ["SS-03"]
 
 
 @pytest.mark.service

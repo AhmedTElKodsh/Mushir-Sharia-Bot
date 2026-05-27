@@ -33,6 +33,68 @@ def test_ingest_can_limit_to_arabic_markdown(tmp_path):
 
 
 @pytest.mark.unit
+def test_ingest_can_limit_to_candidate_standards_from_catalog(tmp_path):
+    from scripts.ingest import filter_files_by_standards, load_source_catalog, markdown_files
+
+    ss_03 = tmp_path / "AAOIFI_Standard_03_en_AAOIFI_Sharia_Standard_No._03_Procrastinating_Debtor.md"
+    ss_19 = tmp_path / "AAOIFI_Standard_19_en_AAOIFI_Sharia_Standard_No._19_Loan_Qard.md"
+    ss_11 = tmp_path / "AAOIFI_Standard_11_en_AAOIFI_Sharia_Standard_No._11_Istisnaa.md"
+    for path in [ss_03, ss_19, ss_11]:
+        path.write_text("content", encoding="utf-8")
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog_path.write_text(
+        f"""
+records:
+  - source_id: aaoifi-ss-03-en
+    source_family: sharia_standard
+    standard_number: SS-03
+    title_en: Procrastinating Debtor
+    language: en
+    official_url: https://aaoifi.example/standards/ss-03
+    acquired_at: 2026-05-25
+    extraction_method: fixture
+    source_type: derived_markdown
+    currentness: current
+    review_status: machine_checked
+    source_confidence: derived_from_official
+    derived_path: {ss_03.name}
+  - source_id: aaoifi-ss-19-en
+    source_family: sharia_standard
+    standard_number: SS-19
+    title_en: Loan Qard
+    language: en
+    official_url: https://aaoifi.example/standards/ss-19
+    acquired_at: 2026-05-25
+    extraction_method: fixture
+    source_type: derived_markdown
+    currentness: current
+    review_status: machine_checked
+    source_confidence: derived_from_official
+    derived_path: {ss_19.name}
+  - source_id: aaoifi-ss-11-en
+    source_family: sharia_standard
+    standard_number: SS-11
+    title_en: Istisnaa
+    language: en
+    official_url: https://aaoifi.example/standards/ss-11
+    acquired_at: 2026-05-25
+    extraction_method: fixture
+    source_type: derived_markdown
+    currentness: current
+    review_status: machine_checked
+    source_confidence: derived_from_official
+    derived_path: {ss_11.name}
+""",
+        encoding="utf-8",
+    )
+
+    files = markdown_files(tmp_path, ["en"])
+    selected = filter_files_by_standards(files, ["SS-3", "SS-19"], load_source_catalog(catalog_path))
+
+    assert selected == [ss_03, ss_19]
+
+
+@pytest.mark.unit
 def test_ingest_detects_text_language_independently_from_filename():
     from scripts.ingest import detect_text_language
 

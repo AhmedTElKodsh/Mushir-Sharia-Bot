@@ -258,6 +258,64 @@ def test_rag_pipeline_does_not_broaden_when_filtered_chroma_query_is_empty():
     assert collection.calls == [{"source_family": "sharia_standard"}]
 
 
+def test_rag_pipeline_translates_list_filters_for_chroma_candidate_standards():
+    from src.rag.pipeline import RAGPipeline
+
+    class FakeModel:
+        def encode(self, query, normalize_embeddings=False):
+            return Mock(tolist=lambda: [0.1, 0.2, 0.3])
+
+    class FakeCollection:
+        def __init__(self):
+            self.calls = []
+
+        def query(self, query_embeddings, n_results, where=None):
+            self.calls.append(where)
+            return {
+                "documents": [["Default evidence", "Qard evidence"]],
+                "metadatas": [[
+                    {
+                        "source_file": "ss-03.md",
+                        "standard_number": "SS-03",
+                        "metadata_status": "cataloged",
+                        "source_family": "sharia_standard",
+                    },
+                    {
+                        "source_file": "ss-19.md",
+                        "standard_number": "SS-19",
+                        "metadata_status": "cataloged",
+                        "source_family": "sharia_standard",
+                    },
+                ]],
+                "distances": [[0.05, 0.06]],
+                "ids": [["ss-03", "ss-19"]],
+            }
+
+    collection = FakeCollection()
+    pipeline = RAGPipeline.__new__(RAGPipeline)
+    pipeline.vector_store = None
+    pipeline.embedding_generator = None
+    pipeline.model = FakeModel()
+    pipeline.collection = collection
+
+    chunks = pipeline.retrieve(
+        "cash loan late fee",
+        k=2,
+        threshold=0.0,
+        filters={"source_family": "sharia_standard", "standard_number": ["SS-03", "SS-19"]},
+    )
+
+    assert [chunk.metadata["standard_number"] for chunk in chunks] == ["SS-03", "SS-19"]
+    assert collection.calls == [
+        {
+            "$and": [
+                {"source_family": "sharia_standard"},
+                {"standard_number": {"$in": ["SS-03", "SS-19"]}},
+            ]
+        }
+    ]
+
+
 def test_rag_pipeline_vector_store_branch_applies_filters_and_quarantine():
     """Qdrant/vector adapters must not bypass governance filtering."""
     from src.rag.pipeline import RAGPipeline

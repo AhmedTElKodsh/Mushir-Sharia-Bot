@@ -23,18 +23,8 @@ def test_live_hard_case_gate_uses_live_pipeline_and_candidate_standard_filter(tm
 
     class FakePipeline:
         def retrieve(self, query, k=8, threshold=0.0, filters=None, mode="dense"):
-            assert filters == {"source_family": "sharia_standard"}
+            assert filters == {"source_family": "sharia_standard", "standard_number": ["SS-11"]}
             return [
-                {
-                    "chunk_id": "wrong-ss-03",
-                    "content": "Debt penalty evidence",
-                    "metadata": {
-                        "source_family": "sharia_standard",
-                        "standard_number": "SS-03",
-                        "metadata_status": "cataloged",
-                    },
-                    "similarity": 0.95,
-                },
                 {
                     "chunk_id": "right-ss-11",
                     "content": "Istisna penalty evidence",
@@ -60,7 +50,7 @@ def test_live_hard_case_gate_uses_live_pipeline_and_candidate_standard_filter(tm
     result = report["results"][0]
     assert result["answer_status"] == "insufficient_data"
     assert result["application_metadata"]["standards_route"]["candidate_standards"] == ["SS-11"]
-    assert result["retrieved_standards"] == ["SS-03", "SS-11"]
+    assert result["retrieved_standards"] == ["SS-11"]
     assert result["matched_standards"] == ["SS-11"]
     assert result["candidate_standard_filter"]["required"] == ["SS-11"]
     assert Path(tmp_path / "report.json").exists()

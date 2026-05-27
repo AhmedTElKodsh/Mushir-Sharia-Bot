@@ -124,7 +124,13 @@ class QdrantVectorStore:
     def _metadata_matches_filters(metadata: Dict[str, Any], filters: Dict[str, Any]) -> bool:
         for key, expected in filters.items():
             actual = metadata.get(key)
-            if actual is None or str(actual).lower() != str(expected).lower():
+            if actual is None:
+                return False
+            if isinstance(expected, (list, tuple, set, frozenset)):
+                if str(actual).lower() not in {str(value).lower() for value in expected}:
+                    return False
+                continue
+            if str(actual).lower() != str(expected).lower():
                 return False
         return True
 

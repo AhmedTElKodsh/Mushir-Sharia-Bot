@@ -82,9 +82,32 @@ def _metadata_matches_filters(metadata: Dict[str, Any], filters: Optional[Dict[s
         actual = metadata.get(key)
         if actual is None:
             return False
+        if isinstance(expected, (list, tuple, set, frozenset)):
+            expected_values = {str(value).lower() for value in expected}
+            if str(actual).lower() not in expected_values:
+                return False
+            continue
         if str(actual).lower() != str(expected).lower():
             return False
     return True
+
+
+def _chroma_where(filters: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not filters:
+        return None
+    clauses = []
+    for key, expected in filters.items():
+        if isinstance(expected, (list, tuple, set, frozenset)):
+            clauses.append({key: {"$in": [str(value) for value in expected]}})
+        else:
+            clauses.append({key: expected})
+    if not clauses:
+        return None
+    if len(clauses) == 1:
+        return clauses[0]
+    if all(not isinstance(next(iter(clause.values())), dict) for clause in clauses):
+        return {key: value for clause in clauses for key, value in clause.items()}
+    return {"$and": clauses}
 
 
 def _chunk_metadata(chunk: Any) -> Dict[str, Any]:
@@ -317,7 +340,7 @@ class RAGPipeline:
             "n_results": max(k * rerank_multiplier, k),
         }
         try:
-            results = self.collection.query(**query_kwargs, where=filters or None)
+            results = self.collection.query(**query_kwargs, where=_chroma_where(filters))
         except TypeError:
             results = self.collection.query(**query_kwargs)
 
