@@ -3,6 +3,58 @@ from typing import Any, Dict, List, Optional
 from datetime import UTC, datetime
 from enum import Enum
 
+from src.models.commercial import ContractFamily
+
+
+class PartyRole(str, Enum):
+    CONTRACTOR = "contractor"
+    DEBTOR = "debtor"
+    LESSOR = "lessor"
+    LESSEE = "lessee"
+    BUYER = "buyer"
+    SELLER = "seller"
+    CUSTOMER = "customer"
+    FINANCIER = "financier"
+    GUARANTOR = "guarantor"
+    UNKNOWN = "unknown"
+
+
+class Permissibility(str, Enum):
+    PERMISSIBLE = "PERMISSIBLE"
+    PROHIBITED = "PROHIBITED"
+    CONDITIONAL = "CONDITIONAL"
+    DISPUTED = "DISPUTED"
+    INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
+
+
+@dataclass
+class RulingContext:
+    concept: str
+    contract_type: ContractFamily = ContractFamily.UNKNOWN
+    party_role: PartyRole = PartyRole.UNKNOWN
+    madhab: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    conditions: List[str] = field(default_factory=list)
+    exceptions: List[str] = field(default_factory=list)
+
+
+@dataclass
+class RulingResult:
+    permissibility: Permissibility
+    confidence: float = 0.0
+    applicable_standards: List[str] = field(default_factory=list)
+    conditions_met: List[str] = field(default_factory=list)
+    conditions_violated: List[str] = field(default_factory=list)
+    alternative_views: List[str] = field(default_factory=list)
+    requires_scholar_review: bool = False
+    source_chunks: List[str] = field(default_factory=list)
+    scholar_reviewed: bool = False
+
+    def __post_init__(self) -> None:
+        self.confidence = max(0.0, min(1.0, float(self.confidence)))
+        if self.confidence < 0.75 or self.permissibility == Permissibility.DISPUTED:
+            self.requires_scholar_review = True
+
 class ComplianceStatus(Enum):
     COMPLIANT = "COMPLIANT"
     NON_COMPLIANT = "NON_COMPLIANT"

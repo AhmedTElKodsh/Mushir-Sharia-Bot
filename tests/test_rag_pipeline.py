@@ -436,6 +436,15 @@ def test_rag_pipeline_hybrid_mode_adds_rrf_trace_and_lifts_lexical_match():
     pipeline.embedding_generator = None
     pipeline.model = FakeModel()
     pipeline.collection = FakeCollection()
+    
+    class FakeBM25Retriever:
+        def retrieve(self, query, top_k):
+            from src.rag.pipeline import ScoredDoc
+            if "murabaha" in query.lower():
+                return [ScoredDoc(doc_id="lexical-right", text="Murabaha ownership...", score=10.0, metadata={"source_file": "fas-28.md", "standard_number": "FAS-28", "metadata_status": "cataloged"})]
+            return []
+            
+    pipeline.bm25_retriever = FakeBM25Retriever()
 
     chunks = pipeline.retrieve(
         "murabaha ownership before resale",
@@ -448,3 +457,30 @@ def test_rag_pipeline_hybrid_mode_adds_rrf_trace_and_lifts_lexical_match():
     assert chunks[0].metadata["retrieval_mode"] == "hybrid"
     assert chunks[0].metadata["score_components"]["lexical_score"] > 0
     assert chunks[0].metadata["score_components"]["rrf_score"] > 0
+
+
+def test_bm25_retriever_and_rrf_merge_rank_lexical_matches():
+    from src.rag.pipeline import BM25Retriever, ScoredDoc, rrf_merge
+
+    sparse = BM25Retriever([
+        ScoredDoc(doc_id="generic", text="Generic finance leasing text.", score=0.0, metadata={}),
+        ScoredDoc(doc_id="dummy1", text="Another dummy document.", score=0.0, metadata={}),
+        ScoredDoc(doc_id="dummy2", text="And another dummy.", score=0.0, metadata={}),
+        ScoredDoc(
+            doc_id="istisna",
+            text="Istisna construction delay penalty actual damage contractor.",
+            score=0.0,
+            metadata={"standard_number": "SS-11"},
+        ),
+    ]).retrieve("construction delay penalty in istisna", top_k=2)
+    fused = rrf_merge(
+        dense_results=[
+            SimpleNamespace(chunk_id="generic", score=0.0), 
+            SimpleNamespace(chunk_id="istisna", score=0.0)
+        ],
+        sparse_results=sparse,
+        k=60,
+    )
+
+    assert sparse[0].doc_id == "istisna"
+    assert fused[0] == "istisna"

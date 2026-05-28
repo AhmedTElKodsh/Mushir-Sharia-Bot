@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import uuid
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -135,6 +136,149 @@ class ScholarReviewStore:
                 if line.strip():
                     records.append(ScholarReviewEvidenceGate.from_mapping(json.loads(line)))
         return records
+
+
+class ScholarReviewQueue(str, Enum):
+    AUTO_FLAGGED = "Q1"
+    RANDOM_SAMPLE = "Q2"
+    USER_REPORTED = "Q3"
+
+
+@dataclass(frozen=True)
+class ScholarReviewQueueItem:
+    """Append-only live answer queue item for continuous scholar review."""
+
+    query_id: str
+    queue: ScholarReviewQueue
+    query_ar: str = ""
+    query_en: str = ""
+    system_answer_ar: str = ""
+    system_answer_en: str = ""
+    system_ruling: str = ""
+    system_standards: List[str] = field(default_factory=list)
+    system_confidence: float = 0.0
+    flag_reason: str = ""
+    source_chunks: List[str] = field(default_factory=list)
+    scholar_sign_off: str = "PENDING"
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    request_id: str = ""
+    session_id: str = ""
+    user_feedback: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.query_id.strip():
+            raise ValueError("query_id is required")
+        if not self.flag_reason.strip():
+            raise ValueError("flag_reason is required")
+        if self.created_at.tzinfo is None:
+            raise ValueError("created_at must include timezone")
+        confidence = max(0.0, min(float(self.system_confidence), 1.0))
+        object.__setattr__(self, "system_confidence", confidence)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "query_id": self.query_id,
+            "queue": self.queue.value,
+            "query_ar": self.query_ar,
+            "query_en": self.query_en,
+            "system_answer_ar": self.system_answer_ar,
+            "system_answer_en": self.system_answer_en,
+            "system_ruling": self.system_ruling,
+            "system_standards": self.system_standards,
+            "system_confidence": self.system_confidence,
+            "flag_reason": self.flag_reason,
+            "source_chunks": self.source_chunks,
+            "scholar_sign_off": self.scholar_sign_off,
+            "created_at": self.created_at.isoformat(),
+            "request_id": self.request_id,
+            "session_id": self.session_id,
+            "user_feedback": self.user_feedback,
+        }
+
+    @classmethod
+    def from_mapping(cls, payload: Mapping[str, Any]) -> "ScholarReviewQueueItem":
+        data = dict(payload)
+        data["queue"] = ScholarReviewQueue(data["queue"])
+        if isinstance(data.get("created_at"), str):
+            data["created_at"] = datetime.fromisoformat(data["created_at"])
+        return cls(**data)
+
+    @classmethod
+    def from_answer(
+        cls,
+        *,
+        queue: ScholarReviewQueue,
+        query: str,
+        answer: AnswerContract,
+        flag_reason: str,
+        query_id: Optional[str] = None,
+        request_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        user_feedback: str = "",
+    ) -> "ScholarReviewQueueItem":
+        metadata = answer.metadata or {}
+        language = metadata.get("response_language", "en")
+        route = metadata.get("standards_route", {}) or {}
+        verdict = metadata.get("verdict_contract", {}) or {}
+        return cls(
+            query_id=query_id or request_id or f"query-{uuid.uuid4()}",
+            queue=queue,
+            query_ar=query if language == "ar" else "",
+            query_en=query if language != "ar" else "",
+            system_answer_ar=answer.answer if language == "ar" else "",
+            system_answer_en=answer.answer if language != "ar" else "",
+            system_ruling=str(verdict.get("verdict") or answer.status.value),
+            system_standards=list(route.get("candidate_standards") or []),
+            system_confidence=float(metadata.get("confidence") or 0.0),
+            flag_reason=flag_reason,
+            source_chunks=list(metadata.get("retrieved_chunk_ids") or []),
+            request_id=request_id or "",
+            session_id=session_id or "",
+            user_feedback=user_feedback,
+        )
+
+
+class ScholarReviewQueueStore:
+    """Append-only JSONL queue for Q1/Q2/Q3 scholar review workflows."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+
+    def append(self, item: ScholarReviewQueueItem) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(item.to_dict(), ensure_ascii=False, sort_keys=True))
+            handle.write("\n")
+
+    def load(self) -> List[ScholarReviewQueueItem]:
+        if not self.path.exists():
+            return []
+        records: List[ScholarReviewQueueItem] = []
+        with self.path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if line.strip():
+                    records.append(ScholarReviewQueueItem.from_mapping(json.loads(line)))
+        return records
+
+    def pending(self) -> List[ScholarReviewQueueItem]:
+        return [
+            item for item in self.load()
+            if item.scholar_sign_off.strip().upper() != "DONE"
+        ]
+
+    def mark_reviewed(self, query_id: str, scholar_sign_off: str = "DONE") -> None:
+        items = self.load()
+        if not any(item.query_id == query_id for item in items):
+            raise ValueError(f"unknown query_id: {query_id}")
+        target = self.path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("w", encoding="utf-8") as handle:
+            for item in items:
+                payload = item.to_dict()
+                if item.query_id == query_id:
+                    payload["scholar_sign_off"] = scholar_sign_off
+                handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True))
+                handle.write("\n")
 
 
 class ScholarReviewWorkflowStatus(str, Enum):

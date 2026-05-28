@@ -18,6 +18,7 @@ from src.api.routes import router as api_router
 from src.chatbot.application_service import ApplicationService
 from src.chatbot.clarification_engine import ClarificationEngine
 from src.chatbot.session_manager import SessionManager
+from src.governance.scholar_review import ScholarReviewQueueStore
 from src.observability.metrics import MetricsRegistry
 from scripts.report_sharia_corpus_coverage import (
     DEFAULT_ACQUISITION_MANIFEST,
@@ -50,6 +51,7 @@ async def lifespan(app: FastAPI):
     app.state.rate_limiter = _build_rate_limiter()
     app.state.audit_store = _build_audit_store()
     app.state.cache_store = _build_cache_store()
+    app.state.scholar_review_queue_store = _build_scholar_review_queue_store()
     # Eagerly build the retriever once at startup so all requests share one
     # pre-warmed SentenceTransformer model — eliminates the per-request
     # lazy-init race condition and prevents concurrent OOM on free-tier hosts.
@@ -60,6 +62,8 @@ async def lifespan(app: FastAPI):
         clarification_service=ClarificationEngine(),
         audit_store=app.state.audit_store,
         cache_store=app.state.cache_store,
+        scholar_review_queue_store=app.state.scholar_review_queue_store,
+        scholar_sampling_rate=float(os.getenv("SCHOLAR_REVIEW_SAMPLE_RATE", "0.05")),
     )
     app.state.metrics = MetricsRegistry()
     app.state.infrastructure = _infrastructure_status(app)
@@ -136,6 +140,10 @@ def _build_cache_store():
     from src.storage.cache import InMemoryCacheStore
 
     return InMemoryCacheStore()
+
+
+def _build_scholar_review_queue_store():
+    return ScholarReviewQueueStore(os.getenv("SCHOLAR_REVIEW_QUEUE_PATH", "data/scholar_review_queue.jsonl"))
 
 
 def _infrastructure_status(app: FastAPI):

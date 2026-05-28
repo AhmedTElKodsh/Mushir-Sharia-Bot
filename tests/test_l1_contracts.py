@@ -115,6 +115,32 @@ def test_application_service_returns_canonical_answer_contract():
 
 
 @pytest.mark.service
+def test_application_service_random_sample_appends_q2_scholar_queue(tmp_path):
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+    from src.governance.scholar_review import ScholarReviewQueueStore
+
+    queue_store = ScholarReviewQueueStore(tmp_path / "scholar_review_queue.jsonl")
+    service = ApplicationService(
+        retriever=FakeRetriever([_chunk()]),
+        llm_client=FakeLLM("COMPLIANT: Supported by AAOIFI [FAS-01 Â§1]."),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+        scholar_review_queue_store=queue_store,
+        scholar_sampling_rate=0.05,
+        scholar_sampler=lambda: 0.0,
+    )
+
+    result = service.answer("How should murabaha profit be recognized?", request_id="req-q2")
+
+    items = queue_store.load()
+    assert result.status == ComplianceStatus.COMPLIANT
+    assert items[0].query_id == "req-q2"
+    assert items[0].queue.value == "Q2"
+    assert items[0].flag_reason == "random_post_launch_sample"
+
+
+@pytest.mark.service
 def test_application_service_returns_insufficient_data_without_retrieved_chunks():
     from src.chatbot.application_service import ApplicationService
     from src.chatbot.citation_validator import CitationValidator
@@ -277,11 +303,13 @@ def test_application_service_source_gap_verdict_survives_empty_sharia_filter_res
 
 
 @pytest.mark.service
-def test_application_service_still_requires_rule_review_when_sharia_evidence_is_retrieved():
+def test_application_service_still_requires_rule_review_when_sharia_evidence_is_retrieved(tmp_path):
     from src.chatbot.application_service import ApplicationService
     from src.chatbot.citation_validator import CitationValidator
+    from src.governance.scholar_review import ScholarReviewQueueStore
 
     llm = FakeLLM("INSUFFICIENT_DATA: More contract facts are needed.")
+    queue_store = ScholarReviewQueueStore(tmp_path / "scholar_review_queue.jsonl")
     service = ApplicationService(
         retriever=FakeRetriever([
             _chunk(
@@ -293,9 +321,10 @@ def test_application_service_still_requires_rule_review_when_sharia_evidence_is_
         llm_client=llm,
         prompt_builder=FakePromptBuilder(),
         citation_validator=CitationValidator(),
+        scholar_review_queue_store=queue_store,
     )
 
-    result = service.answer("Is this murabaha car installment structure halal?")
+    result = service.answer("Is this murabaha car installment structure halal?", request_id="req-q1")
 
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert len(llm.prompts) == 0
@@ -305,6 +334,10 @@ def test_application_service_still_requires_rule_review_when_sharia_evidence_is_
     assert result.metadata["scholar_review_workflow"]["path"] == "scholar_review_enhancement"
     assert result.metadata["scholar_review_workflow"]["blocks_main_app"] is False
     assert result.metadata["scholar_review_workflow"]["runtime_governance_update_allowed"] is False
+    queued = queue_store.load()
+    assert queued[0].query_id == "req-q1"
+    assert queued[0].queue.value == "Q1"
+    assert queued[0].flag_reason == "rule_evaluation_requires_scholar_review"
 
 
 @pytest.mark.service
@@ -363,8 +396,8 @@ def test_application_service_rejects_wrong_sharia_standard_for_candidate_route()
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert result.citations == []
     assert result.metadata["standards_route"]["route_id"] == "istisna-penalty-clause"
-    assert result.metadata["standards_route"]["candidate_standards"] == ["SS-11"]
-    assert result.metadata["candidate_standard_filter"]["required"] == ["SS-11"]
+    assert result.metadata["standards_route"]["candidate_standards"] == ["SS-05", "SS-11"]
+    assert result.metadata["candidate_standard_filter"]["required"] == ["SS-05", "SS-11"]
     assert result.metadata["candidate_standard_filter"]["retrieved"] == ["SS-03"]
     assert result.metadata["source_families"] == ["sharia_standard"]
 

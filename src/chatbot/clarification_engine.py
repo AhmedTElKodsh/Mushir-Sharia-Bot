@@ -32,24 +32,6 @@ QUESTION_TEMPLATES = {
     "duration": "What is the duration of the contract?",
 }
 
-# Arabic versions of the clarification question templates
-QUESTION_TEMPLATES_AR = {
-    "principal_amount": "ما هو المبلغ الأصلي للقرض أو التمويل؟",
-    "interest_rate": "ما هو معدل الفائدة أو الربح المطلوب، إن وجد؟",
-    "term_months": "ما هي مدة القرض بالأشهر؟",
-    "purpose": "ما هو الغرض من هذا القرض أو التمويل؟",
-    "company_activity": "ما هو نشاط الشركة أو المشروع المعني؟",
-    "non_compliant_revenue_percent": "ما النسبة المئوية للإيرادات المصدرها حرام أو غير متوافق مع الشريعة؟",
-    "item_type": "ما هو نوع السلعة أو الأصل المراد شراؤه؟",
-    "price": "ما هو سعر الشراء؟",
-    "payment_terms": "ما هي شروط الدفع؟",
-    "delivery_terms": "ما هي شروط التسليم؟",
-    "contract_type": "ما نوع العقد المطلوب تقييمه؟",
-    "parties": "من هم أطراف العقد؟",
-    "obligations": "ما هي الالتزامات الرئيسية في هذا العقد؟",
-    "duration": "ما هي مدة العقد؟",
-}
-
 QUESTION_TEMPLATES_AR = {
     "principal_amount": "ما هو المبلغ الأصلي للقرض أو التمويل؟",
     "interest_rate": "ما هو معدل الفائدة أو الربح المطلوب، إن وجد؟",
@@ -75,27 +57,16 @@ class ClarificationEngine:
         self.max_clarification_turns = max_clarification_turns
         self.operation_keywords = {
             # English keywords
-            "loan": ["loan", "borrow", "lend", "credit", "financing"],
-            "investment": ["invest", "investment", "shares", "stock", "equity", "mudarabah"],
+            "loan": ["loan", "borrow", "lend", "credit", "financing", "qard"],
+            "investment": ["invest", "investment", "shares", "stock", "equity", "mudarabah", "musharakah"],
             "purchase": ["buy", "bought", "purchase", "acquire", "sell", "murabahah", "installment", "instalment"],
-            "contract": ["contract", "agreement", "ijarah", "lease"],
+            "contract": ["contract", "agreement"],
+            "istisna": ["istisna", "manufacturing", "construction"],
+            "ijarah": ["ijarah", "lease", "rent", "leasing"],
+            "wakalah": ["wakalah", "agency", "agent"],
+            "kafalah": ["kafalah", "guarantee"],
         }
         # Arabic keywords including Modern Standard Arabic and common عامية
-        self.operation_keywords_ar = {
-            "loan": ["قرض", "قروض", "اقتراض", "تمويل", "ائتمان", "دين"],
-            "investment": [
-                "استثمار", "استثمارات", "مضاربة", "أسهم", "حصص",
-                "صناديق", "ملكية", "شراكة", "مشاركة",
-            ],
-            "purchase": [
-                "بيع", "شراء", "اقتناء", "مرابحة", "تقسيط", "بضاعة",
-                "سلعة", "عقار",
-            ],
-            "contract": [
-                "عقد", "اتفاقية", "إجارة", "أجرة", "إيجار", "تأجير",
-                "وكالة", "مقاولة",
-            ],
-        }
         self.operation_keywords_ar = {
             "loan": ["قرض", "قروض", "اقتراض", "تمويل", "ائتمان", "دين"],
             "investment": [
@@ -106,10 +77,11 @@ class ClarificationEngine:
                 "بيع", "شراء", "اشتريت", "أشتري", "اشتري", "اقتناء", "مرابحة", "تقسيط",
                 "بالتقسيط", "سيارة", "عربية", "بضاعة", "سلعة", "عقار",
             ],
-            "contract": [
-                "عقد", "اتفاقية", "إجارة", "أجرة", "إيجار", "تأجير",
-                "وكالة", "مقاولة",
-            ],
+            "contract": ["عقد", "اتفاقية"],
+            "istisna": ["استصناع", "مقاولة", "مقاولات", "تصنيع"],
+            "ijarah": ["إجارة", "أجرة", "إيجار", "تأجير"],
+            "wakalah": ["وكالة", "توكيل", "وكيل"],
+            "kafalah": ["كفالة", "ضمان", "كفيل"],
         }
 
     def extract_operation_type(self, text: str) -> Optional[str]:
@@ -288,6 +260,8 @@ class ClarificationEngine:
         Creates a transient SessionState scoped to this single call so repeated
         invocations with the same query are idempotent.
         """
+        if self._is_judgment_query(query):
+            return None
         if self._is_informational_query(query):
             return None
         if self._has_specific_transaction_structure(query):
@@ -301,6 +275,22 @@ class ClarificationEngine:
         except Exception as exc:
             logger.warning("Clarification check failed for query: %s", exc)
         return None
+
+    @staticmethod
+    def _is_judgment_query(query: str) -> bool:
+        terms = (
+            "ruling",
+            "permissible",
+            "halal",
+            "haram",
+            "\u062d\u0643\u0645",
+            "\u064a\u062c\u0648\u0632",
+            "\u062c\u0627\u0626\u0632",
+            "\u062d\u0644\u0627\u0644",
+            "\u062d\u0631\u0627\u0645",
+        )
+        lowered = (query or "").lower()
+        return any(term in lowered for term in terms)
 
     def _clarification_turns(self, session_state: SessionState) -> int:
         """Count clarification turns, recognising both ASCII '?' and Arabic '\u061f'."""

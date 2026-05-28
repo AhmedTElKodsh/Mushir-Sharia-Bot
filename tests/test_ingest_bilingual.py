@@ -149,7 +149,7 @@ records:
             return [text]
 
     collection = FakeCollection()
-    total = ingest_files(
+    total_chunks, _ = ingest_files(
         [md],
         FakeModel(),
         collection,
@@ -158,7 +158,7 @@ records:
         source_catalog=load_source_catalog(catalog_path),
     )
 
-    assert total == 1
+    assert total_chunks == 1
     assert collection.metadatas[0]["metadata_status"] == "cataloged"
     assert collection.metadatas[0]["source_id"] == "fas-28-en"
     assert collection.metadatas[0]["source_language"] == "en"

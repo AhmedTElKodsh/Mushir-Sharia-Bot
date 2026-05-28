@@ -1,0 +1,203 @@
+[
+  {
+    "case_id": "TC-A1",
+    "query_ar": "هل شرط غرامة التأخير في عقود المقاولات شرط ربوي؟",
+    "query_en": "Is the penalty clause in construction contracts considered riba?",
+    "contract_type": "istisna",
+    "party_role": "contractor",
+    "ruling": "CONDITIONAL",
+    "dalil": "SS-11, Clause 4.3",
+    "applicable_standards": ["SS-11", "SS-05"],
+    "forbidden_standards": ["SS-03", "FAS-30"],
+    "khilaf_flag": false,
+    "conditions": [
+      "penalty represents actual damage to commissioning party",
+      "contractor is the delaying party"
+    ],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-B1",
+    "query_ar": "هل بيع الدين جائز؟",
+    "query_en": "Is the sale of debt permissible?",
+    "contract_type": "qard",
+    "party_role": "unknown",
+    "ruling": "CONDITIONAL",
+    "dalil": "SS-60, Clause 3/1",
+    "applicable_standards": ["SS-60"],
+    "forbidden_standards": ["SS-03"],
+    "khilaf_flag": true,
+    "conditions": [
+      "debt sold at par value without discount",
+      "spot payment if currencies differ"
+    ],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-C1",
+    "query_ar": "هل أخذ كفالة مقابل أجر جائز؟",
+    "query_en": "Is it permissible to charge a fee for a guarantee (Kafala)?",
+    "contract_type": "kafala",
+    "party_role": "guarantor",
+    "ruling": "PROHIBITED",
+    "dalil": "SS-5, Clause 2/2/2",
+    "applicable_standards": ["SS-05"],
+    "forbidden_standards": [],
+    "khilaf_flag": true,
+    "conditions": [],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-C2",
+    "query_ar": "هل يجوز أخذ رسوم على إصدار خطاب الضمان؟",
+    "query_en": "Is it permissible to charge fees for issuing a letter of guarantee?",
+    "contract_type": "kafala",
+    "party_role": "guarantor",
+    "ruling": "CONDITIONAL",
+    "dalil": "SS-5, Clause 3/1/3",
+    "applicable_standards": ["SS-05"],
+    "forbidden_standards": [],
+    "khilaf_flag": false,
+    "conditions": [
+      "fee represents actual administrative cost",
+      "fee is not a percentage of the guarantee amount"
+    ],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-D1",
+    "query_ar": "هل التورق المصرفي المنظم جائز؟",
+    "query_en": "Is organized banking tawarruq permissible?",
+    "contract_type": "tawarruq",
+    "party_role": "unknown",
+    "ruling": "PROHIBITED",
+    "dalil": "SS-30, Clause 5/1",
+    "applicable_standards": ["SS-30"],
+    "forbidden_standards": [],
+    "khilaf_flag": true,
+    "conditions": [],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-E1",
+    "query_ar": "هل ضمان رأس مال المضاربة جائز؟",
+    "query_en": "Is it permissible to guarantee the Mudaraba capital?",
+    "contract_type": "mudaraba",
+    "party_role": "agent",
+    "ruling": "PROHIBITED",
+    "dalil": "SS-13, Clause 4/1/2",
+    "applicable_standards": ["SS-13"],
+    "forbidden_standards": [],
+    "khilaf_flag": false,
+    "conditions": [],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-E2",
+    "query_ar": "هل يجوز ضمان طرف ثالث لرأس مال المضاربة؟",
+    "query_en": "Is a third-party guarantee for Mudaraba capital permissible?",
+    "contract_type": "mudaraba",
+    "party_role": "guarantor",
+    "ruling": "CONDITIONAL",
+    "dalil": "SS-13, Clause 8/5",
+    "applicable_standards": ["SS-13", "SS-05"],
+    "forbidden_standards": [],
+    "khilaf_flag": false,
+    "conditions": [
+      "third party is entirely independent of the Mudarib",
+      "guarantee is not linked to the Mudaraba contract itself"
+    ],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-F1",
+    "query_ar": "هل يجوز تأخير تسليم المبيع في البيع المؤجل؟",
+    "query_en": "Is it permissible to delay delivery of the sold item in a deferred sale?",
+    "contract_type": "murabaha",
+    "party_role": "seller",
+    "ruling": "PROHIBITED",
+    "dalil": "SS-8, Clause 3/1",
+    "applicable_standards": ["SS-08"],
+    "forbidden_standards": ["SS-07"],
+    "khilaf_flag": false,
+    "conditions": [],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-G1",
+    "query_ar": "هل يجوز للبنك أن يأخذ هامش ربح على التمويل العقاري؟",
+    "query_en": "Is it permissible for the bank to take a profit margin on real estate financing?",
+    "contract_type": "ijarah",
+    "party_role": "lessor",
+    "ruling": "CONDITIONAL",
+    "dalil": "SS-09",
+    "applicable_standards": ["SS-09", "SS-14"],
+    "forbidden_standards": ["SS-08"],
+    "khilaf_flag": false,
+    "conditions": [
+      "structured as Ijarah Muntahia Bittamleek",
+      "profit margin is embedded in rent",
+      "bank bears ownership risks"
+    ],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-H1",
+    "query_ar": "هل بيع الوفاء جائز؟",
+    "query_en": "Is Bay' al-Wafa (sale with right of redemption) permissible?",
+    "contract_type": "unknown",
+    "party_role": "unknown",
+    "ruling": "PROHIBITED",
+    "dalil": "OIC Fiqh Academy Res 40/2/5",
+    "applicable_standards": ["OIC-40"],
+    "forbidden_standards": ["SS-08"],
+    "khilaf_flag": false,
+    "conditions": [],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-H6",
+    "query_ar": "هل يجوز الاستصناع في البرمجيات؟",
+    "query_en": "Is Istisna permissible for software development?",
+    "contract_type": "istisna",
+    "party_role": "contractor",
+    "ruling": "DISPUTED",
+    "dalil": "SS-11",
+    "applicable_standards": ["SS-11", "SS-09"],
+    "forbidden_standards": [],
+    "khilaf_flag": true,
+    "conditions": [
+      "specifications must be clearly defined",
+      "may be treated as Ijarah of services depending on jurisdiction"
+    ],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-H8",
+    "query_ar": "هل يجوز تحميل المستأجر تكاليف الصيانة الأساسية؟",
+    "query_en": "Is it permissible to burden the lessee with major maintenance costs?",
+    "contract_type": "ijarah",
+    "party_role": "lessee",
+    "ruling": "PROHIBITED",
+    "dalil": "SS-9, Clause 5/1/5",
+    "applicable_standards": ["SS-09"],
+    "forbidden_standards": [],
+    "khilaf_flag": false,
+    "conditions": [],
+    "scholar_sign_off": "PENDING"
+  },
+  {
+    "case_id": "TC-H10",
+    "query_ar": "هل يجوز توزيع فائض التأمين التكافلي على مساهمي الشركة؟",
+    "query_en": "Is it permissible to distribute the Takaful insurance surplus to the company's shareholders?",
+    "contract_type": "wakala",
+    "party_role": "agent",
+    "ruling": "PROHIBITED",
+    "dalil": "SS-26, Clause 5/4/1",
+    "applicable_standards": ["SS-26"],
+    "forbidden_standards": [],
+    "khilaf_flag": false,
+    "conditions": [],
+    "scholar_sign_off": "PENDING"
+  }
+]

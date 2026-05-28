@@ -16,14 +16,14 @@ def test_live_hard_case_gate_uses_live_pipeline_and_candidate_standard_filter(tm
   query: "Can we impose liquidated damages if the contractor is late delivering the project?"
   expected_behavior: "retrieval"
   expected_source_family: "sharia_standard"
-  expected_candidate_standards: ["SS-11"]
+  expected_candidate_standards: ["SS-05", "SS-11"]
 """.strip(),
         encoding="utf-8",
     )
 
     class FakePipeline:
         def retrieve(self, query, k=8, threshold=0.0, filters=None, mode="dense"):
-            assert filters == {"source_family": "sharia_standard", "standard_number": ["SS-11"]}
+            assert filters == {"source_family": "sharia_standard", "standard_number": ["SS-05", "SS-11"]}
             return [
                 {
                     "chunk_id": "right-ss-11",
@@ -34,6 +34,16 @@ def test_live_hard_case_gate_uses_live_pipeline_and_candidate_standard_filter(tm
                         "metadata_status": "cataloged",
                     },
                     "similarity": 0.93,
+                },
+                {
+                    "chunk_id": "right-ss-05",
+                    "content": "Penalty condition evidence",
+                    "metadata": {
+                        "source_family": "sharia_standard",
+                        "standard_number": "SS-05",
+                        "metadata_status": "cataloged",
+                    },
+                    "similarity": 0.91,
                 },
             ]
 
@@ -49,10 +59,10 @@ def test_live_hard_case_gate_uses_live_pipeline_and_candidate_standard_filter(tm
     assert report["application_answer_used"] is True
     result = report["results"][0]
     assert result["answer_status"] == "insufficient_data"
-    assert result["application_metadata"]["standards_route"]["candidate_standards"] == ["SS-11"]
-    assert result["retrieved_standards"] == ["SS-11"]
-    assert result["matched_standards"] == ["SS-11"]
-    assert result["candidate_standard_filter"]["required"] == ["SS-11"]
+    assert result["application_metadata"]["standards_route"]["candidate_standards"] == ["SS-05", "SS-11"]
+    assert result["retrieved_standards"] == ["SS-05", "SS-11"]
+    assert result["matched_standards"] == ["SS-05", "SS-11"]
+    assert result["candidate_standard_filter"]["required"] == ["SS-05", "SS-11"]
     assert Path(tmp_path / "report.json").exists()
 
 
@@ -66,7 +76,7 @@ def test_live_hard_case_gate_fails_when_only_wrong_sharia_standard_is_retrieved(
   query: "Can we impose an LD clause if the contractor is late delivering the project?"
   expected_behavior: "retrieval"
   expected_source_family: "sharia_standard"
-  expected_candidate_standards: ["SS-11"]
+  expected_candidate_standards: ["SS-05", "SS-11"]
 """.strip(),
         encoding="utf-8",
     )
@@ -93,6 +103,6 @@ def test_live_hard_case_gate_fails_when_only_wrong_sharia_standard_is_retrieved(
     )
 
     assert report["passed"] is False
-    assert "missing expected standards: SS-11" in report["results"][0]["failures"]
+    assert "missing expected standards: SS-05, SS-11" in report["results"][0]["failures"]
     assert report["results"][0]["matched_standards"] == []
     assert report["results"][0]["answer_status"] == "insufficient_data"

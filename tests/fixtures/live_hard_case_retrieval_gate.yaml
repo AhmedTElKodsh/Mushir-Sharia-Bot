@@ -5,7 +5,7 @@
   query: "Can we impose liquidated damages if the contractor is late delivering the project?"
   expected_behavior: "retrieval"
   expected_source_family: "sharia_standard"
-  expected_candidate_standards: ["SS-11"]
+  expected_candidate_standards: ["SS-05", "SS-11"]
 
 - case_id: HC-LIVE-002
   query: "Can the bank charge a late fee on a cash loan?"
@@ -17,4 +17,4 @@
   query: "هل شرط غرامة التأخير في عقود المقاولات شرط ربوي؟"
   expected_behavior: "clarification"
   expected_source_family: "sharia_standard"
-  expected_candidate_standards: ["SS-11"]
+  expected_candidate_standards: ["SS-05", "SS-11"]

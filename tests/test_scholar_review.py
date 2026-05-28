@@ -9,6 +9,9 @@ from src.governance import (
     ScholarReviewPacket,
     ScholarReviewPacketCsvStore,
     ScholarReviewPacketMarkdownStore,
+    ScholarReviewQueue,
+    ScholarReviewQueueItem,
+    ScholarReviewQueueStore,
     ScholarReviewStore,
     ScholarReviewTargetType,
     ScholarReviewWorkflowStatus,
@@ -159,3 +162,65 @@ def test_app_scholar_review_packet_exports_human_readable_review_tables(tmp_path
     assert rows[0]["human_scholar_review"] == ""
     assert "Scholar Review Packet" in markdown
     assert "SS-08" in markdown
+
+
+def test_scholar_review_queue_store_round_trips_pending_items(tmp_path):
+    path = tmp_path / "scholar_review_queue.jsonl"
+    store = ScholarReviewQueueStore(path)
+    item = ScholarReviewQueueItem(
+        query_id="q-001",
+        queue=ScholarReviewQueue.AUTO_FLAGGED,
+        query_en="Is this late penalty allowed?",
+        system_answer_en="Scholar review required.",
+        system_ruling="refer_to_scholar",
+        system_standards=["SS-03", "SS-08"],
+        system_confidence=1.2,
+        flag_reason="rule_evaluation_requires_scholar_review",
+        source_chunks=["chunk-1"],
+    )
+
+    store.append(item)
+    loaded = ScholarReviewQueueStore(path).load()
+    pending = ScholarReviewQueueStore(path).pending()
+    store.mark_reviewed("q-001")
+
+    assert loaded[0].queue == ScholarReviewQueue.AUTO_FLAGGED
+    assert loaded[0].system_confidence == 1.0
+    assert pending[0].query_id == "q-001"
+    assert ScholarReviewQueueStore(path).pending() == []
+
+
+def test_scholar_review_queue_item_can_be_built_from_answer_contract():
+    answer = AnswerContract(
+        answer="Supported by AAOIFI.",
+        status=ComplianceStatus.COMPLIANT,
+        citations=[
+            AAOIFICitation(
+                document_id="AAOIFI_Sharia_Standard_11_Istisna.md",
+                standard_number="SS-11",
+                section_number="1",
+                excerpt="Istisna excerpt.",
+            )
+        ],
+        reasoning_summary="Grounded.",
+        metadata={
+            "response_language": "en",
+            "confidence": 0.82,
+            "retrieved_chunk_ids": ["chunk-9"],
+            "standards_route": {"candidate_standards": ["SS-11", "SS-05"]},
+            "verdict_contract": {"verdict": "conditional"},
+        },
+    )
+
+    item = ScholarReviewQueueItem.from_answer(
+        queue=ScholarReviewQueue.RANDOM_SAMPLE,
+        query="Is a construction delay penalty allowed?",
+        answer=answer,
+        flag_reason="random_post_launch_sample",
+        request_id="req-9",
+    )
+
+    assert item.query_id == "req-9"
+    assert item.queue == ScholarReviewQueue.RANDOM_SAMPLE
+    assert item.system_standards == ["SS-11", "SS-05"]
+    assert item.source_chunks == ["chunk-9"]

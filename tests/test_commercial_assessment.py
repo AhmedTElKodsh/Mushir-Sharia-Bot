@@ -242,7 +242,7 @@ def test_construction_delay_damage_variants_route_to_istisna_candidate_ss11(quer
     assert scenario.contract_family == ContractFamily.ISTISNA
     assert scenario.late_payment_terms
     assert route.route_id == "istisna-penalty-clause"
-    assert route.candidate_standards == ["SS-11"]
+    assert route.candidate_standards == ["SS-05", "SS-11"]
 
 
 def test_arabic_delay_word_does_not_trigger_charity_beneficiary():
@@ -282,7 +282,7 @@ def test_istisna_late_penalty_rule_outputs_review_requirements():
         (
             "Can we impose a penalty if the contractor is late delivering the project?",
             "istisna-penalty-clause",
-            {"SS-11"},
+            {"SS-05", "SS-11"},
         ),
         (
             "Can the bank charge a late fee on a cash loan?",

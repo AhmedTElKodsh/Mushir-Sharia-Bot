@@ -118,13 +118,12 @@ def test_governance_research_question_skips_transaction_clarification():
     assert engine.ask_if_needed("What governance policy should the Sharia board follow for audit review?") is None
 
 
-def test_judgment_query_with_missing_facts_asks_one_targeted_question():
+def test_judgment_query_with_missing_facts_bypasses_transaction_clarification():
     engine = ClarificationEngine()
 
     question = engine.ask_if_needed("What is the ruling on my investment?")
 
-    assert question == "What type of company or business activity is involved?"
-    assert question.count("?") == 1
+    assert question is None
 
 
 def test_specific_murabaha_compliance_query_skips_extra_clarification():
@@ -152,7 +151,7 @@ def test_arabic_transaction_clarification_uses_arabic_question():
     assert question == "ما هو سعر الشراء؟"
 
 
-def test_arabic_car_installment_without_ownership_sequence_asks_relevant_followup():
+def test_arabic_car_installment_judgment_query_reaches_retrieval():
     engine = ClarificationEngine()
 
     question = engine.ask_if_needed(
@@ -161,7 +160,7 @@ def test_arabic_car_installment_without_ownership_sequence_asks_relevant_followu
         "بقيمة مضافة 20% من ثمن السيارة، هل ده حلال"
     )
 
-    assert question == "هل تملك البنك السيارة وقبضها أو تحمل مخاطرها قبل بيعها لك؟"
+    assert question is None
 
 
 def test_arabic_car_installment_with_late_penalty_reaches_retrieval():

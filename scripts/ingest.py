@@ -191,8 +191,9 @@ def ingest_files(
     model_name: str,
     source_catalog: Optional[SourceCatalog] = None,
     corpus_dir: Optional[Path] = None,
-) -> int:
+) -> tuple[int, list]:
     total_chunks = 0
+    bm25_docs = []
     for md_file in files:
         source_language = detect_language(md_file)
         try:
@@ -237,12 +238,14 @@ def ingest_files(
                 documents=chunks,
                 metadatas=metadatas,
             )
+            for i, chunk_text in enumerate(chunks):
+                bm25_docs.append({"doc_id": ids[i], "text": chunk_text, "metadata": metadatas[i]})
             total_chunks += len(chunks)
             print(f"  Stored {len(chunks)} chunks")
         except Exception as exc:
             print(f"  Error processing {md_file.name}: {exc}")
             continue
-    return total_chunks
+    return total_chunks, bm25_docs
 
 
 def parse_args() -> argparse.Namespace:
@@ -334,7 +337,7 @@ def main() -> int:
 
     scope = f" and standards: {', '.join(standards)}" if standards else ""
     print(f"Found {len(files)} AAOIFI standards to process for languages: {', '.join(languages)}{scope}")
-    total_chunks = ingest_files(
+    total_chunks, bm25_docs = ingest_files(
         files,
         model,
         collection,
@@ -343,6 +346,14 @@ def main() -> int:
         source_catalog=source_catalog,
         corpus_dir=corpus_dir,
     )
+
+    if bm25_docs:
+        from src.rag.pipeline import BM25Retriever
+        print(f"Building BM25 index for {len(bm25_docs)} chunks...")
+        bm25_retriever = BM25Retriever(bm25_docs)
+        bm25_path = Path(args.chroma_dir) / "bm25_index.pkl"
+        bm25_retriever.save(bm25_path)
+        print(f"BM25 index saved to: {bm25_path}")
 
     print(f"\n{'=' * 60}")
     print("Ingestion complete!")

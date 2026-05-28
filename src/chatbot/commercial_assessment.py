@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable, List, Optional, Set
 
+from src.chatbot.contract_classifier import ContractTypeClassifier
 from src.governance.router_seed import RouterSeedRecord, RouterSeedRegistry, default_router_seed_registry
 from src.models.commercial import (
     ContractFamily,
@@ -20,6 +21,7 @@ from src.models.commercial import (
     VerdictContract,
     VerdictStatus,
 )
+from src.ontology import ConceptOntologyRouter
 
 AR_MURABAHA = "\u0645\u0631\u0627\u0628\u062d\u0629"
 AR_MURABAHA_ALT = "\u0645\u0631\u0627\u0628\u062d\u0647"
@@ -55,7 +57,7 @@ AR_CONSTRUCTION_TERMS = (
     "\u0627\u0646\u0634\u0627\u0621\u0627\u062a",
     "\u062a\u0634\u064a\u064a\u062f",
 )
-AR_SUPPLY_TERMS = ("\u062a\u0648\u0631\u064a\u062f", "\u0645\u0648\u0631\u062f", "\u062a\u0633\u0644\u064a\u0645")
+AR_SUPPLY_TERMS = ("\u062a\u0648\u0631\u064a\u062f", "\u0645\u0648\u0631\u062f")
 AR_MANUFACTURING_TERMS = ("\u062a\u0635\u0646\u064a\u0639", "\u0645\u0635\u0646\u0639", "\u0635\u0627\u0646\u0639", "\u0627\u0633\u062a\u0635\u0646\u0627\u0639")
 AR_CHARITY_TERMS = (
     "\u062c\u0647\u0629 \u062e\u064a\u0631\u064a\u0629",
@@ -70,6 +72,9 @@ AR_CHARITY_TERMS = (
 
 class ScenarioExtractor:
     """Small deterministic extractor for first-wave commercial domains."""
+
+    def __init__(self, contract_classifier: Optional[ContractTypeClassifier] = None) -> None:
+        self._contract_classifier = contract_classifier or ContractTypeClassifier()
 
     _PERMISSIBILITY_TERMS = (
         "halal", "haram", "riba", "ribawi", "permissible", "allowed", "valid", "sharia-compliant",
@@ -108,7 +113,8 @@ class ScenarioExtractor:
     def extract(self, query: str) -> TransactionScenario:
         text = query or ""
         lowered = text.lower()
-        contract_family = self._contract_family(lowered)
+        classification = self._contract_classifier.classify(text)
+        contract_family = classification.contract_family if classification else self._contract_family(lowered)
         question_type = self._question_type(lowered)
         if question_type == QuestionType.PERMISSIBILITY and not self._has_commercial_context(lowered, contract_family):
             question_type = QuestionType.UNKNOWN
@@ -325,8 +331,13 @@ class ScenarioExtractor:
 class StandardsRouter:
     """Choose source-family routes from the extracted scenario."""
 
-    def __init__(self, seed_registry: Optional[RouterSeedRegistry] = None) -> None:
+    def __init__(
+        self,
+        seed_registry: Optional[RouterSeedRegistry] = None,
+        ontology_router: Optional[ConceptOntologyRouter] = None,
+    ) -> None:
         self._seed_registry = seed_registry or default_router_seed_registry()
+        self._ontology_router = ontology_router or ConceptOntologyRouter()
 
     def route(self, scenario: TransactionScenario, query: str = "") -> StandardsRoute:
         seed = self._seed_registry.match(query) if query else None
@@ -341,6 +352,9 @@ class StandardsRouter:
             )
         if scenario.question_type == QuestionType.PERMISSIBILITY:
             route_id, candidate_standards = self._hard_sharia_route(scenario, query, seed)
+            ontology_route = self._ontology_router.route_query(query, scenario.contract_family)
+            if ontology_route.standard_ids:
+                candidate_standards = sorted(set(candidate_standards) | set(ontology_route.standard_ids))
             return StandardsRoute(
                 primary=[SourceFamily.SHARIA_STANDARD],
                 secondary=[SourceFamily.FAS, SourceFamily.GOVERNANCE],
@@ -366,15 +380,27 @@ class StandardsRouter:
     ) -> tuple[Optional[str], List[str]]:
         lowered = (query or "").lower()
         if scenario.late_payment_terms and scenario.contract_family == ContractFamily.ISTISNA:
-            return "istisna-penalty-clause", ["SS-11"]
+            return "istisna-penalty-clause", ["SS-05", "SS-11"]
         if scenario.late_payment_terms and scenario.contract_family == ContractFamily.MURABAHA:
             return "murabaha-late-payment-penalty", ["SS-03", "SS-08"]
         if scenario.late_payment_terms and scenario.contract_family == ContractFamily.QARD:
             return "debt-late-payment-penalty", ["SS-03", "SS-19"]
-        if any(term in lowered for term in ("currency", "fx", "foreign exchange", "sarf", "\u0635\u0631\u0641", "\u0639\u0645\u0644\u0629")):
+        if any(term in lowered for term in ("currency", "fx", "foreign exchange", "sarf", "صرف", "عملة")):
             return "currency-sarf-settlement", ["SS-01"]
-        if any(term in lowered for term in ("guarantee", "kafalah", "\u0636\u0645\u0627\u0646", "\u0643\u0641\u0627\u0644\u0629")):
+        if any(term in lowered for term in ("guarantee", "kafalah", "ضمان", "كفالة")):
+            if scenario.contract_family == ContractFamily.MUDARABA:
+                return "mudaraba-guarantee", ["SS-13", "SS-05"]
             return "guarantee-kafalah-fee", ["SS-05"]
+        if any(term in lowered for term in ("sale of debt", "بيع الدين")):
+            return "debt-sale", ["SS-60"]
+        if any(term in lowered for term in ("bay' al-wafa", "sale with right of redemption", "بيع الوفاء")):
+            return "bay-al-wafa", ["OIC-40"]
+        if scenario.contract_family == ContractFamily.ISTISNA and any(term in lowered for term in ("software", "برمجيات", "services", "خدمات", "maintenance", "صيانة")):
+            return "istisna-services", ["SS-11", "SS-09"]
+        if any(term in lowered for term in ("takaful", "insurance", "تأمين", "تكافلي")):
+            return "takaful-insurance", ["SS-26"]
+        if any(term in lowered for term in ("real estate financing", "التمويل العقاري")):
+            return "real-estate-financing", ["SS-09", "SS-14"]
         family_routes = {
             ContractFamily.MURABAHA: ("murabaha-permissibility", ["SS-08"]),
             ContractFamily.IJARAH: ("ijarah-permissibility", ["SS-09"]),
@@ -382,6 +408,7 @@ class StandardsRouter:
             ContractFamily.ISTISNA: ("istisna-permissibility", ["SS-11"]),
             ContractFamily.TAWARRUQ: ("tawarruq-permissibility", ["SS-30"]),
             ContractFamily.QARD: ("qard-permissibility", ["SS-19"]),
+            ContractFamily.KAFALA: ("guarantee-kafalah-fee", ["SS-05"]),
             ContractFamily.WAKALA: ("wakala-permissibility", ["SS-46"]),
             ContractFamily.SUKUK: ("sukuk-permissibility", ["SS-17"]),
             ContractFamily.MUSHARAKA: ("musharaka-permissibility", ["SS-12"]),

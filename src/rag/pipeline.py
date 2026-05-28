@@ -3,9 +3,13 @@ L0 RAG Pipeline
 Retrieves relevant AAOIFI chunks for a given query.
 """
 import logging
+import math
 import os
 import re
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
+import pickle
+from pathlib import Path
 from dotenv import load_dotenv
 from src.governance.source_catalog import is_answer_admissible_metadata
 from src.models.schema import SemanticChunk, AAOIFICitation
@@ -26,11 +30,79 @@ GOVERNED_CHROMA_METADATA_KEYS = (
 )
 
 
+@dataclass(frozen=True)
+class ScoredDoc:
+    doc_id: str
+    text: str
+    score: float
+    metadata: Dict[str, Any]
+
+
+class BM25Retriever:
+    """rank_bm25 based retriever for sparse lexical recall."""
+
+    def __init__(self, documents: List[ScoredDoc] | List[Dict[str, Any]]) -> None:
+        from rank_bm25 import BM25Okapi
+        self.documents = [_coerce_scored_doc(index, item) for index, item in enumerate(documents)]
+        self._tokens = [_tokenize_for_bm25(doc.text) for doc in self.documents]
+        self.bm25 = BM25Okapi(self._tokens) if self._tokens else None
+
+    @classmethod
+    def load(cls, path: str | Path) -> Optional['BM25Retriever']:
+        try:
+            with open(path, 'rb') as f:
+                return pickle.load(f)
+        except (FileNotFoundError, EOFError):
+            return None
+
+    def save(self, path: str | Path) -> None:
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
+
+    def retrieve(self, query: str, top_k: int = 20) -> List[ScoredDoc]:
+        if top_k <= 0 or not self.documents or not self.bm25:
+            return []
+        query_terms = _tokenize_for_bm25(query)
+        scores = self.bm25.get_scores(query_terms)
+        
+        scored: List[ScoredDoc] = []
+        for doc, score in zip(self.documents, scores):
+            if score > 0:
+                scored.append(ScoredDoc(doc_id=doc.doc_id, text=doc.text, score=score, metadata=doc.metadata))
+        return sorted(scored, key=lambda item: item.score, reverse=True)[:top_k]
+
+
+from src.retrieval.rrf import rrf_merge
+
+
 def _env_flag_enabled(name: str, default: bool = True) -> bool:
     raw_value = os.getenv(name)
     if raw_value is None:
         return default
     return raw_value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _coerce_scored_doc(index: int, item: ScoredDoc | Dict[str, Any]) -> ScoredDoc:
+    if isinstance(item, ScoredDoc):
+        return item
+    return ScoredDoc(
+        doc_id=str(item.get("doc_id") or item.get("chunk_id") or item.get("id") or f"doc-{index}"),
+        text=str(item.get("text") or item.get("document") or item.get("content") or ""),
+        score=float(item.get("score") or 0.0),
+        metadata=dict(item.get("metadata") or {}),
+    )
+
+
+def _tokenize_for_bm25(text: str) -> List[str]:
+    return re.findall(r"[\w\u0600-\u06ff]+", text.lower())
+
+
+def _result_id(item: Any) -> str:
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        return str(item.get("doc_id") or item.get("chunk_id") or item.get("id") or "")
+    return str(getattr(item, "doc_id", None) or getattr(item, "chunk_id", None) or getattr(item, "id", "") or "")
 
 
 def _governed_metadata_required() -> bool:
@@ -223,6 +295,7 @@ class RAGPipeline:
         """Initialize RAG pipeline with ChromaDB and embedding model."""
         self.vector_store = None
         self.embedding_service = None
+        self.bm25_retriever = None
 
         if persist_dir is not None and hasattr(persist_dir, "similarity_search"):
             self.vector_store = persist_dir
@@ -253,6 +326,11 @@ class RAGPipeline:
             if _governed_metadata_required():
                 validate_chroma_index_for_governed_metadata(self.collection)
             print(f"Collection contains {self.collection.count()} chunks")
+            
+            bm25_path = Path(self.persist_dir) / "bm25_index.pkl"
+            self.bm25_retriever = BM25Retriever.load(bm25_path)
+            if self.bm25_retriever:
+                print(f"Loaded BM25 index with {len(self.bm25_retriever.documents)} documents")
 
     def embed_query(self, query: str) -> List[float]:
         """Generate embedding for a query string with cross-lingual expansion.
@@ -388,11 +466,60 @@ class RAGPipeline:
                 )
                 fallback_chunks.append(chunk)
 
-                # Filter by threshold
+                # Filter by threshold for dense
                 if rerank_score >= threshold:
                     chunks.append(chunk)
 
-        candidates = chunks if chunks or not allow_low_confidence_fallback else fallback_chunks
+        if mode == "hybrid" and self.bm25_retriever:
+            # Get sparse results
+            sparse_docs = self.bm25_retriever.retrieve(query, top_k=max(k * rerank_multiplier, k))
+            # Convert sparse docs to SemanticChunk
+            sparse_chunks = []
+            for sdoc in sparse_docs:
+                if not _metadata_matches_filters(sdoc.metadata, filters) or not _is_answer_admissible_metadata(sdoc.metadata):
+                    continue
+                cit = AAOIFICitation(
+                    standard_id=sdoc.metadata.get('source_file', 'Unknown').replace('.md', ''),
+                    section=sdoc.metadata.get('section') or sdoc.metadata.get('section_title') or sdoc.metadata.get('section_number'),
+                    page=sdoc.metadata.get('page'),
+                    source_file=sdoc.metadata.get('source_file', 'Unknown')
+                )
+                s_traced = dict(sdoc.metadata)
+                s_traced["retrieval_mode"] = "sparse"
+                s_chunk = SemanticChunk(chunk_id=sdoc.doc_id, text=sdoc.text, citation=cit, score=sdoc.score, metadata=s_traced)
+                sparse_chunks.append(s_chunk)
+            
+            # Apply RRF
+            doc_map = {}
+            for c in chunks:
+                doc_map[c.chunk_id] = c
+            for c in sparse_chunks:
+                if c.chunk_id in doc_map:
+                    doc_map[c.chunk_id].metadata["score_components"]["sparse_score"] = c.score
+                else:
+                    c.metadata["score_components"] = {"sparse_score": c.score}
+                    doc_map[c.chunk_id] = c
+                    
+            ranked_ids = rrf_merge(chunks, sparse_chunks, k=60)
+            
+            # Use RRF score as the final score
+            hybrid_chunks = []
+            for rank, doc_id in enumerate(ranked_ids):
+                c = doc_map[doc_id]
+                rrf_score = 1.0 / (rank + 1.0)
+                c.score = rrf_score
+                c.metadata["retrieval_mode"] = "hybrid"
+                if "score_components" not in c.metadata:
+                    c.metadata["score_components"] = {}
+                c.metadata["score_components"]["rrf_score"] = rrf_score
+                # For compatibility with older tests that expect lexical_score
+                c.metadata["score_components"]["lexical_score"] = c.metadata["score_components"].get("sparse_score", 0.0)
+                hybrid_chunks.append(c)
+                
+            candidates = hybrid_chunks
+        else:
+            candidates = chunks if chunks or not allow_low_confidence_fallback else fallback_chunks
+
         ranked_chunks = sorted(candidates, key=lambda chunk: chunk.score, reverse=True)
         return ranked_chunks[:k]
 

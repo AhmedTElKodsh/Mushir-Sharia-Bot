@@ -45,6 +45,14 @@ class ParentChildChunkMetadataBuilder:
         section_parts = [part.strip() for part in section_path if part and part.strip()]
         parent_chunk_id = self.parent_chunk_id(section_parts)
         tags = list(self.operation_tags) + list(operation_tags)
+        # Resolve contract_family from standard_number using query_intent hints
+        from src.models.query_intent import AAOIFI_HINTS_BY_CONTRACT
+        contract_family = "UNKNOWN"
+        for classification, standards in AAOIFI_HINTS_BY_CONTRACT.items():
+            if self.standard_number in standards:
+                contract_family = classification.value
+                break
+                
         base.update(
             {
                 "document_version_id": self.document_version_id,
@@ -57,6 +65,7 @@ class ParentChildChunkMetadataBuilder:
                 "embedding_model": self.embedding_model,
                 "embedding_normalized": self.embedding_normalized,
                 "metadata_status": self._metadata_status(),
+                "contract_family": contract_family,
             }
         )
         return base

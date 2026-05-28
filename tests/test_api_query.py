@@ -229,6 +229,41 @@ def test_rest_query_disclaimer_response_omits_removed_acknowledgement_phrase(mon
 
 
 @pytest.mark.api
+def test_flag_answer_appends_user_reported_scholar_queue_item(monkeypatch, tmp_path):
+    from src.api.main import create_app
+    from src.governance.scholar_review import ScholarReviewQueueStore
+
+    queue_path = tmp_path / "scholar_review_queue.jsonl"
+    monkeypatch.setenv("SCHOLAR_REVIEW_QUEUE_PATH", str(queue_path))
+    app = create_app()
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/flag-answer",
+            json={
+                "query_id": "answer-123",
+                "query": "Is this answer correct?",
+                "answer": "The system answer",
+                "reason": "Incorrect standard cited",
+                "metadata": {
+                    "response_language": "en",
+                    "confidence": 0.71,
+                    "candidate_standards": ["SS-11"],
+                    "retrieved_chunk_ids": ["chunk-11"],
+                    "status": "CONDITIONAL",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"query_id": "answer-123", "queue": "Q3", "status": "queued"}
+    items = ScholarReviewQueueStore(queue_path).load()
+    assert items[0].queue.value == "Q3"
+    assert items[0].system_standards == ["SS-11"]
+    assert items[0].user_feedback == "Incorrect standard cited"
+
+
+@pytest.mark.api
 def test_rest_query_rejects_prompt_injection_before_service_call():
     from src.api.dependencies import get_application_service
     from src.api.main import create_app

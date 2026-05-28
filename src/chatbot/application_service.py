@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import re
 from inspect import Parameter, signature
 from typing import Any, Dict, List, Optional
@@ -19,6 +20,11 @@ from src.models.ruling import AAOIFICitation, AnswerContract, ComplianceStatus
 from src.models.commercial import ContractFamily, SourceFamily
 from src.models.session import ClarificationState
 from src.governance.source_catalog import is_answer_admissible_metadata
+from src.governance.scholar_review import (
+    ScholarReviewQueue,
+    ScholarReviewQueueItem,
+    ScholarReviewQueueStore,
+)
 from src.rag.pipeline import RAGPipeline
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.storage.cache import CacheStore
@@ -65,6 +71,9 @@ class ApplicationService:
         session_store=None,
         audit_store=None,
         cache_store=None,
+        scholar_review_queue_store: Optional[ScholarReviewQueueStore] = None,
+        scholar_sampling_rate: float = 0.05,
+        scholar_sampler=None,
         k: int = 5,
         threshold: float = 0.3,
     ):
@@ -76,6 +85,9 @@ class ApplicationService:
         self.session_store = session_store
         self.audit_store = audit_store
         self.cache_store = cache_store
+        self.scholar_review_queue_store = scholar_review_queue_store
+        self.scholar_sampling_rate = max(0.0, min(float(scholar_sampling_rate), 1.0))
+        self.scholar_sampler = scholar_sampler or random.random
         self.k = k
         self.threshold = threshold
         self.response_cache_ttl = int(os.getenv("RESPONSE_CACHE_TTL_SECONDS", "86400"))
@@ -321,6 +333,14 @@ class ApplicationService:
                 ),
             )
             self._audit(cleaned_query, contract, session_id, request_id)
+            self._append_scholar_review_queue(
+                query=cleaned_query,
+                answer=contract,
+                queue=ScholarReviewQueue.AUTO_FLAGGED,
+                flag_reason="rule_evaluation_requires_scholar_review",
+                session_id=session_id,
+                request_id=request_id,
+            )
             return contract
 
         definition_contract = self._definition_answer_if_supported(
@@ -415,6 +435,36 @@ class ApplicationService:
             ),
         )
         self._audit(cleaned_query, contract, session_id, request_id)
+        
+        # User-flag Q3 (if user feedback indicates issue)
+        user_feedback = "flagged" if (conversation_history and len(conversation_history) > 0 and "flag" in str(conversation_history[-1].get("content", "")).lower()) else ""
+        if user_feedback:
+            self._append_scholar_review_queue(
+                query=cleaned_query,
+                answer=contract,
+                queue=ScholarReviewQueue.USER_REPORTED,
+                flag_reason="user_feedback_flag",
+                session_id=session_id,
+                request_id=request_id,
+            )
+        # Auto-flag Q1 for low-confidence RAG
+        elif self._confidence(chunks) < 0.5 or status == ComplianceStatus.INSUFFICIENT_DATA:
+            self._append_scholar_review_queue(
+                query=cleaned_query,
+                answer=contract,
+                queue=ScholarReviewQueue.AUTO_FLAGGED,
+                flag_reason="low_confidence_or_insufficient_data",
+                session_id=session_id,
+                request_id=request_id,
+            )
+        else:
+            self._maybe_append_random_scholar_sample(
+                query=cleaned_query,
+                answer=contract,
+                session_id=session_id,
+                request_id=request_id,
+            )
+            
         self._cache_answer(cleaned_query, contract, standards_route)
         return contract
 
@@ -727,6 +777,53 @@ class ApplicationService:
         self.audit_store.log_answer(
             query=query,
             answer=answer,
+            session_id=session_id,
+            request_id=request_id,
+        )
+
+    def _append_scholar_review_queue(
+        self,
+        *,
+        query: str,
+        answer: AnswerContract,
+        queue: ScholarReviewQueue,
+        flag_reason: str,
+        session_id: Optional[str],
+        request_id: Optional[str],
+    ) -> None:
+        if not self.scholar_review_queue_store:
+            return
+        item = ScholarReviewQueueItem.from_answer(
+            queue=queue,
+            query=query,
+            answer=answer,
+            flag_reason=flag_reason,
+            query_id=request_id,
+            request_id=request_id,
+            session_id=session_id,
+        )
+        self.scholar_review_queue_store.append(item)
+
+    def _maybe_append_random_scholar_sample(
+        self,
+        *,
+        query: str,
+        answer: AnswerContract,
+        session_id: Optional[str],
+        request_id: Optional[str],
+    ) -> None:
+        if (
+            not self.scholar_review_queue_store
+            or answer.status == ComplianceStatus.CLARIFICATION_NEEDED
+            or self.scholar_sampling_rate <= 0.0
+            or self.scholar_sampler() >= self.scholar_sampling_rate
+        ):
+            return
+        self._append_scholar_review_queue(
+            query=query,
+            answer=answer,
+            queue=ScholarReviewQueue.RANDOM_SAMPLE,
+            flag_reason="random_post_launch_sample",
             session_id=session_id,
             request_id=request_id,
         )
