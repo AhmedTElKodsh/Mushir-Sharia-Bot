@@ -1,0 +1,17 @@
+case_id: GC-014
+query_ar: هل بيع الوفاء (اشتراط حق استرداد المبيع) جائز شرعاً؟
+query_en: Is Bay al-Wafa (sale with a condition to redeem the asset) Sharia-compliant?
+contract_family: GENERAL_SHARIA
+expected_standards:
+- SS-31
+expected_ruling: DISPUTED
+forbidden_citations:
+- SS-08
+- SS-12
+clarification_required: true
+risk_class:
+- R2
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Bay al-Wafa is disputed. Ruling must be DISPUTED with CLARIFY.

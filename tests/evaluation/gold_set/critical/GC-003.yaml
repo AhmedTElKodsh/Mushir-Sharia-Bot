@@ -1,0 +1,15 @@
+case_id: GC-003
+query_ar: هل يجوز لمصدر الصكوك ضمان رأس المال للمستثمرين؟
+query_en: Is it permissible for a Sukuk issuer to guarantee the capital for investors?
+contract_family: GENERAL_SHARIA
+expected_standards:
+- SS-17
+expected_ruling: PROHIBITED
+forbidden_citations:
+- SS-28
+clarification_required: false
+risk_class:
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Sukuk issuer capital guarantee is prohibited. Third-party guarantee is permissible.

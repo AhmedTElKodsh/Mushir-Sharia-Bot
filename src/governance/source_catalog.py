@@ -10,6 +10,12 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional
 from src.models.commercial import SourceFamily
 
 
+class MetadataStatus(str, Enum):
+    QUARANTINED_MISSING_CATALOG = "quarantined_missing_catalog"
+    CATALOGED = "cataloged"
+    CATALOGED_NOT_ANSWER_ADMISSIBLE = "cataloged_not_answer_admissible"
+
+
 class SourceType(str, Enum):
     OFFICIAL_PAGE = "official_page"
     DERIVED_MARKDOWN = "derived_markdown"
@@ -57,13 +63,13 @@ def is_answer_admissible_metadata(
     become hard answer gates.
     """
     status = str(metadata.get("metadata_status") or "").strip().lower()
-    if status == "quarantined_missing_catalog":
+    if status == MetadataStatus.QUARANTINED_MISSING_CATALOG.value:
         return False
-    if status == "cataloged_not_answer_admissible":
+    if status == MetadataStatus.CATALOGED_NOT_ANSWER_ADMISSIBLE.value:
         return False
     if not require_governed_metadata:
         return True
-    if status != "cataloged":
+    if status != MetadataStatus.CATALOGED.value:
         return False
     if str(metadata.get("source_currentness") or "").strip().lower() != SourceCurrentness.CURRENT.value:
         return False

@@ -2,6 +2,7 @@ import json
 import os
 import random
 import re
+from dataclasses import dataclass
 from inspect import Parameter, signature
 from typing import Any, Dict, List, Optional
 
@@ -17,7 +18,7 @@ from src.chatbot.citation_validator import CitationValidator
 from src.chatbot.constants import AUTHORITY_REQUEST_TERMS
 from src.chatbot.prompt_builder import PromptBuilder
 from src.models.ruling import AAOIFICitation, AnswerContract, ComplianceStatus
-from src.models.commercial import ContractFamily, SourceFamily
+from src.models.commercial import ContractFamily, SourceFamily, StandardsRoute
 from src.models.session import ClarificationState
 from src.governance.source_catalog import is_answer_admissible_metadata
 from src.governance.scholar_review import (
@@ -27,6 +28,7 @@ from src.governance.scholar_review import (
 )
 from src.rag.pipeline import RAGPipeline
 from src.rag.query_preprocessor import QueryPreprocessor
+from src.rag.standard_resolver import all_standards_for_family, resolve_bulk
 from src.storage.cache import CacheStore
 
 # ---------------------------------------------------------------------------
@@ -81,7 +83,11 @@ class ApplicationService:
         self.llm_client = llm_client
         self.prompt_builder = prompt_builder or PromptBuilder()
         self.citation_validator = citation_validator or CitationValidator()
-        self.clarification_service = clarification_service
+        # ClarificationEngine is the authoritative gate for pre-retrieval clarification.
+        # Always instantiate a default so the judgment bypass, informational bypass,
+        # and transaction-structure bypass all fire regardless of caller injection.
+        from src.chatbot.clarification_engine import ClarificationEngine
+        self.clarification_service = clarification_service or ClarificationEngine()
         self.session_store = session_store
         self.audit_store = audit_store
         self.cache_store = cache_store
@@ -92,8 +98,12 @@ class ApplicationService:
         self.threshold = threshold
         self.response_cache_ttl = int(os.getenv("RESPONSE_CACHE_TTL_SECONDS", "86400"))
         self.scenario_extractor = ScenarioExtractor()
+        from src.chatbot.contract_family_router import ContractFamilyRouter
+        self.family_router = ContractFamilyRouter()
         self.standards_router = StandardsRouter()
         self.rule_evaluator = CommercialRuleEvaluator()
+        from src.ontology.concept_ontology import ConceptOntology
+        self.ontology = ConceptOntology.load()
 
     def answer(
         self,
@@ -134,50 +144,41 @@ class ApplicationService:
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
 
+        # Stage 1 & 2: Routing and Standard Resolution
         pending_scenario_clarification = self._consume_pending_scenario_clarification(session_id)
+        session_family = pending_scenario_clarification.get("family") if pending_scenario_clarification else None
+        session_turns = pending_scenario_clarification.get("turns", 0) if pending_scenario_clarification else 0
+        family_result, target_standards, standards_route = self._handle_routing_stage(
+            cleaned_query, session_family, session_turns
+        )
+        if cached := self._cached_answer(cleaned_query, standards_route):
+            return cached
+            
+        from src.chatbot.contract_family_router import RetrievalMode
+        known_family = None
+        if family_result.mode in (RetrievalMode.SINGLE_PATH, RetrievalMode.MULTI_PATH):
+            known_family = family_result.primary_family
+
+        # Stage 3: Clarification Validation
+        clarification_contract = self._handle_clarification_stage(
+            cleaned_query,
+            family_result,
+            known_family,
+            session_id,
+            request_id,
+            response_language
+        )
+        if clarification_contract:
+            return clarification_contract
+
+        # Stubbed legacy dependencies
+        from src.chatbot.commercial_assessment import TransactionScenario, QuestionType
         analysis_query = self._query_with_pending_clarification(
             cleaned_query,
             pending_scenario_clarification,
         )
-        scenario = self.scenario_extractor.extract(analysis_query)
-        standards_route = self.standards_router.route(scenario, analysis_query)
+        scenario = TransactionScenario(question_type=QuestionType.PERMISSIBILITY)
         rule_evaluation = self.rule_evaluator.evaluate(scenario, standards_route)
-
-        if SourceFamily.SHARIA_STANDARD not in standards_route.primary:
-            cached = self._cached_answer(cleaned_query, standards_route)
-            if cached:
-                return cached
-        scenario_clarification = self._scenario_clarification_question(scenario, response_language)
-        clarification = scenario_clarification
-        if clarification is None:
-            clarification = self._clarification_question(cleaned_query, session_id)
-        if clarification:
-            if scenario_clarification:
-                self._remember_scenario_clarification(
-                    session_id=session_id,
-                    original_query=cleaned_query,
-                    clarification_question=clarification,
-                    scenario=scenario,
-                    standards_route=standards_route,
-                )
-            clarification_answer = clarification if scenario_clarification else self._clarification_answer(clarification, response_language)
-            contract = AnswerContract(
-                answer=clarification_answer,
-                status=ComplianceStatus.CLARIFICATION_NEEDED,
-                clarification_question=clarification,
-                reasoning_summary=self._clarification_reason(clarification, response_language),
-                limitations=self._limitations(response_language),
-                metadata=self._metadata(
-                    [],
-                    confidence=0.0,
-                    response_language=response_language,
-                    scenario=scenario,
-                    standards_route=standards_route,
-                    rule_evaluation=rule_evaluation,
-                ),
-            )
-            self._audit(cleaned_query, contract, session_id, request_id)
-            return contract
 
         if self.retriever is None:
             try:
@@ -1329,3 +1330,93 @@ class ApplicationService:
     @staticmethod
     def _reasoning_summary(answer: str) -> str:
         return answer.strip().splitlines()[0][:300]
+
+
+    def _handle_routing_stage(self, cleaned_query: str, session_family: "Any", session_turns: int):
+        
+        family_result = getattr(self, "family_router").classify(
+            cleaned_query, 
+            session_family=session_family, 
+            session_confirmation_turns=session_turns
+        )
+
+        matched_concepts = self.ontology.match(cleaned_query)
+        concept_ids = [entry.concept_id for entry in matched_concepts]
+
+        target_standards = resolve_bulk(concept_ids, family_result.primary_family)
+        if not target_standards:
+            target_standards = all_standards_for_family(family_result.primary_family)
+            
+        if family_result.mode and family_result.mode.value == "multi_path":
+            for adj_fam in (getattr(family_result, "adjacent_families", []) or []):
+                adj_standards = resolve_bulk(concept_ids, adj_fam)
+                if not adj_standards:
+                    adj_standards = all_standards_for_family(adj_fam)
+                target_standards.extend(adj_standards)
+            target_standards = list(dict.fromkeys(target_standards))
+
+        standards_route = StandardsRoute(
+            primary=[SourceFamily.SHARIA_STANDARD],
+            candidate_standards=target_standards,
+            requires_rule_evaluation=(family_result.primary_family != ContractFamily.UNKNOWN)
+        )
+        return family_result, target_standards, standards_route
+
+    def _handle_clarification_stage(
+        self,
+        cleaned_query: str,
+        family_result: "Any",
+        known_family: "Optional[ContractFamily]",
+        session_id: "Optional[str]",
+        request_id: "Optional[str]",
+        response_language: str
+    ) -> "Optional[AnswerContract]":
+        """
+        Determine whether clarification is needed before retrieval.
+
+        Architecture decision: the ClarificationEngine's ask_if_needed() is the
+        authoritative gate. The ContractFamilyRouter's mode=CLARIFICATION is an
+        advisory signal only — it means "low routing confidence" but not
+        necessarily "must ask the user a question".
+
+        Concretely:
+          - If the router gives a high-confidence primary family → ask_if_needed
+            decides (judgment bypass fires → None → proceed).
+          - If the router gives AMBIGUOUS/CLARIFICATION mode → still route through
+            ask_if_needed; for self-contained judgment queries (يجوز, حكم, etc.)
+            the judgment bypass fires because primary_family is not None → proceed.
+          - Only if ask_if_needed returns an actual question do we surface CLARIFY.
+        """
+        clarification: Optional[str] = None
+
+        if self.clarification_service:
+            # Pass the known_family so ask_if_needed can apply the bypass
+            # ONLY when the router is confident.
+            clarification = self.clarification_service.ask_if_needed(
+                cleaned_query,
+                session_id=session_id,
+                known_contract_family=known_family,
+            )
+        elif family_result.mode and family_result.mode.value == "clarification":
+            # No clarification service at all — fall back to router hint
+            clarification = getattr(family_result, "clarification_hint", None)
+
+        if clarification:
+            clarification_answer = self._clarification_answer(clarification, response_language)
+            contract = AnswerContract(
+                answer=clarification_answer,
+                status=ComplianceStatus.CLARIFICATION_NEEDED,
+                clarification_question=clarification,
+                reasoning_summary=self._clarification_reason(clarification, response_language),
+                limitations=self._limitations(response_language),
+                metadata=self._metadata(
+                    [],
+                    confidence=0.0,
+                    response_language=response_language,
+                ),
+            )
+            if hasattr(contract, "metadata"):
+                contract.metadata["router_signals"] = getattr(family_result, "signals", {})
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
+        return None

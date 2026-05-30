@@ -1,0 +1,17 @@
+case_id: GC-019
+query_ar: هل يجوز للكفيل (الضامن) تقاضي أجر أو عمولة مقابل الكفالة؟
+query_en: Is it permissible for a Kafil (guarantor) to charge a fee or commission
+  for providing Kafala?
+contract_family: KAFALA
+expected_standards:
+- SS-05
+expected_ruling: PROHIBITED
+forbidden_citations:
+- SS-12
+clarification_required: false
+risk_class:
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Guarantor charging a fee is prohibited as it converts to Riba per majority
+  view.

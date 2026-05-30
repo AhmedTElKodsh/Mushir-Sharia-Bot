@@ -1,0 +1,16 @@
+case_id: GC-008
+query_ar: هل يجوز تقديم قرض حسن بشرط فتح حساب استثماري؟
+query_en: Is it permissible to provide a Qard Hassan conditioned on opening an investment
+  account?
+contract_family: GENERAL_SHARIA
+expected_standards:
+- SS-19
+expected_ruling: PROHIBITED
+forbidden_citations:
+- SS-13
+clarification_required: false
+risk_class:
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Any condition attached to a Qard that brings a benefit to the lender is Riba.

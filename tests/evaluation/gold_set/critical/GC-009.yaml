@@ -1,0 +1,15 @@
+case_id: GC-009
+query_ar: ما حكم عقود الصرف الآجل في العملات؟
+query_en: What is the ruling on forward currency exchange contracts?
+contract_family: GENERAL_SHARIA
+expected_standards:
+- SS-01
+expected_ruling: PROHIBITED
+forbidden_citations:
+- SS-07
+clarification_required: false
+risk_class:
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Forward currency exchange is generally prohibited; spot settlement is required.

@@ -5,7 +5,7 @@ from typing import Iterable, List
 
 from src.models.commercial import ContractFamily
 from src.models.ruling import PartyRole, RulingContext, RulingResult, Permissibility
-from src.ontology.concept_ontology import ConceptOntology, RulingByContext
+from src.ontology.concept_ontology import ConceptOntology, ConditionalRuling
 
 
 class RulingFunctionEvaluator:
@@ -15,7 +15,7 @@ class RulingFunctionEvaluator:
     def evaluate(self, context: RulingContext, source_chunks: Iterable[str] = ()) -> RulingResult:
         matches = [
             item
-            for item in self.ontology.get(context.concept).ruling_by_context
+            for item in self.ontology.get(context.concept).conditional_rulings
             if self._matches(item, context)
         ]
         if not matches:
@@ -39,7 +39,7 @@ class RulingFunctionEvaluator:
         )
 
     @staticmethod
-    def _matches(rule: RulingByContext, context: RulingContext) -> bool:
+    def _matches(rule: ConditionalRuling, context: RulingContext) -> bool:
         if rule.contract_type not in {context.contract_type, ContractFamily.UNKNOWN}:
             return False
         if rule.party_role not in {context.party_role, PartyRole.UNKNOWN}:

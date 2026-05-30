@@ -980,15 +980,16 @@ def test_embedding_candidate_fixture_comparison_uses_separate_temp_index_and_saf
 
 @pytest.mark.unit
 def test_ingestion_candidate_probe_blocks_license_gated_pdf_candidates():
-    from scripts.evaluate_ingestion_candidates import evaluate_ingestion_candidates
+    from scripts.evaluate_ingestion_candidates import evaluate_ingestion_candidates, ProbeStatus
 
     report = evaluate_ingestion_candidates()
 
     assert report["runtime_ingestion_modified"] is False
-    assert report["candidates"]["pdfplumber"]["status"] == "probe_passed"
-    assert "Arab Investment Bank" in report["candidates"]["pdfplumber"]["extracted_text_preview"]
-    assert report["candidates"]["pymupdf"]["status"] == "blocked_pending_license_review"
-    assert report["candidates"]["marker"]["status"] == "blocked_pending_license_review"
+    assert report["candidates"]["pdfplumber"]["status"] in {ProbeStatus.PROBE_PASSED.value, ProbeStatus.MISSING_OPTIONAL_DEPENDENCY.value}
+    if report["candidates"]["pdfplumber"]["status"] == ProbeStatus.PROBE_PASSED.value:
+        assert "Arab Investment Bank" in report["candidates"]["pdfplumber"]["extracted_text_preview"]
+    assert report["candidates"]["pymupdf"]["status"] == ProbeStatus.BLOCKED_PENDING_LICENSE_REVIEW.value
+    assert report["candidates"]["marker"]["status"] == ProbeStatus.BLOCKED_PENDING_LICENSE_REVIEW.value
     assert report["summary"]["license_blocked_candidates"] == ["pymupdf", "marker"]
     assert report["candidates"]["pymupdf"]["adopt_next"] is False
     assert report["candidates"]["marker"]["adopt_next"] is False

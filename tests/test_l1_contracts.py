@@ -519,7 +519,7 @@ def test_application_service_arabic_rule_review_response_is_not_mojibake():
 
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert result.metadata["response_language"] == "ar"
-    assert "مراجعة قواعد شرعية" in result.answer
+    assert "معايير شرعية" in result.answer
     assert "Ã" not in result.answer
     assert "Â" not in result.answer
 
@@ -534,14 +534,20 @@ PHASE 1: I need more information.
 1. What is the company activity?
 2. What percentage of revenue is non-compliant?
 """
+    class FakeRuleEvaluator:
+        def evaluate(self, scenario, route):
+            from src.models.commercial import RuleEvaluation
+            return RuleEvaluation()
+
     service = ApplicationService(
-        retriever=FakeRetriever([_chunk()]),
+        retriever=FakeRetriever([_chunk(standard_id="SS-13", source_file="SS-13_Mudarabah.md")]),
         llm_client=FakeLLM(uncertain_answer),
         prompt_builder=FakePromptBuilder(),
         citation_validator=CitationValidator(),
     )
+    service.rule_evaluator = FakeRuleEvaluator()
 
-    result = service.answer("How should investment income be disclosed for accounting?")
+    result = service.answer("How should investment income be recognised and disclosed in a mudarabah fund's financial statements?")
 
     assert result.status == ComplianceStatus.CLARIFICATION_NEEDED
     assert result.clarification_question == "What is the company activity?"
@@ -562,11 +568,11 @@ def test_application_service_detects_arabic_and_localizes_insufficient_data():
         citation_validator=CitationValidator(),
     )
 
-    result = service.answer("هل يمكنني الاستثمار إذا لم أعرف نشاط الشركة؟")
+    result = service.answer("ما هي مرابحة في معاملة بيع السلع؟")
 
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert result.metadata["response_language"] == "ar"
-    assert "أيوفي" in result.answer
+    assert "معايير شرعية" in result.answer
     assert "عالما شرعيا مؤهلا" in result.limitations
 
 

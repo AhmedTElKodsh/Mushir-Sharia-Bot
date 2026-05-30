@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from src.governance.source_catalog import SourceCatalogRecord
+from src.governance.source_catalog import MetadataStatus, SourceCatalogRecord
 
 
 def _join_values(values: Sequence[str]) -> str:
@@ -64,7 +65,7 @@ class ParentChildChunkMetadataBuilder:
                 "operation_tags": _join_values(tags),
                 "embedding_model": self.embedding_model,
                 "embedding_normalized": self.embedding_normalized,
-                "metadata_status": self._metadata_status(),
+                "metadata_status": self._metadata_status().value,
                 "contract_family": contract_family,
             }
         )
@@ -94,9 +95,9 @@ class ParentChildChunkMetadataBuilder:
             "superseded_by": "",
         }
 
-    def _metadata_status(self) -> str:
+    def _metadata_status(self) -> MetadataStatus:
         if not self.catalog_record:
-            return "quarantined_missing_catalog"
+            return MetadataStatus.QUARANTINED_MISSING_CATALOG
         if self.catalog_record.is_answer_admissible:
-            return "cataloged"
-        return "cataloged_not_answer_admissible"
+            return MetadataStatus.CATALOGED
+        return MetadataStatus.CATALOGED_NOT_ANSWER_ADMISSIBLE

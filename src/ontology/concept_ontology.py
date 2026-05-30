@@ -16,7 +16,7 @@ DEFAULT_ONTOLOGY_DIR = Path("data/concept_ontology")
 
 
 @dataclass(frozen=True)
-class RulingByContext:
+class ConditionalRuling:
     contract_type: ContractFamily
     party_role: PartyRole = PartyRole.UNKNOWN
     ruling: Permissibility = Permissibility.INSUFFICIENT_DATA
@@ -34,7 +34,7 @@ class ConceptOntologyEntry:
     labels_ar: List[str] = field(default_factory=list)
     transliterations: List[str] = field(default_factory=list)
     synonyms: List[str] = field(default_factory=list)
-    ruling_by_context: List[RulingByContext] = field(default_factory=list)
+    conditional_rulings: List[ConditionalRuling] = field(default_factory=list)
 
     @property
     def terms(self) -> set[str]:
@@ -47,10 +47,10 @@ class ConceptOntologyEntry:
         if not concept_id:
             raise ValueError("concept_id is required")
         contexts = []
-        for item in payload.get("ruling_by_context") or []:
+        for item in payload.get("conditional_rulings") or payload.get("ruling_by_context") or []:
             context = item.get("context") or {}
             contexts.append(
-                RulingByContext(
+                ConditionalRuling(
                     contract_type=_contract_family(context.get("contract_type")),
                     party_role=_party_role(context.get("party_role")),
                     ruling=_permissibility(item.get("ruling")),
@@ -67,7 +67,7 @@ class ConceptOntologyEntry:
             labels_ar=_list(payload, "labels_ar") + _list(payload, "arabic_terms"),
             transliterations=_list(payload, "transliterations"),
             synonyms=_list(payload, "synonyms"),
-            ruling_by_context=contexts,
+            conditional_rulings=contexts,
         )
 
 
@@ -100,6 +100,16 @@ class ConceptOntology:
             if any(term in normalized or term in expanded for term in entry.terms):
                 matches.append(entry)
         return matches
+
+    def generate_domain_query_expansions(self) -> dict[str, tuple[str, ...]]:
+        """Generate expansion dict for the QueryPreprocessor from ontology synonyms."""
+        expansions = {}
+        for entry in self.all():
+            terms = entry.terms
+            for term in terms:
+                # Map every term to all terms in the concept cluster
+                expansions[term] = tuple(sorted(list(terms)))
+        return expansions
 
 
 def _read_yaml(path: Path) -> Mapping[str, Any]:

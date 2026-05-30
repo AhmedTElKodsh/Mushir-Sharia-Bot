@@ -1,5 +1,8 @@
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from src.chatbot.contract_family_router import ContractFamily
 
 
 from src.config.logging_config import setup_logging
@@ -13,6 +16,11 @@ REQUIRED_VARIABLES = {
     "investment": ["company_activity", "non_compliant_revenue_percent"],
     "purchase": ["item_type", "price", "payment_terms", "delivery_terms"],
     "contract": ["contract_type", "parties", "obligations", "duration"],
+    # Islamic contract types — each requires type-specific facts before routing to retrieval
+    "istisna": ["subject_matter", "delivery_terms", "penalty_clause_present"],  # AC-ISTISNA-01..03
+    "ijarah": ["asset_type", "lease_term"],                                       # AC-IJARAH-01..02
+    "wakalah": ["investment_scope"],                                              # AC-WAKALAH-01
+    "kafalah": ["guaranteed_obligation_type"],                                    # AC-KAFALAH-01
 }
 
 QUESTION_TEMPLATES = {
@@ -30,6 +38,13 @@ QUESTION_TEMPLATES = {
     "parties": "Who are the parties involved in the contract?",
     "obligations": "What are the main obligations in this contract?",
     "duration": "What is the duration of the contract?",
+    # Islamic contract types
+    "subject_matter": "What is the subject of the Istisna contract? (What is being manufactured or constructed?)",
+    "penalty_clause_present": "Does the contract include a penalty clause for late delivery?",
+    "asset_type": "What type of asset is being leased? (real estate, vehicle, equipment?)",
+    "lease_term": "What is the duration of the Ijara lease?",
+    "investment_scope": "What is the investment scope of the Wakalah? Are there any restrictions on the agent?",
+    "guaranteed_obligation_type": "What obligation does the Kafala guarantee? (debt, performance, quality?)",
 }
 
 QUESTION_TEMPLATES_AR = {
@@ -47,6 +62,13 @@ QUESTION_TEMPLATES_AR = {
     "parties": "من هم أطراف العقد؟",
     "obligations": "ما هي الالتزامات الرئيسية في هذا العقد؟",
     "duration": "ما هي مدة العقد؟",
+    # Islamic contract types
+    "subject_matter": "ما موضوع عقد الاستصناع؟ (ما الذي يُطلب تصنيعه أو بناؤه؟)",
+    "penalty_clause_present": "هل يتضمن العقد شرطاً جزائياً على التأخير في التسليم؟",
+    "asset_type": "ما نوع الأصل محل الإجارة؟ (عقار، سيارة، معدات؟)",
+    "lease_term": "ما هي مدة عقد الإجارة؟",
+    "investment_scope": "ما نطاق استثمار الوكالة؟ وما القيود المفروضة على الوكيل؟",
+    "guaranteed_obligation_type": "ما الالتزام الذي تكفله عقد الكفالة؟ (دَيْن، أداء، جودة؟)",
 }
 
 
@@ -253,18 +275,58 @@ class ClarificationEngine:
             return f"{session_state.user_input} | transaction_type: {op_type} | " + " | ".join(facts)
         return session_state.user_input
 
-    def ask_if_needed(self, query: str, session_id: Optional[str] = None) -> Optional[str]:
+    def ask_if_needed(
+        self,
+        query: str,
+        session_id: Optional[str] = None,
+        known_contract_family: Optional["ContractFamily"] = None,
+    ) -> Optional[str]:
         """Return a clarifying question if the query needs more facts, else None.
 
         Provides the stateless interface that ApplicationService requires.
         Creates a transient SessionState scoped to this single call so repeated
         invocations with the same query are idempotent.
+
+        Args:
+            query: The raw user query.
+            session_id: Optional session identifier for logging.
+            known_contract_family: Contract family already resolved by ContractFamilyRouter.
+                When provided and the query is a judgment query (حكم/يجوز/ربوي),
+                clarification is bypassed because the contract context is already known.
+                When None, judgment queries still require clarification — the system
+                cannot rule on a clause without knowing the contract type first.
+                This guards against the false-fatwa path (AC-CE-001).
         """
-        if self._is_judgment_query(query):
+        # Gate: judgment bypass ONLY fires when contract family is already confidently resolved.
+        # AMBIGUOUS means the router could not determine the family, so even judgment queries
+        # must go through process_query to ask for the contract type first.
+        # Without this check, "ما حكم التورق المصرفي؟" would bypass clarification even
+        # though organized vs. unorganised Tawarruq have completely different rulings.
+        from src.chatbot.contract_family_router import ContractFamily
+        _ambiguous_families = {ContractFamily.AMBIGUOUS, None}
+        if self._is_judgment_query(query) and known_contract_family not in _ambiguous_families:
             return None
         if self._is_informational_query(query):
             return None
         if self._has_specific_transaction_structure(query):
+            return None
+        # Named-instrument bypass: a judgment query that explicitly names a specific
+        # Islamic finance instrument is self-contained — the instrument resolves the
+        # ambiguity. No clarification is needed even when the router returns AMBIGUOUS.
+        # NOTE: Tawarruq is excluded because organized vs. unorganised Tawarruq have
+        # different rulings and DO require clarification (GC-002).
+        # Bay al-Wafa and fixed-distribution Sukuk are excluded because they are
+        # genuinely disputed concepts (GC-013, GC-014).
+        if self._is_judgment_query(query) and self._names_specific_instrument(query):
+            return None
+        # Second bypass: if the router has already confidently resolved the contract family,
+        # skip the process_query loop entirely. The contract type IS already known from the
+        # container pattern match — there's no value in asking "what type of contract is this?".
+        # This covers conditional/factual questions (e.g. GC-004 MUDHARABA, GC-016 IJARA)
+        # that lack explicit judgment keywords but are fully scoped by the router.
+        from src.chatbot.contract_family_router import ContractFamily
+        _ambiguous_families = {ContractFamily.AMBIGUOUS, None}
+        if known_contract_family not in _ambiguous_families:
             return None
         try:
             state = SessionState(session_id=session_id or "")
@@ -279,18 +341,26 @@ class ClarificationEngine:
     @staticmethod
     def _is_judgment_query(query: str) -> bool:
         terms = (
-            "ruling",
-            "permissible",
-            "halal",
-            "haram",
-            "\u062d\u0643\u0645",
-            "\u064a\u062c\u0648\u0632",
-            "\u062c\u0627\u0626\u0632",
-            "\u062d\u0644\u0627\u0644",
-            "\u062d\u0631\u0627\u0645",
+            r"\bruling\b",
+            r"\bpermissible\b",
+            r"\bhalal\b",
+            r"\bharam\b",
+            r"\busury\b",
+            r"\busurious\b",
+            r"\bvalid\b",
+            r"\binvalid\b",
+            "حكم",  # حكم
+            "يجوز",  # يجوز
+            "جائز",  # جائز
+            "حلال",  # حلال
+            "حرام",  # حرام
+            "ربوي",
+            "ربا",
+            "فاسد",
+            "مخالف",
         )
         lowered = (query or "").lower()
-        return any(term in lowered for term in terms)
+        return any(re.search(term if term.isascii() else re.escape(term), lowered) for term in terms)
 
     def _clarification_turns(self, session_state: SessionState) -> int:
         """Count clarification turns, recognising both ASCII '?' and Arabic '\u061f'."""
@@ -373,24 +443,25 @@ class ClarificationEngine:
     def _is_informational_query(self, query: str) -> bool:
         text = query.strip().lower()
         judgment_terms = (
-            "ruling",
-            "compliant",
-            "compliance",
-            "permissible",
-            "allowed",
-            "halal",
-            "haram",
-            "valid",
-            "can i",
-            "should i",
-            "حلال",
-            "حرام",
+            r"\bruling\b",
+            r"\bcompliant\b",
+            r"\bcompliance\b",
+            r"\bpermissible\b",
+            r"\ballowed\b",
+            r"\bhalal\b",
+            r"\bharam\b",
+            r"\bvalid\b",
+            r"\bcan i\b",
+            r"\bshould i\b",
+            "حلال",  # حلال
+            "حرام",  # حرام
             "يجوز",
             "جائز",
             "متوافق",
             "حكم",
+            "مخالف",
         )
-        if any(term in text for term in judgment_terms):
+        if any(re.search(term if term.isascii() else re.escape(term), text) for term in judgment_terms):
             return False
         informational_domains = (
             "accounting",
@@ -416,6 +487,11 @@ class ClarificationEngine:
             "define ",
             "summarize ",
             "tell me about ",
+            "how should ",  # accounting/procedural queries don't need contract-type clarification
+            "how is ",
+            "how are ",
+            "how do ",
+            "how does ",
         )
         if text.startswith(starters):
             return True
@@ -434,6 +510,53 @@ class ClarificationEngine:
         arabic_chars = sum(1 for c in query if '\u0600' <= c <= '\u06ff')
         ratio = arabic_chars / max(len(query), 1)
         return "ar" if arabic_chars >= 12 or ratio > 0.30 else "en"
+
+    @staticmethod
+    def _names_specific_instrument(query: str) -> bool:
+        """Return True when a judgment query names a specific Islamic finance instrument
+        whose ruling is self-contained and deterministic (not variant-dependent).
+
+        Instruments EXCLUDED (require clarification despite being named):
+          - التورق (Tawarruq): organised vs. unorganised variants have different rulings (GC-002)
+          - بيع الوفاء (Bay al-Wafa): genuinely disputed (GC-014)
+          - Sukuk with fixed-distribution framing: disputed (GC-013)
+
+        Instruments INCLUDED (clear, self-contained ruling):
+          - قرض حسن with conditional benefit → Riba (GC-008)
+          - الصرف الآجل / عقود الصرف → generally prohibited (GC-009)
+          - Sukuk + capital guarantee → prohibited (GC-003)
+          - الاستصناع الموازي → specific ruling (GC-010)
+        """
+        text = query.strip().lower()
+        # Excluded: genuinely ambiguous instruments that require clarification
+        _excluded = (
+            "تورق",        # Tawarruq — organized vs. unorganized distinction needed
+            "بيع الوفاء",  # Bay al-Wafa — disputed across schools
+        )
+        if any(excl in text for excl in _excluded):
+            return False
+        # For Sukuk: only self-contained if paired with capital guarantee language
+        # Fixed-income distribution Sukuk is genuinely disputed → require clarification
+        if "صكوك" in text or "الصكوك" in text or "sukuk" in text:
+            if any(t in text for t in ("دخل ثابت", "ثابت دوري", "fixed income", "fixed periodic")):
+                return False  # GC-013: fixed-distribution Sukuk → needs clarification
+            return any(t in text for t in ("ضمان", "كفالة", "guarantee", "capital", "رأس المال"))
+        # Sarf (foreign exchange) instruments — specific ruling independent of context
+        if any(t in text for t in ("الصرف الآجل", "عقود الصرف", "صرف الآجل", "sarf", "forward currency", "forward exchange")):
+            return True
+        # Qard Hassan with conditions — specific ruling (covers both قرض حسن and القرض الحسن)
+        if any(t in text for t in ("قرض حسن", "القرض الحسن", "qard hassan", "qard hasan", "qard")):
+            return True
+        # Parallel Istisna — specific ruling
+        # موازٍ strips diacritics to مواز (not موازي), so we check the prefix مواز
+        # to cover: استصناع موازٍ, الاستصناع الموازي, موازي, etc.
+        if "استصناع" in text and ("مواز" in text or "موازي" in text or "parallel" in text):
+            return True
+        if "parallel istisna" in text:
+            return True
+
+        return False
+
 
     def _has_specific_transaction_structure(self, query: str) -> bool:
         text = query.strip().lower()

@@ -1,0 +1,18 @@
+case_id: GC-013
+query_ar: هل يُعدّ الصكوك الذي يُوزّع دخلاً ثابتاً دورياً مخالفاً للمشاركة في الأرباح؟
+query_en: Are Sukuk that distribute a fixed periodic income considered non-compliant
+  with profit-sharing principles?
+contract_family: MUSHARAKA
+expected_standards:
+- SS-17
+- SS-18
+expected_ruling: DISPUTED
+forbidden_citations:
+- SS-28
+clarification_required: true
+risk_class:
+- R2
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Fixed periodic Sukuk distributions are disputed among scholars. Requires CLARIFY.

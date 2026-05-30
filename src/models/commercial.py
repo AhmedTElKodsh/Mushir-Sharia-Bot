@@ -22,6 +22,7 @@ class ContractFamily(str, Enum):
     IJARAH = "ijarah"
     SALAM = "salam"
     ISTISNA = "istisna"
+    MUQAWALA = "muqawala"
     TAWARRUQ = "tawarruq"
     QARD = "qard"
     KAFALA = "kafala"

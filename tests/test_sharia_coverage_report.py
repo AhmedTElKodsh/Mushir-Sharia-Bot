@@ -53,7 +53,7 @@ def test_sharia_coverage_report_surfaces_blocked_acquisition_manifest():
             {
                 "standard_number": "SS-02",
                 "status": "missing_full_official_or_licensed_text",
-                "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission.",
+                "required_next_action": "Mocked action required.",
             }
         ]
     }
@@ -67,11 +67,9 @@ def test_sharia_coverage_report_surfaces_blocked_acquisition_manifest():
         {
             "standard_number": "SS-02",
             "status": "missing_full_official_or_licensed_text",
-            "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission.",
+            "required_next_action": "Mocked action required.",
         }
     ]
     assert matrix[1]["acquisition_status"] == "missing_full_official_or_licensed_text"
-    assert matrix[1]["required_next_action"] == (
-        "Acquire full official/licensed AAOIFI source text before answer admission."
-    )
-    assert "Source acquisition is blocked" in " ".join(matrix[1]["gate_reasons"])
+    assert matrix[1]["required_next_action"] == "Mocked action required."
+    assert any("Source acquisition is blocked" in reason for reason in matrix[1]["gate_reasons"])

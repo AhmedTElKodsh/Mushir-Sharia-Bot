@@ -541,6 +541,17 @@ class OperationEvidenceSpan:
             raise ValueError("page must be positive")
 
 
+class RuntimeEligibilityPolicy:
+    """Strategy for evaluating runtime eligibility rules."""
+    
+    def is_evaluation_only(self, artifact_class: ArtifactClass) -> bool:
+        return artifact_class in {ArtifactClass.PRODUCT_PAGE, ArtifactClass.MARKETING_ONLY}
+        
+    def validate_eligibility(self, runtime_eligible: bool, artifact_class: ArtifactClass) -> None:
+        if runtime_eligible and self.is_evaluation_only(artifact_class):
+            raise ValueError("scraped institution product pages are evaluation-only and not runtime eligible")
+
+
 @dataclass(frozen=True)
 class OperationCatalogRecord:
     """Evidence-backed operation/product record for an institution."""
@@ -565,6 +576,7 @@ class OperationCatalogRecord:
     extractor_version: str = "operation-extractor-v1"
     promotion_stage: PromotionStage = PromotionStage.EXTRACTED
     runtime_eligible: bool = False
+    eligibility_policy: RuntimeEligibilityPolicy = field(default_factory=RuntimeEligibilityPolicy, compare=False, hash=False, repr=False)
 
     def __post_init__(self) -> None:
         if not self.operation_id.strip():
@@ -586,18 +598,14 @@ class OperationCatalogRecord:
             raise ValueError("confidence must be between 0 and 1")
         if self.runtime_eligible and self.promotion_stage != PromotionStage.RUNTIME_ELIGIBLE:
             raise ValueError("runtime_eligible records must use runtime_eligible promotion stage")
-        if self.runtime_eligible and self.artifact_class in {
-            ArtifactClass.PRODUCT_PAGE,
-            ArtifactClass.MARKETING_ONLY,
-        }:
-            raise ValueError("scraped institution product pages are evaluation-only and not runtime eligible")
+        self.eligibility_policy.validate_eligibility(self.runtime_eligible, self.artifact_class)
 
     def fields_present(self) -> List[OperationEvidenceField]:
         return sorted({span.field for span in self.evidence_spans}, key=lambda field: field.value)
 
     @property
     def evaluation_only(self) -> bool:
-        return self.artifact_class in {ArtifactClass.PRODUCT_PAGE, ArtifactClass.MARKETING_ONLY}
+        return self.eligibility_policy.is_evaluation_only(self.artifact_class)
 
 
 @dataclass(frozen=True)

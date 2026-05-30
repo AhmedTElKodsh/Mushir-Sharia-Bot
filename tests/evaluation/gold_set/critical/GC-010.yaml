@@ -1,0 +1,19 @@
+case_id: GC-010
+query_ar: هل يجوز إبرام عقد استصناع موازٍ حيث تقوم المؤسسة بالتعاقد مع مقاول فرعي
+  دون إعلام العميل؟
+query_en: Is it permissible to use a parallel Istisna contract where the institution
+  subcontracts without notifying the client?
+contract_family: MUQAWALA
+expected_standards:
+- SS-11
+expected_ruling: PERMISSIBLE
+forbidden_citations:
+- SS-08
+- SS-01
+clarification_required: false
+risk_class:
+- R2
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Parallel Istisna is permissible under AAOIFI SS-11 provided both contracts
+  are independent.

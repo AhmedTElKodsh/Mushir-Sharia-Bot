@@ -358,11 +358,7 @@ def test_superseded_records_must_name_replacement():
 def test_default_concept_map_matches_bilingual_and_colloquial_murabaha_terms():
     concepts = default_concept_map()
 
-    murabaha = concepts.primary_match(
-        "\u0639\u0627\u064a\u0632 \u062a\u0642\u0633\u064a\u0637 "
-        "\u0633\u064a\u0627\u0631\u0629 \u0639\u0644\u0649 "
-        "\u0645\u0631\u0627\u0628\u062d\u0647"
-    )
+    murabaha = concepts.primary_match("عايز تقسيط سيارة على مرابحه")
 
     assert murabaha is not None
     assert murabaha.concept_id == "murabaha"
@@ -380,9 +376,9 @@ def test_default_concept_map_routes_late_payment_to_sharia_family():
 @pytest.mark.parametrize(
     ("query", "concept_id", "expected_standard"),
     [
-        ("\u0639\u0642\u062f \u062a\u0648\u0631\u064a\u062f \u0648\u062a\u0635\u0646\u064a\u0639 \u0645\u0639 \u062a\u0633\u0644\u064a\u0645 \u0645\u0624\u062c\u0644", "istisna_supply", "SS-11"),
+        ("عقد توريد وتصنيع مع تسليم مؤجل", "istisna_supply", "SS-11"),
         ("Can we lock an FX rate and settle later?", "currency_sarf", "SS-01"),
-        ("\u0639\u0645\u0648\u0644\u0629 \u062e\u0637\u0627\u0628 \u0636\u0645\u0627\u0646", "guarantee_kafalah", "SS-05"),
+        ("عمولة خطاب ضمان", "guarantee_kafalah", "SS-05"),
     ],
 )
 def test_default_concept_map_expands_bilingual_hard_case_routes(query, concept_id, expected_standard):
@@ -391,7 +387,7 @@ def test_default_concept_map_expands_bilingual_hard_case_routes(query, concept_i
     assert concept is not None
     assert concept.concept_id == concept_id
     assert SourceFamily.SHARIA_STANDARD in concept.candidate_source_families
-    assert expected_standard in concept.expected_standards
+    assert concept.expected_standards == [expected_standard]
 
 
 def test_external_terminology_requires_review_before_concept_map_adoption():
@@ -795,7 +791,18 @@ def test_scraped_product_operations_remain_evaluation_only_not_runtime_eligible(
     assert operation.evaluation_only is True
     assert operation.runtime_eligible is False
 
-    with pytest.raises(ValueError, match="evaluation-only"):
+    with pytest.raises(ValueError, match="^runtime_eligible records must use runtime_eligible promotion stage$"):
+        OperationCatalogRecord(
+            operation_id="bad-promotion-stage",
+            institution_id=record.institution_id,
+            operation_name="Bad promotion stage",
+            artifact_ids=[product_page.artifact_id],
+            artifact_class=ArtifactClass.TERMS_OR_CONTRACT,
+            promotion_stage=PromotionStage.EXTRACTED,
+            runtime_eligible=True,
+        )
+
+    with pytest.raises(ValueError, match="^scraped institution product pages are evaluation-only and not runtime eligible$"):
         OperationCatalogRecord(
             operation_id="bad-runtime-product-page",
             institution_id=record.institution_id,

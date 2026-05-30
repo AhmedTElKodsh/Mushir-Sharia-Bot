@@ -36,12 +36,17 @@ The main runtime flow is:
 2. `src/api/routes.py` validates requests, applies rate limiting, maps errors to safe user-facing messages, and calls `ApplicationService`.
 3. `src/chatbot/application_service.py` is the central answer orchestrator.
 4. `src/chatbot/clarification_engine.py` asks a single targeted question when the user query is too vague.
-5. `src/rag/pipeline.py` embeds and retrieves AAOIFI chunks from Chroma or Qdrant.
-6. Definition-style questions are answered from retrieved, citable excerpts before the LLM is called when the retrieved text directly defines the requested term.
-7. `src/chatbot/prompt_builder.py` builds strict AAOIFI-grounded prompts.
-8. `src/chatbot/llm_client.py` calls OpenRouter through an OpenAI-compatible client.
-9. `src/chatbot/citation_validator.py` accepts only citations backed by retrieved chunks.
-10. `src/models/ruling.py` and `src/api/schemas.py` define the answer contract returned to API/UI callers.
+5. `src/chatbot/contract_family_router.py` maps user queries to specific financial contract families.
+6. `src/rag/pipeline.py` embeds and retrieves AAOIFI chunks from Chroma or Qdrant.
+7. `src/rag/standard_resolver.py` provides targeted standard resolution.
+8. Definition-style questions are answered from retrieved, citable excerpts before the LLM is called when the retrieved text directly defines the requested term.
+9. `src/ontology/concept_router.py` and `ruling_evaluator.py` apply structured logic to map retrieved definitions into commercial rules.
+10. `src/chatbot/prompt_builder.py` builds strict AAOIFI-grounded prompts.
+11. `src/chatbot/llm_client.py` calls OpenRouter through an OpenAI-compatible client.
+12. `src/chatbot/citation_validator.py` accepts only citations backed by retrieved chunks.
+13. `src/models/ruling.py` and `src/api/schemas.py` define the answer contract returned to API/UI callers.
+14. `src/acquisition/egypt_financial/` contains the Data Acquisition layer (crawlers and extractors) for processing local regulatory data.
+15. `tests/evaluation/` provides a comprehensive Sharia Compliance Evaluation Framework using Gold Sets (GC-*) and Expected Calibration Error (ECE) metrics.
 
 ## Safety Rules
 

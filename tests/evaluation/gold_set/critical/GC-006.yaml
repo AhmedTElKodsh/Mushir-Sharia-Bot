@@ -1,0 +1,16 @@
+case_id: GC-006
+query_ar: من يتحمل تكاليف الصيانة في الإجارة المنتهية بالتمليك؟
+query_en: Who bears the maintenance costs in Ijarah Muntahia Bittamleek?
+contract_family: IJARA
+expected_standards:
+- SS-09
+expected_ruling: CLARIFY
+forbidden_citations:
+- SS-28
+clarification_required: true
+risk_class:
+- R2
+severity: CRITICAL
+authority: Sharia Scholar
+notes: 'Requires clarification: structural maintenance (lessor) vs. operational maintenance
+  (lessee).'

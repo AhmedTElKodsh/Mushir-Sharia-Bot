@@ -23,6 +23,9 @@ The current implementation is a FastAPI application with browser chat, REST API,
 - **OpenRouter provider**: uses an OpenAI-compatible OpenRouter client, with `openrouter/free` supported for constrained demos.
 - **FastAPI runtime**: exposes `/chat`, `/health`, `/ready`, `/metrics`, `/api/v1/query`, and `/api/v1/query/stream`.
 - **Operational modes**: supports local Chroma and optional Qdrant, Redis, PostgreSQL, cache, audit, sessions, and rate limiting.
+- **Sharia Ontology Engine**: maps abstract definitions to financial contracts via `ConceptRouter` and `RulingEvaluator`.
+- **Evaluation Framework**: includes YAML-based Gold Sets (GC-001+) and Expected Calibration Error (ECE) metrics.
+- **Data Acquisition Layer**: active scrapers and extractors designed for building a robust evidence corpus (e.g., Egypt Financial).
 
 ## Current Status
 
@@ -35,9 +38,11 @@ The current implementation is a FastAPI application with browser chat, REST API,
 | Citation validation | Implemented |
 | Clarification loop | Implemented as one focused follow-up question |
 | Safe fatwa/legal/financial-advice refusal | Implemented |
+| Sharia Ontology Engine (Concept Router, Ruling Evaluator) | Implemented |
+| Sharia Compliance Evaluation Framework (Gold Sets, ECE) | Implemented |
 | L5 release readiness | Active gate |
 | L6 rules-first evaluator | Proposed future direction; foundational scenario/routing/source-gap scaffolding is implemented, full evaluator is not active runtime scope |
-| Egypt institution evidence corpus | Planned L6 data-acquisition workstream; registry seed folders and planning docs are prepared, live scraping is not implemented yet |
+| Egypt institution evidence corpus | Data acquisition framework implemented; active scraping and evaluation corpus building in progress |
 
 ## Planning Direction
 
@@ -95,8 +100,9 @@ src/
 +-- api/             # FastAPI REST endpoints
 +-- storage/         # Caching and persistence
 +-- config/          # Configuration management
-+-- acquisition/     # Source acquisition primitives; future Egypt institution modules belong here
++-- acquisition/     # Source acquisition primitives and active extractors (Egypt Financial)
 +-- governance/      # Source catalog, concept map, router seeds, chunk metadata
++-- ontology/        # Sharia Ontology mapping, Concept Router, and Ruling Evaluator
 
 scripts/
 +-- check_corpus.py                # Verify AAOIFI corpus exists and is ready
@@ -262,6 +268,7 @@ For the current maintained documentation set, start with:
 
 - `.planning/sharia-compliance-chatbot/docs/index.md` - Documentation map.
 - `.planning/sharia-compliance-chatbot/docs/project-documentation.md` - Full current technical documentation.
+- `.planning/sharia-compliance-chatbot/docs/pipeline-architecture-v2.md` - Visual architecture graphs for the new intelligent routing pipeline.
 - `.planning/sharia-compliance-chatbot/docs/client-plain-language-logic.md` - Simple client-facing explanation of the whole logic.
 - `.planning/sharia-compliance-chatbot/docs/l6-egypt-institution-scrape/README.md` - Project-facing guide for the planned Egypt institution scraping/evidence corpus.
 - `project-context.md` - Implementation context and rules for AI agents and developers.

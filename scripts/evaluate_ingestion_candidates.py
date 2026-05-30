@@ -5,8 +5,17 @@ import argparse
 import importlib.util
 import json
 import tempfile
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict
+
+
+class ProbeStatus(str, Enum):
+    PROBE_PASSED = "probe_passed"
+    PROBE_FAILED = "probe_failed"
+    INSTALL_BLOCKED = "install_blocked"
+    MISSING_OPTIONAL_DEPENDENCY = "missing_optional_dependency"
+    BLOCKED_PENDING_LICENSE_REVIEW = "blocked_pending_license_review"
 
 
 def evaluate_ingestion_candidates() -> Dict[str, Any]:
@@ -21,12 +30,12 @@ def evaluate_ingestion_candidates() -> Dict[str, Any]:
         },
     }
     results["summary"] = {
-        "docling_ready_for_controlled_aaoifi_sample": results["candidates"]["docling"]["status"] == "probe_passed",
-        "pdfplumber_ready_for_registry_pdf_sample": results["candidates"]["pdfplumber"]["status"] == "probe_passed",
+        "docling_ready_for_controlled_aaoifi_sample": results["candidates"]["docling"]["status"] == ProbeStatus.PROBE_PASSED.value,
+        "pdfplumber_ready_for_registry_pdf_sample": results["candidates"]["pdfplumber"]["status"] == ProbeStatus.PROBE_PASSED.value,
         "license_blocked_candidates": [
             name
             for name, result in results["candidates"].items()
-            if result["status"] == "blocked_pending_license_review"
+            if result["status"] == ProbeStatus.BLOCKED_PENDING_LICENSE_REVIEW.value
         ],
     }
     return results
@@ -36,7 +45,7 @@ def _docling_probe() -> Dict[str, Any]:
     if importlib.util.find_spec("docling") is None:
         return {
             "tool": "Docling",
-            "status": "install_blocked",
+            "status": ProbeStatus.INSTALL_BLOCKED.value,
             "sample": "controlled_aaoifi_source_sample",
             "evidence": (
                 "Docling is not importable in the active Python 3.14 venv. "
@@ -47,7 +56,7 @@ def _docling_probe() -> Dict[str, Any]:
         }
     return {
         "tool": "Docling",
-        "status": "probe_passed",
+        "status": ProbeStatus.PROBE_PASSED.value,
         "sample": "controlled_aaoifi_source_sample",
         "evidence": "Docling import is available; run source-sample conversion before production adoption.",
         "adopt_next": False,
@@ -58,7 +67,7 @@ def _pdfplumber_probe() -> Dict[str, Any]:
     if importlib.util.find_spec("pdfplumber") is None:
         return {
             "tool": "pdfplumber",
-            "status": "missing_optional_dependency",
+            "status": ProbeStatus.MISSING_OPTIONAL_DEPENDENCY.value,
             "sample": "cbe_fra_registry_pdf_sample",
             "evidence": "pdfplumber is not installed in the active environment.",
             "adopt_next": False,
@@ -74,7 +83,7 @@ def _pdfplumber_probe() -> Dict[str, Any]:
     matched = "Arab Investment Bank" in extracted and "1974-08-08" in extracted
     return {
         "tool": "pdfplumber",
-        "status": "probe_passed" if matched else "probe_failed",
+        "status": ProbeStatus.PROBE_PASSED.value if matched else ProbeStatus.PROBE_FAILED.value,
         "sample": "cbe_fra_registry_pdf_sample",
         "evidence": (
             "pdfplumber extracted controlled registry sample fields."
@@ -115,7 +124,7 @@ def _minimal_text_pdf(text: str) -> bytes:
 def _license_block(tool: str) -> Dict[str, Any]:
     return {
         "tool": tool,
-        "status": "blocked_pending_license_review",
+        "status": ProbeStatus.BLOCKED_PENDING_LICENSE_REVIEW.value,
         "evidence": "Candidate remains blocked until license review is recorded.",
         "adopt_next": False,
     }

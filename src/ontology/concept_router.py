@@ -9,7 +9,7 @@ import yaml
 
 from src.models.commercial import ContractFamily
 from src.models.ruling import PartyRole
-from src.ontology.concept_ontology import ConceptOntology, ConceptOntologyEntry, RulingByContext
+from src.ontology.concept_ontology import ConceptOntology, ConceptOntologyEntry, ConditionalRuling
 
 
 DEFAULT_SOURCE_CATALOG = Path("data/source_registry/aaoifi-source-catalog.yaml")
@@ -38,9 +38,9 @@ class ConceptOntologyRouter:
         contract_type: ContractFamily,
         concepts: List[ConceptOntologyEntry],
     ) -> OntologyRouteResult:
-        matched_contexts: List[tuple[ConceptOntologyEntry, RulingByContext]] = []
+        matched_contexts: List[tuple[ConceptOntologyEntry, ConditionalRuling]] = []
         for concept in concepts:
-            for context in concept.ruling_by_context:
+            for context in concept.conditional_rulings:
                 if context.contract_type in {contract_type, ContractFamily.UNKNOWN}:
                     matched_contexts.append((concept, context))
         return OntologyRouteResult(

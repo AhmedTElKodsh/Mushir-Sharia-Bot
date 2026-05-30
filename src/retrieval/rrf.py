@@ -3,15 +3,24 @@ from typing import List, Any, Dict
 def _result_id(item: Any) -> str:
     if isinstance(item, str):
         return item
+    keys = ("doc_id", "chunk_id", "id")
     if isinstance(item, dict):
-        return str(item.get("doc_id") or item.get("chunk_id") or item.get("id") or "")
-    return str(getattr(item, "doc_id", None) or getattr(item, "chunk_id", None) or getattr(item, "id", "") or "")
+        for k in keys:
+            val = item.get(k)
+            if val is not None and val != "":
+                return str(val)
+        return ""
+    for k in keys:
+        val = getattr(item, k, None)
+        if val is not None and val != "":
+            return str(val)
+    return ""
 
 def rrf_merge(dense_results: List[Any], sparse_results: List[Any], k: int = 60) -> List[str]:
     """Return document IDs ranked by reciprocal-rank fusion."""
 
     scores: Dict[str, float] = {}
-    for results in (dense_results, sparse_results):
+    for results in (dense_results or [], sparse_results or []):
         for rank, item in enumerate(results, start=1):
             doc_id = _result_id(item)
             if not doc_id:

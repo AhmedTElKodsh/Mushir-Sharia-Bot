@@ -5,6 +5,7 @@ This index points to the current documentation set for Mushir. Older L0 and plan
 ## Start Here
 
 - [Project Documentation](project-documentation.md): full current technical documentation for developers and maintainers.
+- [Pipeline Architecture (V2)](pipeline-architecture-v2.md): visual diagrams for the Stage 1 & 2 Routing, Resolver, and Quality Gates logic.
 - [AI Project Brief](ai-project-brief.md): compact but detailed AI-agent handoff covering runtime contracts, source authority, L5/L6 status, commands, risks, and safe edit rules.
 - [Client Plain-Language Report](client-plain-language-logic.md): non-technical client explanation of project planning, implemented behavior, current limits, L5 readiness, and proposed L6 direction.
 - [Client Source-Governed Roadmap](client-source-governed-aaoifi-roadmap.md): visual client-facing explanation of the updated AAOIFI assistant logic, key terms, source governance, router plan, roadmap, risks, and acceptance checklist.
