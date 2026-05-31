@@ -56,7 +56,6 @@ var I18N = {
     formLabel: "Chat input form",
     welcome: "Ask a Sharia compliance question in English or Arabic.",
     welcomeKicker: "AAOIFI-grounded assistant",
-    welcomeCopy: "Mushir checks retrieved standard excerpts, asks for missing facts, and keeps answers informational.",
     placeholder: "Ask about an Islamic finance transaction...",
     composerHint: "Add the transaction type, parties, payment terms, and the exact point you want checked.",
     ask: "Ask Mushir",
@@ -101,7 +100,6 @@ var I18N = {
     formLabel: "نموذج إدخال المحادثة",
     welcome: "اسأل عن الالتزام الشرعي في المعاملات المالية بالعربية أو الإنجليزية.",
     welcomeKicker: "مساعد مستند إلى معايير أيوفي",
-    welcomeCopy: "يفحص مشير مقتطفات المعايير المسترجعة، ويطلب الحقائق الناقصة، ويحافظ على الإجابات في نطاق المعلومات.",
     placeholder: "اسأل عن معاملة مالية إسلامية...",
     composerHint: "أضف نوع المعاملة، والأطراف، وشروط السداد، والنقطة التي تريد فحصها بدقة.",
     ask: "اسأل مشير",
@@ -516,8 +514,7 @@ function renderWelcomeMessage() {
 function welcomeCardMarkup() {
   return [
     '<div class="welcome-kicker">' + escapeHtml(t("welcomeKicker")) + '</div>',
-    '<div class="welcome-title">' + escapeHtml(t("welcome")) + '</div>',
-    '<div class="welcome-copy">' + escapeHtml(t("welcomeCopy")) + '</div>'
+    '<div class="welcome-title">' + escapeHtml(t("welcome")) + '</div>'
   ].join("");
 }
 

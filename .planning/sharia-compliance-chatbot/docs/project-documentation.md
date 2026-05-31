@@ -4,14 +4,14 @@ Mushir is a FastAPI-based Sharia compliance chatbot for Islamic finance question
 
 This document describes the current project as implemented in the repository and explains how the planning roadmap maps to the built system.
 
-Last refreshed: 2026-05-20
+Last refreshed: 2026-05-31
 
 Current published demo:
 
 - GitHub branch: `main`
 - Hugging Face Space: `https://huggingface.co/spaces/AElKodsh/mushir-sharia-bot`
 - Live app URL: `https://aelkodsh-mushir-sharia-bot.hf.space`
-- Latest verified release behavior: `/health` and `/ready` return `200`; English and Arabic Murabaha definition questions return citation-backed `INSUFFICIENT_DATA` informational answers; unclear Arabic Murabaha purchase questions ask one follow-up question.
+- Latest verified local behavior: the full pytest suite passes with `619 passed, 48 skipped, 2 warnings`; the critical goldset passes with `19 passed, 19 skipped`; GC-001 now clarifies construction delay-penalty responsibility before verdict; organized banking tawarruq routes to SS-30 rather than currency/Sarf.
 
 ## Goals
 
@@ -40,7 +40,17 @@ The planning files under `.planning/sharia-compliance-chatbot/next-level-plans/`
 | L6 | Rules-first Sharia commercial-process evaluator | Proposed future direction; foundational runtime scaffolding is implemented, full evaluator is not active scope yet |
 | L6 evidence corpus | Egypt financial institutions public operations and contracts corpus | Planned data-acquisition workstream; registry seed folders and docs are prepared, broad scraping is not implemented yet |
 
-The active implementation priority is L5. L6 full evaluator work should begin only after L5 quality and runtime gates are green and official-source acquisition/versioning decisions are complete. A small L6 foundation now exists in runtime code to extract scenario metadata, route by source family, detect retrieved source families, and fail closed for late-payment/default permissibility questions when Shari'ah-standard evidence is absent.
+The active implementation priority is L5. L6 full evaluator work should begin only after L5 quality and runtime gates are green and official-source acquisition/versioning decisions are complete. A small L6 foundation now exists in runtime code to extract scenario metadata, route by source family, resolve candidate standards, detect retrieved source families, and fail closed for late-payment/default permissibility questions when Shari'ah-standard evidence is absent.
+
+## Recent Runtime Alignment: 2026-05-31
+
+The latest hard-case work tightened the routing and evaluation contract around construction penalties and structured evaluation fixtures:
+
+- GC-001, the Arabic construction delay-penalty question, is now clarification-required until Mushir knows whether the delay is by the contractor or by the customer.
+- Construction / muqawala / istisna penalty routing targets `SS-05` plus `SS-11`. `SS-10` is Salam and must not be used for that route unless the query actually implicates Salam.
+- `tests/fixtures/hard_case_routing_matrix.yaml` is the canonical launch-blocking matrix for hard-case routes; `tests/routing_matrix.py` loads those cases for service tests.
+- Organized banking tawarruq must route to `SS-30`; the currency/Sarf route no longer fires just because Arabic `sarf` appears inside banking wording.
+- The evaluation pipeline mock now adapts structured fixture dicts into text before they enter `ApplicationService`, so `CitationValidator` remains a string/text boundary.
 
 ## Current Vs Future Scope
 
@@ -98,8 +108,9 @@ flowchart TD
     D -- "Yes" --> E["Safe informational refusal"]
     D -- "No" --> F{"Question missing material facts?"}
     F -- "Yes" --> G["Ask exactly one follow-up question"]
-    F -- "No" --> H["Retrieve AAOIFI excerpts"]
-    H --> I{"Definition query with citable excerpt?"}
+    F -- "No" --> H["Scenario extraction and source routing"]
+    H --> R["Candidate-standard filtered retrieval"]
+    R --> I{"Definition query with citable excerpt?"}
     I -- "Yes" --> J["Deterministic citation-backed definition answer"]
     I -- "No" --> K["Build strict grounded prompt"]
     K --> L["OpenRouter LLM call"]
@@ -182,17 +193,19 @@ It performs:
 4. Optional disclaimer acknowledgement enforcement.
 5. Authority-request refusal for binding fatwa/legal/financial advice.
 6. Response cache lookup.
-7. Clarification check.
-8. Retriever initialization fallback.
-9. RAG retrieval.
-10. Deterministic definition-answer handling when a retrieved AAOIFI excerpt directly defines the requested term.
-11. Prompt building.
-12. LLM generation.
-13. Citation validation.
-14. LLM uncertainty conversion into one follow-up question.
-15. Compliance status derivation.
-16. Audit logging.
-17. Safe response caching.
+7. Scenario extraction and source-route construction.
+8. Clarification check, including route-specific missing-fact questions.
+9. Retriever initialization fallback.
+10. Candidate-standard filtered RAG retrieval.
+11. Deterministic definition-answer handling when a retrieved AAOIFI excerpt directly defines the requested term.
+12. Prompt building.
+13. LLM generation.
+14. Citation validation.
+15. LLM uncertainty conversion into one follow-up question.
+16. Compliance status derivation.
+17. Scholar-review queue append where applicable.
+18. Audit logging.
+19. Safe response caching.
 
 The service returns `INSUFFICIENT_DATA` when the evidence path is not strong enough.
 
@@ -224,6 +237,7 @@ Key behavior:
 - validates that Chroma contains matching embedding metadata, normalized embeddings, and both Arabic and English rows when Arabic retrieval is required;
 - supports Chroma locally and Qdrant as an optional production vector store;
 - reranks candidates using similarity, lexical hits, and language preference;
+- exposes explicit sparse/hybrid support through `BM25Retriever`, `ScoredDoc`, and `rrf_merge` while preserving the current dense retrieval path;
 - returns `SemanticChunk` objects with citation metadata.
 
 Default retrieval settings:
@@ -543,6 +557,19 @@ Before treating any deployment as live, verify:
 
 ## Latest Verification Snapshot
 
+Current local verification from 2026-05-31:
+
+| Check | Expected result | Observed result |
+| --- | --- | --- |
+| Full pytest suite | No failures | `619 passed, 48 skipped, 2 warnings` |
+| Critical goldset | Zero failures | `19 passed, 19 skipped` |
+| Evaluation framework | Zero failures | `96 passed, 44 skipped` |
+| Changed runtime/evaluation surface | Zero failures | `230 passed, 45 skipped` |
+| GC-001 construction penalty | Clarify before verdict | `CLARIFICATION_NEEDED` expected in goldset |
+| Organized banking tawarruq | Route to `SS-30` | Routing accuracy test passes |
+
+Older deployed-space smoke snapshot retained for historical comparison:
+
 Last verified on 2026-05-17 against the Hugging Face Space:
 
 | Check | Expected result | Observed result |
@@ -571,10 +598,11 @@ Production should be considered degraded if required production checks fail.
 
 ## Known Constraints
 
-- Mushir covers AAOIFI FAS excerpts in the configured corpus. It does not automatically cover every AAOIFI standard family unless those documents are ingested.
+- Mushir covers governed AAOIFI material in the configured corpus. It does not automatically cover every AAOIFI standard family unless those documents are acquired, cataloged, ingested, and tested.
 - Strong answer quality depends on the corpus, embeddings, and retrieval threshold.
 - Free-tier hosting can be memory constrained because sentence-transformer models are loaded at runtime.
 - Binding Sharia decisions still require qualified human review.
+- Hard-case routing rules such as the GC-001 construction penalty fix are test-backed safeguards, not a complete commercial verdict engine.
 
 ## Maintenance Rules
 

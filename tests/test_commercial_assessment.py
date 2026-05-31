@@ -12,6 +12,7 @@ from src.models.commercial import ContractFamily, QuestionType, SourceFamily
 from src.models.ruling import ComplianceStatus
 from src.models.schema import AAOIFICitation, SemanticChunk
 from src.rag.query_preprocessor import QueryPreprocessor
+from tests.routing_matrix import routing_case
 
 
 pytestmark = pytest.mark.service
@@ -211,7 +212,8 @@ def test_murabaha_late_payment_rule_outputs_versioned_evidence_requirements():
 
 
 def test_arabic_construction_penalty_routes_to_istisna_not_debt_or_charity():
-    query = "\u0647\u0644 \u0634\u0631\u0637 \u063a\u0631\u0627\u0645\u0629 \u0627\u0644\u062a\u0622\u062e\u064a\u0631 \u0641\u064a \u0639\u0642\u0648\u062f \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u0627\u062a \u0634\u0631\u0637 \u0631\u0628\u0648\u064a\u061f"
+    matrix = routing_case("HCRM-ISTISNA-PENALTY-AMBIGUOUS")
+    query = matrix["queries"][0]
 
     scenario = ScenarioExtractor().extract(query)
     route = StandardsRouter().route(scenario, query)
@@ -222,6 +224,7 @@ def test_arabic_construction_penalty_routes_to_istisna_not_debt_or_charity():
     assert "delay_responsible_party" in scenario.missing_facts
     assert route.primary == [SourceFamily.SHARIA_STANDARD]
     assert route.requires_rule_evaluation is True
+    assert route.candidate_standards == matrix["candidate_standards"]
 
 
 @pytest.mark.parametrize(
@@ -310,6 +313,17 @@ def test_penalty_and_hard_case_family_routes_are_launch_blocking(query, route_id
     assert route.route_id == route_id
     assert set(route.candidate_standards) == standards
     assert should_fail_closed_for_source_gap(scenario, route, {SourceFamily.FAS}) is True
+
+
+def test_construction_penalty_routing_matrix_forbids_salam_standard():
+    matrix = routing_case("HCRM-ISTISNA-PENALTY-CONTRACTOR")
+    scenario = ScenarioExtractor().extract(matrix["queries"][0])
+    route = StandardsRouter().route(scenario, matrix["queries"][0])
+
+    assert route.route_id == "istisna-penalty-clause"
+    assert route.candidate_standards == matrix["candidate_standards"]
+    assert "SS-10" in matrix["forbidden_standards"]
+    assert "SS-10" not in route.candidate_standards
 
 
 def test_query_expansion_does_not_infer_charity_from_delay_or_penalty():

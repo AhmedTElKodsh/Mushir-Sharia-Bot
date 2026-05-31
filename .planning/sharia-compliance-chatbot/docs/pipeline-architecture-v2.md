@@ -1,8 +1,8 @@
 # Mushir Sharia-Bot Pipeline Architecture (V2)
 
-*Updated: 2026-05-28*
+*Updated: 2026-05-31*
 
-This document describes the upgraded logic pipeline built during the "Week 1 Sprint" to resolve edge-cases around conditional rulings (e.g., Delay Penalties in Istisna vs. Murabaha).
+This document describes the upgraded logic pipeline built during the "Week 1 Sprint" to resolve edge-cases around conditional rulings (e.g., Delay Penalties in Istisna vs. Murabaha). The 2026-05-31 update records the GC-001 correction: ambiguous construction penalties clarify the delaying party first, Istisna / Muqawala penalty routing targets `SS-05` plus `SS-11`, and `SS-10` is reserved for Salam.
 
 ## High-Level Execution Pipeline
 
@@ -69,20 +69,21 @@ flowchart LR
     subgraph Ontology[Concept Ontology (YAML)]
         LP[Late Payment Penalty]
         LP --> |Murabaha| SS19[SS-19, SS-28]
-        LP --> |Istisna/Muqawala| SS10[SS-10, SS-05]
+        LP --> |Istisna/Muqawala| SS11[SS-11, SS-05]
     end
     
     Query(Query: Penalty + Construction) --> Router
     Router --> |Family: MUQAWALA| Resolver
-    Resolver --> |Query + MUQAWALA| SS10
+    Resolver --> |Query + MUQAWALA| SS11
     
-    SS10 --> Retriever(Retrieve only from SS-10 and SS-05)
+    SS11 --> Retriever(Retrieve only from SS-11 and SS-05)
 ```
 
 ### Conditional Rulings (ConceptOntologyEntry)
 Each concept in the ontology contains a `conditional_rulings` list (represented via `ConditionalRuling` objects). This ensures that the system knows:
 1. Delay Penalty in Debt = Riba (Prohibited)
-2. Delay Penalty in Construction = Liquidated Damages (Permissible)
+2. Ambiguous construction delay penalty = clarify who delayed before verdict
+3. Contractor delay in construction / Istisna = route to SS-11 and SS-05, not SS-10
 
 ## Testing and Quality Gates (Gold-Set Harness)
 

@@ -1,6 +1,6 @@
 # Mushir AI Project Brief
 
-Last refreshed: 2026-05-22
+Last refreshed: 2026-05-31
 
 This document is written for AI agents, maintainers, and reviewers who need to understand the Mushir codebase quickly and safely. It favors explicit system contracts over marketing language.
 
@@ -10,7 +10,7 @@ Mushir is a source-governed Islamic finance research assistant. The current runt
 
 Mushir is not a fatwa engine. It must not provide binding Sharia rulings, legal advice, or financial advice. It is an informational assistant that works only inside its retrieved, cataloged evidence boundary.
 
-The active delivery gate is L5 quality and release readiness. The future L6 direction is a rules-first Sharia commercial-process assessment assistant backed by governed sources, structured transaction facts, executable rules, public institution evidence, and scholar-reviewed gold cases. L6 scaffolding exists, but the full evaluator is not complete.
+The active delivery gate is L5 quality and release readiness. The future L6 direction is a rules-first Sharia commercial-process assessment assistant backed by governed sources, structured transaction facts, executable rules, public institution evidence, and scholar-reviewed gold cases. L6 scaffolding exists, but the full evaluator is not complete. As of 2026-05-31, construction delay-penalty routing and the evaluation fixtures have been tightened: GC-001 is clarification-first, istisna/muqawala penalty routing targets `SS-05` plus `SS-11`, `SS-10` is forbidden for that route unless Salam is implicated, and organized banking tawarruq routes to `SS-30`.
 
 ## Current Truth Table
 
@@ -26,6 +26,7 @@ The active delivery gate is L5 quality and release readiness. The future L6 dire
 | Language support | English, Arabic, and mixed-language questions |
 | Safety posture | Citation-gated, fail-closed, no binding rulings |
 | Current roadmap | L5 readiness now, L6 source-governed rules-first evaluator later |
+| Latest verification | `619 passed, 48 skipped, 2 warnings` on 2026-05-31 full local suite |
 | Institution corpus | L6 evidence workstream with registry, crawler, machine mapping, and scholar-review exports |
 | Broad live scraping | Not approved until crawl-first pilot gates pass |
 | Documentation entrypoints | `README.md`, `project-context.md`, `.planning/sharia-compliance-chatbot/docs/index.md`, this file |
@@ -148,7 +149,7 @@ Important invariants:
 
 ### Application Service
 
-`src/chatbot/application_service.py` is the main answer orchestrator. It performs query normalization, language detection, disclaimer enforcement, authority-request refusal, cache lookup, clarification, retrieval, deterministic definition answering, prompt construction, LLM generation, citation validation, compliance-status derivation, auditing, and safe caching.
+`src/chatbot/application_service.py` is the main answer orchestrator. It performs query normalization, language detection, disclaimer enforcement, authority-request refusal, cache lookup, scenario extraction, route construction, clarification, candidate-standard filtered retrieval, deterministic definition answering, prompt construction, LLM generation, citation validation, compliance-status derivation, scholar-review queue append where applicable, auditing, and safe caching.
 
 This file is a high-risk edit surface. Preserve its fail-closed behavior.
 
@@ -179,7 +180,14 @@ Default local settings:
 
 ### Commercial Assessment Scaffold
 
-`src/chatbot/commercial_assessment.py` and `src/models/commercial.py` contain early L6 scaffolding: transaction scenario extraction, source-family routing, rule-trace shapes, verdict statuses, and source-gap behavior. This is not a complete rules-first evaluator yet.
+`src/chatbot/commercial_assessment.py` and `src/models/commercial.py` contain early L6 scaffolding: transaction scenario extraction, source-family routing, hard-case candidate-standard selection, rule-trace shapes, verdict statuses, and source-gap behavior. This is not a complete rules-first evaluator yet.
+
+Current hard-case invariants:
+
+- Arabic construction delay-penalty questions such as GC-001 must clarify who delayed before returning a verdict.
+- Construction / muqawala / istisna penalty routing uses `SS-05` and `SS-11`; do not reintroduce `SS-10` into this route.
+- Organized banking tawarruq must route to `SS-30`; do not let the Arabic `sarf` signal match inside banking wording.
+- Keep `tests/fixtures/hard_case_routing_matrix.yaml` as the shared test fixture for launch-blocking routing behavior.
 
 ## Governance Layer
 
@@ -444,7 +452,9 @@ When changing docs:
 | --- | --- | --- |
 | Weak retrieval evidence | Could produce unsupported religious/compliance claims | Return `INSUFFICIENT_DATA` |
 | Citation formatting drift | LLM may cite unavailable chunks | Validate citations against retrieved chunks |
+| Evaluation mock drift | Structured test fixtures may bypass the text boundary and break `CitationValidator` | Adapt fixture dicts to text before calling `ApplicationService`; keep structured values only for assertions |
 | FAS-only permissibility answers | FAS is not enough for halal/haram or contract validity | Require Shari'ah-standard or approved Sharia-source evidence |
+| Hard-case route regression | Construction penalties can be confused with debt/riba, Salam, or charity clauses | Keep GC-001 and hard-case routing matrix tests green |
 | Over-clarification | Definition questions should not become transaction interviews | Keep definition shortcut and clarification tests |
 | Arabic support regression | Arabic users need reliable retrieval and citations | Keep multilingual index and Arabic tests |
 | OpenRouter free limits | Bulk live eval can overload or block the demo path | Use fixtures and retrieval-only eval |
@@ -463,6 +473,15 @@ When changing docs:
 | L4 | Implemented hardening | Citation gates, disclaimers, safe caching, deployment docs |
 | L5 | Active gate | Quality, release readiness, live verification, operational discipline |
 | L6 | Partial scaffold | Source-governed rules-first direction, institution evidence workstream, not complete |
+
+## Latest Verification Snapshot
+
+Local verification from 2026-05-31:
+
+- `.\.venv\Scripts\python.exe -m pytest tests\evaluation\test_critical_goldset.py -q --timeout=90` -> `19 passed, 19 skipped`.
+- `.\.venv\Scripts\python.exe -m pytest tests\evaluation -q --timeout=90` -> `96 passed, 44 skipped`.
+- Changed runtime/evaluation surface -> `230 passed, 45 skipped`.
+- `.\.venv\Scripts\python.exe -m pytest -q --timeout=90` -> `619 passed, 48 skipped, 2 warnings`.
 
 ## Future Work Priority
 

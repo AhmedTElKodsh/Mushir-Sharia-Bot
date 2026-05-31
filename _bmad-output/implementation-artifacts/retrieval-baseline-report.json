@@ -16,8 +16,8 @@
   "clarification_precision": 1.0,
   "arabic_mixed_language_pass_rate": 1.0,
   "latency": {
-    "average_ms": 0.001858332931684951,
-    "max_ms": 0.018699996871873736
+    "average_ms": 0.0014066663425182924,
+    "max_ms": 0.011899999663000926
   },
   "results": [
     {
@@ -124,10 +124,10 @@
       "query": "HC-002 Contractor late delivery penalty under istisna",
       "answerable": true,
       "expected": [
-        "HC-SS-10-penalty"
+        "HC-SS-11-penalty"
       ],
       "retrieved_ids": [
-        "HC-SS-10-penalty"
+        "HC-SS-11-penalty"
       ],
       "matched": true,
       "expected_behavior": "answer",
@@ -154,10 +154,10 @@
       "query": "HC-004 Arabic istisna manufacturer delay",
       "answerable": true,
       "expected": [
-        "HC-SS-10-istisna"
+        "HC-SS-11-istisna"
       ],
       "retrieved_ids": [
-        "HC-SS-10-istisna"
+        "HC-SS-11-istisna"
       ],
       "matched": true,
       "expected_behavior": "answer",
@@ -191,10 +191,10 @@
       "query": "HC-007 Manufactured equipment deferred delivery",
       "answerable": true,
       "expected": [
-        "HC-SS-10-supply"
+        "HC-SS-11-supply"
       ],
       "retrieved_ids": [
-        "HC-SS-10-supply"
+        "HC-SS-11-supply"
       ],
       "matched": true,
       "expected_behavior": "answer",
@@ -856,5 +856,20 @@
   "gold_file": "tests/fixtures/gold_eval_fixture_baseline.yaml",
   "live_vector_index_used": false,
   "live_llm_used": false,
-  "baseline_command": "scripts/run_retrieval_baseline.py"
+  "baseline_command": "scripts/run_retrieval_baseline.py",
+  "scholar_review_gold_gate": {
+    "tracked_case_count": 53,
+    "accepted_gold_case_count": 0,
+    "pending_or_unreviewed_case_count": 53,
+    "status_counts": {
+      "pending": 53
+    },
+    "accepted_statuses": [
+      "accepted",
+      "accepted_for_gold_set",
+      "accepted_with_correction"
+    ],
+    "tuning_allowed": false
+  },
+  "requires_scholar_reviewed_gold": false
 }

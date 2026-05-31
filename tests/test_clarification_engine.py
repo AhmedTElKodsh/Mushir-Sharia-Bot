@@ -121,7 +121,8 @@ def test_governance_research_question_skips_transaction_clarification():
 def test_judgment_query_with_missing_facts_bypasses_transaction_clarification():
     engine = ClarificationEngine()
 
-    question = engine.ask_if_needed("What is the ruling on my investment?")
+    from src.models.commercial import ContractFamily
+    question = engine.ask_if_needed("What is the ruling on my investment?", known_contract_family=ContractFamily.MUSHARAKA)
 
     assert question is None
 
@@ -154,10 +155,12 @@ def test_arabic_transaction_clarification_uses_arabic_question():
 def test_arabic_car_installment_judgment_query_reaches_retrieval():
     engine = ClarificationEngine()
 
+    from src.models.commercial import ContractFamily
     question = engine.ask_if_needed(
         "اشتريت عربية من بنك مصر يع سيارة بالتقسيط ثمنها 700 الف جنيه، "
         "في الأول هناك دفعة قيمتها 300 الف والباقي على مدة سبع سنوات "
-        "بقيمة مضافة 20% من ثمن السيارة، هل ده حلال"
+        "بقيمة مضافة 20% من ثمن السيارة، هل ده حلال",
+        known_contract_family=ContractFamily.MURABAHA
     )
 
     assert question is None
@@ -166,10 +169,12 @@ def test_arabic_car_installment_judgment_query_reaches_retrieval():
 def test_arabic_car_installment_with_late_penalty_reaches_retrieval():
     engine = ClarificationEngine()
 
+    from src.models.commercial import ContractFamily
     question = engine.ask_if_needed(
         "اشتريت عربية من بنك مصر يع سيارة بالتقسيط ثمنها 700 الف جنيه، "
         "دفعة 300 الف والباقي على سبع سنوات بربح 20%، "
-        "وفي حالة التأخير في السداد تضاف غرامة تأخير 5% من قيمة القسط.. هل ده يجوز"
+        "وفي حالة التأخير في السداد تضاف غرامة تأخير 5% من قيمة القسط.. هل ده يجوز",
+        known_contract_family=ContractFamily.MURABAHA
     )
 
     assert question is None

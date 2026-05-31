@@ -126,9 +126,11 @@ def _scripted_response_for(case: dict) -> dict:
     In real tests, this drives from the case's expected values.
     Used to test that the routing + validation layers process it correctly.
     """
+    ruling = "CLARIFY" if case.get("clarification_required") else case["expected_ruling"]
+    confidence = 0.60 if ruling == "CLARIFY" else 0.82
     return {
-        "ruling": case["expected_ruling"],
-        "confidence": 0.82,
+        "ruling": ruling,
+        "confidence": confidence,
         "answer_text": f"Mock answer for {case['case_id']}",
         "cited_standards": case.get("expected_standards", []),
     }

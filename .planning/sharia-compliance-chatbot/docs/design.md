@@ -1,6 +1,6 @@
 # Design Document: Mushir AAOIFI Standards Assistant
 
-**Last reformulated:** 2026-05-19
+**Last reformulated:** 2026-05-19; current-state refresh: 2026-05-31
 **Status:** Maintained architecture plan
 **Scope:** Planning only. Runtime code should be changed only after this design is converted into implementation tickets and tests.
 
@@ -18,6 +18,8 @@ Mushir should be designed as a source-governed, bilingual AAOIFI standards assis
 8. validate answer admissibility before returning it.
 
 The current implementation already contains a practical foundation: `ApplicationService`, multilingual retrieval, query preprocessing, deterministic clarification, citation validation, OpenRouter generation, REST/SSE/UI transports, and a first source-family gate. The next planning step is to make source governance, concept normalization, metadata-aware retrieval, and answer admissibility first-class architecture.
+
+As of 2026-05-31, the first hard-case routing safeguards are implemented and test-backed. GC-001 requires clarification for ambiguous construction delay penalties, construction / Istisna penalty routing targets `SS-05` plus `SS-11`, `SS-10` is reserved for Salam, and organized banking tawarruq routes to `SS-30` without being captured by currency/Sarf substring matching.
 
 The 2026-05-19 deep research report adds concrete seed data and implementation contracts. This design promotes the first-release accounting router, supersession seed graph, parent/child chunking model, retrieval trace schema, and feedback loop into architecture. It treats specific model, vector database, Arabic NLP, and observability products as spike candidates until measured on Mushir's own AAOIFI gold set.
 

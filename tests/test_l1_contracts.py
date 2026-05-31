@@ -3,6 +3,7 @@ import pytest
 from src.models.ruling import ComplianceStatus
 from src.models.schema import AAOIFICitation, SemanticChunk
 from src.models.session import SessionState
+from tests.routing_matrix import routing_case
 
 
 class FakeRetriever:
@@ -349,20 +350,22 @@ def test_application_service_asks_targeted_arabic_penalty_clarification_before_r
         def retrieve(self, query, k=5, threshold=0.3, **kwargs):
             raise AssertionError("ambiguous penalty routing should clarify before retrieval")
 
+    matrix = routing_case("HCRM-ISTISNA-PENALTY-AMBIGUOUS")
     result = ApplicationService(
         retriever=FailingRetriever(),
         llm_client=FakeLLM("unused"),
         prompt_builder=FakePromptBuilder(),
         citation_validator=CitationValidator(),
     ).answer(
-        "\u0647\u0644 \u0634\u0631\u0637 \u063a\u0631\u0627\u0645\u0629 \u0627\u0644\u062a\u0622\u062e\u064a\u0631 \u0641\u064a \u0639\u0642\u0648\u062f \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u0627\u062a \u0634\u0631\u0637 \u0631\u0628\u0648\u064a\u061f"
+        matrix["queries"][0]
     )
 
-    expected = "\u0647\u0644 \u0627\u0644\u063a\u0631\u0627\u0645\u0629 \u0628\u0633\u0628\u0628 \u062a\u0623\u062e\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0641\u064a \u0627\u0644\u062a\u0633\u0644\u064a\u0645 \u0623\u0645 \u0628\u0633\u0628\u0628 \u062a\u0623\u062e\u0631 \u0627\u0644\u0639\u0645\u064a\u0644 \u0641\u064a \u0627\u0644\u0633\u062f\u0627\u062f\u061f"
+    expected = matrix["clarification_behavior"]["question_ar"]
     assert result.status == ComplianceStatus.CLARIFICATION_NEEDED
     assert result.clarification_question == expected
     assert result.answer == expected
-    assert result.metadata["transaction_scenario"]["contract_family"] == "istisna"
+    assert result.metadata["transaction_scenario"]["contract_family"] == matrix["contract_family"]
+    assert result.metadata["standards_route"]["candidate_standards"] == matrix["candidate_standards"]
 
 
 @pytest.mark.service
@@ -451,12 +454,14 @@ def test_application_service_uses_session_clarification_answer_for_next_turn():
             },
         )
     ])
+    from src.chatbot.clarification_engine import ClarificationEngine
     service = ApplicationService(
         retriever=retriever,
         llm_client=FakeLLM("unused"),
         prompt_builder=FakePromptBuilder(),
         citation_validator=CitationValidator(),
         session_store=session_store,
+        clarification_service=ClarificationEngine(),
     )
 
     first = service.answer(
@@ -519,7 +524,7 @@ def test_application_service_arabic_rule_review_response_is_not_mojibake():
 
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert result.metadata["response_language"] == "ar"
-    assert "معايير شرعية" in result.answer
+    assert "قواعد شرعية" in result.answer
     assert "Ã" not in result.answer
     assert "Â" not in result.answer
 
@@ -568,7 +573,7 @@ def test_application_service_detects_arabic_and_localizes_insufficient_data():
         citation_validator=CitationValidator(),
     )
 
-    result = service.answer("ما هي مرابحة في معاملة بيع السلع؟")
+    result = service.answer("هل يجوز المرابحة في معاملة بيع السلع؟")
 
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert result.metadata["response_language"] == "ar"

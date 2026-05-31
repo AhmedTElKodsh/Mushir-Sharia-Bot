@@ -117,7 +117,23 @@ def test_application_service_rewrites_unsupported_answer_to_insufficient_data():
         def generate(self, prompt, **kwargs):
             return "COMPLIANT: This is allowed under [FAS-99]."
 
-    result = ApplicationService(retriever=Retriever(), llm_client=LLM()).answer("Is this allowed?")
+    service = ApplicationService(retriever=Retriever(), llm_client=LLM())
+
+    class FakeFamilyRouter:
+        def classify(self, query, **kwargs):
+            from src.chatbot.contract_family_router import ContractFamilyResult, RetrievalMode
+            from src.models.commercial import ContractFamily
+            return ContractFamilyResult(
+                primary_family=ContractFamily.UNKNOWN,
+                confidence=1.0,
+                mode=RetrievalMode.SINGLE_PATH,
+                signals={},
+                clarification_hint="",
+                query_intent="STANDARD"
+            )
+    service.family_router = FakeFamilyRouter()
+
+    result = service.answer("Is this allowed?")
 
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert result.citations == []
@@ -313,10 +329,24 @@ def test_application_service_bypasses_response_cache_in_eval_mode(monkeypatch):
         cache_store=InMemoryCacheStore(),
     )
 
-    service.answer("Is this compliant?")
-    service.answer("Is this compliant?")
+    class FakeFamilyRouter:
+        def classify(self, query, **kwargs):
+            from src.chatbot.contract_family_router import ContractFamilyResult, RetrievalMode
+            from src.models.commercial import ContractFamily
+            return ContractFamilyResult(
+                primary_family=ContractFamily.UNKNOWN,
+                confidence=1.0,
+                mode=RetrievalMode.SINGLE_PATH,
+                signals={},
+                clarification_hint="",
+                query_intent="STANDARD"
+            )
+    service.family_router = FakeFamilyRouter()
+
+    service.answer("What is the definition of profit?")
+    service.answer("What is the definition of profit?")
     monkeypatch.setenv("RAG_EVAL_MODE", "true")
-    service.answer("Is this compliant?")
+    service.answer("What is the definition of profit?")
 
     assert llm.calls == 2
 
@@ -346,11 +376,34 @@ def test_cached_answer_preserves_validated_citation_metadata():
     )
     cache = InMemoryCacheStore()
     service = ApplicationService(cache_store=cache)
-    scenario = service.scenario_extractor.extract("Is this compliant?")
-    standards_route = service.standards_router.route(scenario, "Is this compliant?")
-    cache.set_json("response", service._cache_key("Is this compliant?", standards_route), cached.to_dict(), 60)
 
-    answer = service.answer("Is this compliant?")
+    class FakeFamilyRouter:
+        def classify(self, query, **kwargs):
+            from src.chatbot.contract_family_router import ContractFamilyResult, RetrievalMode
+            from src.models.commercial import ContractFamily
+            return ContractFamilyResult(
+                primary_family=ContractFamily.UNKNOWN,
+                confidence=1.0,
+                mode=RetrievalMode.SINGLE_PATH,
+                signals={},
+                clarification_hint="",
+                query_intent="STANDARD"
+            )
+    service.family_router = FakeFamilyRouter()
+
+    query = "What is the definition of profit?"
+
+    # We must match the route exactly as ApplicationService builds it internally
+    from src.models.commercial import ContractFamily
+    service.scenario_extractor = type("Fake", (), {"extract": lambda self, q: type("Scen", (), {"contract_family": ContractFamily.UNKNOWN, "question_type": "unknown"})()})()
+    from src.chatbot.commercial_assessment import StandardsRouter
+    service.standards_router = StandardsRouter()
+
+    scenario = service.scenario_extractor.extract(query)
+    standards_route = service.standards_router.route(scenario, query)
+    cache.set_json("response", service._cache_key(query, standards_route), cached.to_dict(), 60)
+
+    answer = service.answer(query)
 
     assert answer.metadata["cache_hit"] is True
     assert answer.citations[0].excerpt == "AAOIFI requires ownership and risk transfer before resale."

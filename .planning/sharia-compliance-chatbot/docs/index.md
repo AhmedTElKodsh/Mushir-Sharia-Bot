@@ -2,6 +2,8 @@
 
 This index points to the current documentation set for Mushir. Older L0 and planning files remain useful historical context, but the files below are the best starting point for current development, review, client handoff, and release work.
 
+Last refreshed: 2026-05-31. The current documentation set reflects the GC-001 construction delay-penalty clarification fix, SS-05/SS-11 istisna penalty routing, SS-30 tawarruq routing guard, evaluation fixture text-boundary fix, and the latest full-suite verification (`619 passed, 48 skipped, 2 warnings`).
+
 ## Start Here
 
 - [Project Documentation](project-documentation.md): full current technical documentation for developers and maintainers.

@@ -1,6 +1,6 @@
 # Requirements Document: Mushir AAOIFI Standards Assistant
 
-**Last reformulated:** 2026-05-19
+**Last reformulated:** 2026-05-19; current-state refresh: 2026-05-31
 **Status:** Maintained planning source of truth
 **Scope:** Planning only. This document describes the required product logic; it does not imply runtime code changes have already been made.
 
@@ -29,6 +29,8 @@ The current codebase already includes more than the older L0-L4 planning languag
 - Local AAOIFI markdown corpus with English and Arabic files and a multilingual Chroma index.
 
 The main planning gap is not "add RAG." The main planning gap is to make the semantic and source-governance contract durable, testable, and not trapped in handwritten code heuristics.
+
+Recent runtime alignment: GC-001 now clarifies ambiguous construction delay penalties before verdict, Istisna/Muqawala penalty routing targets `SS-05` plus `SS-11`, `SS-10` is forbidden for that route unless Salam is implicated, and organized banking tawarruq routes to `SS-30`. These safeguards are part of the current release gate and must remain covered by tests.
 
 ## Official Source Constraint
 

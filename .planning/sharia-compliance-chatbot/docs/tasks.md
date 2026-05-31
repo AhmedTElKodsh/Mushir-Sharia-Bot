@@ -1,7 +1,7 @@
 # Implementation Task Plan: Source-Governed AAOIFI Assistant
 
 **Created:** 2026-05-19
-**Status:** Maintained implementation truth table
+**Status:** Maintained implementation truth table, refreshed 2026-05-31
 **Scope:** Convert the project-logic rethink, deep research reports, and crawler research into implementation slices. Do not treat planned or researched behavior as proof that runtime behavior already exists.
 
 ## Task Principles
@@ -13,6 +13,7 @@
 - Complete official-source registry identity before broad L6 product crawling.
 - Treat third-party pages as discovery-only unless an official artifact confirms the fact.
 - Do not run bulk live generation against `openrouter/free`; use retrieval-only probes and fixtures for evaluation.
+- Keep the 2026-05-31 hard-case routing invariants green: GC-001 clarifies first, Istisna/Muqawala penalties route to `SS-05` + `SS-11`, `SS-10` stays reserved for Salam unless Salam is actually implicated, and organized banking tawarruq routes to `SS-30`.
 
 ## Tasks
 
@@ -31,6 +32,7 @@
 - [x] Mark each seed as `unverified`, `catalog_verified`, or `rejected`.
 - [x] Add English, Arabic, mixed-language, synonym-heavy, and unclear phrasing cases for each first-release route.
 - [x] Ensure a router match permits retrieval only; final answers still require evidence and citation gates.
+- [x] Add launch-blocking hard-case routing matrix tests for construction penalty, debt late-payment, Salam, and tawarruq boundaries.
 
 ### 3. Structured Ingestion And Parent/Child Chunking
 
@@ -85,6 +87,7 @@
 - [x] Select at most one primary observability/evaluation spine after comparing Ragas, DeepEval, Promptfoo, Langfuse, Phoenix, or equivalent tools.
 - [x] Report source-family accuracy, expected-standard hit rate, citation support, clarification precision/recall, Arabic robustness, refusal correctness, latency, and unresolved feedback.
 - [x] Keep live LLM smoke tests small and separate from retrieval-only or fixture-backed matrices.
+- [x] Preserve the production text boundary in evaluation: mock LLM fixture dicts are adapted to text before `ApplicationService`, and structured fields are merged back only for assertions.
 
 ### 10. L6 Entry Gate
 

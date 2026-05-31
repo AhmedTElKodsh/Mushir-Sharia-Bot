@@ -28,6 +28,7 @@ class PipelineUnderTest:
     pipeline: ApplicationService
     mock_llm: MagicMock
     mock_reranker: MagicMock
+    scripted_response: dict[str, Any] | None = None
     _patches: list = field(default_factory=list)
 
     def run(self, query: str, language: str = "ar") -> dict[str, Any]:
@@ -55,16 +56,36 @@ class PipelineUnderTest:
             if "metadata" in res_dict and "confidence" in res_dict["metadata"]:
                 res_dict["confidence"] = res_dict["metadata"]["confidence"]
                 
-            if hasattr(self.mock_llm.generate, "return_value") and isinstance(self.mock_llm.generate.return_value, dict):
-                for k, v in self.mock_llm.generate.return_value.items():
-                    if k not in res_dict:
+            if self.scripted_response:
+                for k, v in self.scripted_response.items():
+                    if k == "confidence" or k not in res_dict:
                         res_dict[k] = v
                 
         return res_dict
 
     def set_llm_response(self, response: dict[str, Any]) -> None:
         """Configure what the mock LLM returns for the next call."""
-        self.mock_llm.generate.return_value = response
+        self.scripted_response = response
+        self.mock_llm.reset_mock()
+        self.mock_llm.generate.return_value = self._llm_text_for(response)
+
+    @staticmethod
+    def _llm_text_for(response: dict[str, Any]) -> str:
+        """Adapt structured evaluation fixtures to ApplicationService's text LLM API."""
+        answer_text = str(response.get("answer_text") or response.get("ruling") or "")
+        ruling = str(response.get("ruling") or "").upper()
+        status_prefix = {
+            "PERMISSIBLE": "COMPLIANT",
+            "PROHIBITED": "NON_COMPLIANT",
+            "DISPUTED": "PARTIALLY_COMPLIANT",
+            "CONDITIONAL": "PARTIALLY_COMPLIANT",
+            "CLARIFY": "INSUFFICIENT_DATA",
+        }.get(ruling, ruling)
+        citation_markers = " ".join(
+            f"[{standard}]" for standard in response.get("cited_standards", [])
+        )
+        parts = [part for part in (status_prefix, answer_text, citation_markers) if part]
+        return ": ".join(parts[:2]) + (f" {parts[2]}" if len(parts) > 2 else "")
 
     def teardown(self) -> None:
         for p in self._patches:

@@ -11,7 +11,7 @@ party-mode rethink (2026-05-28): without this resolver, a query about
 mentioning penalties, including SS-19 (Riba) — producing a false fatwa.
 
 With this resolver:
-  resolve("late_payment_penalty", ContractFamily.MUQAWALA) → ["SS-10", "SS-05"]
+  resolve("late_penalty", ContractFamily.MUQAWALA) → ["SS-11", "SS-05"]
   resolve("late_payment_penalty", ContractFamily.GENERAL_SHARIA) → ["SS-19"]
 
 The retriever uses these standard IDs to filter chunk metadata BEFORE the
@@ -21,8 +21,8 @@ References:
   - AAOIFI SS-05  Guarantees (الضمانات)
   - AAOIFI SS-07  Salam (السلم)
   - AAOIFI SS-09  Ijarah (الإجارة)
-  - AAOIFI SS-10  Istisna' (الاستصناع)
-  - AAOIFI SS-11  Istisna' and Parallel Istisna' (الاستصناع والاستصناع الموازي)
+  - AAOIFI SS-10  Salam and Parallel Salam
+  - AAOIFI SS-11  Istisna' and Parallel Istisna'
   - AAOIFI SS-12  Musharaka (المشاركة)
   - AAOIFI SS-13  Mudaraba (المضاربة)
   - AAOIFI SS-17  Investment Sukuk (صكوك الاستثمار)
@@ -50,8 +50,9 @@ from src.chatbot.contract_family_router import ContractFamily
 CONTEXT_TO_STANDARD_MAP: dict[tuple[str, str], list[str]] = {
 
     # ── Late payment / delay penalty ───────────────────────────────────────
-    # Construction/Istisna context: permissible per SS-10 + SS-05 (Guarantees)
-    ("late_payment_penalty", ContractFamily.MUQAWALA):      ["SS-10", "SS-11", "SS-05"],
+    # Construction/Istisna context: route to SS-11 + SS-05. SS-10 is Salam.
+    ("late_penalty",         ContractFamily.MUQAWALA):      ["SS-05", "SS-11"],
+    ("late_payment_penalty", ContractFamily.MUQAWALA):      ["SS-05", "SS-11"],
     # Murabaha deferred payment context: disputed — possible charity clause
     ("late_payment_penalty", ContractFamily.MURABAHA):      ["SS-28", "SS-19"],
     # General debt context: prohibited Riba
@@ -69,7 +70,7 @@ CONTEXT_TO_STANDARD_MAP: dict[tuple[str, str], list[str]] = {
     # Sukuk: issuer guarantee prohibited; third-party permissible
     ("capital_guarantee",    ContractFamily.GENERAL_SHARIA): ["SS-17"],
     # Performance bond in construction — permissible via Kafala
-    ("performance_bond",     ContractFamily.MUQAWALA):      ["SS-05", "SS-10"],
+    ("performance_bond",     ContractFamily.MUQAWALA):      ["SS-05", "SS-11"],
     ("performance_bond",     ContractFamily.KAFALA):        ["SS-05"],
 
     # ── Return / profit guarantee ──────────────────────────────────────────
@@ -98,7 +99,7 @@ CONTEXT_TO_STANDARD_MAP: dict[tuple[str, str], list[str]] = {
 
     # ── Parallel Istisna ───────────────────────────────────────────────────
     ("parallel_istisna",     ContractFamily.MUQAWALA):      ["SS-11"],
-    ("subcontract_validity", ContractFamily.MUQAWALA):      ["SS-10", "SS-11"],
+    ("subcontract_validity", ContractFamily.MUQAWALA):      ["SS-11"],
 
     # ── Delivery / Salam ───────────────────────────────────────────────────
     ("salam_delivery",       ContractFamily.GENERAL_SHARIA): ["SS-07"],

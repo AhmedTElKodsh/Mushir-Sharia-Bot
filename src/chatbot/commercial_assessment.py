@@ -353,7 +353,7 @@ class StandardsRouter:
         if scenario.question_type == QuestionType.PERMISSIBILITY:
             route_id, candidate_standards = self._hard_sharia_route(scenario, query, seed)
             ontology_route = self._ontology_router.route_query(query, scenario.contract_family)
-            if ontology_route.standard_ids:
+            if ontology_route.standard_ids and not candidate_standards:
                 candidate_standards = sorted(set(candidate_standards) | set(ontology_route.standard_ids))
             return StandardsRoute(
                 primary=[SourceFamily.SHARIA_STANDARD],
@@ -385,7 +385,7 @@ class StandardsRouter:
             return "murabaha-late-payment-penalty", ["SS-03", "SS-08"]
         if scenario.late_payment_terms and scenario.contract_family == ContractFamily.QARD:
             return "debt-late-payment-penalty", ["SS-03", "SS-19"]
-        if any(term in lowered for term in ("currency", "fx", "foreign exchange", "sarf", "صرف", "عملة")):
+        if StandardsRouter._has_currency_exchange_signal(lowered):
             return "currency-sarf-settlement", ["SS-01"]
         if any(term in lowered for term in ("guarantee", "kafalah", "ضمان", "كفالة")):
             if scenario.contract_family == ContractFamily.MUDARABA:
@@ -424,6 +424,17 @@ class StandardsRouter:
             ]
             return (seed.route_id if sharia_candidates else None), sharia_candidates
         return None, []
+
+    @staticmethod
+    def _has_currency_exchange_signal(lowered_query: str) -> bool:
+        english_terms = ("currency", "fx", "foreign exchange", "sarf")
+        if any(term in lowered_query for term in english_terms):
+            return True
+        arabic_letter = r"\u0600-\u06ff"
+        return bool(
+            re.search(rf"(?<![{arabic_letter}])\u0635\u0631\u0641(?![{arabic_letter}])", lowered_query)
+            or re.search(r"\u0639\u0645\u0644(?:\u0629|\u0627\u062a)", lowered_query)
+        )
 
 
 class CommercialRuleEvaluator:

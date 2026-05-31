@@ -11,14 +11,14 @@ cases = [
         'query_ar': 'هل شرط غرامة التآخير في عقود المقاولات شرط ربوي؟',
         'query_en': 'Is a delay penalty clause in construction contracts a usurious clause?',
         'contract_family': 'MUQAWALA',
-        'expected_standards': ['SS-10', 'SS-05'],
-        'expected_ruling': 'PERMISSIBLE',
-        'forbidden_citations': ['SS-19', 'SS-03'],
-        'clarification_required': False,
+        'expected_standards': ['SS-05', 'SS-11'],
+        'expected_ruling': 'CLARIFY',
+        'forbidden_citations': ['SS-19', 'SS-03', 'SS-10'],
+        'clarification_required': True,
         'risk_class': ['R2', 'R3'],
         'severity': 'CRITICAL',
         'authority': 'Sharia Scholar',
-        'notes': 'Construction contracts (Istisna) allow delay penalties against the contractor. Not a debt (Riba) issue.'
+        'notes': 'Construction penalty questions route to SS-11 Istisna and SS-05 guarantees. Ask who delayed before any verdict; SS-10 is Salam and is forbidden unless Salam is implicated.'
     },
     {
         'case_id': 'GC-002',

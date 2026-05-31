@@ -203,13 +203,6 @@ main {
   line-height: 1.35;
 }
 
-.welcome-copy {
-  margin-top: 6px;
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  line-height: 1.45;
-}
-
 .message {
   max-width: var(--bubble-max-width);
   padding: 13px 16px;

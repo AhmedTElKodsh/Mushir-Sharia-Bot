@@ -3,6 +3,21 @@
 
 ---
 
+## Current Implementation Update (2026-05-31)
+
+The recent implementation and review pass landed the first hard-case routing corrections and evaluation harness fixes:
+
+- GC-001 is now a clarification-first case: Mushir asks whether the construction penalty is due to contractor delivery delay or customer payment delay before any verdict.
+- Construction / muqawala / istisna penalty routing targets `SS-05` and `SS-11`; `SS-10` is Salam and is explicitly forbidden for this route unless the query actually implicates Salam.
+- Organized banking tawarruq remains routed to `SS-30`; Arabic currency/Sarf detection must not match the substring inside banking wording.
+- `tests/fixtures/hard_case_routing_matrix.yaml` is the canonical launch-blocking hard-case routing matrix, loaded by `tests/routing_matrix.py`.
+- The evaluation mock LLM now adapts structured response dicts into text before calling `ApplicationService`, preserving `CitationValidator` as the text citation boundary.
+- Verification snapshot: critical goldset `19 passed, 19 skipped`; evaluation suite `96 passed, 44 skipped`; full local suite `619 passed, 48 skipped, 2 warnings`.
+
+Planning language below that says `SS-5` should be read as normalized `SS-05`. Historical examples are retained where useful, but new code and tests should use `SS-05`.
+
+---
+
 ## Two Decisions That Unlock Everything
 
 > **Decision 1 — Ruling-as-Function ✅**

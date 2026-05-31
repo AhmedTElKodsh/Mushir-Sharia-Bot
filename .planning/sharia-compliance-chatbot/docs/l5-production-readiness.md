@@ -2,6 +2,8 @@
 
 This runbook defines the demo/release checks for the implemented Mushir runtime.
 
+Last refreshed: 2026-05-31. Current local verification: full pytest suite `619 passed, 48 skipped, 2 warnings`; critical goldset `19 passed, 19 skipped`; evaluation suite `96 passed, 44 skipped`.
+
 ## Runtime Modes
 
 | Concern | Local/default mode | Production target | Fallback behavior |
@@ -88,6 +90,19 @@ External adapter gate:
 .\.venv\Scripts\python.exe -m pytest -m integration -q
 ```
 
+Critical Sharia evaluation gate:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\evaluation\test_critical_goldset.py -q --timeout=90
+.\.venv\Scripts\python.exe -m pytest tests\evaluation -q --timeout=90
+```
+
+Full local regression gate:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q --timeout=90
+```
+
 API smoke gate:
 
 ```powershell
@@ -111,3 +126,5 @@ Browser gate:
 - `RAG_EVAL_MODE=true` must bypass response cache for quality evaluation.
 - Provider, retrieval, and integration failures must return controlled API/SSE error envelopes.
 - Arabic support must remain visible in fast tests and gold eval rows, not only in manual UI testing.
+- GC-001 and the hard-case routing matrix must remain green before demo/release: construction delay penalties clarify the delaying party, use `SS-05`/`SS-11`, and do not reintroduce `SS-10` unless Salam is implicated.
+- Evaluation mocks must preserve the production boundary by returning text into `ApplicationService`; structured fixture dicts are for assertions only.

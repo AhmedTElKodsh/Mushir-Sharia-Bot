@@ -1,6 +1,6 @@
 # Mushir Client Report: Planning, Implementation, And How The Chatbot Works
 
-Last refreshed: 2026-05-19
+Last refreshed: 2026-05-31
 
 This report explains Mushir in plain language for a non-technical client. It covers the project goal, what has already been implemented, how the current chatbot answers safely, what remains before a stronger release, and how the future product direction expands from a citation-backed chatbot into a structured Sharia commercial-process assessment assistant.
 
@@ -10,7 +10,7 @@ Mushir is a Sharia compliance research assistant for Islamic finance questions. 
 
 Mushir is not a scholar, lawyer, financial advisor, or Sharia board. It does not issue binding fatwas. It is best understood as a careful preparation and research assistant: it helps users find relevant standards, understand what evidence is available, identify missing facts, and prepare better questions for a qualified Sharia scholar or compliance team.
 
-The implementation is already more than a prototype chatbot. It has a browser chat page, API endpoints, streaming support, multilingual retrieval, citation validation, safe refusal behavior, readiness checks, and deployment documentation. The current active planning phase is L5: quality, operations, and release readiness. The proposed future phase is L6: a rules-first commercial-process evaluator.
+The implementation is already more than a prototype chatbot. It has a browser chat page, API endpoints, streaming support, multilingual retrieval, citation validation, safe refusal behavior, readiness checks, and deployment documentation. The current active planning phase is L5: quality, operations, and release readiness. The proposed future phase is L6: a rules-first commercial-process evaluator. The latest local verification on 2026-05-31 passed the full automated suite with `619 passed, 48 skipped, 2 warnings`.
 
 ## The Product In One Sentence
 
@@ -24,6 +24,7 @@ Mushir helps users ask Islamic finance questions and receive careful, citation-b
 | Ask a simple definition question | Searches the corpus and returns a short cited explanation if evidence exists |
 | Ask an unclear transaction question | Asks one focused follow-up question instead of asking a long checklist |
 | Ask a transaction compliance question | Retrieves AAOIFI excerpts, asks the model to answer only from those excerpts, then validates citations |
+| Ask a construction delay-penalty question where the delaying party is unclear | Asks whether the delay is by the contractor or by the customer before giving any verdict |
 | Ask for a binding fatwa | Refuses and explains that the system is informational only |
 | Ask something not supported by the indexed documents | Returns insufficient data instead of guessing |
 | Use the chatbot in a browser | Provides `/chat` as the demo user interface |
@@ -58,6 +59,8 @@ The project has been planned in levels. Some older planning files still exist fo
 | L6 | Future direction: rules-first Sharia commercial-process evaluator | Proposed; first runtime scaffold exists, full evaluator is not active scope |
 
 The most important planning correction is that the current system should not be described as "complete Sharia verdict automation." Today it is a citation-grounded assistant over the available corpus. The future L6 direction adds transaction modeling and rule checks so that broader commercial-process assessment can become safer and more structured. A first runtime scaffold now records transaction-scenario metadata, source routing, rule-trace placeholders, and a fail-closed guard for late-payment/default permissibility questions when Shari'ah-standard evidence is missing.
+
+The newest hard-case update is deliberately conservative: if a construction contract includes a delay penalty, Mushir should not assume the case is a debt penalty, a Salam case, or a charity clause. It first asks who delayed. If the context is construction / Istisna, the relevant routing is SS-05 plus SS-11; SS-10 is Salam and is not used for that case unless the question actually involves Salam.
 
 ## Current Implementation Overview
 
@@ -175,6 +178,19 @@ Expected behavior:
 
 Mushir refuses politely and explains that it provides informational, evidence-backed guidance only.
 
+### 6. Construction Delay-Penalty Question
+
+User asks:
+
+> Is a delay penalty clause in a construction contract riba?
+
+Expected behavior:
+
+1. Mushir recognizes this as a high-risk construction / Istisna hard case.
+2. If the question does not say who delayed, Mushir asks one focused question: was the penalty because the contractor was late delivering, or because the customer was late paying?
+3. It routes the construction case toward SS-05 and SS-11, not SS-10 or generic debt/riba standards.
+4. It still refuses to issue a binding fatwa and requires governed evidence plus scholar review for final authority.
+
 ## Safety Controls
 
 | Risk | Current control |
@@ -183,6 +199,7 @@ Mushir refuses politely and explains that it provides informational, evidence-ba
 | The model invents a citation | Citation validator accepts only citations backed by retrieved chunks |
 | Arabic retrieval silently fails | Readiness checks require the configured multilingual index when Arabic retrieval is enabled |
 | User asks an unclear question | Clarification engine asks one focused follow-up question |
+| Construction penalty is confused with loan/debt penalty | Hard-case routing matrix and goldset tests require clarification and block the wrong standards |
 | User asks for a fatwa or legal advice | Authority guard refuses within informational scope |
 | Provider or model fails | API maps failures to safe messages |
 | Secrets appear in docs or errors | Docs use placeholders and errors are sanitized |
@@ -197,6 +214,7 @@ Mushir refuses politely and explains that it provides informational, evidence-ba
 | Application service | The main decision coordinator for refusal, clarification, retrieval, generation, validation, cache, and audit |
 | Clarification engine | The part that decides when one follow-up question is safer than an answer |
 | RAG pipeline | The search layer that finds relevant AAOIFI excerpts |
+| Hard-case routing matrix | The regression guard for launch-blocking questions such as construction delay penalties |
 | Multilingual embeddings | The retrieval model that supports English and Arabic corpus search |
 | OpenRouter LLM client | The model provider interface used to draft answers from retrieved evidence |
 | Citation validator | The trust layer that checks whether answer citations match retrieved evidence |
@@ -228,6 +246,12 @@ Important L5 gates:
 - deployment docs and runbooks are current;
 - secrets are not exposed in docs, logs, or UI;
 - OpenRouter free-model usage stays small and throttled.
+
+Current automated proof point:
+
+- Critical goldset: `19 passed, 19 skipped`.
+- Evaluation framework: `96 passed, 44 skipped`.
+- Full local suite: `619 passed, 48 skipped, 2 warnings`.
 
 ## L6: Future Product Direction
 

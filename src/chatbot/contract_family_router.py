@@ -9,14 +9,15 @@ false-fatwa path identified in the party-mode rethink (2026-05-28):
   ──────────────────────────────────────────────────────────
   Surface signal: غرامة التأخير  → (weak) Riba / debt context
   Container signal: عقود المقاولات → MUQAWALA (Istisna construction)
-  Container OVERRIDES surface → routes to SS-10 + SS-05, not SS-19.
+  Container OVERRIDES surface → routes to SS-11 + SS-05, not SS-19.
 
 Architecture decision: Returns an immutable ContractFamilyResult.
 Callers construct a new QueryContext with this result — nothing is
 mutated in-place (Option A, confirmed by Winston in Round 2).
 
 References:
-  - AAOIFI SS-10 (Istisna')
+  - AAOIFI SS-10 (Salam)
+  - AAOIFI SS-11 (Istisna')
   - AAOIFI SS-05 (Guarantees)
   - AAOIFI SS-09 (Ijarah)
   - AAOIFI SS-28 (Murabaha)
@@ -204,6 +205,8 @@ _RAW_SURFACE_SIGNALS: dict[str, tuple[ContractFamily, float]] = {
     "تسليم المشروع":    (ContractFamily.MUQAWALA, 0.40),
     "كفيل الأداء":      (ContractFamily.MUQAWALA, 0.35),
     "liquidated damages": (ContractFamily.MUQAWALA, 0.35),
+    "ld clause":        (ContractFamily.MUQAWALA, 0.30),
+    "contractor":       (ContractFamily.MUQAWALA, 0.30),
     # Musharaka surface
     "نسبة المشاركة":    (ContractFamily.MUSHARAKA, 0.40),
     "شريك":             (ContractFamily.MUSHARAKA, 0.25),
@@ -403,9 +406,10 @@ class ContractFamilyRouter:
 
     def _extract_surface_signals(self, text: str) -> dict[ContractFamily, float]:
         """Sum surface signal weights per family for all matching terms."""
+        text_lower = text.lower()
         weights: dict[ContractFamily, float] = {}
         for term, (family, weight) in _SURFACE_SIGNALS.items():
-            if term in text:
+            if term.lower() in text_lower:
                 weights[family] = weights.get(family, 0.0) + weight
         return weights
 

@@ -2,16 +2,19 @@
 
 This document describes the architecture of the Mushir Sharia Compliance Chatbot's answer generation system.
 
+Last refreshed: 2026-05-31
+
 ## Overview
 
-The chatbot uses a layered architecture that separates concerns between orchestration, prompt construction, LLM interaction, and validation. This design enables independent testing, flexible prompt versioning, and clean separation between business logic and LLM integration.
+The chatbot uses a layered architecture that separates concerns between orchestration, scenario extraction, source routing, retrieval, prompt construction, LLM interaction, and validation. This design enables independent testing, flexible prompt versioning, and clean separation between business logic and LLM integration.
 
 ## Component Hierarchy
 
 ```mermaid
 flowchart TD
     A["ApplicationService<br/>Orchestrator"] --> B["ClarificationEngine<br/>one focused question"]
-    A --> C["RAGPipeline<br/>AAOIFI retrieval"]
+    A --> R["CommercialAssessment<br/>scenario + route"]
+    R --> C["RAGPipeline<br/>candidate-standard retrieval"]
     C --> D{"Definition query with direct excerpt?"}
     D -- "Yes" --> E["Deterministic cited definition"]
     D -- "No" --> F["PromptBuilder + LLMClient"]
@@ -69,10 +72,14 @@ The component uses Python's `inspect.signature()` to dynamically detect which pa
 - Disclaimer enforcement
 - Authority request detection (refuses binding fatwas)
 - Cache lookup and storage
+- Transaction scenario extraction
+- Contract-family and source-family routing
+- Candidate-standard filtering for hard cases
 - RAG retrieval coordination
 - Deterministic cited definition answers for supported definition questions
 - Answer generation via AnswerGenerator
 - Citation validation
+- Scholar-review queue append where applicable
 - Compliance status determination
 - Audit logging
 - Session management
@@ -102,26 +109,31 @@ def answer(
    - Generate cache key from query + prompt version + model + corpus version
    - Return cached answer if available (unless in eval mode)
 
-3. **Clarification:**
-   - Check if clarification is needed via ClarificationService
-   - Return clarification question if facts are missing
+3. **Scenario and routing:**
+   - Extract transaction facts and missing facts where possible
+   - Build a source-family route and candidate standard list
+   - Apply hard-case safeguards such as GC-001 construction penalty clarification and SS-05/SS-11 routing
 
-4. **Retrieval:**
-   - Retrieve top-k chunks from vector database
+4. **Clarification:**
+   - Check if clarification is needed via ClarificationService or route-specific missing facts
+   - Return one focused clarification question if facts are missing
+
+5. **Retrieval:**
+   - Retrieve top-k chunks from vector database, filtered by candidate standards when applicable
    - Return INSUFFICIENT_DATA if no chunks found
 
-5. **Definition Shortcut:**
+6. **Definition Shortcut:**
    - If the user asks a definition-style question and a retrieved AAOIFI excerpt directly defines the term, return a cited definition before calling the model
    - Expand retrieval once for definition questions when the initial top-k window finds related but non-definitional chunks
    - Keep the answer status as INSUFFICIENT_DATA because a definition is not a transaction-level compliance assessment
 
-6. **Generation:**
+7. **Generation:**
    - Build prompt via PromptBuilder
    - Generate answer via AnswerGenerator → LLMClient
    - Validate citations via CitationValidator
    - Determine compliance status from answer text
 
-7. **Post-processing:**
+8. **Post-processing:**
    - Audit log the query and answer
    - Cache the answer (unless clarification or eval mode)
    - Return AnswerContract
@@ -233,6 +245,19 @@ def generate(
 - `[FAS-X §Y.Z, p.N]`
 - `[معيار أيوفي FAS-X، القسم Y.Z، صفحة N]`
 
+### 6. Commercial Assessment And Routing
+
+**Location:** `src/chatbot/commercial_assessment.py`, `src/chatbot/contract_family_router.py`, `src/rag/standard_resolver.py`
+
+**Purpose:** Adds the first rules-first scaffold before retrieval. It does not issue final rulings by itself; it decides whether the query has enough facts to retrieve safely, which source family should be searched, and which candidate standards are admissible for the question.
+
+**Current hard-case behavior:**
+
+- GC-001 construction delay-penalty wording asks a clarification question until the responsible delaying party is known.
+- Construction / muqawala / istisna penalty routes use `SS-05` and `SS-11`.
+- `SS-10` is treated as Salam and is forbidden for the construction penalty route unless Salam is actually implicated.
+- Organized banking tawarruq routes to `SS-30`; Arabic currency/Sarf matching must not trigger from the substring inside banking wording.
+
 ## Data Flow
 
 ```mermaid
@@ -243,8 +268,9 @@ flowchart TD
     D -- "Yes" --> E["Return cached AnswerContract"]
     D -- "No" --> F{"Clarification needed?"}
     F -- "Yes" --> G["Return CLARIFICATION_NEEDED"]
-    F -- "No" --> H["RAG retrieval"]
-    H --> I{"No chunks?"}
+    F -- "No" --> H["Scenario extraction and routing"]
+    H --> V["Candidate-standard filtered retrieval"]
+    V --> I{"No chunks?"}
     I -- "Yes" --> J["Return INSUFFICIENT_DATA"]
     I -- "No" --> K{"Definition excerpt found?"}
     K -- "Yes" --> L["Return cited definition"]
@@ -352,6 +378,14 @@ timeout_seconds = 60       # LLM request timeout
 - **Citation Accuracy:** Validate citations match retrieved chunks
 - **Language Detection:** Test Arabic/English detection accuracy
 - **Normalization:** Test query normalization (diacritics, transliteration)
+- **Hard-case Routing:** `tests/fixtures/hard_case_routing_matrix.yaml` and routing accuracy tests protect GC-001, istisna penalty, debt, Salam, and tawarruq boundaries
+- **Evaluation Fixture Contract:** Structured mock LLM responses are adapted to text before entering `ApplicationService`, preserving `CitationValidator` as a text boundary
+
+Current verification snapshot from 2026-05-31:
+
+- Critical goldset: `19 passed, 19 skipped`.
+- Evaluation framework: `96 passed, 44 skipped`.
+- Full local suite: `619 passed, 48 skipped, 2 warnings`.
 
 ## Future Enhancements
 

@@ -88,6 +88,7 @@ class ApplicationService:
         # and transaction-structure bypass all fire regardless of caller injection.
         from src.chatbot.clarification_engine import ClarificationEngine
         self.clarification_service = clarification_service or ClarificationEngine()
+        self._clarification_service_injected = clarification_service is not None
         self.session_store = session_store
         self.audit_store = audit_store
         self.cache_store = cache_store
@@ -144,13 +145,32 @@ class ApplicationService:
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
 
-        # Stage 1 & 2: Routing and Standard Resolution
+        # Extract scenario first so it's available for routing
         pending_scenario_clarification = self._consume_pending_scenario_clarification(session_id)
+        analysis_query = self._query_with_pending_clarification(
+            cleaned_query,
+            pending_scenario_clarification,
+        )
+        from src.chatbot.commercial_assessment import TransactionScenario, QuestionType
+        try:
+            scenario = self.scenario_extractor.extract(analysis_query)
+        except Exception as exc:
+            print(f"Scenario extraction failed: {type(exc).__name__}")
+            scenario = TransactionScenario(question_type=QuestionType.PERMISSIBILITY)
+
+        # Stage 1 & 2: Routing and Standard Resolution
         session_family = pending_scenario_clarification.get("family") if pending_scenario_clarification else None
         session_turns = pending_scenario_clarification.get("turns", 0) if pending_scenario_clarification else 0
-        family_result, target_standards, standards_route = self._handle_routing_stage(
-            cleaned_query, session_family, session_turns
+
+        family_result, target_standards = self._handle_routing_stage(
+            analysis_query, session_family, session_turns
         )
+
+        # Build authoritative standards_route
+        standards_route = self.standards_router.route(scenario, analysis_query)
+        if target_standards and not standards_route.candidate_standards:
+            standards_route.candidate_standards = sorted(set(standards_route.candidate_standards) | set(target_standards))
+
         if cached := self._cached_answer(cleaned_query, standards_route):
             return cached
             
@@ -162,6 +182,8 @@ class ApplicationService:
         # Stage 3: Clarification Validation
         clarification_contract = self._handle_clarification_stage(
             cleaned_query,
+            scenario,
+            standards_route,
             family_result,
             known_family,
             session_id,
@@ -171,13 +193,6 @@ class ApplicationService:
         if clarification_contract:
             return clarification_contract
 
-        # Stubbed legacy dependencies
-        from src.chatbot.commercial_assessment import TransactionScenario, QuestionType
-        analysis_query = self._query_with_pending_clarification(
-            cleaned_query,
-            pending_scenario_clarification,
-        )
-        scenario = TransactionScenario(question_type=QuestionType.PERMISSIBILITY)
         rule_evaluation = self.rule_evaluator.evaluate(scenario, standards_route)
 
         if self.retriever is None:
@@ -1355,16 +1370,13 @@ class ApplicationService:
                 target_standards.extend(adj_standards)
             target_standards = list(dict.fromkeys(target_standards))
 
-        standards_route = StandardsRoute(
-            primary=[SourceFamily.SHARIA_STANDARD],
-            candidate_standards=target_standards,
-            requires_rule_evaluation=(family_result.primary_family != ContractFamily.UNKNOWN)
-        )
-        return family_result, target_standards, standards_route
+        return family_result, target_standards
 
     def _handle_clarification_stage(
         self,
         cleaned_query: str,
+        scenario: "Any",
+        standards_route: "Any",
         family_result: "Any",
         known_family: "Optional[ContractFamily]",
         session_id: "Optional[str]",
@@ -1389,7 +1401,40 @@ class ApplicationService:
         """
         clarification: Optional[str] = None
 
-        if self.clarification_service:
+        scenario_clarification = self._scenario_clarification_question(
+            scenario,
+            response_language,
+        )
+        if scenario_clarification:
+            self._remember_scenario_clarification(
+                session_id=session_id,
+                original_query=cleaned_query,
+                clarification_question=scenario_clarification,
+                scenario=scenario,
+                standards_route=standards_route,
+            )
+            contract = AnswerContract(
+                answer=scenario_clarification,
+                status=ComplianceStatus.CLARIFICATION_NEEDED,
+                clarification_question=scenario_clarification,
+                reasoning_summary=self._clarification_reason(scenario_clarification, response_language),
+                limitations=self._limitations(response_language),
+                metadata=self._metadata(
+                    [],
+                    confidence=0.0,
+                    response_language=response_language,
+                    scenario=scenario,
+                    standards_route=standards_route,
+                ),
+            )
+            contract.metadata["router_signals"] = getattr(family_result, "signals", {})
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
+
+        if self.clarification_service and (
+            getattr(self, "_clarification_service_injected", False)
+            or (family_result.mode and family_result.mode.value == "clarification" and known_family is not None)
+        ):
             # Pass the known_family so ask_if_needed can apply the bypass
             # ONLY when the router is confident.
             clarification = self.clarification_service.ask_if_needed(
@@ -1397,9 +1442,6 @@ class ApplicationService:
                 session_id=session_id,
                 known_contract_family=known_family,
             )
-        elif family_result.mode and family_result.mode.value == "clarification":
-            # No clarification service at all — fall back to router hint
-            clarification = getattr(family_result, "clarification_hint", None)
 
         if clarification:
             clarification_answer = self._clarification_answer(clarification, response_language)
