@@ -1,0 +1,282 @@
+import os
+import yaml
+from pathlib import Path
+
+base_dir = Path(__file__).parent / 'critical'
+base_dir.mkdir(parents=True, exist_ok=True)
+
+cases = [
+    {
+        'case_id': 'GC-001',
+        'query_ar': 'هل شرط غرامة التآخير في عقود المقاولات شرط ربوي؟',
+        'query_en': 'Is a delay penalty clause in construction contracts a usurious clause?',
+        'contract_family': 'MUQAWALA',
+        'expected_standards': ['SS-05', 'SS-11'],
+        'expected_ruling': 'CLARIFY',
+        'forbidden_citations': ['SS-19', 'SS-03', 'SS-10'],
+        'clarification_required': True,
+        'risk_class': ['R2', 'R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Construction penalty questions route to SS-11 Istisna and SS-05 guarantees. Ask who delayed before any verdict; SS-10 is Salam and is forbidden unless Salam is implicated.'
+    },
+    {
+        'case_id': 'GC-002',
+        'query_ar': 'ما حكم التورق المصرفي؟',
+        'query_en': 'What is the ruling on banking Tawarruq?',
+        'contract_family': 'MURABAHA',
+        'expected_standards': ['SS-30'],
+        'expected_ruling': 'CLARIFY',
+        'forbidden_citations': ['SS-01'],
+        'clarification_required': True,
+        'risk_class': ['R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Requires clarification between organised (prohibited) and unorganised (disputed/permissible) Tawarruq.'
+    },
+    {
+        'case_id': 'GC-003',
+        'query_ar': 'هل يجوز لمصدر الصكوك ضمان رأس المال للمستثمرين؟',
+        'query_en': 'Is it permissible for a Sukuk issuer to guarantee the capital for investors?',
+        'contract_family': 'GENERAL_SHARIA',
+        'expected_standards': ['SS-17'],
+        'expected_ruling': 'PROHIBITED',
+        'forbidden_citations': ['SS-28'],
+        'clarification_required': False,
+        'risk_class': ['R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Sukuk issuer capital guarantee is prohibited. Third-party guarantee is permissible.'
+    },
+    {
+        'case_id': 'GC-004',
+        'query_ar': 'هل يحق للمضارب أخذ راتب شهري مقطوع من رأس مال المضاربة؟',
+        'query_en': 'Does the Mudarib have the right to take a fixed monthly salary from the Mudaraba capital?',
+        'contract_family': 'MUDHARABA',
+        'expected_standards': ['SS-13'],
+        'expected_ruling': 'PROHIBITED',
+        'forbidden_citations': ['SS-09'],
+        'clarification_required': False,
+        'risk_class': ['R2'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Fixed salary for Mudarib invalidates the Mudaraba.'
+    },
+    {
+        'case_id': 'GC-005',
+        'query_ar': 'هل يجوز للبنك أخذ غرامة تأخير على أقساط المرابحة كإيراد؟',
+        'query_en': 'Is it permissible for the bank to take a delay penalty on Murabaha installments as income?',
+        'contract_family': 'MURABAHA',
+        'expected_standards': ['SS-28', 'SS-19'],
+        'expected_ruling': 'PROHIBITED',
+        'forbidden_citations': ['SS-10'],
+        'clarification_required': False,
+        'risk_class': ['R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Delay penalty in debt (Murabaha) cannot be taken as income (Riba). Must go to charity.'
+    },
+    {
+        'case_id': 'GC-006',
+        'query_ar': 'من يتحمل تكاليف الصيانة في الإجارة المنتهية بالتمليك؟',
+        'query_en': 'Who bears the maintenance costs in Ijarah Muntahia Bittamleek?',
+        'contract_family': 'IJARA',
+        'expected_standards': ['SS-09'],
+        'expected_ruling': 'CLARIFY',
+        'forbidden_citations': ['SS-28'],
+        'clarification_required': True,
+        'risk_class': ['R2'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Requires clarification: structural maintenance (lessor) vs. operational maintenance (lessee).'
+    },
+    {
+        'case_id': 'GC-007',
+        'query_ar': 'هل يجوز زيادة الإيجار في المشاركة المتناقصة؟',
+        'query_en': 'Is it permissible to increase the rent in Diminishing Musharaka?',
+        'contract_family': 'MUSHARAKA',
+        'expected_standards': ['SS-12', 'SS-09'],
+        'expected_ruling': 'PERMISSIBLE',
+        'forbidden_citations': ['SS-19'],
+        'clarification_required': False,
+        'risk_class': ['R2'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Permissible if tied to a known benchmark at the time of renewing the lease period.'
+    },
+    {
+        'case_id': 'GC-008',
+        'query_ar': 'هل يجوز تقديم قرض حسن بشرط فتح حساب استثماري؟',
+        'query_en': 'Is it permissible to provide a Qard Hassan conditioned on opening an investment account?',
+        'contract_family': 'GENERAL_SHARIA',
+        'expected_standards': ['SS-19'],
+        'expected_ruling': 'PROHIBITED',
+        'forbidden_citations': ['SS-13'],
+        'clarification_required': False,
+        'risk_class': ['R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Any condition attached to a Qard that brings a benefit to the lender is Riba.'
+    },
+    {
+        'case_id': 'GC-009',
+        'query_ar': 'ما حكم عقود الصرف الآجل في العملات؟',
+        'query_en': 'What is the ruling on forward currency exchange contracts?',
+        'contract_family': 'GENERAL_SHARIA',
+        'expected_standards': ['SS-01'],
+        'expected_ruling': 'PROHIBITED',
+        'forbidden_citations': ['SS-07'],
+        'clarification_required': False,
+        'risk_class': ['R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Forward currency exchange is generally prohibited; spot settlement is required.'
+    },
+    {
+        'case_id': 'GC-010',
+        'query_ar': 'هل يجوز إبرام عقد استصناع موازٍ حيث تقوم المؤسسة بالتعاقد مع مقاول فرعي دون إعلام العميل؟',
+        'query_en': 'Is it permissible to use a parallel Istisna contract where the institution subcontracts without notifying the client?',
+        'contract_family': 'MUQAWALA',
+        'expected_standards': ['SS-11'],
+        'expected_ruling': 'PERMISSIBLE',
+        'forbidden_citations': ['SS-08', 'SS-01'],
+        'clarification_required': False,
+        'risk_class': ['R2'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Parallel Istisna is permissible under AAOIFI SS-11 provided both contracts are independent.'
+    },
+    {
+        'case_id': 'GC-011',
+        'query_ar': 'إذا ضمنت المؤسسة عائداً ثابتاً لصندوق الوكالة بالاستثمار، فهل تتحول الوكالة إلى قرض؟',
+        'query_en': 'If the institution guarantees a fixed return on a Wakalah investment fund, does it convert into a Qard?',
+        'contract_family': 'WAKALA',
+        'expected_standards': ['SS-23'],
+        'expected_ruling': 'PROHIBITED',
+        'forbidden_citations': ['SS-17', 'SS-05'],
+        'clarification_required': False,
+        'risk_class': ['R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Guaranteed returns in Wakalah convert the relationship to a guaranteed loan (Qard).'
+    },
+    {
+        'case_id': 'GC-012',
+        'query_ar': 'هل يجوز اشتراط حد أدنى مضمون للعائد في عقد المشاركة؟',
+        'query_en': 'Is a guaranteed minimum return permissible in a Musharaka contract?',
+        'contract_family': 'MUSHARAKA',
+        'expected_standards': ['SS-12'],
+        'expected_ruling': 'PROHIBITED',
+        'forbidden_citations': ['SS-04', 'SS-23'],
+        'clarification_required': False,
+        'risk_class': ['R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Guaranteeing a minimum profit share to one party in Musharaka is prohibited.'
+    },
+    {
+        'case_id': 'GC-013',
+        'query_ar': 'هل يُعدّ الصكوك الذي يُوزّع دخلاً ثابتاً دورياً مخالفاً للمشاركة في الأرباح؟',
+        'query_en': 'Are Sukuk that distribute a fixed periodic income considered non-compliant with profit-sharing principles?',
+        'contract_family': 'MUSHARAKA',
+        'expected_standards': ['SS-17', 'SS-18'],
+        'expected_ruling': 'DISPUTED',
+        'forbidden_citations': ['SS-28'],
+        'clarification_required': True,
+        'risk_class': ['R2', 'R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Fixed periodic Sukuk distributions are disputed among scholars. Requires CLARIFY.'
+    },
+    {
+        'case_id': 'GC-014',
+        'query_ar': 'هل بيع الوفاء (اشتراط حق استرداد المبيع) جائز شرعاً؟',
+        'query_en': 'Is Bay al-Wafa (sale with a condition to redeem the asset) Sharia-compliant?',
+        'contract_family': 'GENERAL_SHARIA',
+        'expected_standards': ['SS-31'],
+        'expected_ruling': 'DISPUTED',
+        'forbidden_citations': ['SS-08', 'SS-12'],
+        'clarification_required': True,
+        'risk_class': ['R2', 'R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Bay al-Wafa is disputed. Ruling must be DISPUTED with CLARIFY.'
+    },
+    {
+        'case_id': 'GC-015',
+        'query_ar': 'ما الفرق الجوهري بين المرابحة السلعية والتورق المصرفي، وهل يُعدّان متماثلين في الحكم؟',
+        'query_en': 'What is the substantive difference between Commodity Murabaha and Tawarruq, and do they share the same ruling?',
+        'contract_family': 'AMBIGUOUS',
+        'expected_standards': ['SS-08', 'SS-30'],
+        'expected_ruling': 'CLARIFY',
+        'forbidden_citations': ['SS-09'],
+        'clarification_required': True,
+        'risk_class': ['R2', 'R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Commodity Murabaha is permissible; organised Tawarruq is prohibited. Ruling must be CLARIFY.'
+    },
+    {
+        'case_id': 'GC-016',
+        'query_ar': 'إذا تضمّنت الإجارة ضماناً بالقيمة المتبقية للأصل عند نهاية العقد، فهل تبقى إجارة شرعية؟',
+        'query_en': 'If an Ijara contract includes a residual value guarantee on the asset at contract end, does it remain Sharia-compliant?',
+        'contract_family': 'IJARA',
+        'expected_standards': ['SS-09'],
+        'expected_ruling': 'PROHIBITED',
+        'forbidden_citations': ['SS-06', 'SS-12'],
+        'clarification_required': False,
+        'risk_class': ['R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'A residual value guarantee in Ijara shifts asset ownership risk back to the lessee.'
+    },
+    {
+        'case_id': 'GC-017',
+        'query_ar': 'هل يجوز إعادة جدولة المرابحة بإضافة هامش ربح جديد على الرصيد المتبقي؟',
+        'query_en': 'Is Murabaha rollover with a new profit margin on the outstanding balance permissible?',
+        'contract_family': 'MURABAHA',
+        'expected_standards': ['SS-08'],
+        'expected_ruling': 'PROHIBITED',
+        'forbidden_citations': ['SS-02', 'SS-19'],
+        'clarification_required': False,
+        'risk_class': ['R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Adding a new profit margin on outstanding Murabaha balance is equivalent to Riba al-Jahiliyya.'
+    },
+    {
+        'case_id': 'GC-018',
+        'query_ar': 'في المشاركة المتناقصة، من يتحمل خسارة رأس المال الناتجة عن انخفاض قيمة الأصل؟',
+        'query_en': 'In Diminishing Musharaka, who bears capital losses from asset value decline?',
+        'contract_family': 'MUSHARAKA',
+        'expected_standards': ['SS-12'],
+        'expected_ruling': 'PERMISSIBLE',
+        'forbidden_citations': ['SS-08', 'SS-09'],
+        'clarification_required': False,
+        'risk_class': ['R2'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Capital losses are shared proportionally to equity stake. Proportional loss-sharing is PERMISSIBLE.'
+    },
+    {
+        'case_id': 'GC-019',
+        'query_ar': 'هل يجوز للكفيل (الضامن) تقاضي أجر أو عمولة مقابل الكفالة؟',
+        'query_en': 'Is it permissible for a Kafil (guarantor) to charge a fee or commission for providing Kafala?',
+        'contract_family': 'KAFALA',
+        'expected_standards': ['SS-05'],
+        'expected_ruling': 'PROHIBITED',
+        'forbidden_citations': ['SS-12'],
+        'clarification_required': False,
+        'risk_class': ['R3'],
+        'severity': 'CRITICAL',
+        'authority': 'Sharia Scholar',
+        'notes': 'Guarantor charging a fee is prohibited as it converts to Riba per majority view.'
+    }
+]
+
+for c in cases:
+    p = base_dir / f"{c['case_id']}.yaml"
+    with p.open('w', encoding='utf-8') as f:
+        yaml.dump(c, f, allow_unicode=True, sort_keys=False)
+
+print(f'Wrote {len(cases)} YAML files to {base_dir}')

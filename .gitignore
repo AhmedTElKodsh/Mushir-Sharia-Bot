@@ -37,6 +37,7 @@ ENV/
 .codex/
 .playwright-mcp/
 .pytest-tmp/
+.tmp/
 .trae/
 .kiro/hooks/
 .kiro/skills/
@@ -52,6 +53,7 @@ superpowers/
 
 # Logs
 logs/
+data/runtime/logs/
 *.log
 uvicorn-*.out.log
 uvicorn-*.err.log
@@ -59,6 +61,7 @@ uvicorn-*.err.log
 # Data
 data/*
 !data/.gitkeep
+!data/runtime/
 !data/source_registry/
 !data/source_registry/README.md
 !data/source_registry/*.yaml
@@ -75,6 +78,7 @@ artifacts/l6_scrape/**
 # Chroma
 chroma_db/
 chroma_db_multilingual/
+chroma_db_multilingual_governed_*/
 chroma/
 *.chroma
 
@@ -102,7 +106,15 @@ Thumbs.db
 .gsd-id
 .mcp.json
 .bg-shell/
-.planning/
+.planning/*
+!.planning/STATE.md
+!.planning/sharia-compliance-chatbot/
+!.planning/sharia-compliance-chatbot/**
+.planning/sharia-compliance-chatbot/docs/l6_scrape/**
+!.planning/sharia-compliance-chatbot/docs/l6_scrape/
+!.planning/sharia-compliance-chatbot/docs/l6_scrape/README.md
+!.planning/sharia-compliance-chatbot/docs/l6_scrape/**/
+!.planning/sharia-compliance-chatbot/docs/l6_scrape/**/*.md
 *.code-workspace
 .env.*
 !.env.example
@@ -120,5 +132,8 @@ test_query.json
 test_bot.py
 system_role.docx
 hf-space-chat.png
-browser-smoke/
+/browser-smoke/
+_legacy/browser-smoke/*
+!_legacy/browser-smoke/
+!_legacy/browser-smoke/README.md
 docs/mushir-client-report.docx

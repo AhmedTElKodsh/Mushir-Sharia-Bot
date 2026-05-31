@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 import uuid
 from typing import Any, Dict, List, Optional
 
@@ -81,12 +82,13 @@ class QdrantVectorStore:
         query_embedding: List[float],
         k: int = 5,
         threshold: float = 0.7,
+        filters: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         try:
             results = self.client.query_points(
                 collection_name=self.collection_name,
                 query=query_embedding,
-                limit=k,
+                limit=self._query_limit(k, filters),
             )
         except Exception as exc:
             logger.error(f"Qdrant similarity search failed: {exc}")
@@ -98,8 +100,11 @@ class QdrantVectorStore:
             if score < threshold:
                 continue
             payload = dict(point.payload or {})
+            if filters and not self._metadata_matches_filters(payload, filters):
+                continue
             content = str(payload.pop("content", ""))
             chunk_id = str(payload.pop("chunk_id", point.id))
+            payload = self._normalized_payload_metadata(payload)
             chunks.append(
                 {
                     "chunk_id": chunk_id,
@@ -109,7 +114,100 @@ class QdrantVectorStore:
                 }
             )
         logger.info(f"Retrieved {len(chunks)} Qdrant chunks (threshold={threshold})")
-        return chunks
+        return chunks[:k]
+
+    @classmethod
+    def _normalized_payload_metadata(cls, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        normalized = dict(metadata)
+        family = normalized.get("source_family") or cls._infer_source_family(normalized)
+        if family:
+            normalized["source_family"] = family
+        aliases = cls._standard_aliases(normalized)
+        normalized_standard = next(
+            (alias for alias in aliases if re.fullmatch(r"(SS|FAS)-\d{2,3}", str(alias))),
+            None,
+        )
+        if normalized_standard:
+            normalized.setdefault("raw_standard_number", normalized.get("standard_number"))
+            normalized["standard_number"] = normalized_standard
+        if "source_language" not in normalized and normalized.get("language"):
+            normalized["source_language"] = normalized["language"]
+        return normalized
+
+    @staticmethod
+    def _query_limit(k: int, filters: Optional[Dict[str, Any]]) -> int:
+        if not filters:
+            return k
+        return max(k * int(os.getenv("QDRANT_FILTER_OVERFETCH_MULTIPLIER", "5")), k)
+
+    @staticmethod
+    def _metadata_matches_filters(metadata: Dict[str, Any], filters: Dict[str, Any]) -> bool:
+        for key, expected in filters.items():
+            actual = QdrantVectorStore._filter_value(metadata, key)
+            if actual is None:
+                return False
+            if isinstance(expected, (list, tuple, set, frozenset)):
+                actual_values = {str(value).lower() for value in QdrantVectorStore._as_values(actual)}
+                expected_values = {str(value).lower() for value in expected}
+                if actual_values.isdisjoint(expected_values):
+                    return False
+                continue
+            if str(actual).lower() != str(expected).lower():
+                return False
+        return True
+
+    @staticmethod
+    def _filter_value(metadata: Dict[str, Any], key: str) -> Any:
+        if key == "source_family":
+            return metadata.get(key) or QdrantVectorStore._infer_source_family(metadata)
+        if key == "standard_number":
+            return QdrantVectorStore._standard_aliases(metadata)
+        actual = metadata.get(key)
+        if actual is not None:
+            return actual
+        return None
+
+    @staticmethod
+    def _as_values(value: Any) -> List[Any]:
+        if isinstance(value, (list, tuple, set, frozenset)):
+            return list(value)
+        return [value]
+
+    @staticmethod
+    def _infer_source_family(metadata: Dict[str, Any]) -> Optional[str]:
+        haystack = " ".join(
+            str(metadata.get(key, ""))
+            for key in ("standard_number", "source_file", "document_title")
+        ).lower()
+        if "sharia" in haystack or "shari" in haystack:
+            return "sharia_standard"
+        if "financial_accounting" in haystack or "accounting" in haystack or "fas" in haystack:
+            return "fas"
+        return None
+
+    @staticmethod
+    def _standard_aliases(metadata: Dict[str, Any]) -> List[str]:
+        raw_values = [
+            str(metadata.get(key, ""))
+            for key in ("standard_number", "source_file", "document_title")
+            if metadata.get(key)
+        ]
+        aliases = set(raw_values)
+        for raw in raw_values:
+            upper = raw.upper()
+            explicit = re.search(r"\b(SS|FAS)[-_\s]*0*(\d{1,3})\b", upper)
+            if explicit:
+                aliases.add(f"{explicit.group(1)}-{int(explicit.group(2)):02d}")
+                continue
+            numeric = re.search(r"AAOIFI_STANDARD_0*(\d{1,3})_", upper)
+            if numeric:
+                family = QdrantVectorStore._infer_source_family(
+                    {**metadata, "standard_number": raw}
+                )
+                prefix = "SS" if family == "sharia_standard" else "FAS" if family == "fas" else None
+                if prefix:
+                    aliases.add(f"{prefix}-{int(numeric.group(1)):02d}")
+        return sorted(aliases)
 
     def get_collection_stats(self) -> Dict[str, Any]:
         info = self.client.get_collection(self.collection_name)

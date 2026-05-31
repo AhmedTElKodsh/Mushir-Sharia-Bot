@@ -59,6 +59,8 @@ ALLOW_PATTERNS = [
     "requirements.txt",
     "src/**",
     "config/**",
+    "scripts/report_sharia_corpus_coverage.py",
+    "data/source_registry/**",
     "gemini-gem-prototype/knowledge-base/**",
     "chroma_db_multilingual/**",
 ]
@@ -70,6 +72,8 @@ UPLOAD_PATHS = [
     Path("requirements.txt"),
     Path("src"),
     Path("config"),
+    Path("scripts") / "report_sharia_corpus_coverage.py",
+    Path("data") / "source_registry",
     Path("gemini-gem-prototype") / "knowledge-base",
     Path("chroma_db_multilingual"),
 ]
@@ -80,8 +84,6 @@ BATCH_SIZE_BYTES = 25 * 1024 * 1024
 SPACE_VARIABLES = {
     "OPENROUTER_MODEL": "openrouter/free",
     "OPENROUTER_MAX_TOKENS": "1024",
-    "VECTOR_DB_TYPE": "chroma",
-    "CHROMA_DIR": "/app/chroma_db_multilingual",
     "EMBED_MODEL": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
     "REQUIRE_ARABIC_RETRIEVAL": "true",
     "CORPUS_DIR": "/app/gemini-gem-prototype/knowledge-base",
@@ -94,11 +96,41 @@ SPACE_VARIABLES = {
     "API_PORT": "8000",
 }
 
+SECRET_ENV_KEYS = [
+    "OPENROUTER_API_KEY",
+    "QDRANT_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "DATABASE_URL",
+    "AUDIT_DATABASE_URL",
+]
+
+OPTIONAL_VARIABLE_ENV_KEYS = [
+    "QDRANT_URL",
+    "QDRANT_COLLECTION",
+    "QDRANT_VECTOR_SIZE",
+    "QDRANT_TIMEOUT_SECONDS",
+    "SUPABASE_PROJECT_REF",
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_STORAGE_BUCKET",
+    "APP_ENV",
+    "CORS_ORIGINS",
+    "AUTH_TOKEN",
+]
+
 
 def require_env(name: str) -> str:
     value = os.getenv(name)
     if not value:
         raise SystemExit(f"Missing required environment variable: {name}")
+    return value
+
+
+def require_real_env(name: str) -> str:
+    value = require_env(name)
+    lowered = value.strip().lower()
+    if "your-" in lowered or "example" in lowered or lowered.endswith("localhost:6333"):
+        raise SystemExit(f"Environment variable {name} still looks like a placeholder/local value")
     return value
 
 
@@ -175,11 +207,18 @@ def main() -> None:
         action="store_true",
         help="Upload only src/static UI assets. Implies --skip-index.",
     )
+    parser.add_argument(
+        "--vector-store",
+        choices=["chroma", "qdrant"],
+        default=os.getenv("VECTOR_DB_TYPE", "chroma").lower(),
+        help="Vector store backend for the deployed Space.",
+    )
     args = parser.parse_args()
 
     token = require_env("HF_TOKEN")
     ui_only = bool(args.ui_only)
-    skip_index = bool(args.skip_index or ui_only)
+    vector_store = args.vector_store
+    skip_index = bool(args.skip_index or ui_only or vector_store == "qdrant")
     upload_paths = [Path("src") / "static"] if ui_only else list(UPLOAD_PATHS)
     if skip_index:
         upload_paths = [path for path in upload_paths if path != Path("chroma_db_multilingual")]
@@ -200,15 +239,29 @@ def main() -> None:
         exist_ok=True,
     )
 
-    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
-    if openrouter_api_key:
-        api.add_space_secret(repo_id=args.repo_id, key="OPENROUTER_API_KEY", value=openrouter_api_key)
-    elif not ui_only:
+    if not os.getenv("OPENROUTER_API_KEY") and not ui_only:
         raise SystemExit("Missing required environment variable: OPENROUTER_API_KEY")
+    if vector_store == "qdrant":
+        require_real_env("QDRANT_URL")
+        require_real_env("QDRANT_API_KEY")
 
     if not ui_only:
-        for key, value in SPACE_VARIABLES.items():
+        variables = {
+            **SPACE_VARIABLES,
+            "VECTOR_DB_TYPE": vector_store,
+        }
+        if vector_store == "chroma":
+            variables["CHROMA_DIR"] = "/app/chroma_db_multilingual"
+        for key in OPTIONAL_VARIABLE_ENV_KEYS:
+            value = os.getenv(key)
+            if value:
+                variables[key] = value
+        for key, value in variables.items():
             api.add_space_variable(repo_id=args.repo_id, key=key, value=value)
+        for key in SECRET_ENV_KEYS:
+            value = os.getenv(key)
+            if value:
+                api.add_space_secret(repo_id=args.repo_id, key=key, value=value)
 
     if skip_index:
         print("Skipping chroma_db_multilingual upload; existing Space index will be reused.", flush=True)

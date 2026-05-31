@@ -107,7 +107,7 @@ class APIConfig:
     host: str = "0.0.0.0"
     port: int = 8000
     log_level: str = "INFO"
-    log_dir: str = "./logs"
+    log_dir: str = "./data/runtime/logs"
     enable_metrics: bool = True
     enable_audit: bool = True
 
@@ -115,7 +115,6 @@ class APIConfig:
 @dataclass
 class AppConfig:
     """Application-wide configuration."""
-    environment: str = "dev"
     llm: LLMConfig
     embedding: EmbeddingConfig
     vector_store: VectorStoreConfig
@@ -125,6 +124,7 @@ class AppConfig:
     rate_limit: RateLimitConfig
     security: SecurityConfig
     api: APIConfig
+    environment: str = "dev"
 
     @classmethod
     def from_env(cls) -> "AppConfig":
@@ -225,7 +225,7 @@ class AppConfig:
             host=os.getenv("API_HOST", "0.0.0.0"),
             port=int(os.getenv("API_PORT", "8000")),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
-            log_dir=os.getenv("LOG_DIR", "./logs"),
+            log_dir=os.getenv("LOG_DIR", "./data/runtime/logs"),
             enable_metrics=_env_flag_enabled("ENABLE_METRICS", True),
             enable_audit=_env_flag_enabled("ENABLE_AUDIT", True),
         )

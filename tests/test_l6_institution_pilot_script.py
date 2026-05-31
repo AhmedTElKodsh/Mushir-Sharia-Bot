@@ -3,6 +3,10 @@ import json
 import zipfile
 from datetime import date
 
+import pytest
+
+pytestmark = pytest.mark.service
+
 from scripts.run_l6_institution_pilot import (
     _access_block_reason,
     _candidate_operation_links,
@@ -10,6 +14,8 @@ from scripts.run_l6_institution_pilot import (
     _has_useful_evidence_text,
     _load_banksegypt_official_sites,
     _load_legacy_old_scraping_registry,
+    _missing_mixed_pilot_inputs,
+    run_mixed_mini_pilot,
     run_official_registry_completion,
     run_legacy_sector_scrape,
     run_fixture_pilot,
@@ -72,11 +78,23 @@ def test_fixture_pilot_loads_registry_writes_artifacts_and_passes_gate(tmp_path)
     assert manifest["baseline_record_count"] == 4
     assert manifest["artifact_count"] == 2
     assert manifest["operation_count"] == 2
+    assert manifest["chunk_ready_spans"].endswith("chunk_ready_spans.jsonl")
     assert (artifact_root / "review" / "test-pilot" / "machine_mapping_candidates.csv").exists()
     assert (artifact_root / "review" / "test-pilot" / "accepted_gold_cases.fixture.csv").exists()
+    assert (artifact_root / "metadata" / "test-pilot" / "chunk_ready_spans.jsonl").exists()
 
 
-def test_full_scrape_gate_allows_targets_without_human_scholar_review(tmp_path, capsys):
+def test_mixed_mini_pilot_preflight_reports_missing_inputs(tmp_path):
+    missing = _missing_mixed_pilot_inputs(
+        workbook_path=tmp_path / "missing.xlsx",
+        old_scraping_dir=tmp_path / "missing_old_scraping",
+    )
+
+    assert any("workbook not found" in item for item in missing)
+    assert any("old scraping directory not found" in item for item in missing)
+
+
+def test_full_scrape_gate_blocks_targets_without_human_scholar_review(tmp_path, capsys):
     workbook = tmp_path / "institutions.xlsx"
     artifact_root = tmp_path / "artifacts" / "l6_scrape"
     _write_minimal_xlsx(
@@ -102,13 +120,13 @@ def test_full_scrape_gate_allows_targets_without_human_scholar_review(tmp_path, 
             encoding="utf-8"
         )
     )
-    assert exit_code == 0
-    assert manifest["allowed_to_scrape"] is True
+    assert exit_code == 2
+    assert manifest["allowed_to_scrape"] is False
     assert manifest["bank_discovery_target_count"] == 1
     assert manifest["review_status"]["review_workflow_ready"] is False
-    assert manifest["human_scholar_review_required_before_scrape"] is False
-    assert manifest["blocked_reasons"] == []
-    assert "Allowed to scrape: True" in capsys.readouterr().out
+    assert manifest["human_scholar_review_required_before_scrape"] is True
+    assert "no real accepted scholar-review import supplied" in manifest["blocked_reasons"]
+    assert "Allowed to scrape: False" in capsys.readouterr().out
 
 
 def test_full_scrape_gate_keeps_review_file_optional_metadata(tmp_path, capsys):
@@ -144,6 +162,45 @@ def test_full_scrape_gate_keeps_review_file_optional_metadata(tmp_path, capsys):
     assert manifest["bank_discovery_target_count"] == 1
     assert manifest["review_status"]["has_real_accepted_review"] is True
     assert "Allowed to scrape: True" in capsys.readouterr().out
+
+
+def test_full_scrape_gate_rejects_fixture_only_scholar_review(tmp_path):
+    workbook = tmp_path / "institutions.xlsx"
+    artifact_root = tmp_path / "artifacts" / "l6_scrape"
+    review_file = tmp_path / "fixture_reviews.csv"
+    _write_minimal_xlsx(
+        workbook,
+        {"01_CBE_Banks": [["Institution Name"], ["Faisal Islamic Bank of Egypt"]]},
+    )
+    review_file.write_text(
+        "\n".join(
+            [
+                "review_id,mapping_id,reviewer,decision,aaoifi_references,rationale,uncertainty_flags,correction_type,accepted_gold_case",
+                "review-fixture-1,map-op-fixture,fixture-scholar,scholar_accepted,FAS-28,Accepted fixture evidence,,,true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    baseline = WorkbookRegistryLoader().load_xlsx(workbook)
+
+    exit_code = run_full_scrape_gate(
+        baseline_registry=baseline,
+        artifact_root=artifact_root,
+        run_date=date(2026, 5, 20),
+        review_file=review_file,
+        bank_discovery_targets=[{"record": baseline.records()[0], "official_website": "https://example.com"}],
+    )
+
+    manifest = json.loads(
+        (artifact_root / "full_scrape_gate" / "2026-05-20" / "manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert exit_code == 2
+    assert manifest["allowed_to_scrape"] is False
+    assert manifest["review_status"]["accepted_gold_count"] == 0
+    assert "no real accepted scholar-review import supplied" in manifest["blocked_reasons"]
 
 
 def test_full_scrape_gate_blocks_when_no_targets_can_be_discovered(tmp_path):
@@ -204,6 +261,28 @@ def test_bank_directory_discovery_respects_robots_before_reading(monkeypatch):
 
     assert _load_banksegypt_official_sites(timeout_seconds=1.0) == {}
     assert calls == []
+
+
+def test_robots_timeout_or_malformed_response_fails_closed(monkeypatch):
+    import scripts.run_l6_institution_pilot as pilot
+
+    def broken_robots(request, timeout):
+        raise TimeoutError("robots timed out")
+
+    monkeypatch.setattr(pilot.urllib.request, "urlopen", broken_robots)
+
+    result = pilot._check_robots("https://bank.example/murabaha", timeout_seconds=0.01)
+
+    assert result["allowed"] is False
+    assert "robots.txt check failed" in result["reason"]
+
+
+def test_access_block_reason_detects_login_captcha_and_paywall_pages():
+    assert _access_block_reason("<form>Login required</form>") == "access blocked by login wall"
+    assert _access_block_reason("<title>CAPTCHA challenge</title>") == "access blocked by captcha"
+    assert _access_block_reason("<p>Subscribe to access this paywall content</p>") == (
+        "access blocked by paywall"
+    )
 
 
 def test_candidate_operation_links_are_same_domain_and_prioritized():
@@ -341,8 +420,237 @@ def test_legacy_sector_scrape_writes_gap_rows_and_review_outputs(tmp_path, monke
     assert manifest["operations_extracted"] >= 1
     assert manifest["gap_count"] == 1
     assert {row["status"] for row in rows} == {"extracted", "official_site_not_found"}
+    extracted = next(row for row in rows if row["status"] == "extracted")
+    gap = next(row for row in rows if row["status"] == "official_site_not_found")
+    assert "machine_proposed" in extracted["mushir_engine_sharia_aaoifi_review"]
+    assert "Murabaha" in extracted["mushir_engine_sharia_aaoifi_review"]
+    assert "FAS-28 - Murabaha and Other Deferred Payment Sales" in extracted[
+        "aaoifi_standard_reference_file_and_title"
+    ]
+    assert "SS-08 - Murabaha" in extracted["aaoifi_standard_reference_file_and_title"]
+    assert extracted["human_scholar_supervision_review"] == ""
+    assert extracted["artifact_class"] == "product_page"
+    assert extracted["operation_family"] == "murabaha"
+    assert extracted["runtime_eligible"] == "false"
+    assert extracted["evidence_snippet"]
+    assert gap["mushir_engine_sharia_aaoifi_review"] == "No operation extracted for Mushir review."
+    assert gap["aaoifi_standard_reference_file_and_title"] == ""
+    assert gap["runtime_eligible"] == "false"
+    assert gap["human_scholar_supervision_review"] == ""
     assert (output_dir / "engine_assessment_rows.csv").exists()
     assert (output_dir / "scholar_review_list_bilingual.csv").exists()
+    span_rows = [
+        json.loads(line)
+        for line in (output_dir / "chunk_ready_spans.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert span_rows[0]["institution_id"] == extracted["institution_id"]
+    assert span_rows[0]["artifact_id"] in extracted["artifact_ids"]
+    assert span_rows[0]["mapping_status"] == "machine_proposed"
+    assert "Use review_item_number" in (output_dir / "SCHOLAR_REVIEW_GUIDANCE.md").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_live_bank_scrape_adds_engine_and_scholar_review_columns(tmp_path, monkeypatch):
+    import scripts.run_l6_institution_pilot as pilot
+
+    workbook = tmp_path / "institutions.xlsx"
+    artifact_root = tmp_path / "artifacts" / "l6_scrape"
+    _write_minimal_xlsx(
+        workbook,
+        {"01_CBE_Banks": [["Institution Name"], ["Faisal Islamic Bank of Egypt"]]},
+    )
+    baseline = WorkbookRegistryLoader().load_xlsx(workbook)
+
+    monkeypatch.setattr(
+        pilot,
+        "_discover_bank_website_candidates",
+        lambda records, timeout_seconds: [
+            {
+                "record": baseline.records()[0],
+                "official_website": "https://faisal.example",
+            }
+        ],
+    )
+    monkeypatch.setattr(pilot, "_check_robots", lambda url, timeout_seconds: {"allowed": True, "reason": ""})
+
+    def fake_fetch(url, timeout_seconds):
+        body = (
+            "<html><body><h1>Retail Murabaha</h1>"
+            + "Murabaha deferred payment fees ownership late payment charity "
+            * 45
+            + "</body></html>"
+        ).encode("utf-8")
+        return pilot.FetchResponse(
+            status_code=200,
+            content_type="text/html",
+            body=body,
+            final_url=url,
+        )
+
+    monkeypatch.setattr(pilot, "_urlopen_fetch", fake_fetch)
+
+    exit_code = pilot.run_live_bank_scrape(
+        baseline_registry=baseline,
+        artifact_root=artifact_root,
+        run_date=date(2026, 5, 21),
+        timeout_seconds=1.0,
+        delay_seconds=0.0,
+        max_targets=1,
+        max_pages_per_target=1,
+    )
+
+    rows = list(
+        csv.DictReader(
+            (artifact_root / "full_scrape" / "2026-05-21" / "bank_scrape_results.csv").open(
+                encoding="utf-8"
+            )
+        )
+    )
+
+    assert exit_code == 0
+    assert "machine_proposed" in rows[0]["mushir_engine_sharia_aaoifi_review"]
+    assert "Late payment/default clauses require focused Sharia review." in rows[0][
+        "mushir_engine_sharia_aaoifi_review"
+    ]
+    assert "FAS-28 - Murabaha and Other Deferred Payment Sales" in rows[0][
+        "aaoifi_standard_reference_file_and_title"
+    ]
+    assert rows[0]["human_scholar_supervision_review"] == ""
+    assert rows[0]["promotion_stage"] == "mapped_machine_proposed"
+    assert rows[0]["runtime_eligible"] == "false"
+    assert (
+        artifact_root / "full_scrape" / "2026-05-21" / "SCHOLAR_REVIEW_GUIDANCE.md"
+    ).exists()
+    assert (
+        artifact_root / "full_scrape" / "2026-05-21" / "chunk_ready_spans.jsonl"
+    ).exists()
+
+
+def test_mixed_mini_pilot_emits_review_files_and_keeps_runtime_ineligible(tmp_path, monkeypatch):
+    import scripts.run_l6_institution_pilot as pilot
+
+    workbook = tmp_path / "institutions.xlsx"
+    old_dir = tmp_path / "old_scraping"
+    artifact_root = tmp_path / "artifacts" / "l6_scrape"
+    old_dir.mkdir()
+    _write_minimal_xlsx(
+        workbook,
+        {
+            "01_CBE_Banks": [["Institution Name"], ["Faisal Islamic Bank of Egypt"], ["Al Baraka Bank"], ["Abu Dhabi Islamic Bank"]],
+            "03_Insurance": [["Company Name"], ["Delta Insurance"]],
+            "04_NonBank_Financial": [["Company Name"], ["Hard Case Finance"]],
+        },
+    )
+    _write_minimal_xlsx(
+        old_dir / "Banks_old.xlsx",
+        {"01_CBE_Banks": [["Name"], ["Arab Investment Bank"], ["Suez Canal Bank"], ["The United Bank"]]},
+    )
+    _write_minimal_xlsx(
+        old_dir / "Capital_Market_old.xlsx",
+        {"02_Capital_Market": [["Name"], ["Pilot Brokerage"]]},
+    )
+
+    monkeypatch.setattr(pilot, "_load_banksegypt_official_sites", lambda timeout_seconds: {})
+    monkeypatch.setattr(
+        pilot,
+        "_check_robots",
+        lambda url, timeout_seconds: (_ for _ in ()).throw(
+            AssertionError("mixed mini-pilot fixture host must not hit live robots")
+        ),
+    )
+    monkeypatch.setattr(
+        pilot,
+        "_urlopen_fetch",
+        lambda url, timeout_seconds: (_ for _ in ()).throw(
+            AssertionError("mixed mini-pilot fixture host must not hit live fetch")
+        ),
+    )
+    baseline = pilot.WorkbookRegistryLoader().load_xlsx(workbook)
+
+    exit_code = run_mixed_mini_pilot(
+        baseline_registry=baseline,
+        old_scraping_dir=old_dir,
+        artifact_root=artifact_root,
+        run_date=date(2026, 5, 23),
+        timeout_seconds=1.0,
+        delay_seconds=0.0,
+        max_pages_per_target=1,
+    )
+
+    output_dir = artifact_root / "mixed_mini_pilot" / "2026-05-23"
+    manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
+    rows = list(csv.DictReader((output_dir / "mixed_mini_pilot_results.csv").open(encoding="utf-8")))
+
+    assert exit_code == 0
+    assert manifest["official_registry_count"] == 3
+    assert manifest["legacy_sector_count"] == 3
+    assert manifest["hard_case_count"] == 1
+    assert all(row["runtime_eligible"] == "false" for row in rows)
+    assert (output_dir / "scholar_review_list_bilingual.csv").exists()
+    assert (output_dir / "chunk_ready_spans.jsonl").exists()
+
+
+def test_mixed_mini_pilot_skips_duplicate_legacy_rows_until_three_distinct(tmp_path, monkeypatch):
+    import scripts.run_l6_institution_pilot as pilot
+
+    workbook = tmp_path / "institutions.xlsx"
+    old_dir = tmp_path / "old_scraping"
+    artifact_root = tmp_path / "artifacts" / "l6_scrape"
+    old_dir.mkdir()
+    _write_minimal_xlsx(
+        workbook,
+        {
+            "01_CBE_Banks": [
+                ["Institution Name"],
+                ["Banque Misr"],
+                ["National Bank of Egypt"],
+                ["Egyptian Arab Land Bank"],
+                ["Agricultural Bank of Egypt"],
+            ],
+        },
+    )
+    _write_minimal_xlsx(
+        old_dir / "Banks_old.xlsx",
+        {
+            "01_CBE_Banks": [
+                ["Name"],
+                ["Banque Misr"],
+                ["National Bank of Egypt"],
+                ["Egyptian Arab Land Bank"],
+                ["Arab Investment Bank"],
+                ["Suez Canal Bank"],
+                ["The United Bank"],
+            ]
+        },
+    )
+
+    monkeypatch.setattr(pilot, "_load_banksegypt_official_sites", lambda timeout_seconds: {})
+    baseline = pilot.WorkbookRegistryLoader().load_xlsx(workbook)
+
+    exit_code = run_mixed_mini_pilot(
+        baseline_registry=baseline,
+        old_scraping_dir=old_dir,
+        artifact_root=artifact_root,
+        run_date=date(2026, 5, 24),
+        timeout_seconds=1.0,
+        delay_seconds=0.0,
+        max_pages_per_target=1,
+    )
+
+    output_dir = artifact_root / "mixed_mini_pilot" / "2026-05-24"
+    manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
+    rows = list(csv.DictReader((output_dir / "mixed_mini_pilot_results.csv").open(encoding="utf-8")))
+
+    assert exit_code == 0
+    assert manifest["official_registry_count"] == 3
+    assert manifest["legacy_sector_count"] == 3
+    assert manifest["candidate_count"] == 7
+    assert {row["institution_id"] for row in rows} >= {
+        "cbe-bank-arab-investment-bank",
+        "cbe-bank-suez-canal-bank",
+        "cbe-bank-the-united-bank",
+    }
 
 
 def test_official_registry_completion_records_cbe_pdf_hash_and_dedupe(tmp_path, monkeypatch):

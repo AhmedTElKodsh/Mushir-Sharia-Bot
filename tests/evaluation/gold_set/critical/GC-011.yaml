@@ -1,0 +1,19 @@
+case_id: GC-011
+query_ar: إذا ضمنت المؤسسة عائداً ثابتاً لصندوق الوكالة بالاستثمار، فهل تتحول الوكالة
+  إلى قرض؟
+query_en: If the institution guarantees a fixed return on a Wakalah investment fund,
+  does it convert into a Qard?
+contract_family: WAKALA
+expected_standards:
+- SS-23
+expected_ruling: PROHIBITED
+forbidden_citations:
+- SS-17
+- SS-05
+clarification_required: false
+risk_class:
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Guaranteed returns in Wakalah convert the relationship to a guaranteed loan
+  (Qard).

@@ -1,0 +1,78 @@
+{
+  "timestamp": "20260529T204406Z",
+  "total_cases": 14,
+  "ece": 0.346,
+  "ece_pass": false,
+  "entries": [
+    {
+      "case_id": "GC-001",
+      "confidence": 0.7476849222183228,
+      "correct": true
+    },
+    {
+      "case_id": "GC-003",
+      "confidence": 0.803898012161255,
+      "correct": true
+    },
+    {
+      "case_id": "GC-004",
+      "confidence": 0.44093822240829467,
+      "correct": true
+    },
+    {
+      "case_id": "GC-005",
+      "confidence": 0.5479464530944824,
+      "correct": true
+    },
+    {
+      "case_id": "GC-007",
+      "confidence": 0.5098962187767029,
+      "correct": true
+    },
+    {
+      "case_id": "GC-008",
+      "confidence": 0.733678099155426,
+      "correct": true
+    },
+    {
+      "case_id": "GC-009",
+      "confidence": 0.7272852745056152,
+      "correct": true
+    },
+    {
+      "case_id": "GC-010",
+      "confidence": 0.8434596204757691,
+      "correct": true
+    },
+    {
+      "case_id": "GC-011",
+      "confidence": 0.6156238317489624,
+      "correct": true
+    },
+    {
+      "case_id": "GC-012",
+      "confidence": 0.6341439604759216,
+      "correct": true
+    },
+    {
+      "case_id": "GC-016",
+      "confidence": 0.6838753786087036,
+      "correct": true
+    },
+    {
+      "case_id": "GC-017",
+      "confidence": 0.6645377531051636,
+      "correct": true
+    },
+    {
+      "case_id": "GC-018",
+      "confidence": 0.5809359788894654,
+      "correct": true
+    },
+    {
+      "case_id": "GC-019",
+      "confidence": 0.6226167440414428,
+      "correct": true
+    }
+  ]
+}

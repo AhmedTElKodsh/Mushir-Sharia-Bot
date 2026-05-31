@@ -1,6 +1,7 @@
 import pytest
 
 from src.chatbot.commercial_assessment import (
+    CommercialRuleEvaluator,
     EvidenceFamilyDetector,
     ScenarioExtractor,
     StandardsRouter,
@@ -11,6 +12,7 @@ from src.models.commercial import ContractFamily, QuestionType, SourceFamily
 from src.models.ruling import ComplianceStatus
 from src.models.schema import AAOIFICitation, SemanticChunk
 from src.rag.query_preprocessor import QueryPreprocessor
+from tests.routing_matrix import routing_case
 
 
 pytestmark = pytest.mark.service
@@ -48,6 +50,16 @@ def test_standards_router_uses_fas_first_for_accounting():
     assert route.route_id == "murabaha-accounting"
     assert route.candidate_standards == ["FAS-28"]
     assert route.requires_rule_evaluation is False
+
+
+def test_standards_router_does_not_leak_fas_seed_into_sharia_permissibility():
+    query = "Is murabaha profit recognized under AAOIFI permissible if the bank never owns the car?"
+    scenario = ScenarioExtractor().extract(query)
+    route = StandardsRouter().route(scenario, query)
+
+    assert scenario.question_type == QuestionType.PERMISSIBILITY
+    assert route.primary == [SourceFamily.SHARIA_STANDARD]
+    assert all(not standard.startswith("FAS-") for standard in route.candidate_standards)
 
 
 def test_application_service_passes_query_to_standards_router_seed():
@@ -176,6 +188,160 @@ def test_query_expansion_handles_arabic_dialect_spelling_and_transliteration(que
     assert terms & {"murabaha", "murabahah", "installment sale", "late payment", "late fee", "riba", "interest"}
 
 
+def test_query_preprocessor_expands_bounded_arabizi_finance_terms():
+    terms = QueryPreprocessor.expand_terms("hal el ta2seet 3ala el 3arabeya feeh gharamet ta2kheer?")
+
+    assert {"installment sale", "late fee", "murabaha"} & terms
+    assert "late payment" in terms
+
+
+def test_murabaha_late_payment_rule_outputs_versioned_evidence_requirements():
+    scenario = ScenarioExtractor().extract(
+        "Is a murabaha car installment sale with a late payment penalty permissible?"
+    )
+    route = StandardsRouter().route(scenario)
+
+    evaluation = CommercialRuleEvaluator().evaluate(scenario, route)
+
+    payload = evaluation.to_dict()
+    assert payload["rule_id"] == "murabaha-late-payment-v1"
+    assert payload["rule_version"] == "2026-05-24"
+    assert "penalty_beneficiary" in payload["missing_facts"]
+    assert "sharia_standard_evidence" in payload["evidence_requirements"]
+    assert "human_review_required" in payload["human_review_flags"]
+
+
+def test_arabic_construction_penalty_routes_to_istisna_not_debt_or_charity():
+    matrix = routing_case("HCRM-ISTISNA-PENALTY-AMBIGUOUS")
+    query = matrix["queries"][0]
+
+    scenario = ScenarioExtractor().extract(query)
+    route = StandardsRouter().route(scenario, query)
+
+    assert scenario.question_type == QuestionType.PERMISSIBILITY
+    assert scenario.contract_family == ContractFamily.ISTISNA
+    assert scenario.penalty_beneficiary is None
+    assert "delay_responsible_party" in scenario.missing_facts
+    assert route.primary == [SourceFamily.SHARIA_STANDARD]
+    assert route.requires_rule_evaluation is True
+    assert route.candidate_standards == matrix["candidate_standards"]
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Can we add liquidated damages if the contractor delays handover?",
+        "Can the construction contract include delay damages for late completion?",
+        "Does an LD clause in a muqawala contract count as riba?",
+        "Is FIDIC delay damages wording permissible in an istisna construction contract?",
+        "\u0647\u0644 \u0627\u0644\u0634\u0631\u0637 \u0627\u0644\u062c\u0632\u0627\u0626\u064a \u0641\u064a \u0639\u0642\u062f \u0645\u0642\u0627\u0648\u0644\u0629 \u0631\u0628\u0627\u061f",
+    ],
+)
+def test_construction_delay_damage_variants_route_to_istisna_candidate_ss11(query):
+    scenario = ScenarioExtractor().extract(query)
+    route = StandardsRouter().route(scenario, query)
+
+    assert scenario.question_type == QuestionType.PERMISSIBILITY
+    assert scenario.contract_family == ContractFamily.ISTISNA
+    assert scenario.late_payment_terms
+    assert route.route_id == "istisna-penalty-clause"
+    assert route.candidate_standards == ["SS-05", "SS-11"]
+
+
+def test_arabic_delay_word_does_not_trigger_charity_beneficiary():
+    scenario = ScenarioExtractor().extract(
+        "\u063a\u0631\u0627\u0645\u0629 \u0627\u0644\u062a\u0623\u062e\u064a\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0642\u0627\u0648\u0644"
+    )
+
+    assert scenario.penalty_beneficiary is None
+
+
+def test_explicit_charity_terms_still_trigger_charity_beneficiary():
+    scenario = ScenarioExtractor().extract(
+        "\u0627\u0644\u063a\u0631\u0627\u0645\u0629 \u062a\u0630\u0647\u0628 \u0625\u0644\u0649 \u062c\u0647\u0629 \u062e\u064a\u0631\u064a\u0629 \u0643\u062a\u0628\u0631\u0639"
+    )
+
+    assert scenario.penalty_beneficiary == "charity"
+
+
+def test_istisna_late_penalty_rule_outputs_review_requirements():
+    scenario = ScenarioExtractor().extract(
+        "\u0647\u0644 \u0634\u0631\u0637 \u063a\u0631\u0627\u0645\u0629 \u0627\u0644\u062a\u0623\u062e\u064a\u0631 \u0641\u064a \u0639\u0642\u062f \u0645\u0642\u0627\u0648\u0644\u0629 \u062c\u0627\u0626\u0632\u061f"
+    )
+    route = StandardsRouter().route(scenario)
+
+    evaluation = CommercialRuleEvaluator().evaluate(scenario, route)
+
+    payload = evaluation.to_dict()
+    assert payload["rule_id"] == "istisna-construction-penalty-v1"
+    assert "delay_responsible_party" in payload["missing_facts"]
+    assert "force_majeure_or_actual_loss_context" in payload["evidence_requirements"]
+    assert "penalty_clause_review_required" in payload["human_review_flags"]
+
+
+@pytest.mark.parametrize(
+    ("query", "route_id", "standards"),
+    [
+        (
+            "Can we impose a penalty if the contractor is late delivering the project?",
+            "istisna-penalty-clause",
+            {"SS-05", "SS-11"},
+        ),
+        (
+            "Can the bank charge a late fee on a cash loan?",
+            "debt-late-payment-penalty",
+            {"SS-03", "SS-19"},
+        ),
+        (
+            "Can we lock today's FX rate and settle next month?",
+            "currency-sarf-settlement",
+            {"SS-01"},
+        ),
+        (
+            "\u0647\u0644 \u064a\u062c\u0648\u0632 \u0639\u0645\u0648\u0644\u0629 \u062e\u0637\u0627\u0628 \u0636\u0645\u0627\u0646 \u062d\u0633\u0628 \u0627\u0644\u0645\u0628\u0644\u063a \u0648\u0627\u0644\u0645\u062f\u0629\u061f",
+            "guarantee-kafalah-fee",
+            {"SS-05"},
+        ),
+    ],
+)
+def test_penalty_and_hard_case_family_routes_are_launch_blocking(query, route_id, standards):
+    scenario = ScenarioExtractor().extract(query)
+    route = StandardsRouter().route(scenario, query)
+
+    assert scenario.question_type == QuestionType.PERMISSIBILITY
+    assert route.primary == [SourceFamily.SHARIA_STANDARD]
+    assert route.route_id == route_id
+    assert set(route.candidate_standards) == standards
+    assert should_fail_closed_for_source_gap(scenario, route, {SourceFamily.FAS}) is True
+
+
+def test_construction_penalty_routing_matrix_forbids_salam_standard():
+    matrix = routing_case("HCRM-ISTISNA-PENALTY-CONTRACTOR")
+    scenario = ScenarioExtractor().extract(matrix["queries"][0])
+    route = StandardsRouter().route(scenario, matrix["queries"][0])
+
+    assert route.route_id == "istisna-penalty-clause"
+    assert route.candidate_standards == matrix["candidate_standards"]
+    assert "SS-10" in matrix["forbidden_standards"]
+    assert "SS-10" not in route.candidate_standards
+
+
+def test_query_expansion_does_not_infer_charity_from_delay_or_penalty():
+    terms = QueryPreprocessor.expand_terms(
+        "\u0647\u0644 \u063a\u0631\u0627\u0645\u0629 \u0627\u0644\u062a\u0623\u062e\u064a\u0631 \u0641\u064a \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u0627\u062a \u0631\u0628\u0627\u061f"
+    )
+
+    assert "late payment" in terms
+    assert "charity clause" not in terms
+    assert {"construction", "istisna", "muqawala"} & terms
+
+
+def test_query_expansion_adds_charity_only_for_explicit_charity_terms():
+    terms = QueryPreprocessor.expand_terms("\u0627\u0644\u063a\u0631\u0627\u0645\u0629 \u0644\u062c\u0647\u0629 \u062e\u064a\u0631\u064a\u0629 \u0623\u0648 \u062a\u0628\u0631\u0639")
+
+    assert "charity clause" in terms
+
+
 def test_evidence_family_detector_classifies_fas_chunk():
     chunk = SemanticChunk(
         chunk_id="fas-28",
@@ -192,13 +358,13 @@ def test_evidence_family_detector_classifies_fas_chunk():
     assert EvidenceFamilyDetector.family_for_chunk(chunk) == SourceFamily.FAS
 
 
-def test_evidence_family_detector_does_not_trust_bare_sharia_family_metadata():
+def test_evidence_family_detector_trusts_explicit_sharia_family_metadata_after_admissibility():
     chunk = {
         "metadata": {"source_family": "sharia_standard"},
         "score": 0.8,
     }
 
-    assert EvidenceFamilyDetector.family_for_chunk(chunk) == SourceFamily.UNKNOWN
+    assert EvidenceFamilyDetector.family_for_chunk(chunk) == SourceFamily.SHARIA_STANDARD
 
 
 def test_evidence_family_detector_requires_minimum_relevance_for_sharia_source():

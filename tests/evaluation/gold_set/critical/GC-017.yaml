@@ -1,0 +1,18 @@
+case_id: GC-017
+query_ar: هل يجوز إعادة جدولة المرابحة بإضافة هامش ربح جديد على الرصيد المتبقي؟
+query_en: Is Murabaha rollover with a new profit margin on the outstanding balance
+  permissible?
+contract_family: MURABAHA
+expected_standards:
+- SS-08
+expected_ruling: PROHIBITED
+forbidden_citations:
+- SS-02
+- SS-19
+clarification_required: false
+risk_class:
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Adding a new profit margin on outstanding Murabaha balance is equivalent to
+  Riba al-Jahiliyya.

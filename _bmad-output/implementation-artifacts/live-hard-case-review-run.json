@@ -1,0 +1,171 @@
+{
+  "passed": false,
+  "case_count": 3,
+  "live_vector_index_used": true,
+  "live_llm_used": false,
+  "gate_command": "scripts/run_live_hard_case_retrieval_gate.py",
+  "cases_file": "tests/fixtures/live_hard_case_retrieval_gate.yaml",
+  "results": [
+    {
+      "case_id": "HC-LIVE-001",
+      "query": "Can we impose liquidated damages if the contractor is late delivering the project?",
+      "passed": false,
+      "failures": [
+        "no candidate-standard-matched chunks retrieved",
+        "missing expected standards: SS-10",
+        "missing expected source family: sharia_standard"
+      ],
+      "route_id": "istisna-penalty-clause",
+      "candidate_standards": [
+        "SS-10"
+      ],
+      "expected_candidate_standards": [
+        "SS-10"
+      ],
+      "retrieved_standards": [
+        "SS-03",
+        "SS-05",
+        "SS-13",
+        "SS-22",
+        "SS-25",
+        "SS-45",
+        "SS-50"
+      ],
+      "matched_standards": [],
+      "filters": {
+        "source_family": "sharia_standard"
+      },
+      "candidate_standard_filter": {
+        "enforced": true,
+        "required": [
+          "SS-10"
+        ],
+        "retrieved": [
+          "SS-03",
+          "SS-05",
+          "SS-13",
+          "SS-22",
+          "SS-25",
+          "SS-45",
+          "SS-50"
+        ],
+        "matched": []
+      },
+      "retrieved_chunk_ids": [
+        "8fd5b96d10678f11c65f907c973778d8",
+        "6080f3cb39098cfc7fad19b47a94db51",
+        "eeaac30c749041e9053ebd2e21cf3fd3",
+        "39caed103faca8100b83464fca1edbc5",
+        "46d437f34d4ce6e0971de4ad3eede2c8",
+        "abf277987032964f998b51b13870a171",
+        "b2f34bdfd9f32f83008a6abb708e4878",
+        "7b40c8555ef721a3b85e7d3e8a05c97d"
+      ]
+    },
+    {
+      "case_id": "HC-LIVE-002",
+      "query": "Can the bank charge a late fee on a cash loan?",
+      "passed": true,
+      "failures": [],
+      "route_id": "debt-late-payment-penalty",
+      "candidate_standards": [
+        "SS-03",
+        "SS-19"
+      ],
+      "expected_candidate_standards": [
+        "SS-03",
+        "SS-19"
+      ],
+      "retrieved_standards": [
+        "SS-03",
+        "SS-06",
+        "SS-14",
+        "SS-19",
+        "SS-21",
+        "SS-37"
+      ],
+      "matched_standards": [
+        "SS-03",
+        "SS-19"
+      ],
+      "filters": {
+        "source_family": "sharia_standard"
+      },
+      "candidate_standard_filter": {
+        "enforced": true,
+        "required": [
+          "SS-03",
+          "SS-19"
+        ],
+        "retrieved": [
+          "SS-03",
+          "SS-06",
+          "SS-14",
+          "SS-19",
+          "SS-21",
+          "SS-37"
+        ],
+        "matched": [
+          "SS-03",
+          "SS-19"
+        ]
+      },
+      "retrieved_chunk_ids": [
+        "d14dbeef26c2604127ebb5782537035d",
+        "24689ae1b289d562819a427c6984e78b",
+        "52f597a6812960821f0f6e20add2792c",
+        "507cc3b117eeb293ed78e262d15063ee",
+        "2b7fbbdd96edf3233b7cdccc353db690",
+        "06aef36205817c0f16f1e180fc653732",
+        "f9b2464e768eee7163a55329fdcf5a66",
+        "ceb6984681a7055163178e507466cdb1"
+      ]
+    },
+    {
+      "case_id": "HC-LIVE-003",
+      "query": "هل شرط غرامة التأخير في عقود المقاولات شرط ربوي؟",
+      "passed": true,
+      "failures": [],
+      "route_id": "istisna-penalty-clause",
+      "candidate_standards": [
+        "SS-10"
+      ],
+      "expected_candidate_standards": [
+        "SS-10"
+      ],
+      "retrieved_standards": [
+        "SS-04",
+        "SS-09",
+        "SS-11",
+        "SS-15"
+      ],
+      "matched_standards": [],
+      "filters": {
+        "source_family": "sharia_standard"
+      },
+      "candidate_standard_filter": {
+        "enforced": true,
+        "required": [
+          "SS-10"
+        ],
+        "retrieved": [
+          "SS-04",
+          "SS-09",
+          "SS-11",
+          "SS-15"
+        ],
+        "matched": []
+      },
+      "retrieved_chunk_ids": [
+        "73169932abacd5b57b9bd71f8bba6c9c",
+        "c73214905fed865f9dbfff2fcc051d32",
+        "3e0fc4ae151af25905a4fecbfd204bc1",
+        "1ede7c041c5b25c4ee13db10c5dc411d",
+        "ce6bfebd53a9fab7938afe85102baba8",
+        "6d305ca85c5db9c49a384b61c4ac0c34",
+        "5b66bfce5dd2e6a0aeec7bbce75cb444",
+        "c204300e4efcdbb980bf2844ce7afcf9"
+      ]
+    }
+  ]
+}

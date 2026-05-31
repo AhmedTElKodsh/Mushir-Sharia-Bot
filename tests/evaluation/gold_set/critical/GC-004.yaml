@@ -1,0 +1,16 @@
+case_id: GC-004
+query_ar: هل يحق للمضارب أخذ راتب شهري مقطوع من رأس مال المضاربة؟
+query_en: Does the Mudarib have the right to take a fixed monthly salary from the
+  Mudaraba capital?
+contract_family: MUDHARABA
+expected_standards:
+- SS-13
+expected_ruling: PROHIBITED
+forbidden_citations:
+- SS-09
+clarification_required: false
+risk_class:
+- R2
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Fixed salary for Mudarib invalidates the Mudaraba.

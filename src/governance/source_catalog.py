@@ -10,6 +10,12 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional
 from src.models.commercial import SourceFamily
 
 
+class MetadataStatus(str, Enum):
+    QUARANTINED_MISSING_CATALOG = "quarantined_missing_catalog"
+    CATALOGED = "cataloged"
+    CATALOGED_NOT_ANSWER_ADMISSIBLE = "cataloged_not_answer_admissible"
+
+
 class SourceType(str, Enum):
     OFFICIAL_PAGE = "official_page"
     DERIVED_MARKDOWN = "derived_markdown"
@@ -33,6 +39,47 @@ class SourceConfidence(str, Enum):
     OFFICIAL = "official"
     DERIVED_FROM_OFFICIAL = "derived_from_official"
     UNVERIFIED = "unverified"
+
+
+ANSWER_ADMISSIBLE_CONFIDENCE = {
+    SourceConfidence.OFFICIAL.value,
+    SourceConfidence.DERIVED_FROM_OFFICIAL.value,
+}
+ANSWER_ADMISSIBLE_REVIEW_STATUS = {
+    SourceReviewStatus.MACHINE_CHECKED.value,
+    SourceReviewStatus.HUMAN_REVIEWED.value,
+}
+
+
+def is_answer_admissible_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    require_governed_metadata: bool = False,
+) -> bool:
+    """Return whether retrieved chunk metadata may support an answer.
+
+    Legacy indexes are allowed unless explicitly quarantined. When strict
+    governance is enabled, catalog currentness, confidence, and review status
+    become hard answer gates.
+    """
+    status = str(metadata.get("metadata_status") or "").strip().lower()
+    if status == MetadataStatus.QUARANTINED_MISSING_CATALOG.value:
+        return False
+    if status == MetadataStatus.CATALOGED_NOT_ANSWER_ADMISSIBLE.value:
+        return False
+    if not require_governed_metadata:
+        return True
+    if status != MetadataStatus.CATALOGED.value:
+        return False
+    if str(metadata.get("source_currentness") or "").strip().lower() != SourceCurrentness.CURRENT.value:
+        return False
+    if str(metadata.get("source_confidence") or "").strip().lower() not in ANSWER_ADMISSIBLE_CONFIDENCE:
+        return False
+    if str(metadata.get("review_status") or "").strip().lower() not in ANSWER_ADMISSIBLE_REVIEW_STATUS:
+        return False
+    if str(metadata.get("superseded_by") or "").strip():
+        return False
+    return True
 
 
 class SourceRelationshipType(str, Enum):
@@ -107,6 +154,7 @@ class SourceCatalogRecord:
             "source_family": self.source_family.value,
             "standard_number": self.standard_number,
             "language": self.language,
+            "source_language": self.language,
             "title_en": self.title_en,
             "title_ar": self.title_ar,
             "official_url": self.official_url,
@@ -259,11 +307,11 @@ class SourceCatalog:
         ]
 
     def find_by_path(self, path: str | Path) -> SourceCatalogRecord:
-        normalized = Path(path).as_posix()
+        normalized = _normalize_catalog_path(path)
         matches = [
             record
             for record in self._records.values()
-            if record.derived_path and Path(record.derived_path).as_posix() == normalized
+            if record.derived_path and _catalog_paths_match(record.derived_path, normalized)
         ]
         if not matches:
             raise KeyError(f"no catalog record for path: {normalized}")
@@ -321,6 +369,20 @@ class SourceCatalog:
                 SourceRelationshipRecord.from_mapping(item) for item in relationships
             ),
         )
+
+
+def _normalize_catalog_path(path: str | Path) -> str:
+    return str(path).replace("\\", "/").lstrip("./")
+
+
+def _catalog_paths_match(record_path: str | Path, requested_path: str | Path) -> bool:
+    record = _normalize_catalog_path(record_path)
+    requested = _normalize_catalog_path(requested_path)
+    return (
+        record == requested
+        or record.endswith(f"/{requested}")
+        or requested.endswith(f"/{record}")
+    )
 
 
 def default_candidate_supersession_relationships() -> List[SourceRelationshipRecord]:

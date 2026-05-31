@@ -2,7 +2,7 @@ import os
 import logging
 from datetime import datetime
 
-def setup_logging(level: str = "INFO", log_dir: str = "./logs"):
+def setup_logging(level: str = "INFO", log_dir: str = "./data/runtime/logs"):
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, f"sharia_bot_{datetime.now().strftime('%Y%m%d')}.log")
     numeric_level = getattr(logging, level.upper(), logging.INFO)

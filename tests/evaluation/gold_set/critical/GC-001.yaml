@@ -1,0 +1,20 @@
+case_id: GC-001
+query_ar: هل شرط غرامة التآخير في عقود المقاولات شرط ربوي؟
+query_en: Is a delay penalty clause in construction contracts a usurious clause?
+contract_family: MUQAWALA
+expected_standards:
+- SS-05
+- SS-11
+expected_ruling: CLARIFY
+forbidden_citations:
+- SS-19
+- SS-03
+- SS-10
+clarification_required: true
+risk_class:
+- R2
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Construction penalty questions route to SS-11 Istisna and SS-05 guarantees.
+  Ask who delayed before any verdict; SS-10 is Salam and is forbidden unless Salam is implicated.

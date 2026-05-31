@@ -23,6 +23,9 @@ The current implementation is a FastAPI application with browser chat, REST API,
 - **OpenRouter provider**: uses an OpenAI-compatible OpenRouter client, with `openrouter/free` supported for constrained demos.
 - **FastAPI runtime**: exposes `/chat`, `/health`, `/ready`, `/metrics`, `/api/v1/query`, and `/api/v1/query/stream`.
 - **Operational modes**: supports local Chroma and optional Qdrant, Redis, PostgreSQL, cache, audit, sessions, and rate limiting.
+- **Sharia Ontology Engine**: maps abstract definitions to financial contracts via `ConceptRouter` and `RulingEvaluator`.
+- **Evaluation Framework**: includes YAML-based Gold Sets (GC-001+) and Expected Calibration Error (ECE) metrics.
+- **Data Acquisition Layer**: active scrapers and extractors designed for building a robust evidence corpus (e.g., Egypt Financial).
 
 ## Current Status
 
@@ -35,9 +38,11 @@ The current implementation is a FastAPI application with browser chat, REST API,
 | Citation validation | Implemented |
 | Clarification loop | Implemented as one focused follow-up question |
 | Safe fatwa/legal/financial-advice refusal | Implemented |
+| Sharia Ontology Engine (Concept Router, Ruling Evaluator) | Implemented |
+| Sharia Compliance Evaluation Framework (Gold Sets, ECE) | Implemented |
 | L5 release readiness | Active gate |
 | L6 rules-first evaluator | Proposed future direction; foundational scenario/routing/source-gap scaffolding is implemented, full evaluator is not active runtime scope |
-| Egypt institution evidence corpus | Planned L6 data-acquisition workstream; registry seed folders and planning docs are prepared, live scraping is not implemented yet |
+| Egypt institution evidence corpus | Data acquisition framework implemented; active scraping and evaluation corpus building in progress |
 
 ## Planning Direction
 
@@ -70,8 +75,8 @@ python scripts/convert_pdf_to_markdown.py --input-dir data/pdfs/ --output-dir da
 # Verify corpus is ready for ingestion
 python scripts/check_corpus.py
 
-# Ingest AAOIFI standards into vector database
-python scripts/ingest.py
+# Ingest cataloged AAOIFI standards into vector database
+python scripts/ingest.py --source-catalog path/to/aaoifi-source-catalog.yaml
 
 # Run RAG pipeline tests
 pytest tests/ -v
@@ -95,8 +100,9 @@ src/
 +-- api/             # FastAPI REST endpoints
 +-- storage/         # Caching and persistence
 +-- config/          # Configuration management
-+-- acquisition/     # Source acquisition primitives; future Egypt institution modules belong here
++-- acquisition/     # Source acquisition primitives and active extractors (Egypt Financial)
 +-- governance/      # Source catalog, concept map, router seeds, chunk metadata
++-- ontology/        # Sharia Ontology mapping, Concept Router, and Ruling Evaluator
 
 scripts/
 +-- check_corpus.py                # Verify AAOIFI corpus exists and is ready
@@ -107,7 +113,7 @@ scripts/
 +-- deploy_to_hf_space.py          # Deploy application to Hugging Face Space
 +-- download_*.py                  # Various download utilities
 
-test_bot.py                       # End-to-end API testing script
+tests/test_api_query.py           # API query contract tests
 
 data/
 +-- raw/            # Raw AAOIFI PDF files
@@ -174,12 +180,12 @@ The planned L6 direction separates source families:
 ### Unit Tests
 
 ```bash
-# Run all tests
-pytest tests/ -v
+# Run all tests through the repo virtual environment
+.\.venv\Scripts\python.exe -m pytest -q --timeout=90 --basetemp=.tmp\pytest
 
 # Run specific test modules
 pytest tests/test_rag_pipeline.py -v
-pytest tests/test_semantic_chunking.py -v
+pytest tests/test_chunker.py -v
 ```
 
 ### End-to-End API Testing
@@ -188,8 +194,8 @@ Test the running API server with the quick test script:
 
 ```bash
 # Ensure the server is running first
-# Then run the end-to-end test
-python test_bot.py
+# Then run the API contract smoke tests
+.\.venv\Scripts\python.exe -m pytest tests\test_api_query.py tests\test_api_streaming.py -q
 ```
 
 **Features:**
@@ -260,10 +266,11 @@ Next steps:
 
 For the current maintained documentation set, start with:
 
-- `docs/index.md` - Documentation map.
-- `docs/project-documentation.md` - Full current technical documentation.
-- `docs/client-plain-language-logic.md` - Simple client-facing explanation of the whole logic.
-- `docs/l6-egypt-institution-scrape/README.md` - Project-facing guide for the planned Egypt institution scraping/evidence corpus.
+- `.planning/sharia-compliance-chatbot/docs/index.md` - Documentation map.
+- `.planning/sharia-compliance-chatbot/docs/project-documentation.md` - Full current technical documentation.
+- `.planning/sharia-compliance-chatbot/docs/pipeline-architecture-v2.md` - Visual architecture graphs for the new intelligent routing pipeline.
+- `.planning/sharia-compliance-chatbot/docs/client-plain-language-logic.md` - Simple client-facing explanation of the whole logic.
+- `.planning/sharia-compliance-chatbot/docs/l6-egypt-institution-scrape/README.md` - Project-facing guide for the planned Egypt institution scraping/evidence corpus.
 - `project-context.md` - Implementation context and rules for AI agents and developers.
 
 ## Scripts
@@ -303,15 +310,15 @@ Sample files:
 [OK] Corpus is ready for ingestion!
 ============================================================
 
-Next step: python scripts/ingest.py
+Next step: python scripts/ingest.py --source-catalog path/to/aaoifi-source-catalog.yaml
 ```
 
 ### Vector Database Ingestion
 
-Chunk and embed AAOIFI markdown files into ChromaDB:
+Chunk and embed cataloged AAOIFI markdown files into ChromaDB:
 
 ```bash
-python scripts/ingest.py
+python scripts/ingest.py --source-catalog path/to/aaoifi-source-catalog.yaml
 ```
 
 **Features:**
@@ -324,11 +331,14 @@ python scripts/ingest.py
 - `CORPUS_DIR`: Path to AAOIFI markdown corpus (default: `./data/aaoifi_md`)
 - `CHROMA_DIR`: ChromaDB storage location (default: `./chroma_db`)
 - `EMBED_MODEL`: Embedding model (default: `sentence-transformers/all-mpnet-base-v2`)
+- `SOURCE_CATALOG_FILE`: YAML source catalog used to mark chunks answer-admissible
 
 **Workflow:**
 1. Run `check_corpus.py` to verify corpus exists
-2. Run `ingest.py` to populate vector database
+2. Run `ingest.py --source-catalog ...` to populate vector database
 3. Vector database is ready for RAG queries
+
+Diagnostic-only ingests can pass `--allow-uncataloged`; those chunks are quarantined and cannot ground answers.
 
 ### AAOIFI Standards Converter (Recommended)
 
@@ -356,7 +366,7 @@ python scripts/convert_aaoifi_to_markdown.py
 
 ## Implementation Status
 
-The early build-status snapshot has been replaced by the maintained current-state docs. The current implementation includes FastAPI, browser chat, REST and streaming endpoints, multilingual retrieval, clarification, citation validation, OpenRouter generation, readiness checks, deployment helpers, and tests. See `docs/project-documentation.md` for details.
+The early build-status snapshot has been replaced by the maintained current-state docs. The current implementation includes FastAPI, browser chat, REST and streaming endpoints, multilingual retrieval, clarification, citation validation, OpenRouter generation, readiness checks, deployment helpers, and tests. See `.planning/sharia-compliance-chatbot/docs/project-documentation.md` for details.
 
 Current implementation summary:
 
@@ -400,12 +410,12 @@ See `scripts/CONVERTER_IMPROVEMENTS.md` for enhancement ideas.
 
 Use these docs as the current roadmap sources:
 
-- `docs/project-documentation.md` - implemented runtime and architecture.
-- `docs/client-plain-language-logic.md` - non-technical client explanation of planning and implementation.
-- `docs/l5-production-readiness.md` - active L5 release/readiness runbook.
-- `.kiro/specs/sharia-compliance-chatbot/next-level-plans/README.md` - planning index.
-- `.kiro/specs/sharia-compliance-chatbot/next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` - proposed L6 future direction.
-- `.kiro/specs/sharia-compliance-chatbot/next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md` - Egypt financial institutions public-source scraping, gap handling, and scholar-review data plan.
+- `.planning/sharia-compliance-chatbot/docs/project-documentation.md` - implemented runtime and architecture.
+- `.planning/sharia-compliance-chatbot/docs/client-plain-language-logic.md` - non-technical client explanation of planning and implementation.
+- `.planning/sharia-compliance-chatbot/docs/l5-production-readiness.md` - active L5 release/readiness runbook.
+- `.planning/sharia-compliance-chatbot/next-level-plans/README.md` - planning index.
+- `.planning/sharia-compliance-chatbot/next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` - proposed L6 future direction.
+- `.planning/sharia-compliance-chatbot/next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md` - Egypt financial institutions public-source scraping, gap handling, and scholar-review data plan.
 
 ## Deployment
 

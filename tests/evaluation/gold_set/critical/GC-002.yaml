@@ -1,0 +1,16 @@
+case_id: GC-002
+query_ar: ما حكم التورق المصرفي؟
+query_en: What is the ruling on banking Tawarruq?
+contract_family: MURABAHA
+expected_standards:
+- SS-30
+expected_ruling: CLARIFY
+forbidden_citations:
+- SS-01
+clarification_required: true
+risk_class:
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Requires clarification between organised (prohibited) and unorganised (disputed/permissible)
+  Tawarruq.

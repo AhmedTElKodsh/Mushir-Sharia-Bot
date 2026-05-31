@@ -1,0 +1,18 @@
+case_id: GC-005
+query_ar: هل يجوز للبنك أخذ غرامة تأخير على أقساط المرابحة كإيراد؟
+query_en: Is it permissible for the bank to take a delay penalty on Murabaha installments
+  as income?
+contract_family: MURABAHA
+expected_standards:
+- SS-28
+- SS-19
+expected_ruling: PROHIBITED
+forbidden_citations:
+- SS-10
+clarification_required: false
+risk_class:
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Delay penalty in debt (Murabaha) cannot be taken as income (Riba). Must go
+  to charity.

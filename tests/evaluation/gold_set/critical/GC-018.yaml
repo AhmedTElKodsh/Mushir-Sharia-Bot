@@ -1,0 +1,17 @@
+case_id: GC-018
+query_ar: في المشاركة المتناقصة، من يتحمل خسارة رأس المال الناتجة عن انخفاض قيمة الأصل؟
+query_en: In Diminishing Musharaka, who bears capital losses from asset value decline?
+contract_family: MUSHARAKA
+expected_standards:
+- SS-12
+expected_ruling: PERMISSIBLE
+forbidden_citations:
+- SS-08
+- SS-09
+clarification_required: false
+risk_class:
+- R2
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Capital losses are shared proportionally to equity stake. Proportional loss-sharing
+  is PERMISSIBLE.

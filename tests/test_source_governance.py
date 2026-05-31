@@ -6,6 +6,7 @@ from src.governance import (
     AccessControlDecision,
     AccessControlSignal,
     AccessDecisionStatus,
+    ArtifactClass,
     ComplianceRiskLabel,
     CorpusPilotPlan,
     DiscoveryEvidenceType,
@@ -23,6 +24,7 @@ from src.governance import (
     OperationCatalogRecord,
     OperationEvidenceField,
     OperationEvidenceSpan,
+    PromotionStage,
     PublicArtifactAuthorityRank,
     PublicArtifactRecord,
     PublicArtifactType,
@@ -46,6 +48,7 @@ from src.governance import (
     default_concept_map,
     default_candidate_supersession_relationships,
     default_router_seed_registry,
+    is_answer_admissible_metadata,
     stable_institution_id,
 )
 from src.models.commercial import ContractFamily, QuestionType, SourceFamily
@@ -291,6 +294,40 @@ def test_parent_child_chunk_metadata_uses_catalog_record_when_available():
     assert metadata["document_version_id"] == "aaoifi-fas-28-en-v2026-05-19"
     assert metadata["source_currentness"] == "current"
     assert metadata["metadata_status"] == "cataloged"
+    assert metadata["source_language"] == "en"
+    assert is_answer_admissible_metadata(metadata) is True
+
+
+def test_parent_child_chunk_metadata_marks_unreviewed_catalog_record_not_answer_admissible():
+    record = SourceCatalogRecord(
+        source_id="aaoifi-fas-28-unreviewed",
+        source_family=SourceFamily.FAS,
+        standard_number="FAS-28",
+        title_en="Murabaha and Other Deferred Payment Sales",
+        language="en",
+        official_url="https://aaoifi.com/accounting-standards-2/?lang=en",
+        acquired_at=date(2026, 5, 19),
+        extraction_method="manual",
+        source_type=SourceType.DERIVED_MARKDOWN,
+        currentness=SourceCurrentness.CURRENT,
+        review_status=SourceReviewStatus.UNREVIEWED,
+        source_confidence=SourceConfidence.DERIVED_FROM_OFFICIAL,
+        derived_path="AAOIFI_Standard_28_en.md",
+    )
+    builder = ParentChildChunkMetadataBuilder(
+        source_file="AAOIFI_Standard_28_en.md",
+        standard_number="FAS-28",
+        language="en",
+        embedding_model="test-model",
+        embedding_normalized=True,
+        total_chunks=1,
+        catalog_record=record,
+    )
+
+    metadata = builder.child_metadata(chunk_index=0, section_path=["FAS-28"])
+
+    assert metadata["metadata_status"] == "cataloged_not_answer_admissible"
+    assert is_answer_admissible_metadata(metadata) is False
 
 
 def test_catalog_finds_records_by_derived_path_and_filters_admissible_family():
@@ -321,11 +358,7 @@ def test_superseded_records_must_name_replacement():
 def test_default_concept_map_matches_bilingual_and_colloquial_murabaha_terms():
     concepts = default_concept_map()
 
-    murabaha = concepts.primary_match(
-        "\u0639\u0627\u064a\u0632 \u062a\u0642\u0633\u064a\u0637 "
-        "\u0633\u064a\u0627\u0631\u0629 \u0639\u0644\u0649 "
-        "\u0645\u0631\u0627\u0628\u062d\u0647"
-    )
+    murabaha = concepts.primary_match("عايز تقسيط سيارة على مرابحه")
 
     assert murabaha is not None
     assert murabaha.concept_id == "murabaha"
@@ -338,6 +371,23 @@ def test_default_concept_map_routes_late_payment_to_sharia_family():
     families = default_concept_map().source_families_for("late payment penalty in murabaha")
 
     assert SourceFamily.SHARIA_STANDARD in families
+
+
+@pytest.mark.parametrize(
+    ("query", "concept_id", "expected_standard"),
+    [
+        ("عقد توريد وتصنيع مع تسليم مؤجل", "istisna_supply", "SS-11"),
+        ("Can we lock an FX rate and settle later?", "currency_sarf", "SS-01"),
+        ("عمولة خطاب ضمان", "guarantee_kafalah", "SS-05"),
+    ],
+)
+def test_default_concept_map_expands_bilingual_hard_case_routes(query, concept_id, expected_standard):
+    concept = default_concept_map().primary_match(query)
+
+    assert concept is not None
+    assert concept.concept_id == concept_id
+    assert SourceFamily.SHARIA_STANDARD in concept.candidate_source_families
+    assert concept.expected_standards == [expected_standard]
 
 
 def test_external_terminology_requires_review_before_concept_map_adoption():
@@ -707,6 +757,61 @@ def test_prioritized_artifacts_put_contract_economic_substance_before_product_pa
 
     assert ordered[0].artifact_type == PublicArtifactType.CONTRACT
     assert ordered[-1].artifact_type == PublicArtifactType.PRODUCT_PAGE
+
+
+def test_scraped_product_operations_remain_evaluation_only_not_runtime_eligible():
+    registry, record, _ = _institution_with_artifacts()
+    product_page = PublicArtifactRecord(
+        artifact_id="faisal-product-page-eval",
+        institution_id=record.institution_id,
+        url="https://www.faisalbank.com.eg/products/car-finance",
+        authority_rank=PublicArtifactAuthorityRank.OFFICIAL_INSTITUTION,
+        artifact_type=PublicArtifactType.PRODUCT_PAGE,
+        language="en",
+        retrieved_at=date(2026, 5, 20),
+        http_status=200,
+        content_type="text/html",
+        content_hash="sha256:page",
+        raw_path="artifacts/l6_scrape/raw/product.html",
+        text_path="artifacts/l6_scrape/text/product.txt",
+        extraction_status=ExtractionStatus.EXTRACTED,
+        citation_anchor_strategy="html_heading",
+        artifact_class=ArtifactClass.PRODUCT_PAGE,
+    )
+    registry.add_artifact(product_page)
+
+    operation = OperationCatalogRecord(
+        operation_id="faisal-car-finance-product-page",
+        institution_id=record.institution_id,
+        operation_name="Car finance product page",
+        artifact_ids=[product_page.artifact_id],
+        artifact_class=ArtifactClass.PRODUCT_PAGE,
+    )
+
+    assert operation.evaluation_only is True
+    assert operation.runtime_eligible is False
+
+    with pytest.raises(ValueError, match="^runtime_eligible records must use runtime_eligible promotion stage$"):
+        OperationCatalogRecord(
+            operation_id="bad-promotion-stage",
+            institution_id=record.institution_id,
+            operation_name="Bad promotion stage",
+            artifact_ids=[product_page.artifact_id],
+            artifact_class=ArtifactClass.TERMS_OR_CONTRACT,
+            promotion_stage=PromotionStage.EXTRACTED,
+            runtime_eligible=True,
+        )
+
+    with pytest.raises(ValueError, match="^scraped institution product pages are evaluation-only and not runtime eligible$"):
+        OperationCatalogRecord(
+            operation_id="bad-runtime-product-page",
+            institution_id=record.institution_id,
+            operation_name="Bad runtime product page",
+            artifact_ids=[product_page.artifact_id],
+            artifact_class=ArtifactClass.PRODUCT_PAGE,
+            promotion_stage=PromotionStage.RUNTIME_ELIGIBLE,
+            runtime_eligible=True,
+        )
 
 
 def test_operations_catalog_preserves_required_economic_evidence_spans():

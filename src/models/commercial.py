@@ -22,8 +22,10 @@ class ContractFamily(str, Enum):
     IJARAH = "ijarah"
     SALAM = "salam"
     ISTISNA = "istisna"
+    MUQAWALA = "muqawala"
     TAWARRUQ = "tawarruq"
     QARD = "qard"
+    KAFALA = "kafala"
     WAKALA = "wakala"
     SUKUK = "sukuk"
     MUSHARAKA = "musharaka"
@@ -129,9 +131,12 @@ class StandardsRoute:
 class RuleEvaluation:
     """Deterministic rule-trace placeholder for supported future domains."""
 
+    rule_id: Optional[str] = None
+    rule_version: Optional[str] = None
     matched_rules: List[str] = field(default_factory=list)
     required_facts: List[str] = field(default_factory=list)
     missing_facts: List[str] = field(default_factory=list)
+    evidence_requirements: List[str] = field(default_factory=list)
     outcome: str = "unknown"
     source_ids: List[str] = field(default_factory=list)
     conflict_flags: List[str] = field(default_factory=list)
@@ -139,9 +144,12 @@ class RuleEvaluation:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "rule_id": self.rule_id,
+            "rule_version": self.rule_version,
             "matched_rules": self.matched_rules,
             "required_facts": self.required_facts,
             "missing_facts": self.missing_facts,
+            "evidence_requirements": self.evidence_requirements,
             "outcome": self.outcome,
             "source_ids": self.source_ids,
             "conflict_flags": self.conflict_flags,

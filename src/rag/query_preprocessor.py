@@ -21,6 +21,15 @@ _TRANSLITERATION_MAP = {
     r'\bmusharaka\b': 'musharakah',
     r'\bwakala\b': 'wakalah',
     r'\bqard hasan\b': 'qard al-hasan',
+    r'\bta2seet\b': 'installment sale',
+    r'\btaqseet\b': 'installment sale',
+    r'\baqsat\b': 'installment sale',
+    r'\b2osoot\b': 'installment sale',
+    r'\bgharamet ta2kheer\b': 'late payment',
+    r'\bgharamat ta2kheer\b': 'late payment',
+    r'\bta2kheer\b': 'late payment',
+    r'\btakheer\b': 'late payment',
+    r'\b3arabeya\b': 'car',
 }
 
 # Precompile regex patterns for performance
@@ -75,6 +84,38 @@ DOMAIN_QUERY_EXPANSIONS.update(
         "riba": ("riba", "interest", "\u0631\u0628\u0627", "\u0641\u0648\u0627\u0626\u062f"),
         "ta2seet": ("installment sale", "deferred payment sale", "murabaha", "murabahah", "\u062a\u0642\u0633\u064a\u0637"),
         "taqseet": ("installment sale", "deferred payment sale", "murabaha", "murabahah", "\u062a\u0642\u0633\u064a\u0637"),
+        "installment sale": ("installment sale", "deferred payment sale", "murabaha", "murabahah", "\u0645\u0631\u0627\u0628\u062d\u0629"),
+        "late payment": ("late payment", "late fee", "default charge", "penalty", "charity clause", "\u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631"),
+    }
+)
+
+DOMAIN_QUERY_EXPANSIONS.update(
+    {
+        "\u063a\u0631\u0627\u0645\u0647": ("late payment", "late fee", "default charge", "penalty", "\u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631"),
+        "\u063a\u0631\u0627\u0645\u0629": ("late payment", "late fee", "default charge", "penalty", "\u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631"),
+        "\u062a\u0627\u062e\u064a\u0631": ("late payment", "late fee", "default charge", "penalty", "\u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631"),
+        "\u062a\u0623\u062e\u064a\u0631": ("late payment", "late fee", "default charge", "penalty", "\u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631"),
+        "\u062a\u0622\u062e\u064a\u0631": ("late payment", "late fee", "default charge", "penalty", "\u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631"),
+        "late payment": ("late payment", "late fee", "default charge", "penalty", "\u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631"),
+        "liquidated damages": ("liquidated damages", "delay damages", "penalty clause", "late delivery damages", "construction", "istisna"),
+        "delay damages": ("delay damages", "liquidated damages", "penalty clause", "late delivery damages", "construction", "istisna"),
+        "ld clause": ("ld clause", "liquidated damages", "delay damages", "penalty clause", "construction", "istisna"),
+        "fidic": ("fidic", "construction", "contractor", "delay damages", "liquidated damages", "istisna"),
+        "\u0645\u0642\u0627\u0648\u0644\u0627\u062a": ("construction", "contractor", "muqawala", "istisna", "\u0627\u0633\u062a\u0635\u0646\u0627\u0639"),
+        "\u0645\u0642\u0627\u0648\u0644\u0629": ("construction", "contractor", "muqawala", "istisna", "\u0627\u0633\u062a\u0635\u0646\u0627\u0639"),
+        "\u0645\u0642\u0627\u0648\u0644": ("construction", "contractor", "muqawala", "istisna", "\u0627\u0633\u062a\u0635\u0646\u0627\u0639"),
+        "construction": ("construction", "contractor", "muqawala", "istisna", "\u0645\u0642\u0627\u0648\u0644\u0627\u062a", "\u0627\u0633\u062a\u0635\u0646\u0627\u0639"),
+        "contractor": ("construction", "contractor", "muqawala", "istisna", "\u0645\u0642\u0627\u0648\u0644", "\u0627\u0633\u062a\u0635\u0646\u0627\u0639"),
+        "muqawala": ("construction", "contractor", "muqawala", "istisna", "\u0645\u0642\u0627\u0648\u0644\u0629"),
+        "istisna": ("istisna", "manufacturing", "construction", "contractor", "\u0627\u0633\u062a\u0635\u0646\u0627\u0639"),
+        "supply": ("supply", "supplier", "manufacturing", "istisna", "salam", "\u062a\u0648\u0631\u064a\u062f"),
+        "\u062a\u0648\u0631\u064a\u062f": ("supply", "supplier", "manufacturing", "istisna", "salam"),
+        "\u062e\u064a\u0631\u064a\u0629": ("charity", "donation", "charity clause", "\u062a\u0628\u0631\u0639"),
+        "\u062a\u0628\u0631\u0639": ("charity", "donation", "charity clause", "\u062e\u064a\u0631\u064a\u0629"),
+        "charity": ("charity", "donation", "charity clause", "\u062e\u064a\u0631\u064a\u0629", "\u062a\u0628\u0631\u0639"),
+        "donation": ("charity", "donation", "charity clause", "\u062e\u064a\u0631\u064a\u0629", "\u062a\u0628\u0631\u0639"),
+        "\u0634\u0631\u0637 \u062c\u0632\u0627\u0626\u064a": ("penalty clause", "liquidated damages", "delay damages", "construction", "istisna"),
+        "\u0627\u0644\u0634\u0631\u0637 \u0627\u0644\u062c\u0632\u0627\u0626\u064a": ("penalty clause", "liquidated damages", "delay damages", "construction", "istisna"),
     }
 )
 
@@ -113,11 +154,17 @@ class QueryPreprocessor:
         
         Cached to avoid recomputing for repeated queries.
         """
-        lowered = query.lower()
+        normalized_query = QueryPreprocessor.normalize(query)
+        lowered = normalized_query.lower()
         terms = {
             token.strip('.,;:?!()[]{}"\'\u061f\u060c')
             for token in lowered.split()
         }
+        original_terms = {
+            token.strip('.,;:?!()[]{}"\'\u061f\u060c')
+            for token in query.lower().split()
+        }
+        terms.update(original_terms)
         
         for trigger, expansions in DOMAIN_QUERY_EXPANSIONS.items():
             # Token-level matching prevents false-positives like "lease" inside "please"
@@ -126,7 +173,7 @@ class QueryPreprocessor:
                 or token.startswith(trigger + "/")
                 or (QueryPreprocessor.contains_arabic(trigger) and trigger in token)
                 for token in terms
-            ):
+            ) or (" " in trigger and trigger in lowered):
                 terms.update(term.lower() for term in expansions)
         
         return frozenset(term for term in terms if len(term) >= 3)

@@ -78,6 +78,30 @@ class QueryResponse(BaseModel):
         return self
 
 
+class FlagAnswerRequest(BaseModel):
+    query_id: Optional[str] = None
+    query: str = Field(default="", min_length=1)
+    answer: str = Field(default="", min_length=1)
+    reason: str = Field(default="user_reported_incorrect", min_length=1)
+    session_id: Optional[str] = None
+    request_id: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("query", "answer", "reason")
+    @classmethod
+    def field_must_not_be_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("field cannot be empty")
+        return stripped
+
+
+class FlagAnswerResponse(BaseModel):
+    query_id: str
+    queue: str
+    status: str
+
+
 class ClarificationResponse(QueryResponse):
     pass
 

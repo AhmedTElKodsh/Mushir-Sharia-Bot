@@ -1,0 +1,19 @@
+case_id: GC-016
+query_ar: إذا تضمّنت الإجارة ضماناً بالقيمة المتبقية للأصل عند نهاية العقد، فهل تبقى
+  إجارة شرعية؟
+query_en: If an Ijara contract includes a residual value guarantee on the asset at
+  contract end, does it remain Sharia-compliant?
+contract_family: IJARA
+expected_standards:
+- SS-09
+expected_ruling: PROHIBITED
+forbidden_citations:
+- SS-06
+- SS-12
+clarification_required: false
+risk_class:
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: A residual value guarantee in Ijara shifts asset ownership risk back to the
+  lessee.

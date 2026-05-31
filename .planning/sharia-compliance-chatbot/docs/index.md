@@ -1,0 +1,63 @@
+# Mushir Documentation Index
+
+This index points to the current documentation set for Mushir. Older L0 and planning files remain useful historical context, but the files below are the best starting point for current development, review, client handoff, and release work.
+
+Last refreshed: 2026-05-31. The current documentation set reflects the GC-001 construction delay-penalty clarification fix, SS-05/SS-11 istisna penalty routing, SS-30 tawarruq routing guard, evaluation fixture text-boundary fix, and the latest full-suite verification (`619 passed, 48 skipped, 2 warnings`).
+
+## Start Here
+
+- [Project Documentation](project-documentation.md): full current technical documentation for developers and maintainers.
+- [Project Clarifications And Developer Walkthrough](project-clarifications-and-developer-walkthrough.md): consolidated developer-facing walkthrough of the runtime flow, request contracts, ingestion, retrieval, source-family gates, deterministic definitions, commercial scenario metadata, Chroma/Qdrant setup, current limitations, and recommended enhancements, with Mermaid diagrams.
+- [Pipeline Architecture (V2)](pipeline-architecture-v2.md): visual diagrams for the Stage 1 & 2 Routing, Resolver, and Quality Gates logic.
+- [AI Project Brief](ai-project-brief.md): compact but detailed AI-agent handoff covering runtime contracts, source authority, L5/L6 status, commands, risks, and safe edit rules.
+- [Client Plain-Language Report](client-plain-language-logic.md): non-technical client explanation of project planning, implemented behavior, current limits, L5 readiness, and proposed L6 direction.
+- [Client Source-Governed Roadmap](client-source-governed-aaoifi-roadmap.md): visual client-facing explanation of the updated AAOIFI assistant logic, key terms, source governance, router plan, roadmap, risks, and acceptance checklist.
+- [L6 Egypt Institution Scrape Workstream](l6-egypt-institution-scrape/README.md): project-facing guide for the planned public-source Egypt institution operations corpus.
+- [Project Context](../../../project-context.md): concise implementation rules for AI agents and developers.
+- [Architecture](chatbot-architecture.md): deeper component-level architecture of the answer-generation path.
+- [Production Readiness](l5-production-readiness.md): runtime modes, release gates, and operational checks.
+- [Deep Research Report](deep-research-report.md): research synthesis for the post-L5 rules-first Sharia commercial-process evaluator direction.
+- [Gemini Research Plan](gemini-research-plan.md): original external blueprint; treat as implemented/partial/gap/spike input, not as the current architecture by itself.
+- [Research Evidence Index](research/README.md): canonical research syntheses and raw evidence inventory.
+- [RAG and Model Intelligence OSS Research](research/rag-model-intelligence-open-source-research-2026-05-22.md): refreshed OSS/GitHub research matrix for improving retrieval, evaluation, ingestion, observability, structured outputs, Arabic NLP, and rules-first intelligence.
+- [Official-Source Crawler Research](research/deep_research_official_source_crawler_2026-05-22.md): CBE/FRA official-source crawler and provenance plan for the L6 evidence corpus.
+- [RAG and Crawler Implementation Plan](research/rag-model-intelligence-implementation-plan-2026-05-22.md): ordered implementation slices merging RAG/model intelligence with official-source crawler evidence gates.
+- [Spec Deep Research Report](deep-research-report.md): 2026-05-19 research input used to seed router, supersession, chunking, data-model, and evaluation planning.
+- [Project Logic Rethink](PROJECT-LOGIC-RETHINK-2026-05-19.md): current source-governed planning reset and implementation gap analysis.
+
+## Operations
+
+- [Deployment](ops/deployment.md): local and deployment operations.
+- [Hugging Face Spaces](ops/huggingface-spaces.md): Docker Space deployment and verification.
+- [Release Checklist](ops/release-checklist.md): release go/no-go checklist.
+- [Scripts Guide](scripts-guide.md): scripts for ingestion, verification, evaluation, and deployment.
+
+## Historical Planning
+
+- [Next-Level Planning Index](../next-level-plans/README.md): historical L1-L4 plans and the L5 readiness plan.
+- [Maintained Requirements](requirements.md): source-governed product requirements.
+- [Maintained Design](design.md): current source-governed architecture plan.
+- [Maintained Tasks](tasks.md): implementation slices for source catalog, router seed verification, parent/child chunking, concept map, retrieval evaluation, feedback, L6 entry gates, and Gemini roadmap gap alignment.
+- [L6 Rules-First Evaluator Plan](../next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md): proposed post-L5 architecture for transaction schemas, source routing, executable rules, and non-fatwa verdicts.
+- [L6 Egypt Financial Institutions Evidence Corpus Plan](../next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md): public-source scraping, bounded discovery, contract evidence, gap marking, and scholar-review dataset plan.
+- [L0 Architecture](../../../_legacy/root-outline-docs/L0_ARCHITECTURE.md): original baseline architecture.
+- [Implementation Summary](../../../_legacy/root-outline-docs/IMPLEMENTATION_SUMMARY.md): earlier implementation summary.
+
+## Most Common Tasks
+
+| Task | Best Doc |
+| --- | --- |
+| Understand the whole app | [Project Documentation](project-documentation.md) |
+| Follow the code path with diagrams | [Project Clarifications And Developer Walkthrough](project-clarifications-and-developer-walkthrough.md) |
+| Brief a future AI agent | [AI Project Brief](ai-project-brief.md) |
+| Explain the system to a client | [Client Plain-Language Report](client-plain-language-logic.md) |
+| Explain the updated source-governed roadmap visually | [Client Source-Governed Roadmap](client-source-governed-aaoifi-roadmap.md) |
+| Give another AI agent the rules | [Project Context](../../../project-context.md) |
+| Run or deploy the app | [Deployment](ops/deployment.md) |
+| Verify production readiness | [Production Readiness](l5-production-readiness.md) |
+| Debug answer generation | [Architecture](chatbot-architecture.md) |
+| Inspect research evidence | [Research Evidence Index](research/README.md) |
+| Research RAG/model intelligence upgrades | [RAG and Model Intelligence OSS Research](research/rag-model-intelligence-open-source-research-2026-05-22.md) |
+| Plan official-source crawler and RAG upgrades | [RAG and Crawler Implementation Plan](research/rag-model-intelligence-implementation-plan-2026-05-22.md) |
+| Plan source-governed implementation slices | [Maintained Tasks](tasks.md) |
+| Prepare Egypt institution scraping | [L6 Egypt Institution Scrape Workstream](l6-egypt-institution-scrape/README.md) |

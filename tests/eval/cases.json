@@ -1,0 +1,56 @@
+{
+  "tier_1_authoritative": [
+    {
+      "id": "T1-001",
+      "query_ar": "هل شرط غرامة التأخير في عقود المقاولات شرط ربوي؟",
+      "query_en": "Is a delay penalty clause in construction contracts a usurious/riba condition?",
+      "expected_contract_family": "ISTISNA",
+      "expected_standards": ["SS-11", "SS-05"],
+      "expected_ruling_direction": "PERMISSIBLE_WITH_CONDITIONS",
+      "critical_misclassification_risk": "DEBT_OR_RIBA",
+      "source_authority": "AAOIFI Q&A Bulletins / SS-11 Appendix"
+    },
+    {
+      "id": "T1-002",
+      "query_ar": "هل يجوز أخذ غرامة تأخير في سداد القرض الحسن؟",
+      "query_en": "Is it permissible to take a delay penalty for the repayment of a benevolent loan (Qard Hasan)?",
+      "expected_contract_family": "QARD",
+      "expected_standards": ["SS-19", "SS-03"],
+      "expected_ruling_direction": "PROHIBITED",
+      "critical_misclassification_risk": "ISTISNA_OR_IJARAH",
+      "source_authority": "SS-19 Qard"
+    },
+    {
+      "id": "T1-003",
+      "query_ar": "ما حكم الوعد الملزم في المرابحة للآمر بالشراء؟",
+      "query_en": "What is the ruling on a binding promise in Murabaha to the purchase orderer?",
+      "expected_contract_family": "MURABAHA",
+      "expected_standards": ["SS-08"],
+      "expected_ruling_direction": "PERMISSIBLE_WITH_CONDITIONS",
+      "critical_misclassification_risk": "WAKALAH",
+      "source_authority": "SS-08 Murabaha"
+    }
+  ],
+  "tier_2_boundary": [
+    {
+      "id": "T2-001",
+      "query_ar": "هل غرامة التأخير حرام؟",
+      "query_en": "Is a delay penalty haram?",
+      "expected_contract_family": "UNCLEAR",
+      "expected_standards": [],
+      "expected_ruling_direction": "CLARIFICATION_REQUIRED",
+      "critical_misclassification_risk": "ANY_DEFINITIVE_RULING",
+      "source_authority": "Clarification Engine Policy"
+    },
+    {
+      "id": "T2-002",
+      "query_ar": "في عقد الإجارة المنتهية بالتمليك، هل يجوز ربط الأجرة بمؤشر متغير؟",
+      "query_en": "In Ijarah Muntahia Bittamleek, is it permissible to link the rental to a variable benchmark?",
+      "expected_contract_family": "IJARAH",
+      "expected_standards": ["SS-09"],
+      "expected_ruling_direction": "PERMISSIBLE_WITH_CONDITIONS",
+      "critical_misclassification_risk": "RIBA",
+      "source_authority": "SS-09 Ijarah"
+    }
+  ]
+}

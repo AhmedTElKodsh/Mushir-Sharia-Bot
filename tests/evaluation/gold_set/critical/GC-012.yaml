@@ -1,0 +1,16 @@
+case_id: GC-012
+query_ar: هل يجوز اشتراط حد أدنى مضمون للعائد في عقد المشاركة؟
+query_en: Is a guaranteed minimum return permissible in a Musharaka contract?
+contract_family: MUSHARAKA
+expected_standards:
+- SS-12
+expected_ruling: PROHIBITED
+forbidden_citations:
+- SS-04
+- SS-23
+clarification_required: false
+risk_class:
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Guaranteeing a minimum profit share to one party in Musharaka is prohibited.

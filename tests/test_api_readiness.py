@@ -49,12 +49,42 @@ def test_ready_checks_all_required_infrastructure_components():
     required = [
         "retrieval_configured",
         "retriever_ready",
+        "sharia_corpus_complete",
+        "hard_sharia_ready",
         "provider_configured",
         "auth_configured",
         "durable_audit_store",
     ]
     for key in required:
         assert key in checks, f"Missing check: {key}"
+
+
+@pytest.mark.api
+def test_ready_reports_partial_sharia_corpus_coverage():
+    from src.api.main import create_app
+
+    app = create_app()
+    with TestClient(app) as client:
+        res = client.get("/ready")
+
+    body = res.json()
+    coverage = body["evidence_coverage"]["sharia_corpus"]
+    assert coverage["status"] == "partial"
+    assert coverage["hard_sharia_ready"] is False
+    assert coverage["release_gate"] == "fail"
+    assert coverage["release_gate_fail_count"] == 60
+    assert coverage["covered_sharia_standard_count"] == 55
+    assert coverage["target_sharia_standard_count"] == 60
+    assert coverage["missing_sharia_standard_count"] == 5
+    assert coverage["missing_sharia_standards"] == ["SS-55", "SS-56", "SS-57", "SS-58", "SS-59"]
+    assert coverage["blocked_source_count"] == 5
+    assert coverage["blocked_source_standards"] == ["SS-55", "SS-56", "SS-57", "SS-58", "SS-59"]
+    assert coverage["blocked_source_details"][0]["status"] == "missing_full_official_or_licensed_text"
+    assert coverage["covered_sharia_standards"][:5] == ["SS-01", "SS-02", "SS-03", "SS-04", "SS-05"]
+    assert coverage["covered_sharia_standards"][-1] == "SS-60"
+    assert body["checks"]["sharia_corpus_complete"] is False
+    assert body["checks"]["hard_sharia_ready"] is False
+    assert coverage["no_go_reasons"]
 
 
 @pytest.mark.api

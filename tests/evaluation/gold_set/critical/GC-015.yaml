@@ -1,0 +1,20 @@
+case_id: GC-015
+query_ar: ما الفرق الجوهري بين المرابحة السلعية والتورق المصرفي، وهل يُعدّان متماثلين
+  في الحكم؟
+query_en: What is the substantive difference between Commodity Murabaha and Tawarruq,
+  and do they share the same ruling?
+contract_family: AMBIGUOUS
+expected_standards:
+- SS-08
+- SS-30
+expected_ruling: CLARIFY
+forbidden_citations:
+- SS-09
+clarification_required: true
+risk_class:
+- R2
+- R3
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Commodity Murabaha is permissible; organised Tawarruq is prohibited. Ruling
+  must be CLARIFY.

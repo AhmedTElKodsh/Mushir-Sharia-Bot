@@ -8,12 +8,13 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from src.api.dependencies import get_application_service, get_rate_limiter, get_session_manager
 from src.api.rate_limit import InMemoryRateLimiter, RateLimitDecision
-from src.api.schemas import ErrorResponse, QueryRequest, QueryResponse
+from src.api.schemas import ErrorResponse, FlagAnswerRequest, FlagAnswerResponse, QueryRequest, QueryResponse
 from src.chatbot.application_service import ApplicationService
 from src.chatbot.llm_client import LLMConfigurationError, LLMRateLimitError, LLMResponseError
 from src.chatbot.session_manager import SessionManager
 from src.models.ruling import AnswerContract
 from src.models.session import SessionState
+from src.governance.scholar_review import ScholarReviewQueue, ScholarReviewQueueItem, ScholarReviewQueueStore
 from src.security.input_validator import InputValidator
 
 router = APIRouter()
@@ -105,6 +106,31 @@ async def query_stream(
         media_type="text/event-stream",
         headers=rate_decision.headers(),
     )
+
+
+@router.post("/flag-answer", response_model=FlagAnswerResponse)
+async def flag_answer(payload: FlagAnswerRequest, request: Request):
+    store = _scholar_review_queue_store(request)
+    query_id = payload.query_id or payload.request_id or str(uuid.uuid4())
+    metadata = payload.metadata or {}
+    item = ScholarReviewQueueItem(
+        query_id=query_id,
+        queue=ScholarReviewQueue.USER_REPORTED,
+        query_ar=payload.query if metadata.get("response_language") == "ar" else "",
+        query_en=payload.query if metadata.get("response_language") != "ar" else "",
+        system_answer_ar=payload.answer if metadata.get("response_language") == "ar" else "",
+        system_answer_en=payload.answer if metadata.get("response_language") != "ar" else "",
+        system_ruling=str(metadata.get("status") or metadata.get("system_ruling") or ""),
+        system_standards=list(metadata.get("candidate_standards") or metadata.get("system_standards") or []),
+        system_confidence=float(metadata.get("confidence") or 0.0),
+        flag_reason=payload.reason,
+        source_chunks=list(metadata.get("retrieved_chunk_ids") or []),
+        request_id=payload.request_id or "",
+        session_id=payload.session_id or "",
+        user_feedback=payload.reason,
+    )
+    store.append(item)
+    return FlagAnswerResponse(query_id=query_id, queue=ScholarReviewQueue.USER_REPORTED.value, status="queued")
 
 
 @router.get("/rulings/{ruling_id}", response_model=None)
@@ -207,6 +233,12 @@ def _rate_limit_response(request_id: str, decision: RateLimitDecision) -> JSONRe
         ).model_dump(),
         headers=decision.headers(),
     )
+
+
+def _scholar_review_queue_store(request: Request) -> ScholarReviewQueueStore:
+    if not hasattr(request.app.state, "scholar_review_queue_store"):
+        request.app.state.scholar_review_queue_store = ScholarReviewQueueStore("data/scholar_review_queue.jsonl")
+    return request.app.state.scholar_review_queue_store
 
 
 def _sse(event: str, data: Dict[str, Any]) -> str:

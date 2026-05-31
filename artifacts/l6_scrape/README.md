@@ -1,13 +1,7 @@
 # L6 Scrape Runtime Artifacts
 
-Runtime scrape output belongs here during local development unless a run config points to external object storage.
+This folder is the default local output root for `scripts/run_l6_institution_pilot.py`.
 
-Expected subfolders after implementation:
+Generated crawl pages, PDFs, extracted text, manifests, CSV exports, and logs are runtime evidence and are ignored by git by default. Keep only this README tracked so the folder boundary is visible in clean clones.
 
-- `raw/` - downloaded public HTML, PDFs, XLSX, DOC/DOCX, and screenshots when allowed.
-- `extracted_text/` - parser or OCR output.
-- `metadata/` - crawl manifests, hashes, source provenance, and access-status records.
-- `logs/` - bounded discovery, crawl, and extraction logs.
-- `errors/` - parser failures, blocked pages, unreachable sites, and manual-review packets.
-
-Generated runtime contents should remain out of git. Keep only this README tracked.
+Curated planning summaries belong under `.planning/sharia-compliance-chatbot/docs/l6_scrape/`. Do not promote generated scrape labels or machine mappings into runtime answer authority without source-catalog validation and scholar review.

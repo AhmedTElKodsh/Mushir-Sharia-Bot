@@ -1,0 +1,85 @@
+# Canonical routing matrix for launch-blocking Shari'ah hard cases.
+# Machine-proposed institution rows must not be added here; this matrix is
+# for source-governed runtime routing and scholar-review evaluation only.
+
+- matrix_id: HCRM-ISTISNA-PENALTY-AMBIGUOUS
+  scenario: Arabic construction delay penalty question with unclear delaying party.
+  queries:
+    - "هل شرط غرامة التأخير في عقود المقاولات شرط ربوي؟"
+    - "هل الشرط الجزائي في عقد مقاولة ربا؟"
+  contract_family: istisna
+  party: unknown
+  trigger: delay penalty / liquidated damages in construction or muqawala context
+  required_facts:
+    - delay_responsible_party
+    - penalty_trigger
+    - force_majeure_or_actual_loss_context
+  candidate_standards:
+    - SS-05
+    - SS-11
+  forbidden_standards:
+    - SS-03
+    - SS-09
+    - SS-10
+    - SS-19
+  clarification_behavior:
+    required: true
+    question_en: "Is the penalty because the contractor was late delivering, or because the customer was late paying?"
+    question_ar: "هل الغرامة بسبب تأخر المقاول في التسليم أم بسبب تأخر العميل في السداد؟"
+
+- matrix_id: HCRM-ISTISNA-PENALTY-CONTRACTOR
+  scenario: Contractor delay damages in Istisna / construction.
+  queries:
+    - "Can we impose liquidated damages if the contractor is late delivering the project?"
+    - "Can we impose a penalty if the contractor is late delivering the project?"
+  contract_family: istisna
+  party: contractor
+  trigger: contractor late delivery / late completion
+  required_facts:
+    - penalty_trigger
+    - force_majeure_or_actual_loss_context
+  candidate_standards:
+    - SS-05
+    - SS-11
+  forbidden_standards:
+    - SS-03
+    - SS-09
+    - SS-10
+    - SS-19
+  clarification_behavior:
+    required: false
+
+- matrix_id: HCRM-QARD-LATE-PAYMENT
+  scenario: Late fee on a cash loan or debt repayment.
+  queries:
+    - "Can the bank charge a late fee on a cash loan?"
+  contract_family: qard
+  party: debtor
+  trigger: debtor late payment
+  required_facts:
+    - penalty_beneficiary
+  candidate_standards:
+    - SS-03
+    - SS-19
+  forbidden_standards:
+    - SS-10
+    - SS-11
+  clarification_behavior:
+    required: false
+
+- matrix_id: HCRM-SALAM-DEFERRED-DELIVERY
+  scenario: Salam advance payment with deferred delivery.
+  queries:
+    - "Is a Salam sale valid if the price is not fully paid at contract signing?"
+  contract_family: salam
+  party: buyer
+  trigger: salam price and deferred delivery
+  required_facts:
+    - price_paid_at_contract
+    - delivery_terms
+  candidate_standards:
+    - SS-10
+  forbidden_standards:
+    - SS-11
+  clarification_behavior:
+    required: false

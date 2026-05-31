@@ -324,3 +324,20 @@ All technology choices are compatible and deployed:
 | No admin/curation workflow | Low — not in scope | Deferred post-MVP |
 | No authority ranking (madhab-aware) | Low — not in scope | Deferred post-MVP |
 | No query escalation (conf → human) | Low — not in scope | Deferred post-MVP |
+
+## Phase 3 (Evaluation & Ontology) Updates
+
+The architecture has been expanded to support robust source governance, ontology mapping, and Sharia compliance evaluation:
+
+### 1. Evaluation Framework
+- **Gold Sets**: Added robust YAML-based evaluation fixtures (GC-001 to GC-019) mapping critical compliance scenarios to expected outputs.
+- **ECE Metrics**: Introduced Expected Calibration Error tracking to ensure the model's confidence aligns accurately with real compliance correctness.
+- **CI/CD Integration**: A new GitHub Actions workflow (`sharia_compliance_eval.yml`) acts as an automated quality gate.
+
+### 2. Sharia Ontology Engine
+- **Concept Router & Ontology (`src/ontology/`)**: Maps abstract definitions to specific real-world contract structures.
+- **Ruling Evaluator**: Synthesizes Sharia rulings systematically from the ontological mappings, grounding the generation closer to deterministic logic before LLM generation.
+- **Contract Family Router (`src/chatbot/contract_family_router.py`)**: Precisely routes user queries into specific financial contract classifications.
+
+### 3. Data Acquisition Layer
+- **Egypt Financial Scraper (`src/acquisition/egypt_financial/`)**: Introduces a modular crawler, extractor, and discovery engine designed to construct an active post-L5 public-source evidence corpus from CBE and FRA regulators.

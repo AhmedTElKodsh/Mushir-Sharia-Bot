@@ -117,7 +117,23 @@ def test_application_service_rewrites_unsupported_answer_to_insufficient_data():
         def generate(self, prompt, **kwargs):
             return "COMPLIANT: This is allowed under [FAS-99]."
 
-    result = ApplicationService(retriever=Retriever(), llm_client=LLM()).answer("Is this allowed?")
+    service = ApplicationService(retriever=Retriever(), llm_client=LLM())
+
+    class FakeFamilyRouter:
+        def classify(self, query, **kwargs):
+            from src.chatbot.contract_family_router import ContractFamilyResult, RetrievalMode
+            from src.models.commercial import ContractFamily
+            return ContractFamilyResult(
+                primary_family=ContractFamily.UNKNOWN,
+                confidence=1.0,
+                mode=RetrievalMode.SINGLE_PATH,
+                signals={},
+                clarification_hint="",
+                query_intent="STANDARD"
+            )
+    service.family_router = FakeFamilyRouter()
+
+    result = service.answer("Is this allowed?")
 
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert result.citations == []
@@ -237,6 +253,43 @@ def test_chroma_index_validation_accepts_bilingual_multilingual_index():
     validate_chroma_index_for_arabic_retrieval(collection, model)
 
 
+@pytest.mark.unit
+def test_chroma_governed_metadata_validation_quarantines_legacy_chunks():
+    from src.rag.pipeline import validate_chroma_index_for_governed_metadata
+
+    collection = _FakeChromaCollection(
+        [
+            {
+                "standard_number": "SS-05",
+                "source_file": "AAOIFI_Sharia_Standard_05.md",
+                "source_language": "ar",
+            }
+        ]
+    )
+
+    with pytest.raises(RuntimeError, match="governed source metadata"):
+        validate_chroma_index_for_governed_metadata(collection)
+
+
+@pytest.mark.unit
+def test_chroma_governed_metadata_validation_accepts_source_governed_chunks():
+    from src.rag.pipeline import validate_chroma_index_for_governed_metadata
+
+    collection = _FakeChromaCollection(
+        [
+            {
+                "source_family": "sharia_standard",
+                "metadata_status": "governed",
+                "source_id": "iifa-resolution-109",
+                "section_path": "Resolution 109 > Fourth",
+                "citation_anchor": "https://iifa-aifi.org/en/32587.html#L118-L124",
+            }
+        ]
+    )
+
+    validate_chroma_index_for_governed_metadata(collection)
+
+
 @pytest.mark.service
 def test_application_service_bypasses_response_cache_in_eval_mode(monkeypatch):
     from src.chatbot.application_service import ApplicationService
@@ -276,10 +329,24 @@ def test_application_service_bypasses_response_cache_in_eval_mode(monkeypatch):
         cache_store=InMemoryCacheStore(),
     )
 
-    service.answer("Is this compliant?")
-    service.answer("Is this compliant?")
+    class FakeFamilyRouter:
+        def classify(self, query, **kwargs):
+            from src.chatbot.contract_family_router import ContractFamilyResult, RetrievalMode
+            from src.models.commercial import ContractFamily
+            return ContractFamilyResult(
+                primary_family=ContractFamily.UNKNOWN,
+                confidence=1.0,
+                mode=RetrievalMode.SINGLE_PATH,
+                signals={},
+                clarification_hint="",
+                query_intent="STANDARD"
+            )
+    service.family_router = FakeFamilyRouter()
+
+    service.answer("What is the definition of profit?")
+    service.answer("What is the definition of profit?")
     monkeypatch.setenv("RAG_EVAL_MODE", "true")
-    service.answer("Is this compliant?")
+    service.answer("What is the definition of profit?")
 
     assert llm.calls == 2
 
@@ -309,9 +376,34 @@ def test_cached_answer_preserves_validated_citation_metadata():
     )
     cache = InMemoryCacheStore()
     service = ApplicationService(cache_store=cache)
-    cache.set_json("response", service._cache_key("Is this compliant?"), cached.to_dict(), 60)
 
-    answer = service.answer("Is this compliant?")
+    class FakeFamilyRouter:
+        def classify(self, query, **kwargs):
+            from src.chatbot.contract_family_router import ContractFamilyResult, RetrievalMode
+            from src.models.commercial import ContractFamily
+            return ContractFamilyResult(
+                primary_family=ContractFamily.UNKNOWN,
+                confidence=1.0,
+                mode=RetrievalMode.SINGLE_PATH,
+                signals={},
+                clarification_hint="",
+                query_intent="STANDARD"
+            )
+    service.family_router = FakeFamilyRouter()
+
+    query = "What is the definition of profit?"
+
+    # We must match the route exactly as ApplicationService builds it internally
+    from src.models.commercial import ContractFamily
+    service.scenario_extractor = type("Fake", (), {"extract": lambda self, q: type("Scen", (), {"contract_family": ContractFamily.UNKNOWN, "question_type": "unknown"})()})()
+    from src.chatbot.commercial_assessment import StandardsRouter
+    service.standards_router = StandardsRouter()
+
+    scenario = service.scenario_extractor.extract(query)
+    standards_route = service.standards_router.route(scenario, query)
+    cache.set_json("response", service._cache_key(query, standards_route), cached.to_dict(), 60)
+
+    answer = service.answer(query)
 
     assert answer.metadata["cache_hit"] is True
     assert answer.citations[0].excerpt == "AAOIFI requires ownership and risk transfer before resale."
@@ -622,6 +714,156 @@ def test_fixture_retrieval_pipeline_runs_without_live_vector_index():
 
 
 @pytest.mark.unit
+def test_retrieval_baseline_command_uses_fixture_safe_defaults(tmp_path):
+    from scripts.run_retrieval_baseline import run_retrieval_baseline
+
+    output = tmp_path / "retrieval-baseline-report.json"
+
+    report = run_retrieval_baseline(output=output)
+
+    assert output.exists()
+    assert report["baseline_mode"] == "fixture_backed_retrieval_only"
+    assert report["gold_file"].endswith("tests/fixtures/gold_eval_fixture_baseline.yaml")
+    assert report["live_vector_index_used"] is False
+    assert report["live_llm_used"] is False
+    assert "expected_standard_hit_rate" in report
+    assert "source_family_accuracy" in report
+    assert "citation_support_rate" in report
+    assert "refusal_correctness" in report
+    assert "arabic_mixed_language_pass_rate" in report
+    assert "latency" in report
+    assert report["scholar_review_gold_gate"]["tuning_allowed"] is False
+
+
+@pytest.mark.unit
+def test_retrieval_baseline_blocks_tuning_on_pending_scholar_review(tmp_path):
+    from scripts.run_retrieval_baseline import run_retrieval_baseline
+
+    gold = tmp_path / "gold.yaml"
+    gold.write_text(
+        """
+- query: "pending hard case"
+  answerable: true
+  required_source_ids: ["HC-SS-11"]
+  expected_source_family: "sharia_standard"
+  fixture_behavior: "answer"
+  scholar_review_status: "pending"
+  fixture_retrieved_chunks:
+    - chunk_id: "HC-SS-11"
+      metadata:
+        standard_number: "SS-11"
+        source_family: "sharia_standard"
+        citation_supported: true
+""".strip(),
+        encoding="utf-8",
+    )
+
+    report = run_retrieval_baseline(
+        gold=gold,
+        output=tmp_path / "report.json",
+        require_scholar_reviewed_gold=True,
+    )
+
+    assert report["passed"] is False
+    assert report["scholar_review_gold_gate"]["tuning_allowed"] is False
+    assert report["scholar_review_gold_gate"]["pending_or_unreviewed_case_count"] == 1
+    assert "scholar-reviewed accepted gold cases" in report["failure_reasons"][0]
+
+
+@pytest.mark.unit
+def test_retrieval_baseline_allows_tuning_on_accepted_scholar_gold(tmp_path):
+    from scripts.run_retrieval_baseline import run_retrieval_baseline
+
+    gold = tmp_path / "gold.yaml"
+    gold.write_text(
+        """
+- query: "accepted hard case"
+  answerable: true
+  required_source_ids: ["HC-SS-11"]
+  expected_source_family: "sharia_standard"
+  fixture_behavior: "answer"
+  scholar_review_status: "accepted_for_gold_set"
+  fixture_retrieved_chunks:
+    - chunk_id: "HC-SS-11"
+      metadata:
+        standard_number: "SS-11"
+        source_family: "sharia_standard"
+        citation_supported: true
+""".strip(),
+        encoding="utf-8",
+    )
+
+    report = run_retrieval_baseline(
+        gold=gold,
+        output=tmp_path / "report.json",
+        require_scholar_reviewed_gold=True,
+    )
+
+    assert report["passed"] is True
+    assert report["scholar_review_gold_gate"]["tuning_allowed"] is True
+    assert report["scholar_review_gold_gate"]["accepted_gold_case_count"] == 1
+
+
+@pytest.mark.unit
+def test_sharia_corpus_coverage_report_marks_partial_catalog():
+    from scripts.report_sharia_corpus_coverage import build_sharia_coverage_matrix, sharia_coverage_report
+
+    records = [
+        {"source_family": "sharia_standard", "standard_number": "SS-02", "language": "ar", "source_id": "ss-02-ar"},
+        {"source_family": "sharia_standard", "standard_number": "SS-02", "language": "en", "source_id": "ss-02-en"},
+        {"source_family": "sharia_standard", "standard_number": "SS-05", "language": "en", "source_id": "ss-05-en"},
+        {"source_family": "fas", "standard_number": "FAS-28", "language": "en"},
+    ]
+
+    report = sharia_coverage_report(records, target_sharia_standard_count=60)
+    matrix = build_sharia_coverage_matrix(records, target_sharia_standard_count=5)
+
+    assert report["status"] == "partial"
+    assert report["covered_sharia_standard_count"] == 2
+    assert report["missing_sharia_standard_count"] == 58
+    assert report["hard_sharia_ready"] is False
+    assert report["release_gate"] == "fail"
+    assert report["release_gate_fail_count"] == 60
+    assert report["bilingual_sharia_standards"] == ["SS-02"]
+    assert report["missing_bilingual_sharia_standards"] == ["SS-05"]
+    assert report["target_inventory_sources"]
+    assert matrix[0]["standard_number"] == "SS-01"
+    assert matrix[0]["ingestion_status"] == "missing_source"
+    assert matrix[1]["standard_number"] == "SS-02"
+    assert matrix[1]["source_coverage_gate"] == "pass"
+    assert matrix[1]["release_gate"] == "fail"
+    assert matrix[4]["standard_number"] == "SS-05"
+    assert matrix[4]["missing_languages"] == ["ar"]
+    assert report["no_go_reasons"]
+
+
+@pytest.mark.unit
+def test_current_machine_catalog_is_not_complete_sharia_evidence_base():
+    from pathlib import Path
+    from scripts.report_sharia_corpus_coverage import load_acquisition_manifest, load_catalog, sharia_coverage_report
+
+    report = sharia_coverage_report(
+        load_catalog(Path("data/source_registry/aaoifi-source-catalog.yaml")),
+        acquisition_manifest=load_acquisition_manifest(
+            Path("data/source_registry/aaoifi-sharia-acquisition-manifest.yaml")
+        ),
+    )
+
+    assert report["status"] == "partial"
+    assert report["covered_sharia_standard_count"] == 55
+    assert report["covered_sharia_standards"][:5] == ["SS-01", "SS-02", "SS-03", "SS-04", "SS-05"]
+    assert report["covered_sharia_standards"][-1] == "SS-60"
+    assert report["covered_sharia_standard_count"] < report["target_sharia_standard_count"]
+    assert report["target_sharia_standard_count"] == 60
+    assert report["missing_sharia_standards"] == ["SS-55", "SS-56", "SS-57", "SS-58", "SS-59"]
+    assert report["missing_sharia_standard_count"] == 5
+    assert report["blocked_source_count"] == 5
+    assert report["blocked_source_standards"] == ["SS-55", "SS-56", "SS-57", "SS-58", "SS-59"]
+    assert report["release_gate_fail_count"] == 60
+    assert report["hard_sharia_ready"] is False
+
+
+@pytest.mark.unit
 def test_bm25_fixture_retriever_ranks_lexical_standard_match():
     from scripts.evaluate_rag import BM25FixtureRetriever
 
@@ -791,15 +1033,16 @@ def test_embedding_candidate_fixture_comparison_uses_separate_temp_index_and_saf
 
 @pytest.mark.unit
 def test_ingestion_candidate_probe_blocks_license_gated_pdf_candidates():
-    from scripts.evaluate_ingestion_candidates import evaluate_ingestion_candidates
+    from scripts.evaluate_ingestion_candidates import evaluate_ingestion_candidates, ProbeStatus
 
     report = evaluate_ingestion_candidates()
 
     assert report["runtime_ingestion_modified"] is False
-    assert report["candidates"]["pdfplumber"]["status"] == "probe_passed"
-    assert "Arab Investment Bank" in report["candidates"]["pdfplumber"]["extracted_text_preview"]
-    assert report["candidates"]["pymupdf"]["status"] == "blocked_pending_license_review"
-    assert report["candidates"]["marker"]["status"] == "blocked_pending_license_review"
+    assert report["candidates"]["pdfplumber"]["status"] in {ProbeStatus.PROBE_PASSED.value, ProbeStatus.MISSING_OPTIONAL_DEPENDENCY.value}
+    if report["candidates"]["pdfplumber"]["status"] == ProbeStatus.PROBE_PASSED.value:
+        assert "Arab Investment Bank" in report["candidates"]["pdfplumber"]["extracted_text_preview"]
+    assert report["candidates"]["pymupdf"]["status"] == ProbeStatus.BLOCKED_PENDING_LICENSE_REVIEW.value
+    assert report["candidates"]["marker"]["status"] == ProbeStatus.BLOCKED_PENDING_LICENSE_REVIEW.value
     assert report["summary"]["license_blocked_candidates"] == ["pymupdf", "marker"]
     assert report["candidates"]["pymupdf"]["adopt_next"] is False
     assert report["candidates"]["marker"]["adopt_next"] is False

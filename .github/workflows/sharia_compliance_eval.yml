@@ -1,0 +1,66 @@
+name: Sharia Intelligence Evaluation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/chatbot/**'
+      - 'src/ontology/**'
+      - 'src/rag/**'
+      - 'data/concept_ontology/**'
+      - 'tests/evaluation/**'
+  push:
+    branches:
+      - main
+      - release/*
+  workflow_dispatch:
+
+jobs:
+  evaluate-gold-set:
+    name: Gold-Set Compliance Harness
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pyyaml
+
+      - name: Run Sharia Zero-Tolerance Critical Tests
+        # -x means fail fast on the first critical failure
+        # This is a hard gate for any PR
+        run: |
+          pytest tests/evaluation/test_critical_goldset.py -v -x
+
+      - name: Run Full Evaluation Harness
+        # Run the rest of the evaluation suite
+        run: |
+          pytest tests/evaluation/ -v --ignore=tests/evaluation/test_critical_goldset.py
+
+      - name: Upload Expected Calibration Error (ECE) Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calibration-reports
+          path: tests/evaluation/reports/ece_report_*.json
+          retention-days: 14
+
+      - name: Upload Auto-Enqueued Scholar Reviews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scholar-review-queue
+          path: tests/evaluation/reports/scholar_review_queue_*.jsonl
+          retention-days: 30

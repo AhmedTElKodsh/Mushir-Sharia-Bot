@@ -1,6 +1,8 @@
 import json
 import os
+import random
 import re
+from dataclasses import dataclass
 from inspect import Parameter, signature
 from typing import Any, Dict, List, Optional
 
@@ -16,9 +18,17 @@ from src.chatbot.citation_validator import CitationValidator
 from src.chatbot.constants import AUTHORITY_REQUEST_TERMS
 from src.chatbot.prompt_builder import PromptBuilder
 from src.models.ruling import AAOIFICitation, AnswerContract, ComplianceStatus
-from src.models.commercial import SourceFamily
+from src.models.commercial import ContractFamily, SourceFamily, StandardsRoute
+from src.models.session import ClarificationState
+from src.governance.source_catalog import is_answer_admissible_metadata
+from src.governance.scholar_review import (
+    ScholarReviewQueue,
+    ScholarReviewQueueItem,
+    ScholarReviewQueueStore,
+)
 from src.rag.pipeline import RAGPipeline
 from src.rag.query_preprocessor import QueryPreprocessor
+from src.rag.standard_resolver import all_standards_for_family, resolve_bulk
 from src.storage.cache import CacheStore
 
 # ---------------------------------------------------------------------------
@@ -63,6 +73,9 @@ class ApplicationService:
         session_store=None,
         audit_store=None,
         cache_store=None,
+        scholar_review_queue_store: Optional[ScholarReviewQueueStore] = None,
+        scholar_sampling_rate: float = 0.05,
+        scholar_sampler=None,
         k: int = 5,
         threshold: float = 0.3,
     ):
@@ -70,16 +83,28 @@ class ApplicationService:
         self.llm_client = llm_client
         self.prompt_builder = prompt_builder or PromptBuilder()
         self.citation_validator = citation_validator or CitationValidator()
-        self.clarification_service = clarification_service
+        # ClarificationEngine is the authoritative gate for pre-retrieval clarification.
+        # Always instantiate a default so the judgment bypass, informational bypass,
+        # and transaction-structure bypass all fire regardless of caller injection.
+        from src.chatbot.clarification_engine import ClarificationEngine
+        self.clarification_service = clarification_service or ClarificationEngine()
+        self._clarification_service_injected = clarification_service is not None
         self.session_store = session_store
         self.audit_store = audit_store
         self.cache_store = cache_store
+        self.scholar_review_queue_store = scholar_review_queue_store
+        self.scholar_sampling_rate = max(0.0, min(float(scholar_sampling_rate), 1.0))
+        self.scholar_sampler = scholar_sampler or random.random
         self.k = k
         self.threshold = threshold
         self.response_cache_ttl = int(os.getenv("RESPONSE_CACHE_TTL_SECONDS", "86400"))
         self.scenario_extractor = ScenarioExtractor()
+        from src.chatbot.contract_family_router import ContractFamilyRouter
+        self.family_router = ContractFamilyRouter()
         self.standards_router = StandardsRouter()
         self.rule_evaluator = CommercialRuleEvaluator()
+        from src.ontology.concept_ontology import ConceptOntology
+        self.ontology = ConceptOntology.load()
 
     def answer(
         self,
@@ -120,34 +145,55 @@ class ApplicationService:
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
 
-        scenario = self.scenario_extractor.extract(cleaned_query)
-        standards_route = self.standards_router.route(scenario, cleaned_query)
-        rule_evaluation = self.rule_evaluator.evaluate(scenario, standards_route)
+        # Extract scenario first so it's available for routing
+        pending_scenario_clarification = self._consume_pending_scenario_clarification(session_id)
+        analysis_query = self._query_with_pending_clarification(
+            cleaned_query,
+            pending_scenario_clarification,
+        )
+        from src.chatbot.commercial_assessment import TransactionScenario, QuestionType
+        try:
+            scenario = self.scenario_extractor.extract(analysis_query)
+        except Exception as exc:
+            print(f"Scenario extraction failed: {type(exc).__name__}")
+            scenario = TransactionScenario(question_type=QuestionType.PERMISSIBILITY)
 
-        if SourceFamily.SHARIA_STANDARD not in standards_route.primary:
-            cached = self._cached_answer(cleaned_query)
-            if cached:
-                return cached
-        clarification = self._clarification_question(cleaned_query, session_id)
-        if clarification:
-            clarification_answer = self._clarification_answer(clarification, response_language)
-            contract = AnswerContract(
-                answer=clarification_answer,
-                status=ComplianceStatus.CLARIFICATION_NEEDED,
-                clarification_question=clarification,
-                reasoning_summary=self._clarification_reason(clarification, response_language),
-                limitations=self._limitations(response_language),
-                metadata=self._metadata(
-                    [],
-                    confidence=0.0,
-                    response_language=response_language,
-                    scenario=scenario,
-                    standards_route=standards_route,
-                    rule_evaluation=rule_evaluation,
-                ),
-            )
-            self._audit(cleaned_query, contract, session_id, request_id)
-            return contract
+        # Stage 1 & 2: Routing and Standard Resolution
+        session_family = pending_scenario_clarification.get("family") if pending_scenario_clarification else None
+        session_turns = pending_scenario_clarification.get("turns", 0) if pending_scenario_clarification else 0
+
+        family_result, target_standards = self._handle_routing_stage(
+            analysis_query, session_family, session_turns
+        )
+
+        # Build authoritative standards_route
+        standards_route = self.standards_router.route(scenario, analysis_query)
+        if target_standards and not standards_route.candidate_standards:
+            standards_route.candidate_standards = sorted(set(standards_route.candidate_standards) | set(target_standards))
+
+        if cached := self._cached_answer(cleaned_query, standards_route):
+            return cached
+            
+        from src.chatbot.contract_family_router import RetrievalMode
+        known_family = None
+        if family_result.mode in (RetrievalMode.SINGLE_PATH, RetrievalMode.MULTI_PATH):
+            known_family = family_result.primary_family
+
+        # Stage 3: Clarification Validation
+        clarification_contract = self._handle_clarification_stage(
+            cleaned_query,
+            scenario,
+            standards_route,
+            family_result,
+            known_family,
+            session_id,
+            request_id,
+            response_language
+        )
+        if clarification_contract:
+            return clarification_contract
+
+        rule_evaluation = self.rule_evaluator.evaluate(scenario, standards_route)
 
         if self.retriever is None:
             try:
@@ -171,7 +217,12 @@ class ApplicationService:
                 )
 
         try:
-            chunks = self.retriever.retrieve(cleaned_query, k=self.k, threshold=self.threshold)
+            chunks = self._retrieve(
+                analysis_query,
+                k=self.k,
+                threshold=self.threshold,
+                standards_route=standards_route,
+            )
         except Exception as exc:
             print(f"RAG retrieval failed: {type(exc).__name__}")
             return AnswerContract(
@@ -189,7 +240,42 @@ class ApplicationService:
                     rule_evaluation=rule_evaluation,
                 ),
             )
+        chunks = self._answer_admissible_chunks(chunks)
+        retrieved_source_families = EvidenceFamilyDetector.families(chunks)
+        candidate_matched_chunks = self._candidate_standard_chunks(chunks, standards_route)
+        candidate_standard_filter = self._candidate_standard_trace(
+            chunks,
+            candidate_matched_chunks,
+            standards_route,
+        )
+        chunks = candidate_matched_chunks
         if not chunks:
+            empty_families: set[SourceFamily] = set()
+            if should_fail_closed_for_source_gap(scenario, standards_route, empty_families):
+                verdict = source_gap_verdict(scenario, standards_route, empty_families)
+                contract = AnswerContract(
+                    answer=self._source_family_gap_message(response_language),
+                    status=ComplianceStatus.INSUFFICIENT_DATA,
+                    citations=[],
+                    reasoning_summary=(
+                        "The query asks about permissibility or contract validity, "
+                        "but no admissible Shari'ah-standard evidence was retrieved."
+                    ),
+                    limitations=self._limitations(response_language),
+                    metadata=self._metadata(
+                        [],
+                        confidence=0.0,
+                        response_language=response_language,
+                        scenario=scenario,
+                        standards_route=standards_route,
+                        rule_evaluation=rule_evaluation,
+                        verdict_contract=verdict,
+                        source_families=retrieved_source_families or empty_families,
+                        candidate_standard_filter=candidate_standard_filter,
+                    ),
+                )
+                self._audit(cleaned_query, contract, session_id, request_id)
+                return contract
             contract = AnswerContract(
                 answer=self._not_addressed_message(response_language),
                 status=ComplianceStatus.INSUFFICIENT_DATA,
@@ -203,6 +289,7 @@ class ApplicationService:
                     scenario=scenario,
                     standards_route=standards_route,
                     rule_evaluation=rule_evaluation,
+                    candidate_standard_filter=candidate_standard_filter,
                 ),
             )
             self._audit(cleaned_query, contract, session_id, request_id)
@@ -229,9 +316,47 @@ class ApplicationService:
                     rule_evaluation=rule_evaluation,
                     verdict_contract=verdict,
                     source_families=evidence_families,
+                    candidate_standard_filter=candidate_standard_filter,
                 ),
             )
             self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
+
+        if rule_evaluation.human_review_flags or rule_evaluation.evidence_requirements:
+            review_citations = self._citations_for_chunks(chunks)
+            contract = AnswerContract(
+                answer=self._rule_review_required_message(response_language),
+                status=ComplianceStatus.INSUFFICIENT_DATA,
+                citations=review_citations,
+                reasoning_summary=(
+                    "The deterministic rule trace is exported for scholar review; "
+                    "Mushir is not issuing a verdict from this path."
+                ),
+                limitations=self._limitations(response_language),
+                metadata=self._metadata(
+                    chunks,
+                    confidence=self._confidence(chunks),
+                    response_language=response_language,
+                    scenario=scenario,
+                    standards_route=standards_route,
+                    rule_evaluation=rule_evaluation,
+                    source_families=evidence_families,
+                    candidate_standard_filter=candidate_standard_filter,
+                    scholar_review_workflow=self._scholar_review_workflow(
+                        rule_evaluation=rule_evaluation,
+                        citation_count=len(review_citations),
+                    ),
+                ),
+            )
+            self._audit(cleaned_query, contract, session_id, request_id)
+            self._append_scholar_review_queue(
+                query=cleaned_query,
+                answer=contract,
+                queue=ScholarReviewQueue.AUTO_FLAGGED,
+                flag_reason="rule_evaluation_requires_scholar_review",
+                session_id=session_id,
+                request_id=request_id,
+            )
             return contract
 
         definition_contract = self._definition_answer_if_supported(
@@ -241,15 +366,18 @@ class ApplicationService:
         )
         if definition_contract is None and self._is_definition_query(cleaned_query):
             try:
-                wider_chunks = self.retriever.retrieve(
-                    cleaned_query,
+                wider_chunks = self._retrieve(
+                    analysis_query,
                     k=max(self.k * 8, 40),
                     threshold=0.0,
+                    standards_route=standards_route,
                 )
             except Exception as exc:
                 print(f"Definition retrieval expansion failed: {type(exc).__name__}")
                 wider_chunks = []
             if wider_chunks:
+                wider_chunks = self._answer_admissible_chunks(wider_chunks)
+                wider_chunks = self._candidate_standard_chunks(wider_chunks, standards_route)
                 definition_contract = self._definition_answer_if_supported(
                     cleaned_query,
                     wider_chunks,
@@ -257,7 +385,7 @@ class ApplicationService:
                 )
         if definition_contract:
             self._audit(cleaned_query, definition_contract, session_id, request_id)
-            self._cache_answer(cleaned_query, definition_contract)
+            self._cache_answer(cleaned_query, definition_contract, standards_route)
             return definition_contract
 
         if self.llm_client is None:
@@ -267,7 +395,7 @@ class ApplicationService:
         
         if hasattr(self.prompt_builder, 'build_messages'):
             system_prompt, user_prompt = self.prompt_builder.build_messages(
-                cleaned_query,
+                analysis_query,
                 chunks,
                 history=self._history(session_id, conversation_history),
                 response_language=response_language,
@@ -275,7 +403,7 @@ class ApplicationService:
             answer = self.llm_client.generate(user_prompt, system_prompt=system_prompt)
         else:
             prompt = self._build_prompt(
-                cleaned_query,
+                analysis_query,
                 chunks,
                 history=self._history(session_id, conversation_history),
                 response_language=response_language,
@@ -298,6 +426,7 @@ class ApplicationService:
                     scenario=scenario,
                     standards_route=standards_route,
                     rule_evaluation=rule_evaluation,
+                    candidate_standard_filter=candidate_standard_filter,
                 ),
             )
             self._audit(cleaned_query, contract, session_id, request_id)
@@ -318,16 +447,289 @@ class ApplicationService:
                 scenario=scenario,
                 standards_route=standards_route,
                 rule_evaluation=rule_evaluation,
+                candidate_standard_filter=candidate_standard_filter,
             ),
         )
         self._audit(cleaned_query, contract, session_id, request_id)
-        self._cache_answer(cleaned_query, contract)
+        
+        # User-flag Q3 (if user feedback indicates issue)
+        user_feedback = "flagged" if (conversation_history and len(conversation_history) > 0 and "flag" in str(conversation_history[-1].get("content", "")).lower()) else ""
+        if user_feedback:
+            self._append_scholar_review_queue(
+                query=cleaned_query,
+                answer=contract,
+                queue=ScholarReviewQueue.USER_REPORTED,
+                flag_reason="user_feedback_flag",
+                session_id=session_id,
+                request_id=request_id,
+            )
+        # Auto-flag Q1 for low-confidence RAG
+        elif self._confidence(chunks) < 0.5 or status == ComplianceStatus.INSUFFICIENT_DATA:
+            self._append_scholar_review_queue(
+                query=cleaned_query,
+                answer=contract,
+                queue=ScholarReviewQueue.AUTO_FLAGGED,
+                flag_reason="low_confidence_or_insufficient_data",
+                session_id=session_id,
+                request_id=request_id,
+            )
+        else:
+            self._maybe_append_random_scholar_sample(
+                query=cleaned_query,
+                answer=contract,
+                session_id=session_id,
+                request_id=request_id,
+            )
+            
+        self._cache_answer(cleaned_query, contract, standards_route)
         return contract
+
+    def _retrieve(
+        self,
+        query: str,
+        k: int,
+        threshold: float,
+        standards_route: Any = None,
+    ) -> List[Any]:
+        filters = self._retrieval_filters(standards_route)
+        mode = os.getenv("RETRIEVAL_MODE", "dense")
+        try:
+            return self.retriever.retrieve(
+                query,
+                k=k,
+                threshold=threshold,
+                filters=filters,
+                mode=mode,
+            )
+        except TypeError as exc:
+            if not self._legacy_retriever_signature_error(exc):
+                raise
+            return self.retriever.retrieve(query, k=k, threshold=threshold)
+
+    @staticmethod
+    def _retrieval_filters(standards_route: Any = None) -> Optional[Dict[str, Any]]:
+        if not standards_route or not getattr(standards_route, "primary", None):
+            return None
+        primary = standards_route.primary[0]
+        value = getattr(primary, "value", primary)
+        if not value:
+            return None
+        filters: Dict[str, Any] = {"source_family": value}
+        if ApplicationService._should_enforce_candidate_standards(standards_route):
+            filters["standard_number"] = ApplicationService._route_candidate_standard_ids(standards_route)
+        return filters
+
+    @staticmethod
+    def _answer_admissible_chunks(chunks: List[Any]) -> List[Any]:
+        admissible = []
+        for chunk in chunks:
+            metadata = chunk.get("metadata", {}) if isinstance(chunk, dict) else getattr(chunk, "metadata", {}) or {}
+            if not is_answer_admissible_metadata(
+                metadata,
+                require_governed_metadata=ApplicationService._governed_metadata_required(),
+            ):
+                continue
+            admissible.append(chunk)
+        return admissible
+
+    @classmethod
+    def _candidate_standard_chunks(cls, chunks: List[Any], standards_route: Any = None) -> List[Any]:
+        """Keep only route-specific Shari'ah standards when the route names them.
+
+        Source-family filtering is necessary but not sufficient: an SS-11
+        Istisna route must not be satisfied by generic SS-03 debt evidence.
+        """
+        if not cls._should_enforce_candidate_standards(standards_route):
+            return chunks
+        required = set(cls._route_candidate_standard_ids(standards_route))
+        return [
+            chunk
+            for chunk in chunks
+            if cls._chunk_standard_id(chunk) in required
+        ]
+
+    @classmethod
+    def _candidate_standard_trace(
+        cls,
+        retrieved_chunks: List[Any],
+        matched_chunks: List[Any],
+        standards_route: Any = None,
+    ) -> Optional[Dict[str, Any]]:
+        if not cls._should_enforce_candidate_standards(standards_route):
+            return None
+        return {
+            "enforced": True,
+            "required": cls._route_candidate_standard_ids(standards_route),
+            "retrieved": sorted({
+                standard
+                for chunk in retrieved_chunks
+                for standard in [cls._chunk_standard_id(chunk)]
+                if standard
+            }),
+            "matched": sorted({
+                standard
+                for chunk in matched_chunks
+                for standard in [cls._chunk_standard_id(chunk)]
+                if standard
+            }),
+        }
+
+    @staticmethod
+    def _should_enforce_candidate_standards(standards_route: Any = None) -> bool:
+        if not standards_route or not getattr(standards_route, "candidate_standards", None):
+            return False
+        primary_values = {
+            getattr(family, "value", family)
+            for family in (getattr(standards_route, "primary", []) or [])
+        }
+        return SourceFamily.SHARIA_STANDARD.value in primary_values
+
+    @classmethod
+    def _route_candidate_standard_ids(cls, standards_route: Any = None) -> List[str]:
+        values = getattr(standards_route, "candidate_standards", []) or []
+        return sorted({
+            normalised
+            for value in values
+            for normalised in [cls._normalize_standard_id(str(value))]
+            if normalised
+        })
+
+    @classmethod
+    def _chunk_standard_id(cls, chunk: Any) -> Optional[str]:
+        metadata = chunk.get("metadata", {}) if isinstance(chunk, dict) else getattr(chunk, "metadata", {}) or {}
+        candidates = [
+            metadata.get("standard_number"),
+            metadata.get("standard_id"),
+            metadata.get("source_id"),
+            metadata.get("document_id"),
+            metadata.get("source_file"),
+        ]
+        citation = None if isinstance(chunk, dict) else getattr(chunk, "citation", None)
+        if citation is not None:
+            candidates.extend(
+                [
+                    getattr(citation, "standard_id", None),
+                    getattr(citation, "source_file", None),
+                ]
+            )
+        for candidate in candidates:
+            standard = cls._normalize_standard_id(str(candidate or ""))
+            if standard:
+                return standard
+        return None
+
+    @staticmethod
+    def _normalize_standard_id(value: str) -> str:
+        text = (value or "").strip().upper()
+        if not text:
+            return ""
+        match = re.search(r"\b(SS|FAS)[-_\s]*0*(\d{1,3})\b", text)
+        if match:
+            return f"{match.group(1)}-{int(match.group(2)):02d}"
+        sharia_match = re.search(r"SHARIA[_\s-]*STANDARD[_\s-]*0*(\d{1,3})", text)
+        if sharia_match:
+            return f"SS-{int(sharia_match.group(1)):02d}"
+        return ""
+
+    def _citations_for_chunks(self, chunks: List[Any]) -> List[AAOIFICitation]:
+        citations: List[AAOIFICitation] = []
+        seen: set[tuple[str, Optional[str]]] = set()
+        for chunk in chunks:
+            citation = self.citation_validator.citation_for_chunk(chunk)
+            if citation is None:
+                continue
+            key = (citation.standard_number, citation.section_number)
+            if key in seen:
+                continue
+            seen.add(key)
+            citations.append(citation)
+        return citations
+
+    @staticmethod
+    def _governed_metadata_required() -> bool:
+        raw_value = os.getenv("REQUIRE_GOVERNED_SOURCE_METADATA")
+        if raw_value is not None:
+            return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+        return (os.getenv("APP_ENV", "dev").strip().lower() or "dev") == "production"
+
+    @staticmethod
+    def _legacy_retriever_signature_error(exc: TypeError) -> bool:
+        message = str(exc)
+        return "unexpected keyword argument" in message and (
+            "filters" in message or "mode" in message
+        )
 
     def _clarification_question(self, query: str, session_id: Optional[str]) -> Optional[str]:
         if not self.clarification_service:
             return None
         return self.clarification_service.ask_if_needed(query, session_id=session_id)
+
+    def _remember_scenario_clarification(
+        self,
+        *,
+        session_id: Optional[str],
+        original_query: str,
+        clarification_question: str,
+        scenario: Any,
+        standards_route: Any,
+    ) -> None:
+        state = self._session_state(session_id, create=True)
+        if state is None:
+            return
+        state.metadata["pending_scenario_clarification"] = {
+            "original_query": original_query,
+            "clarification_question": clarification_question,
+            "scenario": scenario.to_dict() if hasattr(scenario, "to_dict") else {},
+            "standards_route": standards_route.to_dict() if hasattr(standards_route, "to_dict") else {},
+        }
+        state.state = ClarificationState.CLARIFYING
+        self._update_session_state(state)
+
+    def _consume_pending_scenario_clarification(self, session_id: Optional[str]) -> Optional[Dict[str, Any]]:
+        state = self._session_state(session_id, create=False)
+        if state is None:
+            return None
+        pending = state.metadata.pop("pending_scenario_clarification", None)
+        if pending:
+            state.state = ClarificationState.ANALYZING
+            self._update_session_state(state)
+        return pending if isinstance(pending, dict) else None
+
+    @staticmethod
+    def _query_with_pending_clarification(query: str, pending: Optional[Dict[str, Any]]) -> str:
+        if not pending:
+            return query
+        original_query = str(pending.get("original_query") or "").strip()
+        if not original_query:
+            return query
+        return f"{original_query} | clarification_answer: {query}"
+
+    def _session_state(self, session_id: Optional[str], *, create: bool = False) -> Any:
+        if not self.session_store or not session_id:
+            return None
+        state = None
+        if hasattr(self.session_store, "get_session"):
+            state = self.session_store.get_session(session_id)
+        if state is None and create and hasattr(self.session_store, "create_session"):
+            state = self.session_store.create_session(session_id)
+        return state
+
+    def _update_session_state(self, state: Any) -> None:
+        if self.session_store and hasattr(self.session_store, "update_session"):
+            self.session_store.update_session(state)
+
+    @staticmethod
+    def _scenario_clarification_question(scenario: Any, response_language: str) -> Optional[str]:
+        missing_facts = set(getattr(scenario, "missing_facts", []) or [])
+        if (
+            getattr(scenario, "contract_family", None) == ContractFamily.ISTISNA
+            and getattr(scenario, "late_payment_terms", None)
+            and "delay_responsible_party" in missing_facts
+        ):
+            if response_language == "ar":
+                return "\u0647\u0644 \u0627\u0644\u063a\u0631\u0627\u0645\u0629 \u0628\u0633\u0628\u0628 \u062a\u0623\u062e\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0641\u064a \u0627\u0644\u062a\u0633\u0644\u064a\u0645 \u0623\u0645 \u0628\u0633\u0628\u0628 \u062a\u0623\u062e\u0631 \u0627\u0644\u0639\u0645\u064a\u0644 \u0641\u064a \u0627\u0644\u0633\u062f\u0627\u062f\u061f"
+            return "Is the penalty because the contractor was late delivering, or because the customer was late paying?"
+        return None
 
     def _history(
         self,
@@ -345,7 +747,19 @@ class ApplicationService:
             ]
         if not self.session_store:
             return []
-        return self.session_store.history_for(session_id)
+        if hasattr(self.session_store, "history_for"):
+            return self.session_store.history_for(session_id)
+        state = self._session_state(session_id, create=False)
+        if state is None:
+            return []
+        return [
+            {
+                "role": str(getattr(message, "role", ""))[:20],
+                "content": str(getattr(message, "content", ""))[:2000],
+            }
+            for message in getattr(state, "conversation_history", [])[-10:]
+            if getattr(message, "role", None) and getattr(message, "content", None)
+        ]
 
     def _build_prompt(
         self,
@@ -383,17 +797,64 @@ class ApplicationService:
             request_id=request_id,
         )
 
-    def _cached_answer(self, query: str) -> Optional[AnswerContract]:
+    def _append_scholar_review_queue(
+        self,
+        *,
+        query: str,
+        answer: AnswerContract,
+        queue: ScholarReviewQueue,
+        flag_reason: str,
+        session_id: Optional[str],
+        request_id: Optional[str],
+    ) -> None:
+        if not self.scholar_review_queue_store:
+            return
+        item = ScholarReviewQueueItem.from_answer(
+            queue=queue,
+            query=query,
+            answer=answer,
+            flag_reason=flag_reason,
+            query_id=request_id,
+            request_id=request_id,
+            session_id=session_id,
+        )
+        self.scholar_review_queue_store.append(item)
+
+    def _maybe_append_random_scholar_sample(
+        self,
+        *,
+        query: str,
+        answer: AnswerContract,
+        session_id: Optional[str],
+        request_id: Optional[str],
+    ) -> None:
+        if (
+            not self.scholar_review_queue_store
+            or answer.status == ComplianceStatus.CLARIFICATION_NEEDED
+            or self.scholar_sampling_rate <= 0.0
+            or self.scholar_sampler() >= self.scholar_sampling_rate
+        ):
+            return
+        self._append_scholar_review_queue(
+            query=query,
+            answer=answer,
+            queue=ScholarReviewQueue.RANDOM_SAMPLE,
+            flag_reason="random_post_launch_sample",
+            session_id=session_id,
+            request_id=request_id,
+        )
+
+    def _cached_answer(self, query: str, standards_route: Any = None) -> Optional[AnswerContract]:
         if not self.cache_store or self._eval_mode():
             return None
-        cached = self.cache_store.get_json("response", self._cache_key(query))
+        cached = self.cache_store.get_json("response", self._cache_key(query, standards_route))
         if not cached:
             return None
         answer = self._contract_from_dict(cached)
         answer.metadata = {**answer.metadata, "cache_hit": True}
         return answer
 
-    def _cache_answer(self, query: str, answer: AnswerContract) -> None:
+    def _cache_answer(self, query: str, answer: AnswerContract, standards_route: Any = None) -> None:
         if (
             not self.cache_store
             or self._eval_mode()
@@ -402,18 +863,25 @@ class ApplicationService:
             return
         self.cache_store.set_json(
             "response",
-            self._cache_key(query),
+            self._cache_key(query, standards_route),
             answer.to_dict(),
             self.response_cache_ttl,
         )
 
-    def _cache_key(self, query: str) -> str:
+    def _cache_key(self, query: str, standards_route: Any = None) -> str:
         payload = {
             "query": query.strip().lower(),
             "prompt_version": getattr(self.prompt_builder, "prompt_version", None),
             "model_name": getattr(self.llm_client, "model_name", None),
             "corpus_version": os.getenv("AAOIFI_CORPUS_VERSION", "unknown"),
+            "index_version": os.getenv("AAOIFI_INDEX_VERSION", "unknown"),
+            "source_catalog_file": os.getenv("SOURCE_CATALOG_FILE", ""),
+            "source_governance_required": os.getenv("REQUIRE_GOVERNED_SOURCE_METADATA", ""),
+            "retrieval_mode": os.getenv("RETRIEVAL_MODE", "dense"),
+            "embedding_model": os.getenv("EMBED_MODEL", ""),
             "retriever": type(self.retriever).__name__ if self.retriever else "lazy",
+            "route_id": getattr(standards_route, "route_id", None),
+            "source_family_filter": self._retrieval_filters(standards_route),
             "k": self.k,
             "threshold": self.threshold,
         }
@@ -462,6 +930,8 @@ class ApplicationService:
         rule_evaluation: Any = None,
         verdict_contract: Any = None,
         source_families: Optional[set] = None,
+        candidate_standard_filter: Optional[Dict[str, Any]] = None,
+        scholar_review_workflow: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         metadata: Dict[str, Any] = {
             "model_name": getattr(self.llm_client, "model_name", None),
@@ -480,7 +950,36 @@ class ApplicationService:
             metadata["verdict_contract"] = verdict_contract.to_dict()
         if source_families is not None:
             metadata["source_families"] = sorted(family.value for family in source_families)
+        if candidate_standard_filter is not None:
+            metadata["candidate_standard_filter"] = candidate_standard_filter
+        if scholar_review_workflow is not None:
+            metadata["scholar_review_workflow"] = scholar_review_workflow
         return metadata
+
+    @staticmethod
+    def _scholar_review_workflow(
+        *,
+        rule_evaluation: Any,
+        citation_count: int,
+    ) -> Dict[str, Any]:
+        return {
+            "required": True,
+            "path": "scholar_review_enhancement",
+            "blocks_main_app": False,
+            "human_review_status": "pending",
+            "runtime_governance_update_allowed": False,
+            "export_ready": citation_count > 0,
+            "citation_count": citation_count,
+            "review_fields": [
+                "human_scholar_review",
+                "human_scholar_review_references",
+                "human_scholar_review_notes",
+            ],
+            "reason": (
+                "Rule evaluation requires scholar review before any verdict; "
+                "the app may still return the evaluation trace and AAOIFI references."
+            ),
+        }
 
     @staticmethod
     def _detect_language(query: str) -> str:
@@ -636,6 +1135,18 @@ class ApplicationService:
             "INSUFFICIENT_DATA: This question asks about permissibility or contract validity. "
             "Mushir needs Shari'ah-standard evidence and explicit rule checks before giving even a non-binding assessment. "
             "The retrieved evidence is not enough; refer the contract to a qualified Sharia scholar or compliance reviewer."
+        )
+
+    @staticmethod
+    def _rule_review_required_message(response_language: str) -> str:
+        if response_language == "ar":
+            return (
+                "INSUFFICIENT_DATA: تتطلب هذه المعاملة مراجعة قواعد شرعية وأدلة "
+                "مصدرية إضافية قبل تقديم تقييم آمن؛ يرجى إحالتها إلى مراجع شرعي مؤهل."
+            )
+        return (
+            "INSUFFICIENT_DATA: This scenario requires explicit rule evidence and "
+            "human review before Mushir can provide a safe non-binding assessment."
         )
 
     @staticmethod
@@ -834,3 +1345,120 @@ class ApplicationService:
     @staticmethod
     def _reasoning_summary(answer: str) -> str:
         return answer.strip().splitlines()[0][:300]
+
+
+    def _handle_routing_stage(self, cleaned_query: str, session_family: "Any", session_turns: int):
+        
+        family_result = getattr(self, "family_router").classify(
+            cleaned_query, 
+            session_family=session_family, 
+            session_confirmation_turns=session_turns
+        )
+
+        matched_concepts = self.ontology.match(cleaned_query)
+        concept_ids = [entry.concept_id for entry in matched_concepts]
+
+        target_standards = resolve_bulk(concept_ids, family_result.primary_family)
+        if not target_standards:
+            target_standards = all_standards_for_family(family_result.primary_family)
+            
+        if family_result.mode and family_result.mode.value == "multi_path":
+            for adj_fam in (getattr(family_result, "adjacent_families", []) or []):
+                adj_standards = resolve_bulk(concept_ids, adj_fam)
+                if not adj_standards:
+                    adj_standards = all_standards_for_family(adj_fam)
+                target_standards.extend(adj_standards)
+            target_standards = list(dict.fromkeys(target_standards))
+
+        return family_result, target_standards
+
+    def _handle_clarification_stage(
+        self,
+        cleaned_query: str,
+        scenario: "Any",
+        standards_route: "Any",
+        family_result: "Any",
+        known_family: "Optional[ContractFamily]",
+        session_id: "Optional[str]",
+        request_id: "Optional[str]",
+        response_language: str
+    ) -> "Optional[AnswerContract]":
+        """
+        Determine whether clarification is needed before retrieval.
+
+        Architecture decision: the ClarificationEngine's ask_if_needed() is the
+        authoritative gate. The ContractFamilyRouter's mode=CLARIFICATION is an
+        advisory signal only — it means "low routing confidence" but not
+        necessarily "must ask the user a question".
+
+        Concretely:
+          - If the router gives a high-confidence primary family → ask_if_needed
+            decides (judgment bypass fires → None → proceed).
+          - If the router gives AMBIGUOUS/CLARIFICATION mode → still route through
+            ask_if_needed; for self-contained judgment queries (يجوز, حكم, etc.)
+            the judgment bypass fires because primary_family is not None → proceed.
+          - Only if ask_if_needed returns an actual question do we surface CLARIFY.
+        """
+        clarification: Optional[str] = None
+
+        scenario_clarification = self._scenario_clarification_question(
+            scenario,
+            response_language,
+        )
+        if scenario_clarification:
+            self._remember_scenario_clarification(
+                session_id=session_id,
+                original_query=cleaned_query,
+                clarification_question=scenario_clarification,
+                scenario=scenario,
+                standards_route=standards_route,
+            )
+            contract = AnswerContract(
+                answer=scenario_clarification,
+                status=ComplianceStatus.CLARIFICATION_NEEDED,
+                clarification_question=scenario_clarification,
+                reasoning_summary=self._clarification_reason(scenario_clarification, response_language),
+                limitations=self._limitations(response_language),
+                metadata=self._metadata(
+                    [],
+                    confidence=0.0,
+                    response_language=response_language,
+                    scenario=scenario,
+                    standards_route=standards_route,
+                ),
+            )
+            contract.metadata["router_signals"] = getattr(family_result, "signals", {})
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
+
+        if self.clarification_service and (
+            getattr(self, "_clarification_service_injected", False)
+            or (family_result.mode and family_result.mode.value == "clarification" and known_family is not None)
+        ):
+            # Pass the known_family so ask_if_needed can apply the bypass
+            # ONLY when the router is confident.
+            clarification = self.clarification_service.ask_if_needed(
+                cleaned_query,
+                session_id=session_id,
+                known_contract_family=known_family,
+            )
+
+        if clarification:
+            clarification_answer = self._clarification_answer(clarification, response_language)
+            contract = AnswerContract(
+                answer=clarification_answer,
+                status=ComplianceStatus.CLARIFICATION_NEEDED,
+                clarification_question=clarification,
+                reasoning_summary=self._clarification_reason(clarification, response_language),
+                limitations=self._limitations(response_language),
+                metadata=self._metadata(
+                    [],
+                    confidence=0.0,
+                    response_language=response_language,
+                ),
+            )
+            if hasattr(contract, "metadata"):
+                contract.metadata["router_signals"] = getattr(family_result, "signals", {})
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
+        return None

@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Gold-Set Case",
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "pattern": "^GC-\\d{3}$"
+    },
+    "query_ar": {
+      "type": "string"
+    },
+    "query_en": {
+      "type": "string"
+    },
+    "contract_family": {
+      "type": "string",
+      "enum": ["MURABAHA", "IJARA", "MUQAWALA", "MUSHARAKA", "MUDHARABA", "WAKALA", "KAFALA", "GENERAL_SHARIA", "AMBIGUOUS"]
+    },
+    "expected_standards": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expected_ruling": {
+      "type": "string",
+      "enum": ["PERMISSIBLE", "PROHIBITED", "DISPUTED", "CLARIFY"]
+    },
+    "forbidden_citations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "clarification_required": {
+      "type": "boolean"
+    },
+    "risk_class": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["CRITICAL", "HIGH", "MEDIUM"]
+    },
+    "authority": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "case_id",
+    "query_ar",
+    "query_en",
+    "contract_family",
+    "expected_standards",
+    "expected_ruling",
+    "forbidden_citations",
+    "clarification_required",
+    "risk_class",
+    "severity",
+    "authority"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,204 @@
+{
+  "target_sharia_standard_count": 60,
+  "target_inventory_sources": [
+    {
+      "url": "https://aaoifi.com/announcement/aaoifi-makes-all-its-standards-accessible-on-its-website-on-a-complimentary-basis/?lang=en",
+      "claim": "AAOIFI announced 59 Shari'ah standards in its complimentary-access standards notice."
+    },
+    {
+      "url": "https://aaoifi.com/announcement/aaoifi-officially-issues-shariah-standard-no-60-waqf/?lang=en",
+      "claim": "AAOIFI later announced the English translation of Shari'ah Standard No. 60 on Waqf."
+    }
+  ],
+  "target_inventory_notes": [
+    "Target is source-tracked as at least SS-60 because AAOIFI has an official SS-60 Waqf announcement.",
+    "The public complimentary-access announcement still states 59 Shari'ah standards; keep this mismatch visible until the official inventory page is reconciled."
+  ],
+  "catalog_record_count": 152,
+  "sharia_record_count": 60,
+  "covered_sharia_standard_count": 55,
+  "covered_sharia_standards": [
+    "SS-01",
+    "SS-02",
+    "SS-03",
+    "SS-04",
+    "SS-05",
+    "SS-06",
+    "SS-07",
+    "SS-08",
+    "SS-09",
+    "SS-10",
+    "SS-11",
+    "SS-12",
+    "SS-13",
+    "SS-14",
+    "SS-15",
+    "SS-16",
+    "SS-17",
+    "SS-18",
+    "SS-19",
+    "SS-20",
+    "SS-21",
+    "SS-22",
+    "SS-23",
+    "SS-24",
+    "SS-25",
+    "SS-26",
+    "SS-27",
+    "SS-28",
+    "SS-29",
+    "SS-30",
+    "SS-31",
+    "SS-32",
+    "SS-33",
+    "SS-34",
+    "SS-35",
+    "SS-36",
+    "SS-37",
+    "SS-38",
+    "SS-39",
+    "SS-40",
+    "SS-41",
+    "SS-42",
+    "SS-43",
+    "SS-44",
+    "SS-45",
+    "SS-46",
+    "SS-47",
+    "SS-48",
+    "SS-49",
+    "SS-50",
+    "SS-51",
+    "SS-52",
+    "SS-53",
+    "SS-54",
+    "SS-60"
+  ],
+  "missing_sharia_standards": [
+    "SS-55",
+    "SS-56",
+    "SS-57",
+    "SS-58",
+    "SS-59"
+  ],
+  "missing_sharia_standard_count": 5,
+  "blocked_source_count": 5,
+  "blocked_source_standards": [
+    "SS-55",
+    "SS-56",
+    "SS-57",
+    "SS-58",
+    "SS-59"
+  ],
+  "blocked_source_details": [
+    {
+      "standard_number": "SS-55",
+      "status": "missing_full_official_or_licensed_text",
+      "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission."
+    },
+    {
+      "standard_number": "SS-56",
+      "status": "missing_full_official_or_licensed_text",
+      "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission."
+    },
+    {
+      "standard_number": "SS-57",
+      "status": "missing_full_official_or_licensed_text",
+      "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission."
+    },
+    {
+      "standard_number": "SS-58",
+      "status": "missing_full_official_or_licensed_text",
+      "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission."
+    },
+    {
+      "standard_number": "SS-59",
+      "status": "missing_full_official_or_licensed_text",
+      "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission."
+    }
+  ],
+  "coverage_ratio": 0.9166666666666666,
+  "language_counts": {
+    "ar": 5,
+    "en": 55
+  },
+  "currentness_counts": {
+    "current": 60
+  },
+  "review_status_counts": {
+    "machine_checked": 60
+  },
+  "superseded_sharia_standards": [],
+  "unverified_currentness_sharia_standards": [],
+  "supersession_map": {},
+  "bilingual_sharia_standard_count": 5,
+  "bilingual_sharia_standards": [
+    "SS-02",
+    "SS-04",
+    "SS-09",
+    "SS-11",
+    "SS-15"
+  ],
+  "missing_bilingual_sharia_standards": [
+    "SS-01",
+    "SS-03",
+    "SS-05",
+    "SS-06",
+    "SS-07",
+    "SS-08",
+    "SS-10",
+    "SS-12",
+    "SS-13",
+    "SS-14",
+    "SS-16",
+    "SS-17",
+    "SS-18",
+    "SS-19",
+    "SS-20",
+    "SS-21",
+    "SS-22",
+    "SS-23",
+    "SS-24",
+    "SS-25",
+    "SS-26",
+    "SS-27",
+    "SS-28",
+    "SS-29",
+    "SS-30",
+    "SS-31",
+    "SS-32",
+    "SS-33",
+    "SS-34",
+    "SS-35",
+    "SS-36",
+    "SS-37",
+    "SS-38",
+    "SS-39",
+    "SS-40",
+    "SS-41",
+    "SS-42",
+    "SS-43",
+    "SS-44",
+    "SS-45",
+    "SS-46",
+    "SS-47",
+    "SS-48",
+    "SS-49",
+    "SS-50",
+    "SS-51",
+    "SS-52",
+    "SS-53",
+    "SS-54",
+    "SS-60"
+  ],
+  "hard_sharia_ready": false,
+  "release_gate": "fail",
+  "release_gate_fail_count": 60,
+  "status": "partial",
+  "no_go_reasons": [
+    "Sharia standard coverage is partial: 55/60 standards cataloged.",
+    "Missing governed Sharia standards: SS-55, SS-56, SS-57, SS-58, SS-59",
+    "Some cataloged Sharia standards are not bilingual: SS-01, SS-03, SS-05, SS-06, SS-07, SS-08, SS-10, SS-12, SS-13, SS-14...",
+    "Hard-Sharia release gates are incomplete for 60/60 target standards."
+  ]
+}

@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from src.governance.source_catalog import SourceCatalogRecord
+from src.governance.source_catalog import MetadataStatus, SourceCatalogRecord
 
 
 def _join_values(values: Sequence[str]) -> str:
@@ -45,6 +46,14 @@ class ParentChildChunkMetadataBuilder:
         section_parts = [part.strip() for part in section_path if part and part.strip()]
         parent_chunk_id = self.parent_chunk_id(section_parts)
         tags = list(self.operation_tags) + list(operation_tags)
+        # Resolve contract_family from standard_number using query_intent hints
+        from src.models.query_intent import AAOIFI_HINTS_BY_CONTRACT
+        contract_family = "UNKNOWN"
+        for classification, standards in AAOIFI_HINTS_BY_CONTRACT.items():
+            if self.standard_number in standards:
+                contract_family = classification.value
+                break
+                
         base.update(
             {
                 "document_version_id": self.document_version_id,
@@ -56,7 +65,8 @@ class ParentChildChunkMetadataBuilder:
                 "operation_tags": _join_values(tags),
                 "embedding_model": self.embedding_model,
                 "embedding_normalized": self.embedding_normalized,
-                "metadata_status": "cataloged" if self.catalog_record else "quarantined_missing_catalog",
+                "metadata_status": self._metadata_status().value,
+                "contract_family": contract_family,
             }
         )
         return base
@@ -84,3 +94,10 @@ class ParentChildChunkMetadataBuilder:
             "review_status": "unreviewed",
             "superseded_by": "",
         }
+
+    def _metadata_status(self) -> MetadataStatus:
+        if not self.catalog_record:
+            return MetadataStatus.QUARANTINED_MISSING_CATALOG
+        if self.catalog_record.is_answer_admissible:
+            return MetadataStatus.CATALOGED
+        return MetadataStatus.CATALOGED_NOT_ANSWER_ADMISSIBLE

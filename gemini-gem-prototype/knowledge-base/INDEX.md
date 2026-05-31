@@ -63,7 +63,7 @@ The Accounting and Auditing Organization for Islamic Financial Institutions (AAO
 
 ### Standard 11
 
-- 🇬🇧 English: [AAOIFI_Standard_11_en_AAOIFI_Shari'ah_Standard_No._11.md](./AAOIFI_Standard_11_en_AAOIFI_Shari'ah_Standard_No._11.md)
+- 🇬🇧 English: [AAOIFI_Standard_11_en_AAOIFI_Sharia_Standard_No._11_Istisnaa_and_Parallel_Istisnaa.md](./AAOIFI_Standard_11_en_AAOIFI_Sharia_Standard_No._11_Istisnaa_and_Parallel_Istisnaa.md)
 - 🇸🇦 Arabic: [AAOIFI_Standard_11_ar_AAOIFI_Shari'ah_Standard_No._11.md](./AAOIFI_Standard_11_ar_AAOIFI_Shari'ah_Standard_No._11.md)
 
 ### Standard 12

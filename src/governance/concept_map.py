@@ -122,6 +122,11 @@ def default_concept_map() -> ConceptMap:
     delay_plain_ar = "\u062a\u0627\u062e\u064a\u0631"
     riba_ar = "\u0631\u0628\u0627"
     interest_ar = "\u0641\u0648\u0627\u0626\u062f"
+    istisna_ar = "\u0627\u0633\u062a\u0635\u0646\u0627\u0639"
+    supply_ar = "\u062a\u0648\u0631\u064a\u062f"
+    contractor_ar = "\u0645\u0642\u0627\u0648\u0644"
+    currency_ar = "\u0635\u0631\u0641"
+    guarantee_ar = "\u0636\u0645\u0627\u0646"
 
     return ConceptMap(
         [
@@ -172,6 +177,43 @@ def default_concept_map() -> ConceptMap:
                 candidate_source_families=[SourceFamily.SHARIA_STANDARD, SourceFamily.FAS],
                 required_facts=["penalty_beneficiary", "actual_collection_cost", "contract_family"],
                 ambiguity_warnings=["Late-payment clauses need Shariah-source evidence and beneficiary facts."],
+            ),
+            ConceptEntry(
+                concept_id="istisna_supply",
+                contract_family=ContractFamily.ISTISNA,
+                labels_en=["istisna", "construction contract", "manufacturing contract", "supply contract"],
+                labels_ar=[istisna_ar, supply_ar, "\u0645\u0642\u0627\u0648\u0644\u0629"],
+                transliterations=["istisna", "istisna'a", "muqawala"],
+                colloquial_ar=[contractor_ar, "\u0645\u0635\u0646\u0639", "\u062a\u0635\u0646\u064a\u0639"],
+                synonyms=["contractor delay", "manufactured supply", "deferred delivery"],
+                candidate_source_families=[SourceFamily.SHARIA_STANDARD],
+                required_facts=["manufactured_or_generic_goods", "payment_timing", "delivery_timing"],
+                ambiguity_warnings=["Supply wording can map to istisna, salam, or a prohibited debt-for-debt structure."],
+                expected_standards=["SS-11"],
+            ),
+            ConceptEntry(
+                concept_id="currency_sarf",
+                contract_family=ContractFamily.UNKNOWN,
+                labels_en=["currency exchange", "foreign exchange", "sarf"],
+                labels_ar=[currency_ar, "\u0639\u0645\u0644\u0629", "\u0635\u0631\u0627\u0641\u0629"],
+                transliterations=["sarf"],
+                synonyms=["fx", "spot exchange", "deferred settlement"],
+                candidate_source_families=[SourceFamily.SHARIA_STANDARD],
+                required_facts=["currencies", "settlement_timing", "possession_or_qabd"],
+                ambiguity_warnings=["Currency exchange questions require same-session settlement evidence."],
+                expected_standards=["SS-01"],
+            ),
+            ConceptEntry(
+                concept_id="guarantee_kafalah",
+                contract_family=ContractFamily.UNKNOWN,
+                labels_en=["guarantee", "letter of guarantee", "kafalah"],
+                labels_ar=[guarantee_ar, "\u0643\u0641\u0627\u0644\u0629", "\u062e\u0637\u0627\u0628 \u0636\u0645\u0627\u0646"],
+                transliterations=["kafalah", "kafala"],
+                synonyms=["guarantee fee", "amount and duration fee", "administrative cost"],
+                candidate_source_families=[SourceFamily.SHARIA_STANDARD],
+                required_facts=["fee_basis", "guarantee_amount", "actual_administrative_cost"],
+                ambiguity_warnings=["Guarantee fees need fee-basis facts and Shariah-source evidence."],
+                expected_standards=["SS-05"],
             ),
             ConceptEntry(
                 concept_id="riba",

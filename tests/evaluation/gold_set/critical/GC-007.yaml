@@ -1,0 +1,17 @@
+case_id: GC-007
+query_ar: هل يجوز زيادة الإيجار في المشاركة المتناقصة؟
+query_en: Is it permissible to increase the rent in Diminishing Musharaka?
+contract_family: MUSHARAKA
+expected_standards:
+- SS-12
+- SS-09
+expected_ruling: PERMISSIBLE
+forbidden_citations:
+- SS-19
+clarification_required: false
+risk_class:
+- R2
+severity: CRITICAL
+authority: Sharia Scholar
+notes: Permissible if tied to a known benchmark at the time of renewing the lease
+  period.
