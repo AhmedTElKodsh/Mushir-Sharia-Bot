@@ -57,6 +57,7 @@ data/runtime/logs/
 *.log
 uvicorn-*.out.log
 uvicorn-*.err.log
+router_out.txt
 
 # Data
 data/*
@@ -81,6 +82,14 @@ chroma_db_multilingual/
 chroma_db_multilingual_governed_*/
 chroma/
 *.chroma
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated review/evaluation scratch output
+_bmad-output/diff_*.txt
+_bmad-output/implementation-artifacts/live-hard-case-*.json
+tests/evaluation/reports/ece_report_*.json
 
 # pytest
 .pytest_cache/
