@@ -1,6 +1,7 @@
 # Requirements Document: Mushir AAOIFI Standards Assistant
 
-**Last reformulated:** 2026-05-19; current-state refresh: 2026-05-31
+**Last reformulated:** 2026-05-19; current-state refresh: 2026-06-01
+**Current app version:** V1.5 (`1.5.0`)
 **Status:** Maintained planning source of truth
 **Scope:** Planning only. This document describes the required product logic; it does not imply runtime code changes have already been made.
 
@@ -31,6 +32,8 @@ The current codebase already includes more than the older L0-L4 planning languag
 The main planning gap is not "add RAG." The main planning gap is to make the semantic and source-governance contract durable, testable, and not trapped in handwritten code heuristics.
 
 Recent runtime alignment: GC-001 now clarifies ambiguous construction delay penalties before verdict, Istisna/Muqawala penalty routing targets `SS-05` plus `SS-11`, `SS-10` is forbidden for that route unless Salam is implicated, and organized banking tawarruq routes to `SS-30`. These safeguards are part of the current release gate and must remain covered by tests.
+
+V1.5 adds explicit app versioning and a guarded Egypt bank evidence-corpus export. The product requirement remains unchanged: machine-proposed institution mappings are review candidates only and cannot become runtime answer authority until accepted through scholar review and source-governance gates.
 
 ## Official Source Constraint
 

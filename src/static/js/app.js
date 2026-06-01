@@ -73,10 +73,10 @@ var I18N = {
     tooManyRequests: "Too many requests. Please wait a moment and try again.",
     streamError: "The answer service could not complete the request. Please try again later.",
     requestId: " Request ID: {requestId}.",
-    statusCompliant: "Compliant",
-    statusNonCompliant: "Non-compliant",
-    statusPartiallyCompliant: "Partially compliant",
-    statusInsufficientData: "Needs more information",
+    statusCompliant: "Supported by retrieved evidence",
+    statusNonCompliant: "Contradicted by retrieved evidence",
+    statusPartiallyCompliant: "Requires scholar review",
+    statusInsufficientData: "Insufficient source evidence",
     statusClarificationNeeded: "Needs clarification",
     statusFinished: "Finished",
     composing: "Mushir is composing...",
@@ -98,7 +98,7 @@ var I18N = {
     chatLabel: "المحادثة الحالية",
     messagesLabel: "رسائل المحادثة",
     formLabel: "نموذج إدخال المحادثة",
-    welcome: "اسأل عن الالتزام الشرعي في المعاملات المالية بالعربية أو الإنجليزية.",
+    welcome: "اسأل عن أدلة أيوفي لمعاملة مالية بالعربية أو الإنجليزية.",
     welcomeKicker: "مساعد مستند إلى معايير أيوفي",
     placeholder: "اسأل عن معاملة مالية إسلامية...",
     composerHint: "أضف نوع المعاملة، والأطراف، وشروط السداد، والنقطة التي تريد فحصها بدقة.",
@@ -117,10 +117,10 @@ var I18N = {
     tooManyRequests: "طلبات كثيرة جدًا. انتظر قليلًا ثم حاول مرة أخرى.",
     streamError: "تعذر على خدمة الإجابة إكمال الطلب. يرجى المحاولة لاحقًا.",
     requestId: " رقم الطلب: {requestId}.",
-    statusCompliant: "متوافق",
-    statusNonCompliant: "غير متوافق",
-    statusPartiallyCompliant: "متوافق جزئيًا",
-    statusInsufficientData: "يحتاج إلى معلومات إضافية",
+    statusCompliant: "مدعوم بالأدلة المسترجعة",
+    statusNonCompliant: "تعارضه الأدلة المسترجعة",
+    statusPartiallyCompliant: "يتطلب مراجعة عالم شرعي",
+    statusInsufficientData: "أدلة المصدر غير كافية",
     statusClarificationNeeded: "يحتاج إلى توضيح",
     statusFinished: "اكتمل",
     composing: "مشير يكتب الإجابة...",
@@ -266,11 +266,12 @@ async function submitQuery() {
       },
 
       onToken: function(data) {
-        _assistantContent += data.text || "";
+        var displayText = stripAnswerStatusPrefix(data.text || "");
+        _assistantContent += displayText;
         if (!firstTokenReceived) {
           removeTypingIndicator();
           currentAssistantNode = addMessage("assistant", "");
-          renderTypewriter(data.text || "", currentAssistantNode);
+          renderTypewriter(displayText, currentAssistantNode);
           firstTokenReceived = true;
         } else if (currentAssistantNode) {
           extendTypewriterBuffer(_assistantContent);
@@ -416,6 +417,13 @@ async function formatHttpError(response, requestId) {
 function formatSafeStreamError(data, fallbackRequestId) {
   var message = (data && data.message) || t("streamError");
   return message + formatRequestIdSuffix((data && data.request_id) || fallbackRequestId);
+}
+
+function stripAnswerStatusPrefix(text) {
+  return String(text || "").replace(
+    /^(?:COMPLIANT|NON_COMPLIANT|NON-COMPLIANT|PARTIALLY_COMPLIANT|CONDITIONALLY COMPLIANT|SUPPORTED_BY_RETRIEVED_EVIDENCE|CONTRADICTED_BY_RETRIEVED_EVIDENCE|REQUIRES_SCHOLAR_REVIEW|INSUFFICIENT_DATA|CLARIFICATION_NEEDED)\s*:\s*/i,
+    ""
+  );
 }
 
 function formatRequestIdSuffix(requestId) {

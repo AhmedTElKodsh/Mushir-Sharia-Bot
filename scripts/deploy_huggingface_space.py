@@ -49,7 +49,6 @@ IGNORE_PATTERNS = [
     "superpowers/*",
     "_bmad/*",
     "_bmad-output/*",
-    "gemini-gem-prototype/**/*.pdf",
 ]
 
 
@@ -61,7 +60,6 @@ ALLOW_PATTERNS = [
     "config/**",
     "scripts/report_sharia_corpus_coverage.py",
     "data/source_registry/**",
-    "gemini-gem-prototype/knowledge-base/**",
     "chroma_db_multilingual/**",
 ]
 
@@ -74,7 +72,6 @@ UPLOAD_PATHS = [
     Path("config"),
     Path("scripts") / "report_sharia_corpus_coverage.py",
     Path("data") / "source_registry",
-    Path("gemini-gem-prototype") / "knowledge-base",
     Path("chroma_db_multilingual"),
 ]
 
@@ -86,7 +83,9 @@ SPACE_VARIABLES = {
     "OPENROUTER_MAX_TOKENS": "1024",
     "EMBED_MODEL": "sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
     "REQUIRE_ARABIC_RETRIEVAL": "true",
-    "CORPUS_DIR": "/app/gemini-gem-prototype/knowledge-base",
+    "REQUIRE_GOVERNED_SOURCE_METADATA": "true",
+    "APP_ENV": "public-demo",
+    "RELEASE_TIER": "public-demo",
     "SESSION_STORE_TYPE": "memory",
     "RATE_LIMIT_STORE_TYPE": "memory",
     "CACHE_STORE_TYPE": "memory",
@@ -99,6 +98,7 @@ SPACE_VARIABLES = {
 SECRET_ENV_KEYS = [
     "OPENROUTER_API_KEY",
     "QDRANT_API_KEY",
+    "AUTH_TOKEN",
     "SUPABASE_SERVICE_ROLE_KEY",
     "DATABASE_URL",
     "AUDIT_DATABASE_URL",
@@ -115,7 +115,6 @@ OPTIONAL_VARIABLE_ENV_KEYS = [
     "SUPABASE_STORAGE_BUCKET",
     "APP_ENV",
     "CORS_ORIGINS",
-    "AUTH_TOKEN",
 ]
 
 

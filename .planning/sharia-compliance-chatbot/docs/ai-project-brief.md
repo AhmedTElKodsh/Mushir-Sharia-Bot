@@ -1,6 +1,7 @@
 # Mushir AI Project Brief
 
-Last refreshed: 2026-05-31
+Last refreshed: 2026-06-01
+Current app version: V1.5 (`1.5.0`)
 
 This document is written for AI agents, maintainers, and reviewers who need to understand the Mushir codebase quickly and safely. It favors explicit system contracts over marketing language.
 
@@ -10,13 +11,14 @@ Mushir is a source-governed Islamic finance research assistant. The current runt
 
 Mushir is not a fatwa engine. It must not provide binding Sharia rulings, legal advice, or financial advice. It is an informational assistant that works only inside its retrieved, cataloged evidence boundary.
 
-The active delivery gate is L5 quality and release readiness. The future L6 direction is a rules-first Sharia commercial-process assessment assistant backed by governed sources, structured transaction facts, executable rules, public institution evidence, and scholar-reviewed gold cases. L6 scaffolding exists, but the full evaluator is not complete. As of 2026-05-31, construction delay-penalty routing and the evaluation fixtures have been tightened: GC-001 is clarification-first, istisna/muqawala penalty routing targets `SS-05` plus `SS-11`, `SS-10` is forbidden for that route unless Salam is implicated, and organized banking tawarruq routes to `SS-30`.
+The active delivery gate is L5 quality and release readiness. V1.5 adds explicit app versioning and a guarded Egypt institution evidence export path; it does not make scraped labels authoritative. The future L6 direction is a rules-first Sharia commercial-process assessment assistant backed by governed sources, structured transaction facts, executable rules, public institution evidence, and scholar-reviewed gold cases. L6 scaffolding exists, but the full evaluator is not complete. As of 2026-05-31, construction delay-penalty routing and the evaluation fixtures have been tightened: GC-001 is clarification-first, istisna/muqawala penalty routing targets `SS-05` plus `SS-11`, `SS-10` is forbidden for that route unless Salam is implicated, and organized banking tawarruq routes to `SS-30`.
 
 ## Current Truth Table
 
 | Area | Current truth |
 | --- | --- |
 | Product category | Source-governed AAOIFI RAG assistant with non-binding answers |
+| App version | V1.5 / `1.5.0` |
 | Runtime | FastAPI app with `/chat`, REST API, SSE API, health, readiness, and metrics |
 | UI | Static browser chat under `src/static/` |
 | Retrieval | Multilingual dense retrieval over AAOIFI chunks, defaulting to Chroma |
@@ -26,9 +28,9 @@ The active delivery gate is L5 quality and release readiness. The future L6 dire
 | Language support | English, Arabic, and mixed-language questions |
 | Safety posture | Citation-gated, fail-closed, no binding rulings |
 | Current roadmap | L5 readiness now, L6 source-governed rules-first evaluator later |
-| Latest verification | `619 passed, 48 skipped, 2 warnings` on 2026-05-31 full local suite |
-| Institution corpus | L6 evidence workstream with registry, crawler, machine mapping, and scholar-review exports |
-| Broad live scraping | Not approved until crawl-first pilot gates pass |
+| Latest verification | V1.5 targeted slice `27 passed` for institution DB/pilot plus API/static readiness tests; previous full local suite `619 passed, 48 skipped, 2 warnings` on 2026-05-31 |
+| Institution corpus | V1.5 loaded 2,154 baseline institutions and exported 69 bank operation/mapping rows for scholar review |
+| Broad live scraping | Bank evidence slice exists; non-bank sectors still require official website discovery before product crawling |
 | Documentation entrypoints | `README.md`, `project-context.md`, `.planning/sharia-compliance-chatbot/docs/index.md`, this file |
 
 ## Product Boundary
@@ -74,7 +76,7 @@ Mushir must not:
 | `_bmad-output/` | BMAD planning and implementation artifacts |
 | `data/source_registry/` | Tracked source-category and regulator-source planning seeds |
 | `data/fixtures/l6_scrape/` | Small fixture inputs for L6 scrape tests |
-| `artifacts/l6_scrape/` | Runtime scrape artifacts; do not treat as normal source-control content |
+| `data/runtime/artifacts/l6_scrape/` | Runtime scrape artifacts; do not treat as normal source-control content |
 | `chroma_db_multilingual/` | Local multilingual Chroma index used by the demo runtime |
 
 ## Runtime Architecture

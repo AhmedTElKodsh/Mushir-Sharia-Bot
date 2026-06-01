@@ -2,7 +2,8 @@
 
 This file is the working context for AI agents and developers making changes in this repository. Keep changes grounded in the current codebase, not in older roadmap language.
 
-Last refreshed: 2026-05-31
+Last refreshed: 2026-06-01
+Current app version: V1.5 (`1.5.0`)
 
 ## Product Purpose
 
@@ -26,15 +27,16 @@ As of 2026-05-25, the hard-Sharia evidence target is source-tracked as at least 
 
 The 2026-05-19 planning rethink reframes Mushir as a controlled standards workflow rather than a generic RAG bot. The intended architecture is source catalog -> structured ingestion -> bilingual concept normalization -> intent classification -> clarification -> source-family routing -> metadata-aware retrieval -> citation-gated answer -> evaluation. Downloaded markdown is derived content; source currentness, supersession, source family, and citation traceability must become answer-admissibility gates.
 
-The spec-level `deep-research-report.md` was reviewed on 2026-05-19 and promoted into planning only where it creates useful contracts: first-release FAS router seed, supersession seed graph, parent/child chunking, source/retrieval/answer trace records, uncertainty classes, and feedback/admin review. Treat specific library/model/tool names from the report as spike candidates until they are measured against Mushir's AAOIFI gold set.
+The spec-level `.planning/sharia-compliance-chatbot/docs/research/l6-rules-first-evaluator-research.md` was reviewed on 2026-05-19 and promoted into planning only where it creates useful contracts: first-release FAS router seed, supersession seed graph, parent/child chunking, source/retrieval/answer trace records, uncertainty classes, and feedback/admin review. Treat specific library/model/tool names from the report as spike candidates until they are measured against Mushir's AAOIFI gold set.
 
-The 2026-05-20 Egypt financial institutions workstream is a public-source evidence-corpus plan for post-L5/L6 evaluation. It covers CBE banks, CBE payment-service sources, capital-market institutions, insurance and takaful entities, mortgage finance, leasing, consumer finance, microfinance/SME finance, fintech licensees, Islamic funds, sukuk sources, and FRA model contracts. Treat the refresh markdown, workbook, and presentation as baseline inputs only. Before broad scraping, revalidate entities against current regulator sources, use bounded discovery, respect access controls, record missing details explicitly, and keep machine-proposed AAOIFI labels separate from scholar-reviewed ground truth.
+As of V1.5 on 2026-06-01, the Egypt financial institutions workstream has moved from plan-only to a guarded evidence-corpus build. The registry completion run loaded 2,154 baseline institutions: 36 banks, 797 capital-market entities, 996 insurance entities, and 325 non-bank finance entities. Live official-registry revalidation recorded CBE upstream security blocking and FRA CAPTCHA blocking, so those regulator pages remain gap-recorded rather than bypassed. A bounded bank evidence scrape discovered 32 bank website candidates, scraped 14, failed/blocked 18, fetched 73 pages, extracted 69 operation records, and exported 69 machine-proposed AAOIFI mapping rows for scholar review. Non-bank sectors still require official website discovery before product crawling. Machine-proposed labels remain non-authoritative and are not runtime-eligible without scholar review.
 
 ## Current Architecture
 
 The main runtime flow is:
 
 1. `src/api/main.py` creates the FastAPI app, middleware, health/readiness endpoints, metrics, static `/chat` UI, and `/api/v1` routes.
+   The app reports version `1.5.0` / `V1.5` through FastAPI metadata, `/api`, `/health`, `/ready`, Python package metadata, package metadata, and the chat header.
 2. `src/api/routes.py` validates requests, applies rate limiting, maps errors to safe user-facing messages, and calls `ApplicationService`.
 3. `src/chatbot/application_service.py` is the central answer orchestrator.
 4. `src/chatbot/commercial_assessment.py` extracts transaction scenarios, missing facts, source-family routes, and first-wave rule-review metadata.
@@ -162,6 +164,16 @@ curl.exe http://127.0.0.1:8000/health
 curl.exe http://127.0.0.1:8000/ready
 ```
 
+V1.5 Egypt institution evidence corpus commands:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_l6_institution_pilot.py --mode official-registry-completion --today 2026-06-01 --timeout-seconds 30
+.\.venv\Scripts\python.exe scripts\run_l6_institution_pilot.py --mode live-regulator-revalidation --today 2026-06-01 --timeout-seconds 30 --delay-seconds 0.25
+.\.venv\Scripts\python.exe scripts\run_l6_institution_pilot.py --mode bank-evidence-scrape --today 2026-06-01 --timeout-seconds 20 --delay-seconds 0.25 --max-targets 36 --max-pages-per-target 6
+```
+
+The V1.5 bank evidence output is under `data/runtime/artifacts/l6_scrape/full_scrape/2026-06-01/`; it contains `bank_scrape_results.csv`, `engine_assessment_rows.csv`, `scholar_review_list_bilingual.csv`, `chunk_ready_spans.jsonl`, and `manifest.json`. Treat these as review inputs, not final Sharia rulings.
+
 Smoke bilingual answer behavior:
 
 ```powershell
@@ -225,7 +237,7 @@ Scholar-review persistence:
 - `.planning/sharia-compliance-chatbot/docs/client-source-governed-aaoifi-roadmap.md`: visual client-facing roadmap for the updated source-governed AAOIFI assistant logic.
 - `.planning/sharia-compliance-chatbot/docs/chatbot-architecture.md`: detailed answer-generation architecture.
 - `.planning/sharia-compliance-chatbot/docs/l5-production-readiness.md`: release/readiness runbook.
-- `.planning/sharia-compliance-chatbot/docs/deep-research-report.md`: research input for the L6 rules-first evaluator direction.
+- `.planning/sharia-compliance-chatbot/docs/research/l6-rules-first-evaluator-research.md`: research input for the L6 rules-first evaluator direction.
 - `.planning/sharia-compliance-chatbot/docs/requirements.md`: maintained source-governed requirements.
 - `.planning/sharia-compliance-chatbot/docs/design.md`: maintained source-governed design.
 - `.planning/sharia-compliance-chatbot/docs/tasks.md`: maintained implementation backlog for source-governed planning slices.
@@ -247,12 +259,12 @@ Scholar-review persistence:
 
 Keep these root folders because tools or runtime paths expect them:
 
-- `src/`, `tests/`, `scripts/`, `config/`, `data/`, `e2e/`: active project source, tests, configuration, data seeds, and end-to-end checks.
+- `src/`, `tests/`, `scripts/`, `data/`, `e2e/`: active project source, tests, data seeds, and end-to-end checks.
 - `.agents`, `.bob`, `.cline`, `.trae`, `.claude`, `.kiro`: agent/tool workspaces intentionally kept for compatibility.
 - `_bmad/` and `_bmad-output/`: BMAD configuration and generated BMAD artifacts; current BMAD config writes to `_bmad-output/`.
 - `gemini-gem-prototype/`: legacy name, active role. It contains the tracked AAOIFI markdown corpus used by `CORPUS_DIR=./gemini-gem-prototype/knowledge-base`.
 - `chroma_db_multilingual/`: ignored local multilingual Chroma index used by the demo runtime.
-- `chroma_db/`: ignored older/local Chroma index; keep until the active retrieval index history is fully reconciled.
+- `_legacy/runtime-indexes/`: old local Chroma indexes retained outside the exposed project root.
 - `.venv/` and `node_modules/`: local dependency installs, ignored by git.
 - `superpowers/`, `.agent`, `.codex`, `.gsd`, `.planning`: local agent/planning/tooling context.
 

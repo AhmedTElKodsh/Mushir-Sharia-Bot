@@ -400,7 +400,7 @@ class PublicArtifactFetcher:
 
 
 class LocalArtifactStore:
-    """Persist raw bytes, extracted text, and metadata under artifacts/l6_scrape."""
+    """Persist raw bytes, extracted text, and metadata under data/runtime/artifacts/l6_scrape."""
 
     def __init__(self, root_dir: str | Path) -> None:
         self._root_dir = Path(root_dir)

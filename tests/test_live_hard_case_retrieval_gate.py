@@ -118,3 +118,34 @@ def test_live_hard_case_gate_fails_when_only_wrong_sharia_standard_is_retrieved(
     assert "missing expected standards: SS-05, SS-11" in report["results"][0]["failures"]
     assert report["results"][0]["matched_standards"] == []
     assert report["results"][0]["answer_status"] == "insufficient_data"
+
+
+def test_live_hard_case_gate_writes_failure_report_when_pipeline_initialization_fails(tmp_path):
+    from scripts.run_live_hard_case_retrieval_gate import run_live_hard_case_retrieval_gate
+
+    cases = tmp_path / "cases.yaml"
+    cases.write_text(
+        """
+- case_id: t1
+  query: "Is a contractor delay penalty valid in istisna?"
+  expected_behavior: "retrieval"
+  expected_source_family: "sharia_standard"
+  expected_candidate_standards: ["SS-05", "SS-11"]
+""".strip(),
+        encoding="utf-8",
+    )
+    output = tmp_path / "report.json"
+
+    def failing_pipeline_factory():
+        raise RuntimeError("Qdrant unavailable")
+
+    report = run_live_hard_case_retrieval_gate(
+        cases_path=cases,
+        output=output,
+        pipeline_factory=failing_pipeline_factory,
+    )
+
+    assert report["passed"] is False
+    assert report["application_answer_used"] is False
+    assert report["infrastructure_failure"]["stage"] == "pipeline_initialization"
+    assert output.exists()

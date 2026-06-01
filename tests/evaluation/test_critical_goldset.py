@@ -18,6 +18,7 @@ import pytest
 
 from fixtures.citation_detector import ForbiddenCitationDetector
 from fixtures.scholar_review import ScholarReviewQueue
+from fixtures.pipeline import build_pipeline_under_test
 
 
 @pytest.mark.critical_goldset
@@ -134,3 +135,22 @@ def _scripted_response_for(case: dict) -> dict:
         "answer_text": f"Mock answer for {case['case_id']}",
         "cited_standards": case.get("expected_standards", []),
     }
+
+
+def test_pipeline_fixture_does_not_backfill_scripted_ruling_when_runtime_differs():
+    pipeline = build_pipeline_under_test()
+    try:
+        pipeline.set_llm_response(
+            {
+                "ruling": "PERMISSIBLE",
+                "confidence": 0.91,
+                "answer_text": "scripted value must not be copied into result",
+                "cited_standards": [],
+            }
+        )
+        result = pipeline.run("What is an unrelated undefined concept?", language="en")
+    finally:
+        pipeline.teardown()
+
+    assert result["ruling"] != "PERMISSIBLE"
+    assert result.get("cited_standards", []) == []

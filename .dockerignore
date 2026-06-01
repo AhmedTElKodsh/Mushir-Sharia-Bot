@@ -20,6 +20,10 @@ _bmad-custom-backup-temp
 
 chroma_db
 data
+!data/
+data/*
+!data/source_registry/
+!data/source_registry/**
 logs
 gemini-gem-prototype/**/*.pdf
 

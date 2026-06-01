@@ -106,7 +106,7 @@ def check_space_status(space_id: str = "AElKodsh/mushir-sharia-bot"):
         print("   ❌ Vector database not found")
     
     # Check corpus
-    corpus_dir = PROJECT_ROOT / "gemini-gem-prototype" / "knowledge-base"
+    corpus_dir = PROJECT_ROOT / "data" / "aaoifi_md"
     if corpus_dir.exists():
         md_files = list(corpus_dir.glob("*.md"))
         print(f"   ✅ Corpus exists ({len(md_files)} markdown files)")

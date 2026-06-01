@@ -30,6 +30,8 @@ from scripts.report_sharia_corpus_coverage import (
 
 INFRA_FALLBACK_MESSAGE = "configured backend unavailable; falling back to local runtime"
 DEFAULT_SOURCE_CATALOG_FILE = "data/source_registry/aaoifi-source-catalog.yaml"
+APP_VERSION = "1.5.0"
+APP_VERSION_LABEL = "V1.5"
 
 
 def parse_cors_origins(value: str) -> List[str]:
@@ -59,7 +61,9 @@ async def lifespan(app: FastAPI):
     app.state.retriever_ready = retriever is not None
     app.state.application_service = ApplicationService(
         retriever=retriever,
+        llm_client=_build_llm_client(),
         clarification_service=ClarificationEngine(),
+        session_store=app.state.session_manager,
         audit_store=app.state.audit_store,
         cache_store=app.state.cache_store,
         scholar_review_queue_store=app.state.scholar_review_queue_store,
@@ -80,6 +84,22 @@ def _build_session_manager():
             print(_safe_fallback_message("Redis session store"))
             return SessionManager(expiry_minutes=int(os.getenv("SESSION_EXPIRY_MINUTES", "30")))
     return SessionManager(expiry_minutes=int(os.getenv("SESSION_EXPIRY_MINUTES", "30")))
+
+
+def _build_llm_client():
+    if os.getenv("MUSHIR_MOCK_LLM", "").strip().lower() not in {"1", "true", "yes", "on"}:
+        return None
+
+    class StaticEvidenceLLM:
+        model_name = "static-e2e-mock"
+
+        def generate(self, prompt: str, system_prompt: str | None = None) -> str:
+            return (
+                "SUPPORTED_BY_RETRIEVED_EVIDENCE: This response is grounded in the "
+                "retrieved AAOIFI evidence for this local smoke test. [SS-08 §1]"
+            )
+
+    return StaticEvidenceLLM()
 
 
 def _build_rate_limiter():
@@ -147,7 +167,7 @@ def _build_scholar_review_queue_store():
 
 
 def _infrastructure_status(app: FastAPI):
-    return {
+    status = {
         "vector_store": os.getenv("VECTOR_DB_TYPE", "chroma").lower(),
         "retriever_ready": bool(getattr(app.state, "retriever_ready", False)),
         "session_store": type(app.state.session_manager).__name__,
@@ -155,6 +175,34 @@ def _infrastructure_status(app: FastAPI):
         "audit_store": type(app.state.audit_store).__name__,
         "cache_store": type(app.state.cache_store).__name__,
     }
+    retriever = getattr(app.state, "application_service", None)
+    retriever = getattr(retriever, "retriever", None)
+    vector_store = getattr(retriever, "vector_store", None)
+    if status["vector_store"] == "qdrant":
+        qdrant_status = _qdrant_readiness_status(vector_store)
+        status["qdrant"] = qdrant_status
+    return status
+
+
+def _qdrant_readiness_status(vector_store: Any) -> Dict[str, Any]:
+    if vector_store is None or not hasattr(vector_store, "readiness_status"):
+        return {
+            "collection_populated": False,
+            "governed_metadata_ready": False,
+            "bilingual_coverage_ready": False,
+            "retrieval_smoke_ready": False,
+            "error": "Qdrant vector store readiness is unavailable.",
+        }
+    try:
+        return vector_store.readiness_status()
+    except Exception:
+        return {
+            "collection_populated": False,
+            "governed_metadata_ready": False,
+            "bilingual_coverage_ready": False,
+            "retrieval_smoke_ready": False,
+            "error": "Qdrant vector store readiness check failed.",
+        }
 
 
 def _safe_fallback_message(component: str) -> str:
@@ -163,32 +211,108 @@ def _safe_fallback_message(component: str) -> str:
 
 def _readiness_status(app: FastAPI) -> Dict[str, Any]:
     level = os.getenv("APP_ENV", "dev").strip().lower() or "dev"
+    release_tier = (
+        os.getenv("RELEASE_TIER", "")
+        .strip()
+        .lower()
+        .replace("_", "-")
+        .replace(" ", "-")
+    )
+    tier_order = {
+        "local-dev": 0,
+        "dev": 0,
+        "development": 0,
+        "public-demo": 1,
+        "controlled-beta": 2,
+        "production-pilot": 3,
+        "production": 3,
+        "hard-sharia-ready": 4,
+    }
+    effective_tier = release_tier or ("production-pilot" if level == "production" else "local-dev")
+    if effective_tier not in tier_order:
+        effective_tier = "production-pilot" if level == "production" else "public-demo"
+    if level == "production" and tier_order[effective_tier] < tier_order["production-pilot"]:
+        effective_tier = "production-pilot"
     infrastructure = app.state.infrastructure
     sharia_corpus = _sharia_corpus_coverage_status()
+    auth_token = os.getenv("AUTH_TOKEN", "").strip()
     checks = {
         "retrieval_configured": infrastructure.get("vector_store") in {"chroma", "qdrant"},
         "retriever_ready": bool(infrastructure.get("retriever_ready")),
         "sharia_corpus_complete": sharia_corpus.get("status") == "complete",
         "hard_sharia_ready": sharia_corpus.get("hard_sharia_ready") is True,
         "provider_configured": bool(os.getenv("OPENROUTER_API_KEY")),
-        "auth_configured": bool(os.getenv("AUTH_TOKEN")),
+        "auth_configured": bool(auth_token),
+        "auth_enforced": tier_order[effective_tier] < tier_order["controlled-beta"] or bool(auth_token),
         "durable_session_store": infrastructure.get("session_store") != "SessionManager",
         "durable_rate_limit_store": infrastructure.get("rate_limit_store") != "InMemoryRateLimiter",
         "durable_audit_store": infrastructure.get("audit_store") != "NullAuditStore",
         "durable_cache_store": infrastructure.get("cache_store") != "InMemoryCacheStore",
     }
-    production_requirements = [
+    if infrastructure.get("vector_store") == "qdrant":
+        qdrant = infrastructure.get("qdrant") or {}
+        checks.update(
+            {
+                "qdrant_collection_populated": qdrant.get("collection_populated") is True,
+                "qdrant_governed_metadata_ready": qdrant.get("governed_metadata_ready") is True,
+                "qdrant_bilingual_coverage_ready": qdrant.get("bilingual_coverage_ready") is True,
+                "qdrant_retrieval_smoke_ready": qdrant.get("retrieval_smoke_ready") is True,
+            }
+        )
+    runtime_requirements = [
         "retrieval_configured",
         "retriever_ready",
-        "hard_sharia_ready",
         "provider_configured",
-        "auth_configured",
-        "durable_audit_store",
     ]
-    degraded = level == "production" and not all(checks[name] for name in production_requirements)
+    if infrastructure.get("vector_store") == "qdrant":
+        runtime_requirements.extend(
+            [
+                "qdrant_collection_populated",
+                "qdrant_governed_metadata_ready",
+                "qdrant_bilingual_coverage_ready",
+                "qdrant_retrieval_smoke_ready",
+            ]
+        )
+    tier_requirements = {
+        "local-dev": ["retrieval_configured"],
+        "dev": ["retrieval_configured"],
+        "development": ["retrieval_configured"],
+        "public-demo": runtime_requirements,
+        "controlled-beta": runtime_requirements + ["auth_enforced", "durable_audit_store"],
+        "production-pilot": runtime_requirements
+        + [
+            "auth_enforced",
+            "durable_session_store",
+            "durable_rate_limit_store",
+            "durable_audit_store",
+            "durable_cache_store",
+        ],
+        "production": runtime_requirements
+        + [
+            "auth_enforced",
+            "durable_session_store",
+            "durable_rate_limit_store",
+            "durable_audit_store",
+            "durable_cache_store",
+        ],
+        "hard-sharia-ready": runtime_requirements
+        + [
+            "auth_enforced",
+            "durable_session_store",
+            "durable_rate_limit_store",
+            "durable_audit_store",
+            "durable_cache_store",
+            "hard_sharia_ready",
+        ],
+    }
+    required_checks = tier_requirements[effective_tier]
+    degraded = not all(checks[name] for name in required_checks)
     return {
         "status": "degraded" if degraded else "ready",
         "readiness_level": level,
+        "release_tier": release_tier or None,
+        "effective_release_tier": effective_tier,
+        "required_checks": required_checks,
         "checks": checks,
         "evidence_coverage": {"sharia_corpus": sharia_corpus},
     }
@@ -249,7 +373,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Sharia Compliance Chatbot API",
         description="RAG-based Islamic finance compliance analysis using AAOIFI standards",
-        version="1.0.0",
+        version=APP_VERSION,
         lifespan=lifespan,
     )
     app.state.metrics = MetricsRegistry()
@@ -279,7 +403,11 @@ def create_app() -> FastAPI:
         request.state.request_id = request_id
         start = MetricsRegistry.timer()
         try:
-            response = await call_next(request)
+            auth_error = _production_auth_error(request, request_id)
+            if auth_error is not None:
+                response = auth_error
+            else:
+                response = await call_next(request)
         except Exception:
             response = JSONResponse(
                 status_code=500,
@@ -321,7 +449,8 @@ def create_app() -> FastAPI:
         return {
             "status": "ok",
             "name": "Sharia Compliance Chatbot API",
-            "version": "1.0.0",
+            "version": APP_VERSION,
+            "version_label": APP_VERSION_LABEL,
             "endpoints": {
                 "health": "/health",
                 "ready": "/ready",
@@ -339,7 +468,12 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health_check():
-        return {"status": "healthy", "timestamp": datetime.now(UTC).isoformat(), "version": "1.0.0"}
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now(UTC).isoformat(),
+            "version": APP_VERSION,
+            "version_label": APP_VERSION_LABEL,
+        }
 
     @app.get("/ready")
     async def ready_check():
@@ -349,7 +483,12 @@ def create_app() -> FastAPI:
             content={
                 "status": readiness["status"],
                 "readiness_level": readiness["readiness_level"],
+                "release_tier": readiness["release_tier"],
+                "effective_release_tier": readiness["effective_release_tier"],
+                "required_checks": readiness["required_checks"],
                 "timestamp": datetime.now(UTC).isoformat(),
+                "version": APP_VERSION,
+                "version_label": APP_VERSION_LABEL,
                 "infrastructure": app.state.infrastructure,
                 "checks": readiness["checks"],
                 "evidence_coverage": readiness["evidence_coverage"],
@@ -374,6 +513,31 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router, prefix="/api/v1")
     return app
+
+
+def _production_auth_error(request: Request, request_id: str) -> JSONResponse | None:
+    if os.getenv("APP_ENV", "dev").strip().lower() != "production":
+        return None
+    auth_token = os.getenv("AUTH_TOKEN", "").strip()
+    if not request.url.path.startswith("/api/v1"):
+        return None
+    if request.url.path == "/api/v1/compliance/disclaimer":
+        return None
+    if not auth_token:
+        return JSONResponse(
+            status_code=503,
+            content=ErrorResponse.create(
+                "AUTH_MISCONFIGURED",
+                "Production API authentication is not configured",
+                request_id,
+            ),
+        )
+    if request.headers.get("authorization", "") == f"Bearer {auth_token}":
+        return None
+    return JSONResponse(
+        status_code=401,
+        content=ErrorResponse.create("UNAUTHORIZED", "Authentication required", request_id),
+    )
 
 
 def _validation_error_message(exc: RequestValidationError) -> str:

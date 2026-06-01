@@ -7,6 +7,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 from src.config.logging_config import setup_logging
+from src.governance.source_catalog import is_answer_admissible_metadata
 from src.models.chunk import SemanticChunk
 
 logger = setup_logging()
@@ -216,6 +217,77 @@ class QdrantVectorStore:
             "chunk_count": int(info.points_count or 0),
             "backend": "qdrant",
         }
+
+    def readiness_status(self) -> Dict[str, Any]:
+        """Return launch-readiness checks for a Qdrant-backed evidence index."""
+        stats = self.get_collection_stats()
+        sample_points = self._sample_points(
+            limit=int(os.getenv("QDRANT_READY_SAMPLE_LIMIT", "64")),
+            with_vectors=True,
+        )
+        sample_payloads = [
+            self._normalized_payload_metadata(dict(getattr(point, "payload", None) or {}))
+            for point in sample_points
+        ]
+        languages = {
+            str(payload.get("source_language") or payload.get("language") or "").strip().lower()
+            for payload in sample_payloads
+            if payload
+        }
+        answer_admissible = [
+            payload
+            for payload in sample_payloads
+            if is_answer_admissible_metadata(payload, require_governed_metadata=True)
+        ]
+        retrieval_smoke_ready = False
+        sample_vector = self._first_sample_vector(sample_points)
+        if sample_vector:
+            try:
+                self.client.query_points(
+                    collection_name=self.collection_name,
+                    query=sample_vector,
+                    limit=1,
+                )
+                retrieval_smoke_ready = True
+            except Exception:
+                retrieval_smoke_ready = False
+        return {
+            **stats,
+            "collection_populated": stats["chunk_count"] > 0,
+            "sampled_payload_count": len(sample_payloads),
+            "governed_metadata_ready": bool(answer_admissible),
+            "bilingual_coverage_ready": {"ar", "en"}.issubset(languages),
+            "retrieval_smoke_ready": retrieval_smoke_ready,
+            "languages": sorted(language for language in languages if language),
+        }
+
+    def _sample_payloads(self, limit: int = 64) -> List[Dict[str, Any]]:
+        return [
+            self._normalized_payload_metadata(dict(getattr(point, "payload", None) or {}))
+            for point in self._sample_points(limit=limit, with_vectors=False)
+        ]
+
+    def _sample_points(self, limit: int = 64, with_vectors: bool = False) -> List[Any]:
+        try:
+            points, _ = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=limit,
+                with_payload=True,
+                with_vectors=with_vectors,
+            )
+        except Exception:
+            return []
+        return list(points)
+
+    @staticmethod
+    def _first_sample_vector(points: List[Any]) -> Optional[List[float]]:
+        for point in points:
+            vector = getattr(point, "vector", None)
+            if isinstance(vector, dict):
+                vector = next((value for value in vector.values() if isinstance(value, list)), None)
+            if isinstance(vector, list) and vector:
+                return [float(value) for value in vector]
+        return None
 
     @staticmethod
     def _point_id(chunk_id: str) -> str:

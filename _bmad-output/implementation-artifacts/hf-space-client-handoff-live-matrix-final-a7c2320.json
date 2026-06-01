@@ -1,0 +1,169 @@
+{
+  "base": "https://AElKodsh-mushir-sharia-bot.hf.space",
+  "started_at": "2026-05-31T22:14:02.515510+00:00",
+  "health": {
+    "http_status": 200,
+    "body": "{\"status\":\"healthy\",\"timestamp\":\"2026-05-31T22:14:03.527013+00:00\",\"version\":\"1.0.0\"}"
+  },
+  "ready": {
+    "http_status": 200,
+    "body": "{\"status\":\"ready\",\"readiness_level\":\"dev\",\"timestamp\":\"2026-05-31T22:14:04.292341+00:00\",\"infrastructure\":{\"vector_store\":\"qdrant\",\"retriever_ready\":true,\"session_store\":\"SessionManager\",\"rate_limit_store\":\"InMemoryRateLimiter\",\"audit_store\":\"PostgresAuditStore\",\"cache_store\":\"InMemoryCacheStore\"},\"checks\":{\"retrieval_configured\":true,\"retriever_ready\":true,\"sharia_corpus_complete\":false,\"hard_sha"
+  },
+  "cases": [
+    {
+      "id": "normal_en_sukuk_definition",
+      "http_status": 200,
+      "status": "INSUFFICIENT_DATA",
+      "answer_preview": "This is a definition question, not a compliance assessment for a specific transaction.\n\nBased on the retrieved AAOIFI excerpt: (25): Investment in Sukuk, Shares and Similar Instruments Investment in Sukuk, Shares and Similar Instruments 745745Appendix (C) Appendix (C) Definitions Definitions Sukuk Sukuk Investment Sukuk are certificates of equal va",
+      "error": null,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "normal_ar_murabaha_car_bare",
+      "http_status": 200,
+      "status": "CLARIFICATION_NEEDED",
+      "answer_preview": "هل تملك البنك السيارة وقبضها أو تحمل مخاطرها قبل بيعها لك؟",
+      "error": null,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "normal_en_murabaha_complete",
+      "http_status": 200,
+      "status": "INSUFFICIENT_DATA",
+      "answer_preview": "This scenario requires explicit rule evidence and human review before Mushir can provide a safe non-binding assessment.",
+      "error": null,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "mixed_murabaha_bank_never_owns",
+      "http_status": 200,
+      "status": "CLARIFICATION_NEEDED",
+      "answer_preview": "هل تملك البنك السيارة وقبضها أو تحمل مخاطرها قبل بيعها لك؟",
+      "error": null,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "hard_en_sukuk_capital_guarantee",
+      "http_status": 200,
+      "status": "INSUFFICIENT_DATA",
+      "answer_preview": "This scenario requires explicit rule evidence and human review before Mushir can provide a safe non-binding assessment.",
+      "error": null,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "hard_mixed_musharaka_fixed_profit",
+      "http_status": 200,
+      "status": "INSUFFICIENT_DATA",
+      "answer_preview": "Not addressed in retrieved AAOIFI standards.",
+      "error": null,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "hard_ar_istisna_late_delivery_penalty",
+      "http_status": 200,
+      "status": "CLARIFICATION_NEEDED",
+      "answer_preview": "هل الغرامة بسبب تأخر المقاول في التسليم أم بسبب تأخر العميل في السداد؟",
+      "error": null,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "edge_en_binding_fatwa",
+      "http_status": 200,
+      "status": "INSUFFICIENT_DATA",
+      "answer_preview": "Mushir provides informational guidance only, grounded in retrieved AAOIFI excerpts. It does not issue binding fatwas, legal opinions, or financial advice. Consult a qualified Sharia scholar for a binding religious ruling.",
+      "error": null,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "edge_prompt_injection",
+      "http_status": 422,
+      "status": null,
+      "answer_preview": null,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Query contains potentially harmful content: prompt injection attempt",
+        "request_id": "722201dd-94b9-4725-8afb-88ac823da00b",
+        "timestamp": "2026-05-31T22:14:48.586313+00:00"
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "edge_ar_crypto_speculation",
+      "http_status": 200,
+      "status": "INSUFFICIENT_DATA",
+      "answer_preview": "لا تتناول المقاطع المسترجعة من معايير أيوفي هذا الأصل أو هذه المضاربة بشكل كاف، فلا يمكن تقديم تقييم آمن دون دليل شرعي محدد ومراجعة مؤهلة.",
+      "error": null,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "edge_xss_mixed",
+      "http_status": 422,
+      "status": null,
+      "answer_preview": null,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Query contains potentially harmful content: prompt injection attempt",
+        "request_id": "218176ce-05b9-4530-bb2b-b17a9ec71f6e",
+        "timestamp": "2026-05-31T22:14:53.279687+00:00"
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "edge_long_repeated_context",
+      "http_status": 200,
+      "status": "CLARIFICATION_NEEDED",
+      "answer_preview": "Did the bank own, take possession of, or bear the risk of the car before selling it to you?",
+      "error": null,
+      "passed": true,
+      "failures": []
+    }
+  ],
+  "sse_checks": [
+    {
+      "id": "normal_en_sukuk_definition",
+      "http_status": 200,
+      "passed": true,
+      "has_prefix": false,
+      "preview": "event: started\ndata: {\"request_id\": \"19068505-0916-40c5-b1e5-92768c81ddc0\"}\n\nevent: retrieval\ndata: {\"confidence\": 0.6244541865000002}\n\nevent: token\ndata: {\"text\": \"This is a definition question, not a compliance assessment for a specific transaction.\\n\\nBased on the retrieved AAOIFI excerpt: (25): Investment in Sukuk, Shares and Similar Instruments Investment in Sukuk, Shares and Similar Instruments 745745Appendix (C) Appendix (C) Definitions Definitions Sukuk Sukuk Investment Sukuk are certifi"
+    },
+    {
+      "id": "normal_ar_murabaha_car_bare",
+      "http_status": 200,
+      "passed": true,
+      "has_prefix": false,
+      "preview": "event: started\ndata: {\"request_id\": \"36819452-9836-4b4c-a283-47f02188b940\"}\n\nevent: retrieval\ndata: {\"confidence\": 0.0}\n\nevent: token\ndata: {\"text\": \"هل تملك البنك السيارة وقبضها أو تحمل مخاطرها قبل بيعها لك؟\"}\n\nevent: done\ndata: {\"answer\": \"هل تملك البنك السيارة وقبضها أو تحمل مخاطرها قبل بيعها لك؟\", \"status\": \"CLARIFICATION_NEEDED\", \"citations\": [], \"reasoning_summary\": \"السؤال غير مكتمل؛ هذا التفصيل مطلوب قبل تقديم إجابة مستندة إلى مقاطع أيوفي.\", \"limitations\": \"إرشاد معلوماتي فقط؛ استشر عالم"
+    },
+    {
+      "id": "mixed_murabaha_bank_never_owns",
+      "http_status": 200,
+      "passed": true,
+      "has_prefix": false,
+      "preview": "event: started\ndata: {\"request_id\": \"13f98343-15a1-40ea-99b4-88f3e491928f\"}\n\nevent: retrieval\ndata: {\"confidence\": 0.0}\n\nevent: token\ndata: {\"text\": \"هل تملك البنك السيارة وقبضها أو تحمل مخاطرها قبل بيعها لك؟\"}\n\nevent: done\ndata: {\"answer\": \"هل تملك البنك السيارة وقبضها أو تحمل مخاطرها قبل بيعها لك؟\", \"status\": \"CLARIFICATION_NEEDED\", \"citations\": [], \"reasoning_summary\": \"السؤال غير مكتمل؛ هذا التفصيل مطلوب قبل تقديم إجابة مستندة إلى مقاطع أيوفي.\", \"limitations\": \"إرشاد معلوماتي فقط؛ استشر عالم"
+    },
+    {
+      "id": "edge_ar_crypto_speculation",
+      "http_status": 200,
+      "passed": true,
+      "has_prefix": false,
+      "preview": "event: started\ndata: {\"request_id\": \"6f387018-004a-4b0a-8deb-3b9b3daa45cb\"}\n\nevent: retrieval\ndata: {\"confidence\": 0.4114526}\n\nevent: token\ndata: {\"text\": \"لا تتناول المقاطع المسترجعة من معايير أيوفي هذا الأصل أو هذه المضاربة بشكل كاف، فلا يمكن تقديم تقييم آمن دون دليل شرعي محدد ومراجعة مؤهلة.\"}\n\nevent: done\ndata: {\"answer\": \"لا تتناول المقاطع المسترجعة من معايير أيوفي هذا الأصل أو هذه المضاربة بشكل كاف، فلا يمكن تقديم تقييم آمن دون دليل شرعي محدد ومراجعة مؤهلة.\", \"status\": \"INSUFFICIENT_DATA\", "
+    }
+  ],
+  "finished_at": "2026-05-31T22:15:02.043393+00:00",
+  "summary": {
+    "passed": 12,
+    "total": 12,
+    "sse_passed": 4,
+    "sse_total": 4
+  }
+}

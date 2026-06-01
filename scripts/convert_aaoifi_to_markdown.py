@@ -164,7 +164,7 @@ def main():
     # Paths
     base_dir = Path(__file__).parent.parent
     input_dir = base_dir / "data" / "raw" / "aaoifi_standards"
-    output_dir = base_dir / "gemini-gem-prototype" / "knowledge-base"
+    output_dir = base_dir / "data" / "aaoifi_md"
     
     # Create output directory if it doesn't exist
     output_dir.mkdir(parents=True, exist_ok=True)

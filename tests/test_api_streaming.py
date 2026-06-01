@@ -48,6 +48,37 @@ def test_query_stream_emits_l2_event_order():
 
 
 @pytest.mark.api
+def test_query_stream_strips_internal_status_prefix_from_token_and_done_answer():
+    from src.api.dependencies import get_application_service
+    from src.api.main import create_app
+    from src.models.ruling import AnswerContract, ComplianceStatus
+
+    class FakeService:
+        def answer(self, query, session_id=None):
+            return AnswerContract(
+                answer="CLARIFICATION_NEEDED: Please provide the ownership sequence?",
+                status=ComplianceStatus.CLARIFICATION_NEEDED,
+                citations=[],
+                clarification_question="Please provide the ownership sequence?",
+                reasoning_summary="A required fact is missing.",
+                metadata={"confidence": 0.0},
+            )
+
+    app = create_app()
+    app.dependency_overrides[get_application_service] = lambda: FakeService()
+
+    with TestClient(app) as client:
+        response = client.post("/api/v1/query/stream", json={"query": "test"})
+
+    assert response.status_code == 200
+    events = _events(response.text)
+    token = next(event for event in events if event["event"] == "token")
+    done = next(event for event in events if event["event"] == "done")
+    assert token["data"]["text"] == "Please provide the ownership sequence?"
+    assert done["data"]["answer"] == "Please provide the ownership sequence?"
+
+
+@pytest.mark.api
 def test_query_stream_returns_error_event_for_service_failure():
     from src.api.dependencies import get_application_service
     from src.api.main import create_app

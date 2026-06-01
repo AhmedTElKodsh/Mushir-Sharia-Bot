@@ -4,15 +4,17 @@ emoji: ⚖️
 colorFrom: green
 colorTo: blue
 sdk: docker
-app_port: 7860
+app_port: 8000
 pinned: false
 ---
 
 # Sharia Compliance Chatbot
 
+Current app version: **V1.5** (`1.5.0`) as of 2026-06-01.
+
 Mushir is a RAG-based Islamic finance research assistant. It answers English and Arabic questions from the configured AAOIFI corpus, validates citations, asks focused clarification questions when facts are missing, and refuses binding fatwas, legal advice, and financial advice.
 
-The current implementation is a FastAPI application with browser chat, REST API, SSE streaming, multilingual retrieval, OpenRouter generation, citation validation, readiness checks, and deployment support. The active roadmap gate is L5 quality and release readiness. The proposed future L6 direction is a rules-first Sharia commercial-process evaluator.
+The current V1.5 implementation is a FastAPI application with browser chat, REST API, SSE streaming, multilingual retrieval, OpenRouter generation, citation validation, readiness checks, deployment support, and guarded Egypt institution evidence-corpus exports. The active runtime remains a non-binding AAOIFI evidence assistant. The proposed future L6 direction is a rules-first Sharia commercial-process evaluator.
 
 ## Features
 
@@ -40,9 +42,10 @@ The current implementation is a FastAPI application with browser chat, REST API,
 | Safe fatwa/legal/financial-advice refusal | Implemented |
 | Sharia Ontology Engine (Concept Router, Ruling Evaluator) | Implemented |
 | Sharia Compliance Evaluation Framework (Gold Sets, ECE) | Implemented |
+| App versioning | V1.5 / `1.5.0` exposed through API metadata, `/health`, `/ready`, package metadata, and chat UI |
 | L5 release readiness | Active gate |
 | L6 rules-first evaluator | Proposed future direction; foundational scenario/routing/source-gap scaffolding is implemented, full evaluator is not active runtime scope |
-| Egypt institution evidence corpus | Data acquisition framework implemented; active scraping and evaluation corpus building in progress |
+| Egypt institution evidence corpus | V1.5 guarded bank evidence scrape completed: 2,154 baseline institutions loaded, 32 bank candidates discovered, 69 operation/mapping rows exported for scholar review |
 
 ## Planning Direction
 
@@ -50,9 +53,21 @@ Older L0-L4 planning files are retained as historical implementation context. Th
 
 - **L5 now:** prove the implemented runtime through tests, retrieval evaluation, live smoke checks, readiness gates, documentation, and secret-safe deployment practices.
 - **L6 next:** widen Mushir into a rules-first commercial-process assessment assistant only after L5 is green. The first runtime scaffold now supports transaction-scenario metadata, standards routing metadata, source-family detection, and a fail-closed source-gap guard for late-payment/default permissibility questions. Full L6 still requires Shari'ah-source acquisition, executable rules, structured verdict exposure, and human-review workflows.
-- **L6 evidence corpus:** build a public-source Egypt financial institutions operations corpus for supervised evaluation and future institution-aware retrieval. The scraper must preserve source provenance, stop after bounded discovery attempts, respect access controls, record missing details explicitly, and keep machine-proposed AAOIFI labels separate from scholar-reviewed ground truth.
+- **V1.5 evidence corpus:** build a public-source Egypt financial institutions operations corpus for supervised evaluation and future institution-aware retrieval. The 2026-06-01 guarded run loaded the full baseline registry, recorded CBE/FRA access-control gaps, and exported bank-slice evidence rows. The scraper must preserve source provenance, stop after bounded discovery attempts, respect access controls, record missing details explicitly, and keep machine-proposed AAOIFI labels separate from scholar-reviewed ground truth.
 
 Mushir must not be marketed as a fatwa engine. It provides evidence-backed, non-binding assistance.
+
+## Release Taxonomy
+
+| Tier | Meaning | Required Gates |
+|------|---------|----------------|
+| `local dev` | Developer workstation or CI fixture mode. | Unit/service/API tests; no live provider or durable infrastructure required. |
+| `public demo` | Hugging Face demo for bounded, non-binding AAOIFI evidence answers. | `/ready` not degraded for retrieval/provider, source-governed metadata enabled, demo smoke tests pass. |
+| `controlled beta` | Limited users with monitored feedback and reviewer queue. | Public-demo gates plus durable audit, scholar-review queue export, and live smoke checks. |
+| `production pilot` | Institution-facing pilot with operational controls. | Controlled-beta gates plus auth, durable audit, durable rate/session/cache stores where replicated, Playwright e2e, and scholar-reviewed gold gates. |
+| `hard-Sharia ready` | Broad Shari'ah-standard evidence release. | Production-pilot gates plus complete governed SS-01..SS-60 coverage, Arabic/English parity, retrieval smoke, representative questions, and scholar-review evidence for every target standard. |
+
+Runtime badges are evidence labels, not fatwa labels: `Supported by retrieved evidence`, `Contradicted by retrieved evidence`, `Requires scholar review`, and `Insufficient source evidence`.
 
 ## Quick Start
 
@@ -110,7 +125,7 @@ scripts/
 +-- convert_pdf_to_markdown.py     # Convert AAOIFI PDFs to Markdown format
 +-- convert_aaoifi_to_markdown.py  # AAOIFI-specific converter with metadata
 +-- test_space_query.py            # Test deployed Hugging Face Space endpoints
-+-- deploy_to_hf_space.py          # Deploy application to Hugging Face Space
++-- deploy_huggingface_space.py    # Deploy application to Hugging Face Space
 +-- download_*.py                  # Various download utilities
 
 tests/test_api_query.py           # API query contract tests
@@ -120,9 +135,8 @@ data/
 +-- markdown/       # Converted Markdown documents
 +-- source_registry/ # Tracked planning seeds for Egypt institution source categories
 +-- fixtures/       # Small tracked scrape fixtures for tests only
-
-artifacts/
-+-- l6_scrape/      # Local/runtime scrape output, ignored except README
++-- runtime/
+    +-- artifacts/  # Local/runtime scrape output, ignored except README
 ```
 
 ## Environment Variables
@@ -136,11 +150,11 @@ OPENROUTER_MODEL=openrouter/free
 OPENROUTER_MAX_TOKENS=1024
 
 # Vector Database
-CHROMA_PERSIST_DIRECTORY=./data/chroma_db
 CHROMA_DIR=./chroma_db_multilingual
 
-# Corpus Location
-CORPUS_DIR=./gemini-gem-prototype/knowledge-base
+# Optional corpus location for re-ingestion runs
+# Launch/runtime evidence is governed by data/source_registry and the prebuilt vector index.
+CORPUS_DIR=./data/aaoifi_md
 
 # Embedding Model
 EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2
@@ -329,8 +343,8 @@ python scripts/ingest.py --source-catalog path/to/aaoifi-source-catalog.yaml
 
 **Environment Variables:**
 - `CORPUS_DIR`: Path to AAOIFI markdown corpus (default: `./data/aaoifi_md`)
-- `CHROMA_DIR`: ChromaDB storage location (default: `./chroma_db`)
-- `EMBED_MODEL`: Embedding model (default: `sentence-transformers/all-mpnet-base-v2`)
+- `CHROMA_DIR`: ChromaDB storage location (default: `./chroma_db_multilingual`)
+- `EMBED_MODEL`: Embedding model (default: `sentence-transformers/paraphrase-multilingual-mpnet-base-v2`)
 - `SOURCE_CATALOG_FILE`: YAML source catalog used to mark chunks answer-admissible
 
 **Workflow:**
@@ -360,7 +374,7 @@ python scripts/convert_aaoifi_to_markdown.py
 
 **Input Format:** `Standard_{number}_{AR|EN}.pdf` (e.g., `Standard_01_EN.pdf`, `Standard_01_AR.pdf`)
 
-**Output:** `gemini-gem-prototype/knowledge-base/AAOIFI_Standard_{number}_{lang}_{title}.md`
+**Output:** `data/aaoifi_md/AAOIFI_Standard_{number}_{lang}_{title}.md` unless `CORPUS_DIR` is overridden.
 
 **Requirements:** `pip install PyPDF2`
 
@@ -424,29 +438,32 @@ Use these docs as the current roadmap sources:
 Deploy the application to Hugging Face Space using the automated deployment script:
 
 ```bash
-# Deploy current code to Hugging Face Space
-python scripts/deploy_to_hf_space.py
+# Deploy current code/runtime to Hugging Face Space
+python scripts/deploy_huggingface_space.py --repo-id AElKodsh/mushir-sharia-bot --skip-index
 ```
 
 **Prerequisites:**
 - Hugging Face account with write access
 - `HF_TOKEN` configured in `.env` file (get from https://huggingface.co/settings/tokens)
 - Required packages: `pip install huggingface_hub python-dotenv`
+- `OPENROUTER_API_KEY` configured locally so the script can store it as a Space secret.
 
 **Features:**
 - Authenticates with Hugging Face Hub API
-- Uploads source code, scripts, and vector database
+- Uploads the Docker runtime, app source, source-registry evidence, and optionally the vector database
+- Sets current Space variables for `APP_ENV`, `RELEASE_TIER`, vector-store backend, and governed metadata enforcement
 - Excludes unnecessary files (`.env`, `.git`, `__pycache__`, etc.)
 - Provides deployment status and Space URL
 - Automatic commit message generation
 
 **What Gets Deployed:**
 - `src/` - Application source code
-- `scripts/` - Utility scripts
+- `scripts/report_sharia_corpus_coverage.py` - Runtime evidence-coverage report
+- `data/source_registry/` - Source-governance evidence files
 - `requirements.txt` - Python dependencies
 - `Dockerfile` - Container configuration
 - `README.md` - Documentation
-- `chroma_db_multilingual/` - Vector database
+- `chroma_db_multilingual/` - Vector database unless `--skip-index` or `--vector-store qdrant` is used
 
 **Expected Output:**
 ```
@@ -521,11 +538,11 @@ Response:
 
 ## Docker Deployment
 
-Docker is the current deployment shape for Hugging Face Spaces. The container starts the FastAPI app on port `7860`.
+Docker is the current deployment shape for Hugging Face Spaces. The container starts the FastAPI app on port `8000`.
 
 ```bash
 docker build -t mushir-sharia-bot .
-docker run --env-file .env -p 7860:7860 mushir-sharia-bot
+docker run --env-file .env -p 8000:8000 mushir-sharia-bot
 ```
 
-Then open `http://127.0.0.1:7860/chat` and verify `/health`, `/ready`, and at least one English and Arabic smoke query.
+Then open `http://127.0.0.1:8000/chat` and verify `/health`, `/ready`, and at least one English and Arabic smoke query.

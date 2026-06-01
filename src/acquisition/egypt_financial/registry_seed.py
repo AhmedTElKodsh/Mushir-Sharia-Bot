@@ -12,10 +12,14 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    # Fallback to local SQLite if no Supabase Postgres URL is provided
-    DATABASE_URL = "sqlite:///l6_evidence.db"
+    # Fallback to an ignored local runtime DB when no shared Postgres URL is provided.
+    DATABASE_URL = "sqlite:///data/runtime/l6_evidence.db"
 
-EXCEL_PATH = ".planning/sharia-compliance-chatbot/docs/Egypt_Financial_Institutions_COMPLETE.xlsx"
+EXCEL_PATH = (
+    ".planning/sharia-compliance-chatbot/docs/research/"
+    "l6-egypt-institution-scrape/source-inputs/"
+    "Egypt_Financial_Institutions_COMPLETE.xlsx"
+)
 
 SECTOR_MAP = {
     '01_CBE_Banks': ('Banking', 'CBE'),

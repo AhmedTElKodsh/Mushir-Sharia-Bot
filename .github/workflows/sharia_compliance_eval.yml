@@ -6,21 +6,53 @@ on:
       - main
       - develop
     paths:
+      - '.github/workflows/sharia_compliance_eval.yml'
       - 'src/chatbot/**'
+      - 'src/api/**'
+      - 'src/static/**'
+      - 'src/governance/**'
+      - 'src/models/**'
       - 'src/ontology/**'
       - 'src/rag/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'requirements.txt'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'playwright.config.ts'
+      - 'e2e/**'
       - 'data/concept_ontology/**'
+      - 'data/source_registry/**'
+      - 'scripts/**'
+      - 'tests/eval/**'
       - 'tests/evaluation/**'
+      - 'tests/fixtures/**'
+      - 'tests/test_live_hard_case_retrieval_gate.py'
+      - 'tests/test_rag_hardening.py'
   push:
     branches:
       - main
       - release/*
   workflow_dispatch:
+    inputs:
+      release_tier:
+        description: "Release tier gate to enforce"
+        required: true
+        default: "public-demo"
+        type: choice
+        options:
+          - local-dev
+          - public-demo
+          - controlled-beta
+          - production-pilot
+          - hard-sharia-ready
 
 jobs:
   evaluate-gold-set:
     name: Gold-Set Compliance Harness
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TIER: ${{ github.event.inputs.release_tier || 'public-demo' }}
     
     steps:
       - name: Checkout Code
@@ -38,16 +70,73 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov pyyaml
 
+      - name: Install Playwright
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run Broad Pytest Suite
+        run: |
+          pytest -q --timeout=90
+
+      - name: Run Hard-Sharia Corpus Coverage Report
+        run: |
+          python scripts/report_sharia_corpus_coverage.py \
+            --output _bmad-output/implementation-artifacts/ci-sharia-corpus-coverage.json \
+            --matrix-output _bmad-output/implementation-artifacts/ci-sharia-coverage-matrix.json
+
+      - name: Enforce Hard-Sharia Tier Gate
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, sys
+          report = json.loads(pathlib.Path("_bmad-output/implementation-artifacts/ci-sharia-corpus-coverage.json").read_text(encoding="utf-8"))
+          tier = os.getenv("RELEASE_TIER", "public-demo")
+          if tier == "hard-sharia-ready" and not report.get("hard_sharia_ready"):
+              print(json.dumps(report.get("no_go_reasons", []), indent=2))
+              sys.exit(1)
+          print(f"RELEASE_TIER={tier}; hard_sharia_ready={report.get('hard_sharia_ready')}")
+          PY
+
       - name: Run Sharia Zero-Tolerance Critical Tests
         # -x means fail fast on the first critical failure
         # This is a hard gate for any PR
         run: |
           pytest tests/evaluation/test_critical_goldset.py -v -x
 
+      - name: Run Standards Routing Accuracy Gate
+        run: |
+          pytest tests/eval/test_routing_accuracy.py -v
+
+      - name: Run Fixture Retrieval Baseline Gate
+        run: |
+          python scripts/run_retrieval_baseline.py --mode gate
+
+      - name: Enforce Scholar-Reviewed Gold Gate For Tuning/Hard Tiers
+        run: |
+          python scripts/run_retrieval_baseline.py --mode gate --output _bmad-output/implementation-artifacts/ci-retrieval-scholar-gate.json
+          python - <<'PY'
+          import json, os, pathlib, sys
+          report = json.loads(pathlib.Path("_bmad-output/implementation-artifacts/ci-retrieval-scholar-gate.json").read_text(encoding="utf-8"))
+          tier = os.getenv("RELEASE_TIER", "public-demo")
+          gate = report.get("scholar_review_gold_gate", {})
+          if tier in {"production-pilot", "hard-sharia-ready"} and not gate.get("tuning_allowed"):
+              print(json.dumps(gate, indent=2))
+              sys.exit(1)
+          print(f"RELEASE_TIER={tier}; accepted_gold_case_count={gate.get('accepted_gold_case_count')}")
+          PY
+
+      - name: Run Live Hard-Case Retrieval Gate Unit Tests
+        run: |
+          pytest tests/test_live_hard_case_retrieval_gate.py -v
+
       - name: Run Full Evaluation Harness
         # Run the rest of the evaluation suite
         run: |
           pytest tests/evaluation/ -v --ignore=tests/evaluation/test_critical_goldset.py
+
+      - name: Run Playwright E2E
+        run: |
+          npm run test:e2e
 
       - name: Upload Expected Calibration Error (ECE) Report
         if: always()
@@ -55,6 +144,24 @@ jobs:
         with:
           name: calibration-reports
           path: tests/evaluation/reports/ece_report_*.json
+          retention-days: 14
+
+      - name: Upload Hard-Sharia Coverage Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hard-sharia-coverage
+          path: _bmad-output/implementation-artifacts/ci-sharia-*.json
+          retention-days: 30
+
+      - name: Upload Playwright Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results/e2e-artifacts
           retention-days: 14
 
       - name: Upload Auto-Enqueued Scholar Reviews

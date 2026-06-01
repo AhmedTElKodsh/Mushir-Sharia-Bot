@@ -2,11 +2,12 @@
 
 This index points to the current documentation set for Mushir. Older L0 and planning files remain useful historical context, but the files below are the best starting point for current development, review, client handoff, and release work.
 
-Last refreshed: 2026-05-31. The current documentation set reflects the GC-001 construction delay-penalty clarification fix, SS-05/SS-11 istisna penalty routing, SS-30 tawarruq routing guard, evaluation fixture text-boundary fix, and the latest full-suite verification (`619 passed, 48 skipped, 2 warnings`).
+Last refreshed: 2026-06-01. The current documentation set marks the app as V1.5 (`1.5.0`), reflects the guarded Egypt bank evidence scrape outputs, and still preserves the GC-001 construction delay-penalty clarification fix, SS-05/SS-11 istisna penalty routing, SS-30 tawarruq routing guard, evaluation fixture text-boundary fix, and the latest full-suite baseline (`619 passed, 48 skipped, 2 warnings`).
 
 ## Start Here
 
 - [Project Documentation](project-documentation.md): full current technical documentation for developers and maintainers.
+- [Version History](version-history.md): current app version, V1.5 evidence-corpus milestone, and verification notes.
 - [Project Clarifications And Developer Walkthrough](project-clarifications-and-developer-walkthrough.md): consolidated developer-facing walkthrough of the runtime flow, request contracts, ingestion, retrieval, source-family gates, deterministic definitions, commercial scenario metadata, Chroma/Qdrant setup, current limitations, and recommended enhancements, with Mermaid diagrams.
 - [Pipeline Architecture (V2)](pipeline-architecture-v2.md): visual diagrams for the Stage 1 & 2 Routing, Resolver, and Quality Gates logic.
 - [AI Project Brief](ai-project-brief.md): compact but detailed AI-agent handoff covering runtime contracts, source authority, L5/L6 status, commands, risks, and safe edit rules.
@@ -16,13 +17,13 @@ Last refreshed: 2026-05-31. The current documentation set reflects the GC-001 co
 - [Project Context](../../../project-context.md): concise implementation rules for AI agents and developers.
 - [Architecture](chatbot-architecture.md): deeper component-level architecture of the answer-generation path.
 - [Production Readiness](l5-production-readiness.md): runtime modes, release gates, and operational checks.
-- [Deep Research Report](deep-research-report.md): research synthesis for the post-L5 rules-first Sharia commercial-process evaluator direction.
-- [Gemini Research Plan](gemini-research-plan.md): original external blueprint; treat as implemented/partial/gap/spike input, not as the current architecture by itself.
 - [Research Evidence Index](research/README.md): canonical research syntheses and raw evidence inventory.
+- [Rules-First Evaluator Research](research/l6-rules-first-evaluator-research.md): research synthesis for the post-L5 rules-first Sharia commercial-process evaluator direction.
+- [Legacy Gemini Architecture Research](research/legacy/gemini-architecture-research.md): original external blueprint; treat as implemented/partial/gap/spike input, not as the current architecture by itself.
 - [RAG and Model Intelligence OSS Research](research/rag-model-intelligence-open-source-research-2026-05-22.md): refreshed OSS/GitHub research matrix for improving retrieval, evaluation, ingestion, observability, structured outputs, Arabic NLP, and rules-first intelligence.
 - [Official-Source Crawler Research](research/deep_research_official_source_crawler_2026-05-22.md): CBE/FRA official-source crawler and provenance plan for the L6 evidence corpus.
 - [RAG and Crawler Implementation Plan](research/rag-model-intelligence-implementation-plan-2026-05-22.md): ordered implementation slices merging RAG/model intelligence with official-source crawler evidence gates.
-- [Spec Deep Research Report](deep-research-report.md): 2026-05-19 research input used to seed router, supersession, chunking, data-model, and evaluation planning.
+- [Spec Deep Research Report](research/l6-rules-first-evaluator-research.md): 2026-05-19 research input used to seed router, supersession, chunking, data-model, and evaluation planning.
 - [Project Logic Rethink](PROJECT-LOGIC-RETHINK-2026-05-19.md): current source-governed planning reset and implementation gap analysis.
 
 ## Operations

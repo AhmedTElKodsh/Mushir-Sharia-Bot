@@ -1,5 +1,6 @@
 {
   "name": "mushir-sharia-bot-e2e",
+  "version": "1.5.0",
   "private": true,
   "scripts": {
     "test:e2e": "playwright test --config=playwright.config.ts"

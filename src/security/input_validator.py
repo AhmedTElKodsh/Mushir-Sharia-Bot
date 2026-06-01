@@ -1,11 +1,13 @@
 """Input validation and sanitization."""
 import re
+import unicodedata
 from typing import Optional, Tuple
 
 
 # Prompt injection patterns
 PROMPT_INJECTION_PATTERNS = [
     r'ignore\s+(?:all\s+)?(?:above\s+|previous\s+)?instructions?',
+    r'ignore\s+.{0,80}\binstructions?\b',
     r'disregard\s+(?:(?:all|the)\s+)?(?:above|previous|prior)\s+instructions?',
     r'forget\s+(previous|all|above)\s+instructions?',
     r'you\s+are\s+now\s+a',
@@ -13,6 +15,10 @@ PROMPT_INJECTION_PATTERNS = [
     r'pretend\s+to\s+be',
     r'system\s*:\s*',
     r'<\s*system\s*>',
+    r'<\s*/?\s*script\b',
+    r'javascript\s*:',
+    r'data\s*:\s*text/html',
+    r'vbscript\s*:',
     r'\[SYSTEM\]',
     r'sudo\s+mode',
     r'developer\s+mode',
@@ -32,6 +38,7 @@ class InputValidator:
         self,
         max_length: int = 2000,
         enable_injection_filter: bool = True,
+        enable_special_char_filter: bool = True,
     ):
         """Initialize input validator.
         
@@ -41,6 +48,7 @@ class InputValidator:
         """
         self.max_length = max_length
         self.enable_injection_filter = enable_injection_filter
+        self.enable_special_char_filter = enable_special_char_filter
 
     def validate_query(self, query: str) -> Tuple[bool, Optional[str]]:
         """Validate user query.
@@ -77,10 +85,13 @@ class InputValidator:
             if pattern.search(query):
                 return False, "prompt injection attempt"
 
-        # Check for excessive special characters (potential obfuscation)
-        special_char_ratio = sum(1 for c in query if not c.isalnum() and not c.isspace()) / max(len(query), 1)
-        if special_char_ratio > 0.4:
-            return False, "excessive special characters"
+        # Check for excessive special characters (potential obfuscation).
+        # Use Unicode categories instead of str.isalnum(); some Python/runtime
+        # combinations do not classify Arabic letters as alphanumeric.
+        if self.enable_special_char_filter:
+            special_char_ratio = sum(1 for c in query if self._is_special_character(c)) / max(len(query), 1)
+            if special_char_ratio > 0.4:
+                return False, "excessive special characters"
 
         # Check for repeated instruction-like phrases
         instruction_words = ["must", "should", "need to", "have to", "required to"]
@@ -89,6 +100,17 @@ class InputValidator:
             return False, "excessive instruction-like language"
 
         return True, None
+
+    @staticmethod
+    def _is_special_character(char: str) -> bool:
+        if char.isspace():
+            return False
+        category = unicodedata.category(char)
+        if category[0] in {"L", "N"}:
+            return False
+        if category in {"Mn", "Mc"}:
+            return False
+        return True
 
     @staticmethod
     def sanitize_for_logging(query: str, max_length: int = 200) -> str:

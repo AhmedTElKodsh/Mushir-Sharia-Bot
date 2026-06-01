@@ -14,6 +14,8 @@ def test_ready_returns_correct_structure():
     body = res.json()
     assert "status" in body
     assert "readiness_level" in body
+    assert "effective_release_tier" in body
+    assert "required_checks" in body
     assert "checks" in body
     assert "infrastructure" in body
 
@@ -53,6 +55,7 @@ def test_ready_checks_all_required_infrastructure_components():
         "hard_sharia_ready",
         "provider_configured",
         "auth_configured",
+        "auth_enforced",
         "durable_audit_store",
     ]
     for key in required:
@@ -105,6 +108,17 @@ def test_ready_infrastructure_shows_store_types():
 
 
 @pytest.mark.api
+def test_lifespan_wires_session_store_into_application_service():
+    from src.api.main import create_app
+
+    app = create_app()
+    with TestClient(app):
+        service = app.state.application_service
+
+    assert service.session_store is app.state.session_manager
+
+
+@pytest.mark.api
 def test_health_returns_ok_and_timestamp():
     from src.api.main import create_app
 
@@ -117,7 +131,8 @@ def test_health_returns_ok_and_timestamp():
     assert body["status"] == "healthy"
     assert "timestamp" in body
     assert "version" in body
-    assert body["version"] == "1.0.0"
+    assert body["version"] == "1.5.0"
+    assert body["version_label"] == "V1.5"
 
 
 @pytest.mark.api
@@ -131,7 +146,8 @@ def test_root_returns_api_info():
     assert res.status_code == 200
     body = res.json()
     assert body["name"] == "Sharia Compliance Chatbot API"
-    assert body["version"] == "1.0.0"
+    assert body["version"] == "1.5.0"
+    assert body["version_label"] == "V1.5"
     assert "endpoints" in body
     assert "/api/v1/query" in body["endpoints"].values()
 
@@ -165,6 +181,159 @@ def test_production_ready_degrades_when_retriever_startup_fails(monkeypatch):
     assert body["status"] == "degraded"
     assert body["checks"]["retriever_ready"] is False
     assert body["infrastructure"]["retriever_ready"] is False
+
+
+@pytest.mark.api
+def test_public_demo_ready_degrades_when_runtime_provider_missing(monkeypatch):
+    from src.api import main as api_main
+
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("APP_ENV", "dev")
+    monkeypatch.setenv("RELEASE_TIER", "public-demo")
+    monkeypatch.setattr(api_main, "_build_retriever", lambda: object())
+
+    app = api_main.create_app()
+    with TestClient(app) as client:
+        res = client.get("/ready")
+
+    body = res.json()
+    assert res.status_code == 503
+    assert body["status"] == "degraded"
+    assert body["checks"]["provider_configured"] is False
+
+
+@pytest.mark.api
+def test_production_pilot_ready_does_not_require_hard_sharia_ready(monkeypatch):
+    from src.api import main as api_main
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("RELEASE_TIER", "production-pilot")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-provider-key")
+    monkeypatch.setenv("AUTH_TOKEN", "test-auth-token")
+    monkeypatch.setattr(api_main, "_build_retriever", lambda: object())
+
+    app = api_main.create_app()
+    with TestClient(app) as client:
+        app.state.infrastructure.update(
+            {
+                "session_store": "RedisSessionStore",
+                "rate_limit_store": "RedisRateLimiter",
+                "audit_store": "PostgresAuditStore",
+                "cache_store": "RedisCacheStore",
+                "retriever_ready": True,
+                "vector_store": "chroma",
+            }
+        )
+        res = client.get("/ready")
+
+    body = res.json()
+    assert body["effective_release_tier"] == "production-pilot"
+    assert "hard_sharia_ready" not in body["required_checks"]
+
+
+@pytest.mark.api
+def test_production_api_requires_bearer_auth(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("AUTH_TOKEN", "test-token")
+
+    from src.api.main import create_app
+
+    app = create_app()
+    with TestClient(app) as client:
+        res = client.post(
+            "/api/v1/query",
+            json={"query": "What is Murabaha?", "context": {"disclaimer_acknowledged": True}},
+        )
+
+    assert res.status_code == 401
+    assert res.json()["error"]["code"] == "UNAUTHORIZED"
+
+
+@pytest.mark.api
+def test_production_api_fails_closed_when_auth_token_missing(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.delenv("AUTH_TOKEN", raising=False)
+
+    from src.api.main import create_app
+
+    app = create_app()
+    with TestClient(app) as client:
+        res = client.post(
+            "/api/v1/query",
+            json={"query": "What is Murabaha?", "context": {"disclaimer_acknowledged": True}},
+        )
+
+    assert res.status_code == 503
+    assert res.json()["error"]["code"] == "AUTH_MISCONFIGURED"
+
+
+@pytest.mark.api
+def test_production_api_accepts_matching_bearer_auth(monkeypatch):
+    from src.api.dependencies import get_application_service
+    from src.models.ruling import AnswerContract, ComplianceStatus
+
+    class FastService:
+        def answer(self, query, **kwargs):
+            return AnswerContract(
+                answer="ok",
+                status=ComplianceStatus.INSUFFICIENT_DATA,
+                citations=[],
+                reasoning_summary="test",
+                limitations="test",
+                metadata={"confidence": 0.0},
+            )
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("AUTH_TOKEN", "test-token")
+
+    from src.api.main import create_app
+
+    app = create_app()
+    app.dependency_overrides[get_application_service] = lambda: FastService()
+
+    with TestClient(app) as client:
+        res = client.post(
+            "/api/v1/query",
+            json={"query": "What is Murabaha?", "context": {"disclaimer_acknowledged": True}},
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+    assert res.status_code == 200
+
+
+@pytest.mark.api
+def test_qdrant_readiness_checks_are_reported_and_gate_runtime(monkeypatch):
+    from src.api import main as api_main
+
+    class FakeQdrantStore:
+        def readiness_status(self):
+            return {
+                "collection_populated": True,
+                "governed_metadata_ready": True,
+                "bilingual_coverage_ready": False,
+                "retrieval_smoke_ready": True,
+                "chunk_count": 10,
+            }
+
+    class FakeRetriever:
+        vector_store = FakeQdrantStore()
+
+    monkeypatch.setenv("VECTOR_DB_TYPE", "qdrant")
+    monkeypatch.setenv("RELEASE_TIER", "public-demo")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-provider-key")
+    monkeypatch.setattr(api_main, "_build_retriever", lambda: FakeRetriever())
+
+    app = api_main.create_app()
+    with TestClient(app) as client:
+        res = client.get("/ready")
+
+    body = res.json()
+    assert res.status_code == 503
+    assert body["checks"]["qdrant_collection_populated"] is True
+    assert body["checks"]["qdrant_governed_metadata_ready"] is True
+    assert body["checks"]["qdrant_bilingual_coverage_ready"] is False
+    assert body["checks"]["qdrant_retrieval_smoke_ready"] is True
+    assert body["infrastructure"]["qdrant"]["chunk_count"] == 10
 
 
 @pytest.mark.api

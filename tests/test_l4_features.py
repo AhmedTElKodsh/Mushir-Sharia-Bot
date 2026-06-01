@@ -50,6 +50,51 @@ def test_citation_validator_accepts_sharia_standard_references():
     assert citations[0].standard_number == "SS-08"
 
 
+@pytest.mark.unit
+def test_citation_validator_prefers_object_chunk_metadata_standard_number():
+    from src.chatbot.citation_validator import CitationValidator
+    from src.models.schema import AAOIFICitation, SemanticChunk
+
+    chunk = SemanticChunk(
+        chunk_id="chunk-ss-28",
+        text="AAOIFI Sharia Standard evidence for banking services.",
+        citation=AAOIFICitation(
+            standard_id="AAOIFI_Standard_28_en",
+            section="3",
+            page=None,
+            source_file="AAOIFI_Standard_28_en.md",
+        ),
+        score=0.9,
+        metadata={"standard_number": "SS-28", "section_number": "3"},
+    )
+
+    citations = CitationValidator().validate("Supported by [SS-28 §3].", [chunk])
+
+    assert len(citations) == 1
+    assert citations[0].standard_number == "SS-28"
+
+
+@pytest.mark.unit
+def test_citation_validator_rejects_section_citation_when_chunk_section_missing():
+    from src.chatbot.citation_validator import CitationValidator
+    from src.models.schema import AAOIFICitation, SemanticChunk
+
+    chunk = SemanticChunk(
+        chunk_id="chunk-ss-19",
+        text="AAOIFI Sharia Standard evidence for qard.",
+        citation=AAOIFICitation(
+            standard_id="SS-19",
+            section=None,
+            page=None,
+            source_file="SS-19.md",
+        ),
+        score=0.9,
+    )
+
+    assert CitationValidator().validate("Supported by [SS-19 §9].", [chunk]) == []
+    assert len(CitationValidator().validate("Supported by [SS-19].", [chunk])) == 1
+
+
 @pytest.mark.service
 def test_application_service_uses_response_cache_for_identical_query():
     from src.chatbot.application_service import ApplicationService
@@ -90,10 +135,15 @@ def test_application_service_uses_response_cache_for_identical_query():
 
     retriever = Retriever()
     llm = LLM()
+    class NoClarification:
+        def ask_if_needed(self, *args, **kwargs):
+            return None
+
     service = ApplicationService(
         retriever=retriever,
         llm_client=llm,
         cache_store=InMemoryCacheStore(),
+        clarification_service=NoClarification(),
     )
 
     first = service.answer("Is this compliant?")

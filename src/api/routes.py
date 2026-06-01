@@ -1,7 +1,8 @@
 import json
+import re
 import uuid
 from inspect import Parameter, signature
-from typing import Any, Dict
+from typing import Any, Dict, Iterable
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -121,10 +122,10 @@ async def flag_answer(payload: FlagAnswerRequest, request: Request):
         system_answer_ar=payload.answer if metadata.get("response_language") == "ar" else "",
         system_answer_en=payload.answer if metadata.get("response_language") != "ar" else "",
         system_ruling=str(metadata.get("status") or metadata.get("system_ruling") or ""),
-        system_standards=list(metadata.get("candidate_standards") or metadata.get("system_standards") or []),
-        system_confidence=float(metadata.get("confidence") or 0.0),
+        system_standards=_metadata_list(metadata.get("candidate_standards") or metadata.get("system_standards")),
+        system_confidence=_metadata_float(metadata.get("confidence")),
         flag_reason=payload.reason,
-        source_chunks=list(metadata.get("retrieved_chunk_ids") or []),
+        source_chunks=_metadata_list(metadata.get("retrieved_chunk_ids")),
         request_id=payload.request_id or "",
         session_id=payload.session_id or "",
         user_feedback=payload.reason,
@@ -166,7 +167,18 @@ async def compliance_disclaimer():
 
 
 def _query_response(answer: AnswerContract) -> QueryResponse:
-    return QueryResponse(**answer.to_dict())
+    payload = answer.to_dict()
+    payload["answer"] = _strip_answer_status_prefix(str(payload.get("answer") or ""))
+    return QueryResponse(**payload)
+
+
+def _strip_answer_status_prefix(text: str) -> str:
+    return re.sub(
+        r"^(?:COMPLIANT|NON_COMPLIANT|NON-COMPLIANT|PARTIALLY_COMPLIANT|CONDITIONALLY COMPLIANT|SUPPORTED_BY_RETRIEVED_EVIDENCE|CONTRADICTED_BY_RETRIEVED_EVIDENCE|REQUIRES_SCHOLAR_REVIEW|INSUFFICIENT_DATA|CLARIFICATION_NEEDED)\s*:\s*",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
 
 
 def _answer_service(application_service: ApplicationService, payload: QueryRequest, request_id: str):
@@ -208,7 +220,6 @@ def _validate_query(payload: QueryRequest) -> str | None:
     valid, error = InputValidator().validate_query(payload.query)
     return None if valid else error
 
-
 def _rate_limit_key(request: Request) -> str:
     forwarded_for = request.headers.get("x-forwarded-for")
     if forwarded_for:
@@ -239,6 +250,23 @@ def _scholar_review_queue_store(request: Request) -> ScholarReviewQueueStore:
     if not hasattr(request.app.state, "scholar_review_queue_store"):
         request.app.state.scholar_review_queue_store = ScholarReviewQueueStore("data/scholar_review_queue.jsonl")
     return request.app.state.scholar_review_queue_store
+
+
+def _metadata_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, Iterable):
+        return [str(item) for item in value if str(item).strip()]
+    return [str(value)]
+
+
+def _metadata_float(value: Any) -> float:
+    try:
+        return float(value or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def _sse(event: str, data: Dict[str, Any]) -> str:

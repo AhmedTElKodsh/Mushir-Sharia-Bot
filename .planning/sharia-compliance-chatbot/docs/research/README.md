@@ -7,12 +7,18 @@ This folder holds research inputs that are allowed to influence Mushir planning.
 - `rag-model-intelligence-open-source-research-2026-05-22.md` - OSS/GitHub research for RAG evaluation, hybrid retrieval, reranking, ingestion, observability, structured extraction, Arabic NLP, and future rules-first options.
 - `deep_research_official_source_crawler_2026-05-22.md` - official-source crawler research for CBE/FRA registry completion, immutable evidence capture, product/contract discovery, and fail-closed institution evidence handling.
 - `rag-model-intelligence-implementation-plan-2026-05-22.md` - implementation plan that merges the RAG/model intelligence research with the official-source crawler research.
+- `l6-rules-first-evaluator-research.md` - 2026-05-19 research synthesis for the post-L5 rules-first evaluator direction.
+- `l6-rules-first-evaluator-execution-plan.md` - execution graph and schema notes for the L6 target.
+- `technology-decisions.md` - historical technology decision matrix.
+- `legacy/gemini-architecture-research.md` - legacy Gemini architecture blueprint retained as gap-classification input.
+- `l6-egypt-institution-scrape/` - curated L6 Egypt institution scrape research and review notes formerly mixed with generated scrape output.
 
 ## Raw Evidence
 
 Raw Tavily, crawl, and GitHub evidence is stored under:
 
 - `raw/2026-05-22/`
+- `l6-egypt-institution-scrape/`
 
 These files are retained for auditability. They may contain search snippets, raw provider output, or crawl responses. Treat them as source material for research review, not as curated product documentation.
 

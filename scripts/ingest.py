@@ -20,7 +20,7 @@ from src.governance.source_catalog import SourceCatalog, SourceCatalogRecord
 
 DEFAULT_EMBED_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 DEFAULT_CHROMA_DIR = "./chroma_db_multilingual"
-DEFAULT_CORPUS_DIR = "./gemini-gem-prototype/knowledge-base"
+DEFAULT_CORPUS_DIR = "./data/aaoifi_md"
 SUPPORTED_LANGUAGES = {"en", "ar"}
 EXCLUDED_MARKDOWN = {"INDEX.md", "CONVERSION_SUMMARY.md", ".gitkeep"}
 

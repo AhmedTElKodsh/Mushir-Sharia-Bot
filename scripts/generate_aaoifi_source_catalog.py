@@ -9,7 +9,7 @@ from typing import Iterable
 
 import yaml
 
-DEFAULT_CORPUS_DIR = Path("gemini-gem-prototype/knowledge-base")
+DEFAULT_CORPUS_DIR = Path("data/aaoifi_md")
 DEFAULT_OUTPUT = Path("data/source_registry/aaoifi-source-catalog.yaml")
 EXCLUDED_MARKDOWN = {"INDEX.md", "CONVERSION_SUMMARY.md", ".gitkeep"}
 

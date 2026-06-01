@@ -214,7 +214,7 @@ def test_application_service_passes_source_family_filter_and_strict_metadata_gat
 
     assert retriever.calls[0]["filters"] == {
         "source_family": "sharia_standard",
-        "standard_number": ["SS-03", "SS-08"],
+        "standard_number": ["SS-03", "SS-08", "SS-19", "SS-28"],
     }
     assert retriever.calls[0]["mode"] == "hybrid"
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
@@ -527,6 +527,63 @@ def test_application_service_arabic_rule_review_response_is_not_mojibake():
     assert "قواعد شرعية" in result.answer
     assert "Ã" not in result.answer
     assert "Â" not in result.answer
+
+
+@pytest.mark.service
+def test_application_service_clarifies_arabic_murabaha_car_purchase_before_retrieval():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    result = ApplicationService(
+        retriever=FakeRetriever([]),
+        llm_client=FakeLLM("unused"),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    ).answer("\u062d\u0643\u0645 \u0634\u0631\u0627\u0621 \u0633\u064a\u0627\u0631\u0629 \u0628\u0627\u0644\u0645\u0631\u0627\u0628\u062d\u0629")
+
+    assert result.status == ComplianceStatus.CLARIFICATION_NEEDED
+    assert result.clarification_question == (
+        "\u0647\u0644 \u062a\u0645\u0644\u0643 \u0627\u0644\u0628\u0646\u0643 \u0627\u0644\u0633\u064a\u0627\u0631\u0629 "
+        "\u0648\u0642\u0628\u0636\u0647\u0627 \u0623\u0648 \u062a\u062d\u0645\u0644 \u0645\u062e\u0627\u0637\u0631\u0647\u0627 "
+        "\u0642\u0628\u0644 \u0628\u064a\u0639\u0647\u0627 \u0644\u0643\u061f"
+    )
+    assert result.metadata["transaction_scenario"]["missing_facts"] == [
+        "ownership_sequence",
+        "possession_or_risk_bearing",
+    ]
+
+
+@pytest.mark.service
+def test_application_service_fails_closed_for_arabic_crypto_speculation_before_llm():
+    from src.chatbot.application_service import ApplicationService
+    from src.chatbot.citation_validator import CitationValidator
+
+    class FailingLLM:
+        model_name = "failing-llm"
+
+        def generate(self, *args, **kwargs):
+            raise AssertionError("unsupported crypto gap should not call the LLM")
+
+    result = ApplicationService(
+        retriever=RecordingRetriever([
+            _chunk(
+                chunk_id="generic-currency",
+                standard_id="SS-01",
+                source_file="AAOIFI_Sharia_Standard_01_Trading_in_Currencies.md",
+                metadata={
+                    "source_family": "sharia_standard",
+                    "standard_number": "SS-01",
+                    "metadata_status": "cataloged",
+                },
+            )
+        ]),
+        llm_client=FailingLLM(),
+        prompt_builder=FakePromptBuilder(),
+        citation_validator=CitationValidator(),
+    ).answer("\u0647\u0644 \u0623\u0634\u062a\u0631\u064a \u0639\u0645\u0644\u0629 \u0645\u0634\u0641\u0631\u0629 \u0644\u0644\u0645\u0636\u0627\u0631\u0628\u0629 \u0627\u0644\u0633\u0631\u064a\u0639\u0629\u061f")
+
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert "\u0627\u0644\u0645\u0636\u0627\u0631\u0628\u0629" in result.answer
 
 
 @pytest.mark.service

@@ -1,4 +1,4 @@
-# Mushir AI Agent Project Handoff
+﻿# Mushir AI Agent Project Handoff
 
 Last updated: 2026-05-23  
 Repository: `D:\AI Projects\Freelance\Sabry\Mushir-Sharia-Bot`  
@@ -453,13 +453,13 @@ Current script capabilities:
 
 Current caveat:
 
-- L6 scraping artifacts under `.planning/sharia-compliance-chatbot/docs/l6_scrape/` include many generated outputs. Treat them as evidence/review artifacts, not runtime answer authority.
+- L6 scraping runtime artifacts belong under `data/runtime/artifacts/l6_scrape/`; curated research/review notes belong under `.planning/sharia-compliance-chatbot/docs/research/l6-egypt-institution-scrape/`. Treat them as evidence/review artifacts, not runtime answer authority.
 
 ## 9. Data And Indexing
 
 Default corpus:
 
-- `CORPUS_DIR=./gemini-gem-prototype/knowledge-base`
+- `CORPUS_DIR=./data/aaoifi_md`
 - Contains converted AAOIFI markdown files in English and Arabic.
 
 Default vector index:
@@ -749,7 +749,8 @@ High-risk areas for edits:
 - `src/api/routes.py`: public error mapping and response contract.
 - `src/config/settings.py`: production config and secret validation.
 - `scripts/run_l6_institution_pilot.py`: large script with ethical scraping gates and many test-backed branches.
-- `.planning/sharia-compliance-chatbot/docs/l6_scrape/`: generated evidence artifacts; do not treat as stable code.
+- `data/runtime/artifacts/l6_scrape/`: generated evidence artifacts; do not treat as stable code.
+- `.planning/sharia-compliance-chatbot/docs/research/l6-egypt-institution-scrape/`: curated L6 scrape research and review notes.
 
 Common failure modes:
 
@@ -829,3 +830,4 @@ Before edits, run git status --short. For behavior changes, add or update tests 
 - Scholar-reviewed truth: human-reviewed label or evaluation row suitable for gold-set use.
 - L5: current release-readiness and operations gate.
 - L6: proposed rules-first commercial evaluator and Egypt institution evidence workstream.
+

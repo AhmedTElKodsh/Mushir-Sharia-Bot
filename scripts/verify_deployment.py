@@ -18,6 +18,11 @@ import sys
 
 SPACE_URL = "https://AElKodsh-mushir-sharia-bot.hf.space"
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 def check_health():
     """Check health endpoint."""
     try:

@@ -30,6 +30,13 @@ ACCEPTED_SCHOLAR_REVIEW_STATUSES = {
     "accepted_for_gold_set",
     "accepted_with_correction",
 }
+GATE_DEFAULTS = {
+    "min_hit_at_k": 1.0,
+    "min_recall_at_k": 1.0,
+    "min_mrr": 1.0,
+    "min_answerable_cases": 1,
+    "max_unanswerable_retrieval_rate": 0.0,
+}
 
 
 def scholar_review_gold_gate(cases: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -65,7 +72,20 @@ def run_retrieval_baseline(
     min_answerable_cases: int = 1,
     max_unanswerable_retrieval_rate: float = 1.0,
     require_scholar_reviewed_gold: bool = False,
+    mode: str = "gate",
 ) -> Dict[str, Any]:
+    mode = mode.strip().lower()
+    if mode not in {"gate", "research"}:
+        raise ValueError("mode must be 'gate' or 'research'")
+    if mode == "gate":
+        min_hit_at_k = max(min_hit_at_k, GATE_DEFAULTS["min_hit_at_k"])
+        min_recall_at_k = max(min_recall_at_k, GATE_DEFAULTS["min_recall_at_k"])
+        min_mrr = max(min_mrr, GATE_DEFAULTS["min_mrr"])
+        min_answerable_cases = max(min_answerable_cases, GATE_DEFAULTS["min_answerable_cases"])
+        max_unanswerable_retrieval_rate = min(
+            max_unanswerable_retrieval_rate,
+            GATE_DEFAULTS["max_unanswerable_retrieval_rate"],
+        )
     cases = load_cases(gold)
     scholar_gate = scholar_review_gold_gate(cases)
     report = evaluate_retrieval(
@@ -88,6 +108,7 @@ def run_retrieval_baseline(
             "live_vector_index_used": False,
             "live_llm_used": False,
             "baseline_command": "scripts/run_retrieval_baseline.py",
+            "baseline_gate_mode": mode,
             "scholar_review_gold_gate": scholar_gate,
             "requires_scholar_reviewed_gold": require_scholar_reviewed_gold,
         }
@@ -114,6 +135,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-answerable-cases", type=int, default=1)
     parser.add_argument("--max-unanswerable-retrieval-rate", type=float, default=1.0)
     parser.add_argument(
+        "--mode",
+        choices=("gate", "research"),
+        default="gate",
+        help="gate applies zero-tolerance thresholds by default; research preserves exploratory thresholds.",
+    )
+    parser.add_argument(
         "--require-scholar-reviewed-gold",
         action="store_true",
         help="Fail when hard-case rows are still pending scholar review; use for tuning or learning runs.",
@@ -134,6 +161,7 @@ def main() -> int:
         min_answerable_cases=args.min_answerable_cases,
         max_unanswerable_retrieval_rate=args.max_unanswerable_retrieval_rate,
         require_scholar_reviewed_gold=args.require_scholar_reviewed_gold,
+        mode=args.mode,
     )
     print(json.dumps(report, indent=2))
     return 0 if report["passed"] else 1

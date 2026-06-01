@@ -1,6 +1,9 @@
 # Mushir Project Clarifications And Developer Walkthrough
 
-Last refreshed: 2026-05-30
+Last refreshed: 2026-06-01
+Current app version: V1.5 (`1.5.0`)
+
+V1.5 adds visible/API app versioning and guarded Egypt bank evidence exports. The core answer runtime remains a non-binding, AAOIFI-citation-grounded assistant; institution evidence rows are review inputs until scholar-reviewed and promoted.
 
 This document consolidates the project-review clarifications into one connected technical walkthrough. It is written for a developer, product owner, technical stakeholder, or future AI coding agent who needs to understand how Mushir works without assuming deep prior knowledge of FastAPI, RAG, embeddings, vector databases, or Sharia-compliance software design.
 

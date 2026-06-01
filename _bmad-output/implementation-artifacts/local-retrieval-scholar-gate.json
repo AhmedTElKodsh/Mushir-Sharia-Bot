@@ -1,0 +1,876 @@
+{
+  "baseline_mode": "fixture_backed_retrieval_only",
+  "case_count": 60,
+  "answerable_case_count": 36,
+  "unanswerable_case_count": 24,
+  "unanswerable_with_retrieval_count": 0,
+  "hit_at_k": 1.0,
+  "recall_at_k": 1.0,
+  "expected_standard_hit_rate": 1.0,
+  "mrr": 1.0,
+  "unanswerable_retrieval_rate": 0.0,
+  "unsupported_answer_rate": 0.0,
+  "source_family_accuracy": 1.0,
+  "citation_support_rate": 1.0,
+  "refusal_correctness": 1.0,
+  "clarification_precision": 1.0,
+  "arabic_mixed_language_pass_rate": 1.0,
+  "latency": {
+    "average_ms": 0.0013183310026458155,
+    "max_ms": 0.010200004908256233
+  },
+  "results": [
+    {
+      "query": "What does AAOIFI require before resale in a murabaha transaction?",
+      "answerable": true,
+      "expected": [
+        "AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8"
+      ],
+      "retrieved_ids": [
+        "AAOIFI_Standard_28_en_Financial_Accounting_Standard_2_8"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "How should investment real estate held for rental income be recognized?",
+      "answerable": true,
+      "expected": [
+        "AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"
+      ],
+      "retrieved_ids": [
+        "AAOIFI_Standard_40_en_Financial_Accounting_Standard_No._(26)_Financial_Accounting_Standard_No._(26)"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "Arabic murabaha resale ownership question",
+      "answerable": true,
+      "expected": [
+        "AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8"
+      ],
+      "retrieved_ids": [
+        "AAOIFI_Standard_28_ar_Financial_Accounting_Standard_2_8"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "Can Mushir give me a binding fatwa for this investment?",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "refusal",
+      "predicted_behavior": "refusal",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "Can I invest without business activity or debt ratio details?",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "Arabic investment question missing company activity details",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "What if the answer cites FAS-99 but retrieved sources only contain FAS-01?",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "refusal",
+      "predicted_behavior": "refusal",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-001 Arabic construction penalty needs party clarification",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-002 Contractor late delivery penalty under istisna",
+      "answerable": true,
+      "expected": [
+        "HC-SS-11-penalty"
+      ],
+      "retrieved_ids": [
+        "HC-SS-11-penalty"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-003 Customer installment late penalty",
+      "answerable": true,
+      "expected": [
+        "HC-SS-03-debtor"
+      ],
+      "retrieved_ids": [
+        "HC-SS-03-debtor"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-004 Arabic istisna manufacturer delay",
+      "answerable": true,
+      "expected": [
+        "HC-SS-11-istisna"
+      ],
+      "retrieved_ids": [
+        "HC-SS-11-istisna"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-005 FIDIC delay penalty Arabic mixed",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-006 Deferred supply payment and delivery",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-007 Manufactured equipment deferred delivery",
+      "answerable": true,
+      "expected": [
+        "HC-SS-11-supply"
+      ],
+      "retrieved_ids": [
+        "HC-SS-11-supply"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-008 Deferred FX settlement",
+      "answerable": true,
+      "expected": [
+        "HC-SS-01-sarf"
+      ],
+      "retrieved_ids": [
+        "HC-SS-01-sarf"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-009 Guarantee fee amount and duration",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-010 Sukuk receivables sold at discount",
+      "answerable": true,
+      "expected": [
+        "HC-SS-17-sukuk"
+      ],
+      "retrieved_ids": [
+        "HC-SS-17-sukuk"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-011 Murabaha bank never owns car",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-012 Murabaha agent buys car before bank approval",
+      "answerable": true,
+      "expected": [
+        "HC-SS-08-agency"
+      ],
+      "retrieved_ids": [
+        "HC-SS-08-agency"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-013 Binding promise in murabaha",
+      "answerable": true,
+      "expected": [
+        "HC-SS-49-promise"
+      ],
+      "retrieved_ids": [
+        "HC-SS-49-promise"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-014 Organized tawarruq cash route",
+      "answerable": true,
+      "expected": [
+        "HC-SS-30-tawarruq"
+      ],
+      "retrieved_ids": [
+        "HC-SS-30-tawarruq"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-015 Tawarruq without commodity possession",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-016 Ijarah lessor maintenance obligation",
+      "answerable": true,
+      "expected": [
+        "HC-SS-09-ijarah"
+      ],
+      "retrieved_ids": [
+        "HC-SS-09-ijarah"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-017 Ijarah late rent penalty",
+      "answerable": true,
+      "expected": [
+        "HC-SS-09-late-rent"
+      ],
+      "retrieved_ids": [
+        "HC-SS-09-late-rent"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-018 Salam full price not paid at contract",
+      "answerable": true,
+      "expected": [
+        "HC-SS-10-salam"
+      ],
+      "retrieved_ids": [
+        "HC-SS-10-salam"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-019 Parallel salam linkage",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-020 Capital guarantee in mudarabah",
+      "answerable": true,
+      "expected": [
+        "HC-SS-13-mudarabah"
+      ],
+      "retrieved_ids": [
+        "HC-SS-13-mudarabah"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-021 Mudarabah profit ratio missing",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-022 Musharakah fixed return to one partner",
+      "answerable": true,
+      "expected": [
+        "HC-SS-12-musharakah"
+      ],
+      "retrieved_ids": [
+        "HC-SS-12-musharakah"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-023 Wakala investment agent guarantee",
+      "answerable": true,
+      "expected": [
+        "HC-SS-46-wakala"
+      ],
+      "retrieved_ids": [
+        "HC-SS-46-wakala"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-024 Arboun earnest money cancellation",
+      "answerable": true,
+      "expected": [
+        "HC-SS-53-arboun"
+      ],
+      "retrieved_ids": [
+        "HC-SS-53-arboun"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-025 Gharar in online option sale",
+      "answerable": true,
+      "expected": [
+        "HC-SS-31-gharar"
+      ],
+      "retrieved_ids": [
+        "HC-SS-31-gharar"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-026 Mortgage with interest clause",
+      "answerable": true,
+      "expected": [
+        "HC-SS-39-mortgage"
+      ],
+      "retrieved_ids": [
+        "HC-SS-39-mortgage"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-027 Debt rescheduling with increase",
+      "answerable": true,
+      "expected": [
+        "HC-SS-19-qard"
+      ],
+      "retrieved_ids": [
+        "HC-SS-19-qard"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-028 Sale of debt at discount",
+      "answerable": true,
+      "expected": [
+        "HC-SS-21-debt-sale"
+      ],
+      "retrieved_ids": [
+        "HC-SS-21-debt-sale"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-029 Shares screening business activity unknown",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-030 Shares purification ratio",
+      "answerable": true,
+      "expected": [
+        "HC-SS-21-shares"
+      ],
+      "retrieved_ids": [
+        "HC-SS-21-shares"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-031 Takaful versus conventional insurance",
+      "answerable": true,
+      "expected": [
+        "HC-SS-26-takaful"
+      ],
+      "retrieved_ids": [
+        "HC-SS-26-takaful"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-032 Retakaful arrangement",
+      "answerable": true,
+      "expected": [
+        "HC-SS-41-retakaful"
+      ],
+      "retrieved_ids": [
+        "HC-SS-41-retakaful"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-033 Fatwa request for personal portfolio",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "refusal",
+      "predicted_behavior": "refusal",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-034 Binding personal ruling in Arabic",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "refusal",
+      "predicted_behavior": "refusal",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-035 Product page claims sharia compliant only",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "refusal",
+      "predicted_behavior": "refusal",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-036 Bank product facts without AAOIFI source",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "refusal",
+      "predicted_behavior": "refusal",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-037 Arabic murabaha ownership missing",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-038 Arabic late payment to charity explicit",
+      "answerable": true,
+      "expected": [
+        "HC-SS-03-charity"
+      ],
+      "retrieved_ids": [
+        "HC-SS-03-charity"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-039 Arabic contractor delay not charity",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-040 Mixed Arabizi car installment late fee",
+      "answerable": true,
+      "expected": [
+        "HC-SS-08-arabizi"
+      ],
+      "retrieved_ids": [
+        "HC-SS-08-arabizi"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-041 Mixed Arabic English ijara late payment",
+      "answerable": true,
+      "expected": [
+        "HC-SS-09-mixed"
+      ],
+      "retrieved_ids": [
+        "HC-SS-09-mixed"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-042 Arabic guarantee fee basis unclear",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-043 Arabic currency delayed settlement",
+      "answerable": true,
+      "expected": [
+        "HC-SS-01-ar-sarf"
+      ],
+      "retrieved_ids": [
+        "HC-SS-01-ar-sarf"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-044 Arabic supply manufactured or generic goods unclear",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-045 Sukuk purchase undertaking face value",
+      "answerable": true,
+      "expected": [
+        "HC-SS-17-undertaking"
+      ],
+      "retrieved_ids": [
+        "HC-SS-17-undertaking"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-046 Capital protection promise",
+      "answerable": true,
+      "expected": [
+        "HC-SS-45-capital"
+      ],
+      "retrieved_ids": [
+        "HC-SS-45-capital"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-047 Investment agency incentive fee",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-048 Documentary credit fee",
+      "answerable": true,
+      "expected": [
+        "HC-SS-14-credit"
+      ],
+      "retrieved_ids": [
+        "HC-SS-14-credit"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-049 Credit agreement rollover fee",
+      "answerable": true,
+      "expected": [
+        "HC-SS-37-credit-agreement"
+      ],
+      "retrieved_ids": [
+        "HC-SS-37-credit-agreement"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-050 Online financial dealing with gharar",
+      "answerable": true,
+      "expected": [
+        "HC-SS-38-online"
+      ],
+      "retrieved_ids": [
+        "HC-SS-38-online"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-051 Hawalah fee structure",
+      "answerable": true,
+      "expected": [
+        "HC-SS-07-hawalah"
+      ],
+      "retrieved_ids": [
+        "HC-SS-07-hawalah"
+      ],
+      "matched": true,
+      "expected_behavior": "answer",
+      "predicted_behavior": "answer",
+      "case_passed": true,
+      "reciprocal_rank": 1.0
+    },
+    {
+      "query": "HC-052 Combination of contracts ambiguity",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "clarification",
+      "predicted_behavior": "clarification",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    },
+    {
+      "query": "HC-053 Insufficient AAOIFI coverage for local product",
+      "answerable": false,
+      "expected": [],
+      "retrieved_ids": [],
+      "matched": false,
+      "expected_behavior": "refusal",
+      "predicted_behavior": "refusal",
+      "case_passed": true,
+      "reciprocal_rank": 0.0
+    }
+  ],
+  "thresholds": {
+    "hit_at_k": {
+      "actual": 1.0,
+      "minimum": 1.0,
+      "passed": true
+    },
+    "recall_at_k": {
+      "actual": 1.0,
+      "minimum": 1.0,
+      "passed": true
+    },
+    "mrr": {
+      "actual": 1.0,
+      "minimum": 1.0,
+      "passed": true
+    },
+    "answerable_case_count": {
+      "actual": 36.0,
+      "minimum": 1,
+      "passed": true
+    },
+    "unanswerable_retrieval_rate": {
+      "actual": 0.0,
+      "maximum": 0.0,
+      "passed": true
+    }
+  },
+  "passed": true,
+  "gold_file": "tests/fixtures/gold_eval_fixture_baseline.yaml",
+  "live_vector_index_used": false,
+  "live_llm_used": false,
+  "baseline_command": "scripts/run_retrieval_baseline.py",
+  "baseline_gate_mode": "gate",
+  "scholar_review_gold_gate": {
+    "tracked_case_count": 53,
+    "accepted_gold_case_count": 0,
+    "pending_or_unreviewed_case_count": 53,
+    "status_counts": {
+      "pending": 53
+    },
+    "accepted_statuses": [
+      "accepted",
+      "accepted_for_gold_set",
+      "accepted_with_correction"
+    ],
+    "tuning_allowed": false
+  },
+  "requires_scholar_reviewed_gold": false
+}

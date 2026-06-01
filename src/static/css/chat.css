@@ -47,11 +47,21 @@ header {
 }
 
 h1 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
   margin: 0;
   font-size: 24px;
   font-weight: 700;
   letter-spacing: 0;
   color: var(--color-text-primary);
+}
+
+.app-version {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
 }
 
 html[dir="rtl"] h1,

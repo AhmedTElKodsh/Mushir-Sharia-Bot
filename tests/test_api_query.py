@@ -54,6 +54,32 @@ def test_rest_query_returns_l1_contract():
 
 
 @pytest.mark.api
+def test_rest_query_strips_internal_status_prefix_from_answer_text():
+    from src.api.dependencies import get_application_service
+    from src.api.main import create_app
+    from src.models.ruling import AnswerContract, ComplianceStatus
+
+    service = FakeService(
+        AnswerContract(
+            answer="INSUFFICIENT_DATA: Not enough contract facts are available.",
+            status=ComplianceStatus.INSUFFICIENT_DATA,
+            citations=[],
+            reasoning_summary="No grounded ruling can be issued.",
+            metadata={"confidence": 0.0},
+        )
+    )
+    app = create_app()
+    app.dependency_overrides[get_application_service] = lambda: service
+
+    with TestClient(app) as client:
+        response = client.post("/api/v1/query", json={"query": "Is it compliant?"})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "INSUFFICIENT_DATA"
+    assert response.json()["answer"] == "Not enough contract facts are available."
+
+
+@pytest.mark.api
 def test_rest_query_maps_service_errors_to_controlled_payload():
     from src.api.dependencies import get_application_service
     from src.api.main import create_app
@@ -128,6 +154,33 @@ def test_rest_query_maps_validation_errors_to_controlled_payload():
         "Invalid request: query cannot be empty. Please enter a Sharia compliance question."
     )
     assert response.json()["error"]["request_id"] == response.headers["X-Request-ID"]
+
+
+@pytest.mark.api
+def test_rest_query_accepts_arabic_letters_as_normal_text():
+    from src.api.dependencies import get_application_service
+    from src.api.main import create_app
+    from src.models.ruling import AnswerContract, ComplianceStatus
+
+    service = FakeService(
+        AnswerContract(
+            answer="Need clarification.",
+            status=ComplianceStatus.CLARIFICATION_NEEDED,
+            clarification_question="من المتأخر في التسليم؟",
+            reasoning_summary="Clarification required.",
+        )
+    )
+    app = create_app()
+    app.dependency_overrides[get_application_service] = lambda: service
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/query",
+            json={"query": "هل يجوز غرامة تأخير في عقد استصناع إذا تأخر التسليم؟"},
+        )
+
+    assert response.status_code == 200
+    assert service.calls == [("هل يجوز غرامة تأخير في عقد استصناع إذا تأخر التسليم؟", None)]
 
 
 @pytest.mark.api
@@ -261,6 +314,37 @@ def test_flag_answer_appends_user_reported_scholar_queue_item(monkeypatch, tmp_p
     assert items[0].queue.value == "Q3"
     assert items[0].system_standards == ["SS-11"]
     assert items[0].user_feedback == "Incorrect standard cited"
+
+
+@pytest.mark.api
+def test_flag_answer_handles_string_standards_and_bad_confidence(monkeypatch, tmp_path):
+    from src.api.main import create_app
+    from src.governance.scholar_review import ScholarReviewQueueStore
+
+    queue_path = tmp_path / "scholar_review_queue.jsonl"
+    monkeypatch.setenv("SCHOLAR_REVIEW_QUEUE_PATH", str(queue_path))
+    app = create_app()
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/flag-answer",
+            json={
+                "query": "Is this answer correct?",
+                "answer": "The system answer",
+                "reason": "Bad metadata should not break reporting",
+                "metadata": {
+                    "confidence": "not-a-number",
+                    "candidate_standards": "SS-11",
+                    "retrieved_chunk_ids": "chunk-11",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    items = ScholarReviewQueueStore(queue_path).load()
+    assert items[0].system_standards == ["SS-11"]
+    assert items[0].source_chunks == ["chunk-11"]
+    assert items[0].system_confidence == 0.0
 
 
 @pytest.mark.api

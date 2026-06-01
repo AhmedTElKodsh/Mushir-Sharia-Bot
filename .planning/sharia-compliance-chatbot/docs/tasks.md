@@ -1,7 +1,7 @@
 # Implementation Task Plan: Source-Governed AAOIFI Assistant
 
 **Created:** 2026-05-19
-**Status:** Maintained implementation truth table, refreshed 2026-05-31
+**Status:** Maintained implementation truth table, refreshed 2026-06-01; current app version V1.5 (`1.5.0`)
 **Scope:** Convert the project-logic rethink, deep research reports, and crawler research into implementation slices. Do not treat planned or researched behavior as proof that runtime behavior already exists.
 
 ## Task Principles
@@ -99,7 +99,7 @@
 
 ### 11. Egypt Financial Institutions Evidence Corpus
 
-**Current implementation state (2026-05-21):** governance/data-contract foundation and fixture-safe pipeline helpers exist with focused tests. The crawl-first data layer should now focus on collecting public institution/operation evidence and exporting Mushir engine assessment rows. Human-scholar-review fields stay blank for now and are a later enhancement step, not a pre-scrape blocker.
+**Current implementation state (V1.5, 2026-06-01):** governance/data-contract foundation, fixture-safe pipeline helpers, app versioning, registry completion, live regulator revalidation, and the guarded bank evidence scrape are implemented with focused tests. The crawl-first data layer now has 69 bank operation/mapping rows exported for scholar review. Human-scholar-review fields stay blank for now and are a later enhancement step, not a pre-scrape blocker.
 
 - [x] Treat `Egypt Financial Institutions Refresh for Sharia Screening.md`, `Egypt_Financial_Institutions_COMPLETE.xlsx`, and `Egyptian_Financial_Institutions_Complete_Presentation.pdf` as baseline inputs, not production authority.
 - [x] Normalize the CBE banks, capital-market, insurance, and non-bank finance workbook sheets into a canonical institution registry with stable IDs, regulator category, source provenance, and refresh status.
@@ -111,7 +111,7 @@
 - [x] Add access-control decision contracts for robots.txt, terms, rate limits, CAPTCHA, login walls, paywalls, and access controls.
 - [x] Wire access-control checks into the crawler/fetcher so blocked content becomes a status, not an evasion target.
 - [x] Add public-artifact metadata contracts for URL, institution ID, document type, language, retrieval timestamp, HTTP status, content hash, raw path, extraction status, and citation-anchor strategy.
-- [x] Implement public artifact fetching and storage under `artifacts/l6_scrape/`.
+- [x] Implement public artifact fetching and storage under `data/runtime/artifacts/l6_scrape/`.
 - [x] Prioritize contract-level and economic-substance documents: tariffs, fees, terms, contracts, model contracts, annual reports, prospectuses, sukuk documents, fund documents, policy wordings, and regulator rulebooks.
 - [x] Add operations-catalog contracts that preserve evidence spans for fees, payment terms, late-payment clauses, penalty beneficiaries, collateral, guarantees, insurance/takaful links, ownership or asset flow, and Sharia claims.
 - [x] Implement extraction/classification from captured artifacts into operations-catalog records.
@@ -124,8 +124,9 @@
 - [x] Add a user-fact override contract so user-supplied facts can override stored institution assumptions.
 - [x] Add a pilot-readiness gate that requires mixed institution coverage, at least one hard no-details/blocked case, captured artifacts, extracted operations, and accepted scholar-reviewed gold data.
 - [ ] Wire institution pre-knowledge and user-fact override behavior into runtime answer flow after reviewed corpus data exists.
-- [ ] Run a crawl-first pilot across mixed institution types and one no-details-found hard case before scaling to the full registry.
-- [ ] Approve broader scraping after the pilot proves discovery, crawl limits, blocked-site classification, raw capture, extraction, deduplication, gap marking, operations extraction, and Mushir engine assessment export. Scholar review remains blank until the later review/improvement layer.
+- [x] Run a guarded crawl-first bank evidence slice with bounded discovery, blocked-site classification, raw capture, extraction, gap marking, operations extraction, and Mushir engine assessment export.
+- [ ] Run a crawl-first pilot across mixed non-bank institution types and one no-details-found hard case before scaling beyond the bank slice.
+- [ ] Approve broader non-bank scraping after official website discovery proves crawl limits, blocked-site classification, raw capture, extraction, deduplication, gap marking, operations extraction, and Mushir engine assessment export. Scholar review remains blank until the later review/improvement layer.
 
 ### 12. Official-Source Crawler Research Integration
 

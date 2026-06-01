@@ -106,8 +106,19 @@ def _result_id(item: Any) -> str:
 
 
 def _governed_metadata_required() -> bool:
-    production_default = (os.getenv("APP_ENV", "dev").strip().lower() or "dev") == "production"
-    return _env_flag_enabled("REQUIRE_GOVERNED_SOURCE_METADATA", production_default)
+    launch_like_envs = {
+        "production",
+        "prod",
+        "staging",
+        "public-demo",
+        "controlled-beta",
+        "production-pilot",
+        "hard-sharia-ready",
+    }
+    app_env = os.getenv("APP_ENV", "dev").strip().lower() or "dev"
+    release_tier = os.getenv("RELEASE_TIER", "").strip().lower()
+    launch_default = app_env in launch_like_envs or release_tier in launch_like_envs
+    return _env_flag_enabled("REQUIRE_GOVERNED_SOURCE_METADATA", launch_default)
 
 
 def _collection_has_metadata(collection: Any, key: str, value: Any) -> bool:
@@ -451,7 +462,7 @@ class RAGPipeline:
                 }
 
                 citation = AAOIFICitation(
-                    standard_id=metadata.get('source_file', 'Unknown').replace('.md', ''),
+                    standard_id=metadata.get('standard_number') or metadata.get('standard_id') or metadata.get('source_file', 'Unknown').replace('.md', ''),
                     section=metadata.get('section') or metadata.get('section_title') or metadata.get('section_number'),
                     page=metadata.get('page'),
                     source_file=metadata.get('source_file', 'Unknown')
@@ -479,7 +490,7 @@ class RAGPipeline:
                 if not _metadata_matches_filters(sdoc.metadata, filters) or not _is_answer_admissible_metadata(sdoc.metadata):
                     continue
                 cit = AAOIFICitation(
-                    standard_id=sdoc.metadata.get('source_file', 'Unknown').replace('.md', ''),
+                    standard_id=sdoc.metadata.get('standard_number') or sdoc.metadata.get('standard_id') or sdoc.metadata.get('source_file', 'Unknown').replace('.md', ''),
                     section=sdoc.metadata.get('section') or sdoc.metadata.get('section_title') or sdoc.metadata.get('section_number'),
                     page=sdoc.metadata.get('page'),
                     source_file=sdoc.metadata.get('source_file', 'Unknown')

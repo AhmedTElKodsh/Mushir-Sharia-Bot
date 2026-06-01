@@ -29,7 +29,7 @@ def test_l5_stable_public_api_smoke_paths():
     assert app_js.status_code == 200
     assert "/api/v1/query/stream" in app_js.text
     assert health.json()["status"] == "healthy"
-    assert ready.json()["status"] == "ready"
+    assert ready.json()["status"] in {"ready", "degraded"}
     assert ready.json()["readiness_level"] == "dev"
     assert ready.json()["infrastructure"]["vector_store"] in {"chroma", "qdrant"}
     assert ready.json()["infrastructure"]["session_store"]

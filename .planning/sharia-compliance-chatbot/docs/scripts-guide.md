@@ -1,4 +1,4 @@
-# Scripts Guide
+﻿# Scripts Guide
 
 This document provides detailed information about the utility scripts available in the `scripts/` directory.
 
@@ -145,7 +145,7 @@ python scripts/ingest.py
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CORPUS_DIR` | `./gemini-gem-prototype/knowledge-base` | Path to AAOIFI markdown corpus |
+| `CORPUS_DIR` | `./data/aaoifi_md` | Path to AAOIFI markdown corpus |
 | `CHROMA_DIR` | `./chroma_db_multilingual` | ChromaDB storage location |
 | `EMBED_MODEL` | `sentence-transformers/paraphrase-multilingual-mpnet-base-v2` | Embedding model |
 | `INGEST_LANGUAGES` | `en,ar` | Comma-separated language codes to ingest |
@@ -1358,7 +1358,7 @@ When adding new scripts:
 
 ## Related Documentation
 
-- [Technology Research](./technology-research.md) - Research on tools and libraries
+- [Technology Decisions](./research/technology-decisions.md) - Research on tools and libraries
 - [README.md](../README.md) - Main project documentation
 - [Requirements](../.kiro/specs/sharia-compliance-chatbot/requirements.md) - System requirements
 - [Design](../.kiro/specs/sharia-compliance-chatbot/design.md) - System design
@@ -1373,3 +1373,4 @@ When adding new scripts:
   - Structure detection
   - Markdown conversion
   - Metadata header generation
+

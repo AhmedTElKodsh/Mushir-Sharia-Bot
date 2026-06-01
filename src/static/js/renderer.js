@@ -298,7 +298,7 @@ function addEvent(text) {
 }
 
 /**
- * Render a compliance status badge as a pill before answer text.
+ * Render a non-binding evidence status badge as a pill before answer text.
  * @param {string} status - COMPLIANT | NON_COMPLIANT | PARTIALLY_COMPLIANT | INSUFFICIENT_DATA
  * @param {HTMLElement} [targetNode] - Assistant message the badge should label
  * @returns {HTMLElement|null} The badge element, or null if status is unknown
@@ -309,10 +309,10 @@ function renderBadge(status, targetNode) {
 
   var normalized = status.toLowerCase().replace(/_/g, "-");
   var labels = {
-    COMPLIANT:           _uiText("statusCompliant", "Compliant"),
-    NON_COMPLIANT:       _uiText("statusNonCompliant", "Non-compliant"),
-    PARTIALLY_COMPLIANT: _uiText("statusPartiallyCompliant", "Partially compliant"),
-    INSUFFICIENT_DATA:   _uiText("statusInsufficientData", "Needs more information")
+    COMPLIANT:           _uiText("statusCompliant", "Supported by retrieved evidence"),
+    NON_COMPLIANT:       _uiText("statusNonCompliant", "Contradicted by retrieved evidence"),
+    PARTIALLY_COMPLIANT: _uiText("statusPartiallyCompliant", "Requires scholar review"),
+    INSUFFICIENT_DATA:   _uiText("statusInsufficientData", "Insufficient source evidence")
   };
 
   var badge  = document.createElement("div");
@@ -478,7 +478,7 @@ function retryHandler() {
 /**
  * Restore previously persisted messages into the chat container.
  * Called synchronously before first paint to avoid flash-of-empty.
- * Renders compliance status badges when the message carries a valid status.
+   * Renders evidence status badges when the message carries a valid status.
  * @param {Array<{role: string, content: string, status?: string}>} savedMessages
  */
 function restoreMessages(savedMessages) {

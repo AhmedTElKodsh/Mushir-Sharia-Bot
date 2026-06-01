@@ -1,6 +1,7 @@
 # Mushir Client Roadmap: Source-Governed AAOIFI Assistant
 
-Last refreshed: 2026-05-19
+Last refreshed: 2026-06-01
+Current app version: V1.5 (`1.5.0`)
 
 ## Who This Is For
 
@@ -18,6 +19,8 @@ After reading it, the client should be able to answer:
 ## One-Page Summary
 
 Mushir is being shaped into a careful AAOIFI standards assistant for Islamic finance questions.
+
+V1.5 marks the first version where the app exposes version metadata and where the Egypt financial-institution evidence workstream has produced guarded, review-only bank operation exports. It does not turn Mushir into a final Sharia authority.
 
 The goal is not to build a chatbot that guesses answers from documents. The goal is to build a controlled assistant that:
 
@@ -88,6 +91,8 @@ quadrantChart
 | Citations | Validates that citations come from retrieved evidence | Add stronger source lineage from official source to answer citation |
 | Permissibility questions | Fails closed when Shariah evidence is missing | Add Shariah-standard routing only after the required sources are acquired and governed |
 | Future assessment | First scaffold exists for commercial assessment | Build rules-first assessment one supported domain at a time |
+| App versioning | V1.5 / `1.5.0` is exposed in API metadata, health/readiness responses, package metadata, and the chat UI | Keep future releases explicit and auditable |
+| Egypt institution evidence | V1.5 exported 69 machine-proposed bank operation mapping rows from bounded public crawling | Add official-site discovery for non-bank sectors, then scholar review and promotion gates |
 
 ## Simple Glossary
 

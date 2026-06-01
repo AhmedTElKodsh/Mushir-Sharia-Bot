@@ -1,5 +1,8 @@
 # L6 Egypt Institution Scrape Workstream
 
+Last refreshed: 2026-06-01
+Current app version: V1.5 (`1.5.0`)
+
 This folder documents the public-source evidence corpus planned for Egyptian financial institutions and their financial operations.
 
 The detailed planning source is:
@@ -28,7 +31,7 @@ Planned tracked inputs:
 
 Runtime output:
 
-- `artifacts/l6_scrape/` - raw pages, PDFs, extracted text, crawl logs, and errors. This folder is for local/runtime artifacts and should not become a normal source-control dump.
+- `data/runtime/artifacts/l6_scrape/` - raw pages, PDFs, extracted text, crawl logs, and errors. This folder is for local/runtime artifacts and should not become a normal source-control dump.
 
 Future code should extend the existing acquisition/governance direction:
 
@@ -42,13 +45,25 @@ Implemented and covered by focused tests:
 
 - workbook/CSV/mapping loaders that emit validated `InstitutionRegistryRecord` rows;
 - discovery runner with configured attempt budgets and no inferred URLs;
-- access-control-first public artifact fetcher and local store under an `artifacts/l6_scrape` compatible layout;
+- access-control-first public artifact fetcher and local store under an `data/runtime/artifacts/l6_scrape` compatible layout;
 - deterministic HTML/text extraction and evidence-span operation extraction;
 - machine-only AAOIFI mapping candidates that remain review inputs, not truth;
 - database-ready engine assessment export with institution name, operation/contract, Mushir engine review, AAOIFI references, and blank human-scholar-review columns;
 - scholar-facing bilingual review lists, including `scholar_review_list_bilingual.csv`, `scholar_review_list_en.csv`, and `scholar_review_list_ar.csv`, with the same `review_item_number` and `operation_id` in Arabic and English so reviewers can connect matching entities;
 - scholar-review CSV import/export plus accepted-gold-case projection for the later improvement layer;
 - pilot gate that blocks full scrape approval until mixed coverage, hard-case gap handling, captured artifacts, and extracted operations exist.
+
+## V1.5 Runtime Evidence Status
+
+The 2026-06-01 V1.5 run produced the first guarded bank-slice evidence export:
+
+- Official registry completion loaded 2,154 baseline institutions: 36 banks, 797 capital-market entities, 996 insurance entities, and 325 non-bank finance entities.
+- CBE official bank PDF access was blocked by upstream security, and FRA capital-market/insurance register pages were blocked by CAPTCHA; both were recorded as gaps.
+- `bank-evidence-scrape` discovered 32 bank website candidates, scraped 14, failed or blocked 18, fetched 73 public pages, extracted 69 operation records, and exported 69 machine-proposed AAOIFI mapping rows.
+- Output folder: `data/runtime/artifacts/l6_scrape/full_scrape/2026-06-01/`.
+- Key files: `bank_scrape_results.csv`, `engine_assessment_rows.csv`, `scholar_review_list_bilingual.csv`, `chunk_ready_spans.jsonl`, and `manifest.json`.
+
+These outputs are review inputs only. They are not runtime answer authority and are not scholar-reviewed ground truth.
 
 ## Safe Pilot Command
 
@@ -58,7 +73,7 @@ Run the fixture-backed pilot before any live crawl:
 python scripts\run_l6_institution_pilot.py --mode fixture-pilot --today 2026-05-20
 ```
 
-The command loads the baseline workbook, selects a small mixed pilot, exercises bounded discovery and artifact capture with local fixture content, exports machine mapping candidates, writes a fixture gold-case CSV, and emits a manifest under `artifacts/l6_scrape/metadata/`.
+The command loads the baseline workbook, selects a small mixed pilot, exercises bounded discovery and artifact capture with local fixture content, exports machine mapping candidates, writes a fixture gold-case CSV, and emits a manifest under `data/runtime/artifacts/l6_scrape/metadata/`.
 
 This is a pipeline readiness run, not live regulator revalidation and not production scholar approval.
 
@@ -68,7 +83,7 @@ Run live regulator/source access revalidation:
 python scripts\run_l6_institution_pilot.py --mode live-regulator-revalidation --today 2026-05-20 --timeout-seconds 20 --delay-seconds 1
 ```
 
-This checks the known regulator/source URLs from the workbook through robots.txt plus a conservative reachability probe, then writes `artifacts/l6_scrape/live_revalidation/<date>/manifest.json` and `regulator_source_access.csv`.
+This checks the known regulator/source URLs from the workbook through robots.txt plus a conservative reachability probe, then writes `data/runtime/artifacts/l6_scrape/live_revalidation/<date>/manifest.json` and `regulator_source_access.csv`.
 
 Run the full-scrape gate:
 
@@ -80,13 +95,21 @@ The gate refuses broad scraping unless official or reviewed-discovery institutio
 
 Any exploratory bank-slice output remains review input only. Non-bank sectors still require official website discovery before crawling.
 
+Run the V1.5 pre-review bank evidence scrape directly:
+
+```powershell
+python scripts\run_l6_institution_pilot.py --mode bank-evidence-scrape --today 2026-06-01 --timeout-seconds 20 --delay-seconds 0.25 --max-targets 36 --max-pages-per-target 6
+```
+
+This mode intentionally skips the scholar-review precondition because it only builds review files. It keeps all exported machine mappings non-runtime-eligible.
+
 Rerun only failed or low-quality bank targets:
 
 ```powershell
 python scripts\run_l6_institution_pilot.py --mode full-scrape --today 2026-05-20 --timeout-seconds 20 --delay-seconds 1 --max-targets 36 --max-pages-per-target 5 --rerun-status failed,insufficient_text
 ```
 
-Reruns write to `artifacts/l6_scrape/full_scrape_rerun/` and keep the primary full-scrape ledger intact.
+Reruns write to `data/runtime/artifacts/l6_scrape/full_scrape_rerun/` and keep the primary full-scrape ledger intact.
 
 Still not approved:
 

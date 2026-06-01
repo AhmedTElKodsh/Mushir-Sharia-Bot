@@ -62,6 +62,18 @@ def test_standards_router_does_not_leak_fas_seed_into_sharia_permissibility():
     assert all(not standard.startswith("FAS-") for standard in route.candidate_standards)
 
 
+def test_mixed_murabaha_is_that_ok_routes_to_sharia_permissibility():
+    query = "In Murabaha, البنك لا يملك السيارة before selling it to me. Is that ok?"
+    scenario = ScenarioExtractor().extract(query)
+    route = StandardsRouter().route(scenario, query)
+
+    assert scenario.question_type == QuestionType.PERMISSIBILITY
+    assert scenario.contract_family == ContractFamily.MURABAHA
+    assert route.primary == [SourceFamily.SHARIA_STANDARD]
+    assert route.requires_rule_evaluation is True
+    assert "SS-08" in route.candidate_standards
+
+
 def test_application_service_passes_query_to_standards_router_seed():
     class EmptyRetriever:
         def retrieve(self, query, k=5, threshold=0.3):

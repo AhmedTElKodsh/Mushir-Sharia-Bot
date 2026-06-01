@@ -139,11 +139,17 @@ class ScenarioExtractor:
             "halal", "haram", "riba", "ribawi", "permissible", "allowed", "valid",
             "sharia-compliant", "can ", "can i ", "can we ", "should i ", "should we ",
             "should the bank", "should a bank", "should the customer",
-            "is it ok", "is it okay", "acceptable", "islamically",
+            "is it ok", "is it okay", "is that ok", "is that okay",
+            "is this ok", "is this okay", "acceptable", "islamically",
             AR_HALAL, AR_HARAM, AR_ALLOWED, AR_VALID, AR_OK,
             AR_SHARIA_ADJECTIVE, AR_MATCHING, AR_RIBA, AR_RIBAWI, "\u0631\u0628\u0648\u064a\u0629",
         )
         if any(term in lowered for term in hard_permissibility_terms):
+            return QuestionType.PERMISSIBILITY
+        if (
+            any(term in lowered for term in ("maintenance", "\u0635\u064a\u0627\u0646\u0629"))
+            and any(term in lowered for term in ("ijarah", "ijara", "lease", "\u0625\u062c\u0627\u0631\u0629", "\u0627\u062c\u0627\u0631\u0629", "\u0627\u0644\u0627\u062c\u0627\u0631\u0629", "\u0627\u064a\u062c\u0627\u0631"))
+        ):
             return QuestionType.PERMISSIBILITY
         if any(term in lowered for term in self._ACCOUNTING_TERMS):
             return QuestionType.ACCOUNTING
@@ -193,7 +199,7 @@ class ScenarioExtractor:
     def _contract_family(lowered: str) -> ContractFamily:
         checks = (
             (ContractFamily.MURABAHA, ("murabaha", "murabahah", AR_MURABAHA, AR_MURABAHA_ALT)),
-            (ContractFamily.IJARAH, ("ijarah", "ijara", "lease", "\u0625\u062c\u0627\u0631\u0629", "\u0627\u064a\u062c\u0627\u0631")),
+            (ContractFamily.IJARAH, ("ijarah", "ijara", "lease", "\u0625\u062c\u0627\u0631\u0629", "\u0627\u062c\u0627\u0631\u0629", "\u0627\u0644\u0627\u062c\u0627\u0631\u0629", "\u0627\u064a\u062c\u0627\u0631")),
             (ContractFamily.TAWARRUQ, ("tawarruq", "\u062a\u0648\u0631\u0642")),
             (ContractFamily.QARD, ("qard", "loan", "interest", "cash advance", "\u0642\u0631\u0636", "\u0641\u0627\u0626\u062f\u0629", "\u0641\u0648\u0627\u0626\u062f", AR_CASH)),
             (ContractFamily.WAKALA, ("wakala", "agency", "\u0648\u0643\u0627\u0644\u0629")),
@@ -225,8 +231,9 @@ class ScenarioExtractor:
     def _payment_terms(text: str, lowered: str) -> Optional[str]:
         markers = (
             "installment", "instalment", "deferred", "monthly", "years", "months",
+            "maintenance",
             AR_INSTALLMENT, "\u062f\u0641\u0639\u0629", "\u0623\u0642\u0633\u0627\u0637",
-            "\u0633\u0646\u0648\u0627\u062a",
+            "\u0633\u0646\u0648\u0627\u062a", "\u0635\u064a\u0627\u0646\u0629",
         )
         return text if any(marker in lowered for marker in markers) else None
 
@@ -284,6 +291,29 @@ class ScenarioExtractor:
                 missing.append("delay_responsible_party")
             missing.append("penalty_trigger")
             missing.append("force_majeure_or_actual_loss_context")
+        if (
+            scenario.question_type == QuestionType.PERMISSIBILITY
+            and scenario.contract_family == ContractFamily.IJARAH
+            and scenario.payment_terms
+            and any(term in scenario.payment_terms.lower() for term in ("maintenance", "\u0635\u064a\u0627\u0646\u0629"))
+        ):
+            lowered_terms = scenario.payment_terms.lower()
+            if not any(
+                term in lowered_terms
+                for term in (
+                    "structural",
+                    "major",
+                    "capital maintenance",
+                    "operational",
+                    "minor",
+                    "routine",
+                    "\u0625\u0646\u0634\u0627\u0626\u064a\u0629",
+                    "\u062c\u0648\u0647\u0631\u064a\u0629",
+                    "\u062a\u0634\u063a\u064a\u0644\u064a\u0629",
+                    "\u0628\u0633\u064a\u0637\u0629",
+                )
+            ):
+                missing.append("maintenance_type")
         return missing
 
     @staticmethod
@@ -387,14 +417,39 @@ class StandardsRouter:
             return "debt-late-payment-penalty", ["SS-03", "SS-19"]
         if StandardsRouter._has_currency_exchange_signal(lowered):
             return "currency-sarf-settlement", ["SS-01"]
-        if any(term in lowered for term in ("guarantee", "kafalah", "ضمان", "كفالة")):
+        has_guarantee = any(term in lowered for term in ("guarantee", "guaranteed", "kafalah", "\u0636\u0645\u0627\u0646", "\u0643\u0641\u0627\u0644\u0629"))
+        has_sukuk = scenario.contract_family == ContractFamily.SUKUK or any(term in lowered for term in ("sukuk", "\u0635\u0643\u0648\u0643"))
+        if has_sukuk and has_guarantee and any(term in lowered for term in ("capital", "issuer", "\u0631\u0623\u0633 \u0627\u0644\u0645\u0627\u0644", "\u0631\u0627\u0633 \u0627\u0644\u0645\u0627\u0644", "\u0627\u0644\u0645\u0635\u062f\u0631")):
+            return "sukuk-capital-guarantee", ["SS-17"]
+        if has_sukuk and (
+            any(term in lowered for term in ("fixed periodic", "fixed income", "fixed return", "\u062f\u062e\u0644 \u062b\u0627\u0628\u062a", "\u062b\u0627\u0628\u062a \u062f\u0648\u0631\u064a"))
+            or ("\u062f\u062e\u0644" in lowered and "\u062b\u0627\u0628\u062a" in lowered and "\u062f\u0648\u0631\u064a" in lowered)
+        ):
+            return "sukuk-fixed-distribution", ["SS-17", "SS-18"]
+        if scenario.contract_family == ContractFamily.IJARAH and has_guarantee and any(term in lowered for term in ("residual value", "asset at contract end", "\u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0645\u062a\u0628\u0642\u064a\u0629")):
+            return "ijarah-residual-value-guarantee", ["SS-09"]
+        if scenario.contract_family == ContractFamily.MUSHARAKA and has_guarantee and any(term in lowered for term in ("minimum return", "fixed return", "profit", "return", "\u0639\u0627\u0626\u062f", "\u0631\u0628\u062d")):
+            return "musharaka-guaranteed-return", ["SS-12"]
+        if scenario.contract_family == ContractFamily.IJARAH and any(term in lowered for term in ("maintenance", "\u0635\u064a\u0627\u0646\u0629")):
+            return "ijarah-maintenance-duty", ["SS-09"]
+        if has_guarantee:
             if scenario.contract_family == ContractFamily.MUDARABA:
                 return "mudaraba-guarantee", ["SS-13", "SS-05"]
             return "guarantee-kafalah-fee", ["SS-05"]
         if any(term in lowered for term in ("sale of debt", "بيع الدين")):
             return "debt-sale", ["SS-60"]
-        if any(term in lowered for term in ("bay' al-wafa", "sale with right of redemption", "بيع الوفاء")):
-            return "bay-al-wafa", ["OIC-40"]
+        if any(
+            term in lowered
+            for term in (
+                "bay' al-wafa",
+                "bay al-wafa",
+                "bay al wafa",
+                "sale with right of redemption",
+                "condition to redeem the asset",
+                "بيع الوفاء",
+            )
+        ):
+            return "bay-al-wafa", ["SS-31", "OIC-40"]
         if scenario.contract_family == ContractFamily.ISTISNA and any(term in lowered for term in ("software", "برمجيات", "services", "خدمات", "maintenance", "صيانة")):
             return "istisna-services", ["SS-11", "SS-09"]
         if any(term in lowered for term in ("takaful", "insurance", "تأمين", "تكافلي")):

@@ -1,0 +1,1907 @@
+[
+  {
+    "standard_number": "SS-01",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-01-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-02",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-02-ar",
+      "aaoifi-ss-02-en"
+    ],
+    "languages_present": [
+      "ar",
+      "en"
+    ],
+    "missing_languages": [],
+    "catalog_record_count": 2,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "pass",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-03",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-03-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-04",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-04-ar",
+      "aaoifi-ss-04-en"
+    ],
+    "languages_present": [
+      "ar",
+      "en"
+    ],
+    "missing_languages": [],
+    "catalog_record_count": 2,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "pass",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-05",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-05-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-06",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-06-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-07",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-07-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-08",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-08-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-09",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-09-ar",
+      "aaoifi-ss-09-en"
+    ],
+    "languages_present": [
+      "ar",
+      "en"
+    ],
+    "missing_languages": [],
+    "catalog_record_count": 2,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "pass",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-10",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-10-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-11",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-11-ar",
+      "aaoifi-ss-11-en"
+    ],
+    "languages_present": [
+      "ar",
+      "en"
+    ],
+    "missing_languages": [],
+    "catalog_record_count": 2,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "pass",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-12",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-12-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-13",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-13-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-14",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-14-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-15",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-15-ar",
+      "aaoifi-ss-15-en"
+    ],
+    "languages_present": [
+      "ar",
+      "en"
+    ],
+    "missing_languages": [],
+    "catalog_record_count": 2,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "pass",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-16",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-16-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-17",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-17-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-18",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-18-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-19",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-19-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-20",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-20-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-21",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-21-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-22",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-22-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-23",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-23-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-24",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-24-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-25",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-25-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-26",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-26-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-27",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-27-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-28",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-28-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-29",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-29-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-30",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-30-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-31",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-31-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-32",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-32-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-33",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-33-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-34",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-34-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-35",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-35-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-36",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-36-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-37",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-37-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-38",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-38-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-39",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-39-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-40",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-40-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-41",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-41-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-42",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-42-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-43",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-43-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-44",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-44-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-45",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-45-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-46",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-46-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-47",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-47-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-48",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-48-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-49",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-49-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-50",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-50-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-51",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-51-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-52",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-52-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-53",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-53-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-54",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-54-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  },
+  {
+    "standard_number": "SS-55",
+    "cataloged": false,
+    "source_ids": [],
+    "languages_present": [],
+    "missing_languages": [
+      "ar",
+      "en"
+    ],
+    "catalog_record_count": 0,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "missing_source",
+    "acquisition_status": "missing_full_official_or_licensed_text",
+    "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission.",
+    "metadata_validation_status": "blocked_no_source",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "blocked_no_source",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "No governed source catalog record is present.",
+      "Source acquisition is blocked: Acquire full official/licensed AAOIFI source text before answer admission.",
+      "Arabic/English source parity is incomplete: ar, en"
+    ]
+  },
+  {
+    "standard_number": "SS-56",
+    "cataloged": false,
+    "source_ids": [],
+    "languages_present": [],
+    "missing_languages": [
+      "ar",
+      "en"
+    ],
+    "catalog_record_count": 0,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "missing_source",
+    "acquisition_status": "missing_full_official_or_licensed_text",
+    "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission.",
+    "metadata_validation_status": "blocked_no_source",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "blocked_no_source",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "No governed source catalog record is present.",
+      "Source acquisition is blocked: Acquire full official/licensed AAOIFI source text before answer admission.",
+      "Arabic/English source parity is incomplete: ar, en"
+    ]
+  },
+  {
+    "standard_number": "SS-57",
+    "cataloged": false,
+    "source_ids": [],
+    "languages_present": [],
+    "missing_languages": [
+      "ar",
+      "en"
+    ],
+    "catalog_record_count": 0,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "missing_source",
+    "acquisition_status": "missing_full_official_or_licensed_text",
+    "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission.",
+    "metadata_validation_status": "blocked_no_source",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "blocked_no_source",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "No governed source catalog record is present.",
+      "Source acquisition is blocked: Acquire full official/licensed AAOIFI source text before answer admission.",
+      "Arabic/English source parity is incomplete: ar, en"
+    ]
+  },
+  {
+    "standard_number": "SS-58",
+    "cataloged": false,
+    "source_ids": [],
+    "languages_present": [],
+    "missing_languages": [
+      "ar",
+      "en"
+    ],
+    "catalog_record_count": 0,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "missing_source",
+    "acquisition_status": "missing_full_official_or_licensed_text",
+    "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission.",
+    "metadata_validation_status": "blocked_no_source",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "blocked_no_source",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "No governed source catalog record is present.",
+      "Source acquisition is blocked: Acquire full official/licensed AAOIFI source text before answer admission.",
+      "Arabic/English source parity is incomplete: ar, en"
+    ]
+  },
+  {
+    "standard_number": "SS-59",
+    "cataloged": false,
+    "source_ids": [],
+    "languages_present": [],
+    "missing_languages": [
+      "ar",
+      "en"
+    ],
+    "catalog_record_count": 0,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "missing_source",
+    "acquisition_status": "missing_full_official_or_licensed_text",
+    "required_next_action": "Acquire full official/licensed AAOIFI source text before answer admission.",
+    "metadata_validation_status": "blocked_no_source",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "blocked_no_source",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "No governed source catalog record is present.",
+      "Source acquisition is blocked: Acquire full official/licensed AAOIFI source text before answer admission.",
+      "Arabic/English source parity is incomplete: ar, en"
+    ]
+  },
+  {
+    "standard_number": "SS-60",
+    "cataloged": true,
+    "source_ids": [
+      "aaoifi-ss-60-en"
+    ],
+    "languages_present": [
+      "en"
+    ],
+    "missing_languages": [
+      "ar"
+    ],
+    "catalog_record_count": 1,
+    "currentness_states": [
+      "current"
+    ],
+    "superseded_by": [],
+    "ingestion_status": "cataloged",
+    "acquisition_status": "acquired",
+    "required_next_action": "",
+    "metadata_validation_status": "catalog_governed",
+    "retrieval_smoke_status": "not_recorded",
+    "representative_question_status": "not_seeded",
+    "answerability_status": "source_present_pending_retrieval_smoke",
+    "scholar_review_status": "not_reviewed",
+    "source_coverage_gate": "fail",
+    "release_gate": "fail",
+    "gate_reasons": [
+      "Arabic/English source parity is incomplete: ar",
+      "Retrieval smoke and scholar-review gates are not yet recorded for this standard."
+    ]
+  }
+]

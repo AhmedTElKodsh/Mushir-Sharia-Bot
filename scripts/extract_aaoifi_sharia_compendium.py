@@ -24,7 +24,7 @@ except ImportError as exc:  # pragma: no cover - operator-facing setup error
 
 DEFAULT_COMPENDIUM = Path("data/raw/aaoifi_sharia/Shariaa-Standards-ENG.pdf")
 DEFAULT_SS60 = Path("data/raw/aaoifi_sharia/AAOIFI-SS-60-Waqf-English.pdf")
-DEFAULT_OUTPUT_DIR = Path("gemini-gem-prototype/knowledge-base")
+DEFAULT_OUTPUT_DIR = Path("data/aaoifi_md")
 
 COMPENDIUM_OFFICIAL_URL = "https://aaoifi.com/shariaa-standards/?lang=en"
 SS60_OFFICIAL_URL = (

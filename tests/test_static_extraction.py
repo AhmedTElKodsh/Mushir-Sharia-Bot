@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 # Strings that must appear in the served HTML (not in external JS)
 HTML_SURFACE_STRINGS = [
     "Mushir Sharia Chatbot",
+    "V1.5",
     'id="prompt"',
     'id="messages"',
     'id="history-sidebar"',
@@ -125,6 +126,8 @@ def test_static_files_contain_expected_content():
         assert "function applyTheme" in app_js
         assert "mushir_ui_theme" in app_js
         assert "mushir_ui_language" in app_js
+        assert "function stripAnswerStatusPrefix" in app_js
+        assert "INSUFFICIENT_DATA" in app_js
         assert "prompt-chip" not in app_js
         assert "composerHint" in app_js
 

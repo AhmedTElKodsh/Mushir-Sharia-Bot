@@ -1,17 +1,18 @@
-# Mushir Project Documentation
+﻿# Mushir Project Documentation
 
 Mushir is a FastAPI-based Sharia compliance chatbot for Islamic finance questions. It uses retrieval-augmented generation (RAG) over AAOIFI Financial Accounting Standards excerpts, then validates that generated answers are grounded in retrieved citations.
 
 This document describes the current project as implemented in the repository and explains how the planning roadmap maps to the built system.
 
-Last refreshed: 2026-05-31
+Last refreshed: 2026-06-01
+Current app version: V1.5 (`1.5.0`)
 
 Current published demo:
 
 - GitHub branch: `main`
 - Hugging Face Space: `https://huggingface.co/spaces/AElKodsh/mushir-sharia-bot`
 - Live app URL: `https://aelkodsh-mushir-sharia-bot.hf.space`
-- Latest verified local behavior: the full pytest suite passes with `619 passed, 48 skipped, 2 warnings`; the critical goldset passes with `19 passed, 19 skipped`; GC-001 now clarifies construction delay-penalty responsibility before verdict; organized banking tawarruq routes to SS-30 rather than currency/Sarf.
+- Latest verified local behavior: the V1.5 documentation/versioning slice passed targeted tests on 2026-06-01; previous full-suite baseline was `619 passed, 48 skipped, 2 warnings`; the critical goldset passed with `19 passed, 19 skipped`; GC-001 now clarifies construction delay-penalty responsibility before verdict; organized banking tawarruq routes to SS-30 rather than currency/Sarf.
 
 ## Goals
 
@@ -37,10 +38,22 @@ The planning files under `.planning/sharia-compliance-chatbot/next-level-plans/`
 | L3 | Production-style infrastructure options and observability | Implemented as selectable modes for Chroma/Qdrant, Redis-backed stores, PostgreSQL audit, readiness, and metrics |
 | L4 | Trust, citation quality, disclaimers, caching rules, and operational hardening | Implemented through citation-gated answers, disclaimer behavior, safe errors, cache rules, and deployment docs |
 | L5 | Quality, operations, release readiness, and demo gates | Active gate; tracked by `.planning/sharia-compliance-chatbot/docs/l5-production-readiness.md` and `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md` |
+| V1.5 | Versioned runtime plus guarded Egypt institution evidence exports | Implemented: app reports `1.5.0` / `V1.5`; bank-slice evidence scrape exported review-only operation/mapping rows |
 | L6 | Rules-first Sharia commercial-process evaluator | Proposed future direction; foundational runtime scaffolding is implemented, full evaluator is not active scope yet |
-| L6 evidence corpus | Egypt financial institutions public operations and contracts corpus | Planned data-acquisition workstream; registry seed folders and docs are prepared, broad scraping is not implemented yet |
+| L6 evidence corpus | Egypt financial institutions public operations and contracts corpus | V1.5 guarded bank evidence slice complete; non-bank sectors still require official website discovery and all machine labels require scholar review |
 
 The active implementation priority is L5. L6 full evaluator work should begin only after L5 quality and runtime gates are green and official-source acquisition/versioning decisions are complete. A small L6 foundation now exists in runtime code to extract scenario metadata, route by source family, resolve candidate standards, detect retrieved source families, and fail closed for late-payment/default permissibility questions when Shari'ah-standard evidence is absent.
+
+## V1.5 Evidence-Corpus Update: 2026-06-01
+
+V1.5 adds explicit app versioning and a guarded Egypt bank evidence export path:
+
+- FastAPI metadata, `/api`, `/health`, `/ready`, `src.__version__`, package metadata, and the chat header report `1.5.0` / `V1.5`.
+- Official registry completion loaded 2,154 baseline institutions: 36 banks, 797 capital-market entities, 996 insurance entities, and 325 non-bank finance entities.
+- CBE official bank PDF access returned an upstream security block, and FRA capital-market/insurance register pages returned CAPTCHA blocks; these were recorded as access gaps, not bypassed.
+- `bank-evidence-scrape` discovered 32 bank website candidates, scraped 14, failed or blocked 18, fetched 73 pages, extracted 69 operations, and exported 69 machine-proposed AAOIFI mappings.
+- Outputs are under `data/runtime/artifacts/l6_scrape/full_scrape/2026-06-01/` and remain review-only: `engine_assessment_rows.csv`, `scholar_review_list_bilingual.csv`, `chunk_ready_spans.jsonl`, and `manifest.json`.
+- Non-bank sectors remain registry-normalized but not product-crawled until official website discovery exists.
 
 ## Recent Runtime Alignment: 2026-05-31
 
@@ -91,10 +104,10 @@ Mushir must not:
 | `tests/` | Unit, service, API, integration, smoke, and readiness tests |
 | `.planning/sharia-compliance-chatbot/docs/` | Current technical, operations, stakeholder, research, and AI handoff documentation |
 | `.planning/sharia-compliance-chatbot/next-level-plans/` | Historical planning files and active readiness plans |
-| `gemini-gem-prototype/knowledge-base/` | AAOIFI markdown corpus used for ingestion |
+| `data/aaoifi_md/` | AAOIFI markdown corpus used for ingestion |
 | `data/source_registry/` | Small tracked source-category and regulator-source seeds for the planned Egypt institution corpus |
 | `data/fixtures/l6_scrape/` | Tiny fixtures for future scraper tests |
-| `artifacts/l6_scrape/` | Runtime scrape artifacts, ignored except the README |
+| `data/runtime/artifacts/l6_scrape/` | Runtime scrape artifacts, ignored except the README |
 
 ## Main Runtime Flow
 
@@ -369,9 +382,9 @@ The next L6 data workstream is the Egypt financial institutions public-source ev
 
 The workstream starts from:
 
-- `.planning/sharia-compliance-chatbot/docs/Egypt Financial Institutions Refresh for Sharia Screening.md`;
-- `.planning/sharia-compliance-chatbot/docs/Egypt_Financial_Institutions_COMPLETE.xlsx`;
-- `.planning/sharia-compliance-chatbot/docs/Egyptian_Financial_Institutions_Complete_Presentation.pdf`.
+- `.planning/sharia-compliance-chatbot/docs/research/l6-egypt-institution-scrape/source-inputs/egypt-financial-institutions-refresh-for-sharia-screening.md`;
+- `.planning/sharia-compliance-chatbot/docs/research/l6-egypt-institution-scrape/source-inputs/Egypt_Financial_Institutions_COMPLETE.xlsx`;
+- `.planning/sharia-compliance-chatbot/docs/research/l6-egypt-institution-scrape/source-inputs/Egyptian_Financial_Institutions_Complete_Presentation.pdf`.
 
 The workbook and presentation are baseline inputs, not production authority. The implementation must revalidate institutions against current regulator sources before broad crawling.
 
@@ -438,7 +451,7 @@ OPENROUTER_MAX_TOKENS=1024
 EMBED_MODEL=sentence-transformers/paraphrase-multilingual-mpnet-base-v2
 VECTOR_DB_TYPE=chroma
 CHROMA_DIR=./chroma_db_multilingual
-CORPUS_DIR=./gemini-gem-prototype/knowledge-base
+CORPUS_DIR=./data/aaoifi_md
 ```
 
 `OPENROUTER_MODEL=openrouter/free` is deliberate for demo and low-cost testing:
@@ -612,3 +625,4 @@ Production should be considered degraded if required production checks fail.
 - Run the focused gate before the full suite during active development.
 - Use placeholders in docs and examples.
 - Re-run secret scans after handling real credentials or deployment incidents.
+

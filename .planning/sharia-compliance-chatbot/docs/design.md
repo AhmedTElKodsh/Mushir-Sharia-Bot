@@ -1,6 +1,7 @@
 # Design Document: Mushir AAOIFI Standards Assistant
 
-**Last reformulated:** 2026-05-19; current-state refresh: 2026-05-31
+**Last reformulated:** 2026-05-19; current-state refresh: 2026-06-01
+**Current app version:** V1.5 (`1.5.0`)
 **Status:** Maintained architecture plan
 **Scope:** Planning only. Runtime code should be changed only after this design is converted into implementation tickets and tests.
 
@@ -24,6 +25,8 @@ As of 2026-05-31, the first hard-case routing safeguards are implemented and tes
 The 2026-05-19 deep research report adds concrete seed data and implementation contracts. This design promotes the first-release accounting router, supersession seed graph, parent/child chunking model, retrieval trace schema, and feedback loop into architecture. It treats specific model, vector database, Arabic NLP, and observability products as spike candidates until measured on Mushir's own AAOIFI gold set.
 
 The 2026-05-22 research package adds an official-source crawler correction. L6 institution data must be built as an official-source-first evidence pipeline: CBE/FRA regulator registry completion, immutable artifact capture, institution identity dedupe, bounded product/contract discovery, evidence-rich operation extraction, then scholar-review handoff. Search and third-party pages are discovery aids only, not compliance evidence.
+
+V1.5 implements the first guarded bank evidence export path and makes version identity explicit across runtime surfaces. The architecture still treats exported institution operation rows as evaluation/review inputs until scholar review promotes them.
 
 ## Target Pipeline
 

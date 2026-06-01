@@ -8,12 +8,12 @@ from sqlalchemy.orm import sessionmaker
 
 from src.acquisition.egypt_financial.models import Base, InstitutionRegistry, DocumentArtifact, DiscoveryStatus, DocumentType
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///l6_evidence.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/runtime/l6_evidence.db")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 SUPABASE_STORAGE_BUCKET = "l6_evidence_artifacts"
 
-ARTIFACTS_DIR = "artifacts/l6_scrape/raw"
+ARTIFACTS_DIR = "data/runtime/artifacts/l6_scrape/raw"
 os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 
 class CrawlerEngine:

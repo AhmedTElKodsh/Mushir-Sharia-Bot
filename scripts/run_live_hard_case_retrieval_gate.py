@@ -45,7 +45,27 @@ def run_live_hard_case_retrieval_gate(
     pipeline_factory: Callable[[], Any] = RAGPipeline,
 ) -> Dict[str, Any]:
     cases = load_hard_cases(cases_path)
-    pipeline = pipeline_factory()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        pipeline = pipeline_factory()
+    except Exception as exc:
+        report = {
+            "passed": False,
+            "case_count": len(cases),
+            "live_vector_index_used": True,
+            "live_llm_used": False,
+            "application_answer_used": False,
+            "gate_command": "scripts/run_live_hard_case_retrieval_gate.py",
+            "cases_file": cases_path.as_posix(),
+            "infrastructure_failure": {
+                "stage": "pipeline_initialization",
+                "error_type": type(exc).__name__,
+                "message": str(exc),
+            },
+            "results": [],
+        }
+        output.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+        return report
     extractor = ScenarioExtractor()
     router = StandardsRouter()
     service = ApplicationService(retriever=pipeline)
@@ -58,9 +78,25 @@ def run_live_hard_case_retrieval_gate(
         if not query:
             raise ValueError("hard-case query is required")
         expected_behavior = str(case.get("expected_behavior") or "retrieval").strip()
-        scenario = extractor.extract(query)
-        route = router.route(scenario, query)
-        answer = service.answer(query)
+        try:
+            scenario = extractor.extract(query)
+            route = router.route(scenario, query)
+            answer = service.answer(query)
+        except Exception as exc:
+            results.append(
+                {
+                    "case_id": case.get("case_id"),
+                    "query": query,
+                    "passed": False,
+                    "failures": [f"infrastructure failure during case execution: {type(exc).__name__}: {exc}"],
+                    "infrastructure_failure": {
+                        "stage": "case_execution",
+                        "error_type": type(exc).__name__,
+                        "message": str(exc),
+                    },
+                }
+            )
+            continue
         route_payload = answer.metadata.get("standards_route") or {}
         candidate_trace = answer.metadata.get("candidate_standard_filter") or {}
         expected_standards = _normalise_list(
@@ -121,7 +157,6 @@ def run_live_hard_case_retrieval_gate(
         "cases_file": cases_path.as_posix(),
         "results": results,
     }
-    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     return report
 

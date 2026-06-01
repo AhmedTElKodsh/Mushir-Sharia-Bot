@@ -36,7 +36,6 @@ class CitationValidator:
 
                 section_matches = (
                     cited_section is None
-                    or normalized_chunk_section is None
                     or cited_section == normalized_chunk_section
                 )
                 if chunk_standard == standard and section_matches and ref not in seen:
@@ -83,11 +82,12 @@ class CitationValidator:
         return refs
 
     def _chunk_ref(self, chunk: Any) -> Tuple[Optional[str], Optional[str]]:
+        metadata = self._metadata(chunk)
         if isinstance(chunk, dict):
-            metadata = chunk.get("metadata", {})
             # Handle various formats: standard_number, source_file, document_id.
             standard = (
                 metadata.get("standard_number")
+                or metadata.get("standard_id")
                 or metadata.get("source_file")
                 or metadata.get("document_id")
             )
@@ -100,12 +100,19 @@ class CitationValidator:
             )
             return (standard, section)
         citation = getattr(chunk, "citation", None)
-        standard = getattr(citation, "standard_id", None)
+        standard = (
+            metadata.get("standard_number")
+            or metadata.get("standard_id")
+            or getattr(citation, "standard_id", None)
+        )
         if standard:
             standard = self._normalize_standard(standard)
         return (
             standard,
-            getattr(citation, "section", None),
+            metadata.get("section_number")
+            or metadata.get("section")
+            or metadata.get("section_title")
+            or getattr(citation, "section", None),
         )
 
     @staticmethod
@@ -164,11 +171,13 @@ class CitationValidator:
     def _metadata(chunk: Any) -> Dict[str, Any]:
         if isinstance(chunk, dict):
             return chunk.get("metadata", {})
+        metadata = dict(getattr(chunk, "metadata", {}) or {})
         citation = getattr(chunk, "citation", None)
-        return {
+        metadata.update({
             "document_id": getattr(citation, "source_file", None),
-            "section_title": getattr(citation, "section", None),
-        }
+            "section_title": metadata.get("section_title") or getattr(citation, "section", None),
+        })
+        return metadata
 
     @staticmethod
     def _chunk_text(chunk: Any) -> str:

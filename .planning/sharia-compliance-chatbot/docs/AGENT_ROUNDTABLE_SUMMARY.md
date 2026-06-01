@@ -3,7 +3,7 @@
 **Date:** 2026-05-20
 **Mode:** `bmad-party-mode` planning review
 **Participants:** Winston, Amelia, Mary, Murat
-**Scope:** Rethink Mushir's project logic, compare the desired product with the implemented code, and integrate useful planning inputs from `deep-research-report.md`. Planning documents only.
+**Scope:** Rethink Mushir's project logic, compare the desired product with the implemented code, and integrate useful planning inputs from `research/l6-rules-first-evaluator-research.md`. Planning documents only.
 
 ## Consensus
 

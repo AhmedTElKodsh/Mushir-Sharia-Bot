@@ -28,7 +28,7 @@ from src.governance.scholar_review import (
 )
 from src.rag.pipeline import RAGPipeline
 from src.rag.query_preprocessor import QueryPreprocessor
-from src.rag.standard_resolver import all_standards_for_family, resolve_bulk
+from src.rag.standard_resolver import resolve_bulk
 from src.storage.cache import CacheStore
 
 # ---------------------------------------------------------------------------
@@ -168,7 +168,7 @@ class ApplicationService:
 
         # Build authoritative standards_route
         standards_route = self.standards_router.route(scenario, analysis_query)
-        if target_standards and not standards_route.candidate_standards:
+        if target_standards:
             standards_route.candidate_standards = sorted(set(standards_route.candidate_standards) | set(target_standards))
 
         if cached := self._cached_answer(cleaned_query, standards_route):
@@ -387,6 +387,27 @@ class ApplicationService:
             self._audit(cleaned_query, definition_contract, session_id, request_id)
             self._cache_answer(cleaned_query, definition_contract, standards_route)
             return definition_contract
+
+        unsupported_modern_asset_contract = self._unsupported_modern_asset_contract(
+            cleaned_query,
+            response_language,
+            chunks,
+            scenario,
+            standards_route,
+            rule_evaluation,
+            candidate_standard_filter,
+        )
+        if unsupported_modern_asset_contract:
+            self._audit(cleaned_query, unsupported_modern_asset_contract, session_id, request_id)
+            self._append_scholar_review_queue(
+                query=cleaned_query,
+                answer=unsupported_modern_asset_contract,
+                queue=ScholarReviewQueue.AUTO_FLAGGED,
+                flag_reason="unsupported_modern_asset_source_gap",
+                session_id=session_id,
+                request_id=request_id,
+            )
+            return unsupported_modern_asset_contract
 
         if self.llm_client is None:
             from src.chatbot.llm_client import GeminiClient
@@ -719,7 +740,15 @@ class ApplicationService:
             self.session_store.update_session(state)
 
     @staticmethod
-    def _scenario_clarification_question(scenario: Any, response_language: str) -> Optional[str]:
+    def _scenario_clarification_question(
+        scenario: Any,
+        response_language: str,
+        standards_route: Any = None,
+    ) -> Optional[str]:
+        if getattr(standards_route, "route_id", None) == "bay-al-wafa":
+            if response_language == "ar":
+                return "\u0628\u064a\u0639 \u0627\u0644\u0648\u0641\u0627\u0621 \u0645\u0633\u0623\u0644\u0629 \u062e\u0644\u0627\u0641\u064a\u0629. \u0647\u0644 \u062a\u0631\u064a\u062f \u062a\u0631\u062c\u064a\u062d \u062c\u0647\u0629 \u0631\u0642\u0627\u0628\u0629 \u0634\u0631\u0639\u064a\u0629 \u0645\u0639\u064a\u0646\u0629 \u0623\u0645 \u0639\u0631\u0636 \u0627\u0644\u0623\u062f\u0644\u0629 \u0648\u0623\u0648\u062c\u0647 \u0627\u0644\u062e\u0644\u0627\u0641\u061f"
+            return "Bay al-Wafa is disputed. Should I ground the answer in a specific Sharia board or present the evidence and areas of disagreement?"
         missing_facts = set(getattr(scenario, "missing_facts", []) or [])
         if (
             getattr(scenario, "contract_family", None) == ContractFamily.ISTISNA
@@ -729,6 +758,24 @@ class ApplicationService:
             if response_language == "ar":
                 return "\u0647\u0644 \u0627\u0644\u063a\u0631\u0627\u0645\u0629 \u0628\u0633\u0628\u0628 \u062a\u0623\u062e\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0641\u064a \u0627\u0644\u062a\u0633\u0644\u064a\u0645 \u0623\u0645 \u0628\u0633\u0628\u0628 \u062a\u0623\u062e\u0631 \u0627\u0644\u0639\u0645\u064a\u0644 \u0641\u064a \u0627\u0644\u0633\u062f\u0627\u062f\u061f"
             return "Is the penalty because the contractor was late delivering, or because the customer was late paying?"
+        if (
+            getattr(scenario, "contract_family", None) == ContractFamily.MURABAHA
+            and {"ownership_sequence", "possession_or_risk_bearing"} & missing_facts
+            and getattr(scenario, "asset", None)
+            and not getattr(scenario, "payment_terms", None)
+            and not getattr(scenario, "profit_basis", None)
+            and not getattr(scenario, "late_payment_terms", None)
+        ):
+            if response_language == "ar":
+                return "\u0647\u0644 \u062a\u0645\u0644\u0643 \u0627\u0644\u0628\u0646\u0643 \u0627\u0644\u0633\u064a\u0627\u0631\u0629 \u0648\u0642\u0628\u0636\u0647\u0627 \u0623\u0648 \u062a\u062d\u0645\u0644 \u0645\u062e\u0627\u0637\u0631\u0647\u0627 \u0642\u0628\u0644 \u0628\u064a\u0639\u0647\u0627 \u0644\u0643\u061f"
+            return "Did the bank own, take possession of, or bear the risk of the car before selling it to you?"
+        if (
+            getattr(scenario, "contract_family", None) == ContractFamily.IJARAH
+            and "maintenance_type" in missing_facts
+        ):
+            if response_language == "ar":
+                return "\u0647\u0644 \u062a\u0642\u0635\u062f \u0627\u0644\u0635\u064a\u0627\u0646\u0629 \u0627\u0644\u0625\u0646\u0634\u0627\u0626\u064a\u0629 \u0623\u0648 \u0627\u0644\u062c\u0648\u0647\u0631\u064a\u0629\u060c \u0623\u0645 \u0627\u0644\u0635\u064a\u0627\u0646\u0629 \u0627\u0644\u062a\u0634\u063a\u064a\u0644\u064a\u0629 \u0623\u0648 \u0627\u0644\u0628\u0633\u064a\u0637\u0629\u061f"
+            return "Do you mean structural or major maintenance, or operational or routine maintenance?"
         return None
 
     def _history(
@@ -955,6 +1002,82 @@ class ApplicationService:
         if scholar_review_workflow is not None:
             metadata["scholar_review_workflow"] = scholar_review_workflow
         return metadata
+
+    def _unsupported_modern_asset_contract(
+        self,
+        query: str,
+        response_language: str,
+        chunks: List[Any],
+        scenario: Any,
+        standards_route: Any,
+        rule_evaluation: Any,
+        candidate_standard_filter: Optional[Dict[str, Any]],
+    ) -> Optional[AnswerContract]:
+        if not self._is_unsupported_modern_asset_query(query):
+            return None
+        if response_language == "ar":
+            answer = (
+                "\u0644\u0627 \u062a\u062a\u0646\u0627\u0648\u0644 \u0627\u0644\u0645\u0642\u0627\u0637\u0639 "
+                "\u0627\u0644\u0645\u0633\u062a\u0631\u062c\u0639\u0629 \u0645\u0646 \u0645\u0639\u0627\u064a\u064a\u0631 "
+                "\u0623\u064a\u0648\u0641\u064a \u0647\u0630\u0627 \u0627\u0644\u0623\u0635\u0644 \u0623\u0648 "
+                "\u0647\u0630\u0647 \u0627\u0644\u0645\u0636\u0627\u0631\u0628\u0629 \u0628\u0634\u0643\u0644 "
+                "\u0643\u0627\u0641\u060c \u0641\u0644\u0627 \u064a\u0645\u0643\u0646 \u062a\u0642\u062f\u064a\u0645 "
+                "\u062a\u0642\u064a\u064a\u0645 \u0622\u0645\u0646 \u062f\u0648\u0646 \u062f\u0644\u064a\u0644 "
+                "\u0634\u0631\u0639\u064a \u0645\u062d\u062f\u062f \u0648\u0645\u0631\u0627\u062c\u0639\u0629 "
+                "\u0645\u0624\u0647\u0644\u0629."
+            )
+        else:
+            answer = (
+                "The retrieved AAOIFI excerpts do not address this modern asset or speculation scenario "
+                "well enough for a safe assessment. A qualified Sharia reviewer should evaluate the specific "
+                "asset, trading purpose, custody, gharar, and counterparty terms."
+            )
+        return AnswerContract(
+            answer=answer,
+            status=ComplianceStatus.INSUFFICIENT_DATA,
+            citations=[],
+            reasoning_summary=(
+                "The query concerns a modern/unsupported asset class outside the currently grounded source coverage."
+            ),
+            limitations=self._limitations(response_language),
+            metadata=self._metadata(
+                chunks,
+                confidence=self._confidence(chunks),
+                response_language=response_language,
+                scenario=scenario,
+                standards_route=standards_route,
+                rule_evaluation=rule_evaluation,
+                candidate_standard_filter=candidate_standard_filter,
+            ),
+        )
+
+    @staticmethod
+    def _is_unsupported_modern_asset_query(query: str) -> bool:
+        lowered = (query or "").lower()
+        crypto_terms = (
+            "crypto",
+            "cryptocurrency",
+            "bitcoin",
+            "btc",
+            "token",
+            "\u0639\u0645\u0644\u0629 \u0645\u0634\u0641\u0631\u0629",
+            "\u0639\u0645\u0644\u0627\u062a \u0645\u0634\u0641\u0631\u0629",
+            "\u0643\u0631\u064a\u0628\u062a\u0648",
+            "\u0628\u062a\u0643\u0648\u064a\u0646",
+        )
+        speculation_terms = (
+            "speculation",
+            "trade quickly",
+            "quick profit",
+            "\u0645\u0636\u0627\u0631\u0628\u0629",
+            "\u0627\u0644\u0645\u0636\u0627\u0631\u0628\u0629",
+            "\u0627\u0644\u0633\u0631\u064a\u0639\u0629",
+        )
+        ruling_terms = ("halal", "haram", "\u062d\u0644\u0627\u0644", "\u062d\u0631\u0627\u0645", "\u064a\u062c\u0648\u0632")
+        return any(term in lowered for term in crypto_terms) and (
+            any(term in lowered for term in speculation_terms)
+            or any(term in lowered for term in ruling_terms)
+        )
 
     @staticmethod
     def _scholar_review_workflow(
@@ -1359,14 +1482,10 @@ class ApplicationService:
         concept_ids = [entry.concept_id for entry in matched_concepts]
 
         target_standards = resolve_bulk(concept_ids, family_result.primary_family)
-        if not target_standards:
-            target_standards = all_standards_for_family(family_result.primary_family)
             
         if family_result.mode and family_result.mode.value == "multi_path":
             for adj_fam in (getattr(family_result, "adjacent_families", []) or []):
                 adj_standards = resolve_bulk(concept_ids, adj_fam)
-                if not adj_standards:
-                    adj_standards = all_standards_for_family(adj_fam)
                 target_standards.extend(adj_standards)
             target_standards = list(dict.fromkeys(target_standards))
 
@@ -1404,6 +1523,7 @@ class ApplicationService:
         scenario_clarification = self._scenario_clarification_question(
             scenario,
             response_language,
+            standards_route,
         )
         if scenario_clarification:
             self._remember_scenario_clarification(
@@ -1433,7 +1553,10 @@ class ApplicationService:
 
         if self.clarification_service and (
             getattr(self, "_clarification_service_injected", False)
-            or (family_result.mode and family_result.mode.value == "clarification" and known_family is not None)
+            or (
+                getattr(getattr(family_result, "mode", None), "value", None) == "clarification"
+                and known_family is not None
+            )
         ):
             # Pass the known_family so ask_if_needed can apply the bypass
             # ONLY when the router is confident.

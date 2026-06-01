@@ -290,6 +290,17 @@ def test_chroma_governed_metadata_validation_accepts_source_governed_chunks():
     validate_chroma_index_for_governed_metadata(collection)
 
 
+def test_governed_metadata_required_for_launch_like_tiers(monkeypatch):
+    from src.rag import pipeline
+
+    monkeypatch.setenv("APP_ENV", "public-demo")
+    monkeypatch.delenv("REQUIRE_GOVERNED_SOURCE_METADATA", raising=False)
+    assert pipeline._governed_metadata_required() is True
+
+    monkeypatch.setenv("REQUIRE_GOVERNED_SOURCE_METADATA", "false")
+    assert pipeline._governed_metadata_required() is False
+
+
 @pytest.mark.service
 def test_application_service_bypasses_response_cache_in_eval_mode(monkeypatch):
     from src.chatbot.application_service import ApplicationService

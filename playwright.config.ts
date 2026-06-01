@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 
 const localPython = process.platform === "win32" ? ".\\.venv\\Scripts\\python.exe" : ".venv/bin/python";
 const pythonCommand = existsSync(localPython) ? localPython : "python";
-const baseURL = process.env.MUSHIR_API_URL || "http://127.0.0.1:8017";
+const baseURL = process.env.MUSHIR_API_URL || "http://127.0.0.1:8304";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -21,10 +21,16 @@ export default defineConfig({
   webServer: process.env.MUSHIR_API_URL
     ? undefined
     : {
-        command: `${pythonCommand} -m uvicorn src.api.main:app --host 127.0.0.1 --port 8017`,
+        command: `${pythonCommand} -m uvicorn src.api.main:app --host 127.0.0.1 --port 8304`,
         url: `${baseURL}/health`,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
+        env: {
+          ...process.env,
+          APP_ENV: process.env.APP_ENV || "local",
+          VECTOR_DB_TYPE: process.env.VECTOR_DB_TYPE || "chroma",
+          MUSHIR_MOCK_LLM: process.env.MUSHIR_MOCK_LLM || "true",
+        },
       },
   projects: [
     {

@@ -61,10 +61,11 @@ from src.governance import (
 
 
 DEFAULT_WORKBOOK = (
-    ".planning/sharia-compliance-chatbot/docs/"
+    ".planning/sharia-compliance-chatbot/docs/research/"
+    "l6-egypt-institution-scrape/source-inputs/"
     "Egypt_Financial_Institutions_COMPLETE.xlsx"
 )
-DEFAULT_ARTIFACT_ROOT = "artifacts/l6_scrape"
+DEFAULT_ARTIFACT_ROOT = "data/runtime/artifacts/l6_scrape"
 MIN_EVIDENCE_TEXT_LENGTH = 500
 SCRAPE_REVIEW_FIELDS = [
     "mushir_engine_sharia_aaoifi_review",
@@ -129,6 +130,7 @@ def main() -> int:
             "legacy-sector-scrape",
             "official-registry-completion",
             "mixed-mini-pilot",
+            "bank-evidence-scrape",
         ],
         default="fixture-pilot",
     )
@@ -142,7 +144,7 @@ def main() -> int:
     parser.add_argument("--max-pages-per-target", type=int, default=5)
     parser.add_argument(
         "--old-scraping-dir",
-        default="artifacts/l6_scrape/full_scrape/2026-05-21/old_scraping",
+        default="data/runtime/artifacts/l6_scrape/full_scrape/2026-05-21/old_scraping",
         help="Folder containing Banks_old.xlsx, Capital_Market_old.xlsx, Insurance_old.xlsx, and Non_Categorized_old.xlsx.",
     )
     parser.add_argument(
@@ -256,6 +258,22 @@ def main() -> int:
                 rerun_statuses=_split_statuses(args.rerun_status),
             )
         return gate_result
+    if args.mode == "bank-evidence-scrape":
+        print("=== L6 Bank Evidence Scrape ===")
+        print(
+            "Pre-review evidence build: outputs remain machine-proposed, "
+            "human scholar review stays blank, and rows are not runtime eligible."
+        )
+        return run_live_bank_scrape(
+            baseline_registry=baseline_registry,
+            artifact_root=artifact_root,
+            run_date=run_date,
+            timeout_seconds=args.timeout_seconds,
+            delay_seconds=args.delay_seconds,
+            max_targets=args.max_targets,
+            max_pages_per_target=args.max_pages_per_target,
+            rerun_statuses=_split_statuses(args.rerun_status),
+        )
 
     pilot_registry = run_fixture_pilot(
         baseline_registry=baseline_registry,

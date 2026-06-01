@@ -1,8 +1,12 @@
 # Mushir Sharia-Bot Pipeline Architecture (V2)
 
-*Updated: 2026-05-31*
+*Updated: 2026-06-01*
+
+Current app version: V1.5 (`1.5.0`)
 
 This document describes the upgraded logic pipeline built during the "Week 1 Sprint" to resolve edge-cases around conditional rulings (e.g., Delay Penalties in Istisna vs. Murabaha). The 2026-05-31 update records the GC-001 correction: ambiguous construction penalties clarify the delaying party first, Istisna / Muqawala penalty routing targets `SS-05` plus `SS-11`, and `SS-10` is reserved for Salam.
+
+V1.5 adds visible/API app versioning and guarded institution-evidence exports. Those exports remain outside the runtime answer pipeline until scholar-reviewed and promoted.
 
 ## High-Level Execution Pipeline
 

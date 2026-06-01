@@ -25,7 +25,7 @@ accessible_sources:
     covers: "SS-02, SS-04, SS-09, SS-11, SS-15"
     language: ar,en
     official_url: "https://aaoifi.com/shariaa-standards/?lang=en"
-    local_raw_path: "gemini-gem-prototype/knowledge-base"
+    local_raw_path: "data/aaoifi_md"
     status: acquired_machine_checked
     notes: "Existing local bilingual markdown corpus present before the 2026-05-25 compendium extraction."
 blocked_sources:

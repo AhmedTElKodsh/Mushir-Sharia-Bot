@@ -72,9 +72,10 @@ data/*
 !data/fixtures/l6_scrape/README.md
 
 # Runtime scrape artifacts
-artifacts/l6_scrape/**
-!artifacts/l6_scrape/
-!artifacts/l6_scrape/README.md
+data/runtime/artifacts/**
+!data/runtime/artifacts/
+!data/runtime/artifacts/l6_scrape/
+!data/runtime/artifacts/l6_scrape/README.md
 
 # Chroma
 chroma_db/
@@ -119,11 +120,6 @@ Thumbs.db
 !.planning/STATE.md
 !.planning/sharia-compliance-chatbot/
 !.planning/sharia-compliance-chatbot/**
-.planning/sharia-compliance-chatbot/docs/l6_scrape/**
-!.planning/sharia-compliance-chatbot/docs/l6_scrape/
-!.planning/sharia-compliance-chatbot/docs/l6_scrape/README.md
-!.planning/sharia-compliance-chatbot/docs/l6_scrape/**/
-!.planning/sharia-compliance-chatbot/docs/l6_scrape/**/*.md
 *.code-workspace
 .env.*
 !.env.example

@@ -1,6 +1,7 @@
 # Mushir Client Report: Planning, Implementation, And How The Chatbot Works
 
-Last refreshed: 2026-05-31
+Last refreshed: 2026-06-01
+Current app version: V1.5 (`1.5.0`)
 
 This report explains Mushir in plain language for a non-technical client. It covers the project goal, what has already been implemented, how the current chatbot answers safely, what remains before a stronger release, and how the future product direction expands from a citation-backed chatbot into a structured Sharia commercial-process assessment assistant.
 
@@ -10,7 +11,9 @@ Mushir is a Sharia compliance research assistant for Islamic finance questions. 
 
 Mushir is not a scholar, lawyer, financial advisor, or Sharia board. It does not issue binding fatwas. It is best understood as a careful preparation and research assistant: it helps users find relevant standards, understand what evidence is available, identify missing facts, and prepare better questions for a qualified Sharia scholar or compliance team.
 
-The implementation is already more than a prototype chatbot. It has a browser chat page, API endpoints, streaming support, multilingual retrieval, citation validation, safe refusal behavior, readiness checks, and deployment documentation. The current active planning phase is L5: quality, operations, and release readiness. The proposed future phase is L6: a rules-first commercial-process evaluator. The latest local verification on 2026-05-31 passed the full automated suite with `619 passed, 48 skipped, 2 warnings`.
+The implementation is already more than a prototype chatbot. V1.5 has a browser chat page, API endpoints, streaming support, multilingual retrieval, citation validation, safe refusal behavior, readiness checks, deployment documentation, visible app versioning, and the first guarded Egypt financial-institution evidence-corpus exports. The current runtime remains a careful AAOIFI evidence assistant. The proposed future phase is L6: a rules-first commercial-process evaluator.
+
+The V1.5 data milestone on 2026-06-01 loaded 2,154 Egyptian financial-institution baseline records: 36 banks, 797 capital-market entities, 996 insurance entities, and 325 non-bank finance entities. CBE and FRA live registry pages were checked but blocked by security/CAPTCHA controls, so the system recorded those gaps instead of bypassing them. A bounded bank evidence scrape found 32 bank website candidates, scraped 14, failed or blocked 18, fetched 73 public pages, and exported 69 machine-proposed AAOIFI mapping rows for scholar review. These rows are review inputs only, not final Sharia rulings.
 
 ## The Product In One Sentence
 
@@ -30,6 +33,8 @@ Mushir helps users ask Islamic finance questions and receive careful, citation-b
 | Use the chatbot in a browser | Provides `/chat` as the demo user interface |
 | Integrate from another app | Provides REST and Server-Sent Events API endpoints |
 | Check deployment health | Provides `/health`, `/ready`, and `/metrics` endpoints |
+| Check app version | Reports V1.5 / `1.5.0` through API metadata, health/readiness responses, package metadata, and the chat header |
+| Prepare institution evidence for review | Exports bank operation evidence, Mushir engine AAOIFI candidates, and bilingual scholar-review lists |
 
 ## What Mushir Does Not Do
 
@@ -56,7 +61,8 @@ The project has been planned in levels. Some older planning files still exist fo
 | L3 | Add production-style infrastructure options such as Qdrant, Redis, PostgreSQL, metrics, and readiness checks | Implemented as configurable options and readiness gates |
 | L4 | Add trust, citation quality, disclaimers, caching controls, and operational hardening | Implemented as part of the current safety layer |
 | L5 | Prove quality and release readiness through tests, retrieval evaluation, deployment checks, and runbooks | Active gate |
-| L6 | Future direction: rules-first Sharia commercial-process evaluator | Proposed; first runtime scaffold exists, full evaluator is not active scope |
+| V1.5 | Versioned app and guarded Egypt institution evidence exports | Implemented as review-only evidence corpus outputs, not runtime Sharia authority |
+| L6 | Future direction: rules-first Sharia commercial-process evaluator | Proposed; first runtime scaffold and V1.5 evidence exports exist, full evaluator is not active scope |
 
 The most important planning correction is that the current system should not be described as "complete Sharia verdict automation." Today it is a citation-grounded assistant over the available corpus. The future L6 direction adds transaction modeling and rule checks so that broader commercial-process assessment can become safer and more structured. A first runtime scaffold now records transaction-scenario metadata, source routing, rule-trace placeholders, and a fail-closed guard for late-payment/default permissibility questions when Shari'ah-standard evidence is missing.
 

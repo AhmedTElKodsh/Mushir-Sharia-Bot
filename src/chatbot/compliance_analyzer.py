@@ -19,13 +19,21 @@ def derive_compliance_status(answer: str, citations: List[Any]) -> ComplianceSta
         "PARTIALLY_COMPLIANT" in upper
         or "PARTIALLY COMPLIANT" in upper
         or "CONDITIONALLY COMPLIANT" in upper
+        or "REQUIRES_SCHOLAR_REVIEW" in upper
+        or "REQUIRES SCHOLAR REVIEW" in upper
     ):
         return ComplianceStatus.PARTIALLY_COMPLIANT
 
-    if "NON_COMPLIANT" in upper or "NON-COMPLIANT" in upper or "NON COMPLIANT" in upper:
+    if (
+        "NON_COMPLIANT" in upper
+        or "NON-COMPLIANT" in upper
+        or "NON COMPLIANT" in upper
+        or "CONTRADICTED_BY_RETRIEVED_EVIDENCE" in upper
+        or "CONTRADICTED BY RETRIEVED EVIDENCE" in upper
+    ):
         return ComplianceStatus.NON_COMPLIANT
 
-    if "COMPLIANT" in upper:
+    if "COMPLIANT" in upper or "SUPPORTED_BY_RETRIEVED_EVIDENCE" in upper or "SUPPORTED BY RETRIEVED EVIDENCE" in upper:
         return ComplianceStatus.COMPLIANT
 
     return ComplianceStatus.INSUFFICIENT_DATA

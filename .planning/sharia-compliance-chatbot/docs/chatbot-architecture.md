@@ -2,11 +2,14 @@
 
 This document describes the architecture of the Mushir Sharia Compliance Chatbot's answer generation system.
 
-Last refreshed: 2026-05-31
+Last refreshed: 2026-06-01
+Current app version: V1.5 (`1.5.0`)
 
 ## Overview
 
 The chatbot uses a layered architecture that separates concerns between orchestration, scenario extraction, source routing, retrieval, prompt construction, LLM interaction, and validation. This design enables independent testing, flexible prompt versioning, and clean separation between business logic and LLM integration.
+
+V1.5 adds runtime version metadata and guarded institution-evidence exports, but it does not change the answer-generation authority boundary: runtime answers still require retrieved AAOIFI evidence and validated citations.
 
 ## Component Hierarchy
 

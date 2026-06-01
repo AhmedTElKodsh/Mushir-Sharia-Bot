@@ -163,7 +163,7 @@ The evaluation plan must test:
 
 ## Deep Research Report Addendum
 
-The later `deep-research-report.md` review sharpened the planning rewrite. It did not change the core product direction; it made several parts more concrete.
+The later `research/l6-rules-first-evaluator-research.md` review sharpened the planning rewrite. It did not change the core product direction; it made several parts more concrete.
 
 Promote into active planning now:
 

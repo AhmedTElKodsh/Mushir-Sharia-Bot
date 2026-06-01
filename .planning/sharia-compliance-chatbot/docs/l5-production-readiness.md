@@ -2,7 +2,7 @@
 
 This runbook defines the demo/release checks for the implemented Mushir runtime.
 
-Last refreshed: 2026-05-31. Current local verification: full pytest suite `619 passed, 48 skipped, 2 warnings`; critical goldset `19 passed, 19 skipped`; evaluation suite `96 passed, 44 skipped`.
+Last refreshed: 2026-06-01. Current app version: V1.5 (`1.5.0`). Current local verification baseline: full pytest suite `619 passed, 48 skipped, 2 warnings`; critical goldset `19 passed, 19 skipped`; evaluation suite `96 passed, 44 skipped`. V1.5 targeted verification covered the versioning/static/API and L6 institution evidence slices.
 
 ## Runtime Modes
 
@@ -15,6 +15,7 @@ Last refreshed: 2026-05-31. Current local verification: full pytest suite `619 p
 | Cache | `CACHE_STORE_TYPE=memory` | `CACHE_STORE_TYPE=redis`, `REDIS_URL` | App falls back to in-memory cache if Redis setup fails. |
 | LLM | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL=openrouter/free`, `OPENROUTER_MAX_TOKENS=1024` | Explicit OpenRouter model with known quota/latency | Missing OpenRouter key fails when generation is first needed. Free routes must be used conservatively. |
 | Arabic answers and retrieval | Automatic Arabic query detection, `l1-aaoifi-grounded-bilingual-v1` prompt, `./chroma_db_multilingual` | Same model/index contract, or equivalent Qdrant collection | Arabic user questions receive Arabic safety/disclaimer language and are evaluated against Arabic retrieval rows. |
+| App version | `APP_VERSION=1.5.0`, label `V1.5` | Same version must appear in API metadata, `/health`, `/ready`, package metadata, and visible UI | Release smoke should fail if visible/API version surfaces diverge. |
 
 ## Required Environment Variables
 

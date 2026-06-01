@@ -15,7 +15,7 @@ def test_canonical_planning_entrypoints_exist():
         ".planning/sharia-compliance-chatbot/docs/project-documentation.md",
         ".planning/sharia-compliance-chatbot/docs/AI_AGENT_PROJECT_HANDOFF.md",
         ".planning/sharia-compliance-chatbot/next-level-plans/README.md",
-        "artifacts/l6_scrape/README.md",
+        "data/runtime/artifacts/l6_scrape/README.md",
         "scripts/legacy/README.md",
     ]
 
