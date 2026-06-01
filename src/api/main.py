@@ -86,8 +86,12 @@ def _build_session_manager():
     return SessionManager(expiry_minutes=int(os.getenv("SESSION_EXPIRY_MINUTES", "30")))
 
 
+def _mock_llm_enabled() -> bool:
+    return os.getenv("MUSHIR_MOCK_LLM", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _build_llm_client():
-    if os.getenv("MUSHIR_MOCK_LLM", "").strip().lower() not in {"1", "true", "yes", "on"}:
+    if not _mock_llm_enabled():
         return None
 
     class StaticEvidenceLLM:
@@ -241,7 +245,7 @@ def _readiness_status(app: FastAPI) -> Dict[str, Any]:
         "retriever_ready": bool(infrastructure.get("retriever_ready")),
         "sharia_corpus_complete": sharia_corpus.get("status") == "complete",
         "hard_sharia_ready": sharia_corpus.get("hard_sharia_ready") is True,
-        "provider_configured": bool(os.getenv("OPENROUTER_API_KEY")),
+        "provider_configured": bool(os.getenv("OPENROUTER_API_KEY")) or _mock_llm_enabled(),
         "auth_configured": bool(auth_token),
         "auth_enforced": tier_order[effective_tier] < tier_order["controlled-beta"] or bool(auth_token),
         "durable_session_store": infrastructure.get("session_store") != "SessionManager",

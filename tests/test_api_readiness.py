@@ -203,6 +203,24 @@ def test_public_demo_ready_degrades_when_runtime_provider_missing(monkeypatch):
 
 
 @pytest.mark.api
+def test_public_demo_ready_accepts_explicit_mock_provider(monkeypatch):
+    from src.api import main as api_main
+
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("APP_ENV", "dev")
+    monkeypatch.setenv("RELEASE_TIER", "public-demo")
+    monkeypatch.setenv("MUSHIR_MOCK_LLM", "true")
+    monkeypatch.setattr(api_main, "_build_retriever", lambda: object())
+
+    app = api_main.create_app()
+    with TestClient(app) as client:
+        res = client.get("/ready")
+
+    body = res.json()
+    assert body["checks"]["provider_configured"] is True
+
+
+@pytest.mark.api
 def test_production_pilot_ready_does_not_require_hard_sharia_ready(monkeypatch):
     from src.api import main as api_main
 
