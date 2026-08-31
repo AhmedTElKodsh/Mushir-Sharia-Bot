@@ -65,7 +65,82 @@ The 2026-06-01 V1.5 run produced the first guarded bank-slice evidence export:
 
 These outputs are review inputs only. They are not runtime answer authority and are not scholar-reviewed ground truth.
 
+## 2026-08-31 Consumer-Finance Registry Refresh
+
+The dedicated FRA typed-register command completed the `consumer-finance` /
+`تمويل استهلاكي` slice from the current Arabic registry:
+
+- 2 listing pages fetched;
+- 38 listing records and 38 unique company rows;
+- 38 detail pages fetched successfully;
+- 0 technical-error rows and 0 duplicate detail URLs or company numbers;
+- output: `data/runtime/artifacts/l6_scrape/fra_registry/2026-08-31/`.
+
+The FRA robots endpoint returned non-robots authorization content, so this run
+used the documented, human-approved unavailable-robots acknowledgement. The
+registry and detail pages themselves remained public and returned no CAPTCHA or
+security-control page. The acknowledgement did not override an explicit robots
+disallow. The exact approved refresh command was:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\scrape_fra_registry.py --fra-type consumer-finance --fra-type-ar "تمويل استهلاكي" --today 2026-08-31 --delay-seconds 1 --site-terms-review-state no-separate-terms-found --acknowledge-unavailable-robots
+```
+
+These rows remain regulator identity facts and are not Sharia
+compliance judgments or runtime-eligible knowledge.
+
 ## Safe Pilot Command
+
+### FRA typed company-register export
+
+The dedicated FRA registry command exports one row per company while retaining
+the FRA type on every row. For consumer finance:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\scrape_fra_registry.py --fra-type consumer-finance --fra-type-ar "تمويل استهلاكي" --today 2026-08-31 --delay-seconds 1 --site-terms-review-state no-separate-terms-found
+```
+
+Output is written under
+`data/runtime/artifacts/l6_scrape/fra_registry/<date>/` as an Excel-safe
+UTF-8-SIG CSV, `manifest.json`, and hashed raw HTML captures. Each execution
+uses a unique `raw/<run-id>/` capture directory so a shorter rerun cannot mix
+current evidence with stale files. CSV and manifest publication use atomic file
+replacement, with the manifest committed last. Runtime output is ignored by
+Git; only the small sanitized fixtures are tracked.
+
+The CSV always includes `regulator`, `registry_name_ar`, `fra_type_code`, and
+`fra_type_ar`. A successfully retrieved FRA page that does not publish a field
+uses the exact value `No data exists`. A field unavailable because of a timeout,
+blocked detail page, parser failure, or another collection problem uses
+`Not scraped due to technical error`, plus `scrape_status` and a sanitized
+`scrape_error`. Multiple activity/date pairs are retained in `activities_json`
+without creating duplicate company rows.
+
+The command checks robots policy before registry access, stays single-threaded,
+rechecks the loaded policy for every pagination/detail path, honors any larger
+published crawl delay, uses bounded pagination and response sizes, rejects
+cross-origin URLs/redirects, and stops on CAPTCHA, login/paywall, HTTP
+401/403/429, explicit robots disallow, or another security control. Blockers
+are classified in the manifest as `robots_unavailable`, `robots_disallowed`,
+`blocked_by_security`, `requires_login`, `document_not_public`, or
+`rate_limited`. If the robots endpoint is missing, unavailable, or returns
+non-robots content, the default is fail-closed. Only a human-reviewed run may add
+`--acknowledge-unavailable-robots`; that flag never overrides an explicit
+disallow or a target-page security control.
+
+The default crawler identity can be replaced with a reviewed operator contact
+using `--user-agent`. Before a live run, review any published FRA terms and use
+the acknowledgement flag only for the exact unavailable-robots condition that
+was manually inspected. The required `--site-terms-review-state` records whether
+no separate terms page was identified or published terms were reviewed as
+compatible. Raw robots content is retained and hashed whenever a
+response body is received so the access decision remains auditable.
+
+Values beginning with Excel formula trigger characters are prefixed with an
+apostrophe in the CSV. The raw hashed HTML remains the unmodified source record.
+
+This export contains regulator identity facts only. It does not create Sharia
+compliance evidence, scholar-reviewed ground truth, or runtime eligibility.
 
 Run the fixture-backed pilot before any live crawl:
 
