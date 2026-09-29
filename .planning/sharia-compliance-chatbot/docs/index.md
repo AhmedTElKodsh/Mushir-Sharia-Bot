@@ -13,6 +13,8 @@ Last refreshed: 2026-06-01. The current documentation set marks the app as V1.5 
 - [AI Project Brief](ai-project-brief.md): compact but detailed AI-agent handoff covering runtime contracts, source authority, L5/L6 status, commands, risks, and safe edit rules.
 - [Client Plain-Language Report](client-plain-language-logic.md): non-technical client explanation of project planning, implemented behavior, current limits, L5 readiness, and proposed L6 direction.
 - [Client Source-Governed Roadmap](client-source-governed-aaoifi-roadmap.md): visual client-facing explanation of the updated AAOIFI assistant logic, key terms, source governance, router plan, roadmap, risks, and acceptance checklist.
+- [Client Egypt Market AI Strategy](client-egypt-market-ai-strategy.md): client-facing explanation of how market data, scholar-approved rules and assistant behavior combine, how non-public contracts are handled, and the V1.6-V2.0 release plan.
+- [L6 Market Knowledge Strategy](../next-level-plans/L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md): technical decisions, release gates, V1.6 blockers and open decisions behind the client strategy.
 - [L6 Egypt Institution Scrape Workstream](l6-egypt-institution-scrape/README.md): project-facing guide for the planned public-source Egypt institution operations corpus.
 - [Project Context](../../../project-context.md): concise implementation rules for AI agents and developers.
 - [Architecture](chatbot-architecture.md): deeper component-level architecture of the answer-generation path.
@@ -62,3 +64,5 @@ Last refreshed: 2026-06-01. The current documentation set marks the app as V1.5 
 | Plan official-source crawler and RAG upgrades | [RAG and Crawler Implementation Plan](research/rag-model-intelligence-implementation-plan-2026-05-22.md) |
 | Plan source-governed implementation slices | [Maintained Tasks](tasks.md) |
 | Prepare Egypt institution scraping | [L6 Egypt Institution Scrape Workstream](l6-egypt-institution-scrape/README.md) |
+| Explain the market-data and training strategy to the client | [Client Egypt Market AI Strategy](client-egypt-market-ai-strategy.md) |
+| Plan the next POC release | [L6 Market Knowledge Strategy](../next-level-plans/L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md) |

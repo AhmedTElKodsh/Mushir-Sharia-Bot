@@ -9,6 +9,14 @@ The detailed planning source is:
 
 - `.planning/sharia-compliance-chatbot/next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md`
 
+The 2026-09-29 market strategy and POC release ladder that builds on this
+workstream is `.planning/sharia-compliance-chatbot/next-level-plans/L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md`
+(client version: `../client-egypt-market-ai-strategy.md`). Instalment-market
+methodology, buyer-journey enrichment and POC answer gates are in
+[installment-market-expansion.md](installment-market-expansion.md),
+[progressive-buyer-journey-crawl-plan.md](progressive-buyer-journey-crawl-plan.md)
+and [dual-query-poc-answer-gates.md](dual-query-poc-answer-gates.md).
+
 ## Boundary
 
 This workstream prepares evidence and evaluation data. It does not make Mushir a fatwa engine and does not make scraped labels authoritative.

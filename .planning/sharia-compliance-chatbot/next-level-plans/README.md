@@ -7,6 +7,7 @@
 **Deep research integration:** 2026-05-19 after reviewing `../docs/deep-research-report.md`
 **Egypt institutions corpus update:** 2026-05-20 after reviewing the Egyptian financial institutions refresh package
 **Research cleanup and crawler update:** 2026-05-22 after reviewing OSS RAG/model intelligence and official-source crawler research
+**Market knowledge strategy:** 2026-09-29 after the instalment-market scrape and a party-mode strategy roundtable
 
 This folder contains historical phase plans and current next-level planning for Mushir. The maintained top-level planning source is now:
 
@@ -65,6 +66,7 @@ After L5 is green, the next product-risk reductions are:
 - `L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md` - Active readiness plan.
 - `L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` - Future rules-first assessment direction, now aligned to source catalog, concept map, source-family routing, and QA gates.
 - `L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md` - Future L6 data-acquisition workstream for public Egyptian institution operations, contracts, bounded discovery, ethical crawling, gap marking, and scholar-reviewed evaluation rows.
+- `L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md` - Evidence store / rule cards / model-behavior split, financing-mechanism tiers, template + schedule contract strategy, bounded archetype prior, scholar-time plan, and the V1.6-V2.0 Hugging Face release ladder with open decisions.
 - `PARTY-MODE-REVIEW-SUMMARY.md` - Earlier party-mode refinement of L1-L4, retained as history.
 - `../docs/tasks.md` - Current implementation task backlog for source catalog, router seeds, parent/child chunking, concept map, retrieval evaluation, feedback, and L6 entry gates.
 - `../docs/deep-research-report.md` - Research input reviewed on 2026-05-19; useful seed data must be catalog-verified before it becomes answer authority.
