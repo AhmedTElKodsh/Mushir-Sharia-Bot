@@ -142,3 +142,6 @@ _legacy/browser-smoke/*
 !_legacy/browser-smoke/
 !_legacy/browser-smoke/README.md
 docs/mushir-client-report.docx
+
+# Generated client deliverables (workbooks, reports, capture bundles)
+outputs/
