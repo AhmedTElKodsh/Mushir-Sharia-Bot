@@ -11,5 +11,19 @@ Use it for:
 - small seed manifests derived from reviewed planning artifacts;
 - validation fixtures that help future code reject missing regulator/source provenance.
 - reviewed loader inputs that can be converted into `InstitutionRegistryRecord` rows by `src/governance/institution_pipeline.py`.
+- `egypt_installment_market.csv`: reviewed public page pointers and explicit source gaps for retailer, financier, marketplace, and property instalment discovery. Its optional financial metrics do not by themselves establish a market ranking.
+- `egypt_market_candidates.csv`: merchant and marketplace seller discovery leads, with a discovery source and explicit verification status. Lead rows are not verified offers.
+
+The bank merchant-list URL used for 40 candidate rows is mutable. The version
+available during the 2026-09-27 review did not reproduce every name in the
+candidate CSV, and the version used to compile those names was not archived.
+Treat both merchant identity and the `online` commerce hint as unverified until
+checked against a dated source or the merchant's own site.
+
+The instalment collector runs five stages (`product_market`, `online_vendor`,
+`direct_store`, `services`, `real_estate`). The separate summarizer combines the
+latest dated crawl from each stage into seller, channel, and financing-party
+relationships. See the [market expansion methodology](../../.planning/sharia-compliance-chatbot/docs/l6-egypt-institution-scrape/installment-market-expansion.md)
+for exact status meanings and the current run.
 
 Do not store full raw websites, downloaded PDFs, extracted text dumps, logs, or private/gated material here. Runtime captures belong under `data/runtime/artifacts/l6_scrape/` or a configured external store.
