@@ -1,0 +1,70 @@
+# tickets.toml — the initiative's epics in build order. tickets.py reads it.
+
+[[epic]]
+id = 1
+slug = "epic-evidence-safe-runtime"
+title = "Mushir never gives an unearned verdict"
+covers = ["CAP-4", "CAP-5"]
+
+[[epic]]
+id = 2
+slug = "epic-described-operation-lane"
+title = "A buyer describes their deal and gets the one right question"
+covers = ["CAP-2", "CAP-3"]
+after = [{ epic = 1, needs = "the fact-slot record, gate-decision envelope, intent taxonomy, tri-state evaluator and rule-card loader" }]
+
+[[epic]]
+id = 3
+slug = "epic-pilot-dossiers"
+title = "Five pilot entities have evidence dossiers"
+covers = ["CAP-6"]
+after = [{ epic = 1, needs = "the fact-slot status vocabulary and the dossier observation schema" }]
+
+[[epic]]
+id = 4
+slug = "epic-named-offer-lane"
+title = "Ask about a named company and get dated, cited terms"
+covers = ["CAP-1"]
+after = [{ epic = 2, needs = "slot model and gates across turns" }, { epic = 3, needs = "the dossier store and five pilot dossiers" }]
+
+[[epic]]
+id = 5
+slug = "epic-scholar-verified-v1-6-release"
+title = "V1.6 is live and scholar-verified"
+covers = ["CAP-7", "CAP-8"]
+after = [{ epic = 2, needs = "review-log rows from the described-operation lane" }, { epic = 4, needs = "review-log rows from the named-offer lane" }]
+
+[[epic]]
+id = 6
+slug = "epic-scholar-rule-cards"
+title = "Client Sharia rules become scholar-approved rule cards"
+covers = ["CAP-9", "CAP-11"]
+after = [{ epic = 5, needs = "the scholar review loop and card promotion path" }]
+
+[[epic]]
+id = 7
+slug = "epic-schedule-screenshots"
+title = "Buyers share their instalment schedule safely"
+covers = ["CAP-10"]
+after = [{ epic = 2, needs = "the slot model for schedule facts" }]
+
+[[epic]]
+id = 8
+slug = "epic-financier-coverage"
+title = "All 38 FRA consumer-finance licensees are covered"
+covers = ["CAP-12"]
+after = [{ epic = 3, needs = "the dossier pipeline and store" }]
+
+[[epic]]
+id = 9
+slug = "epic-learned-behavior"
+title = "Learned behavior improves questions without touching verdicts"
+covers = ["CAP-13", "CAP-14"]
+after = [{ epic = 5, needs = "the versioned frozen set" }, { epic = 6, needs = "the approved archetype taxonomy" }, { epic = 8, needs = "coverage data for entity-grouped splits" }]
+
+[[epic]]
+id = 10
+slug = "epic-launch-candidate"
+title = "Mushir V2.0 is a scholar-signed launch candidate"
+covers = ["CAP-15"]
+after = [{ epic = 9, needs = "learned behavior adopted or dropped" }]

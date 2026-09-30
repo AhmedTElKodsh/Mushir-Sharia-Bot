@@ -1,0 +1,13 @@
+# tickets.toml — epic-evidence-safe-runtime. Not yet incepted: only the shared-contract entry the other epics wait on.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Shared contracts for both answer lanes"
+description = "Codes the typed fact-slot record and status vocabulary, gate-decision envelope and review-log row, intent taxonomy, rule-card loader and dossier observation schema from the spec companions, and restores the local test environment."
+verify = "Unit tests construct each contract from the spec companions' examples, and a reviewer confirms each field against fact-and-evidence-model.md, rule-card-schema.md and the dual-query gates doc."
+covers = ["CAP-4"]
+after = []
+hitl = true
+risk = "medium"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/fact-and-evidence-model.md", "_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/rule-card-schema.md", ".planning/sharia-compliance-chatbot/docs/l6-egypt-institution-scrape/dual-query-poc-answer-gates.md"]
