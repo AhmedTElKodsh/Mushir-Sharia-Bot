@@ -344,7 +344,7 @@ def test_flag_answer_handles_string_standards_and_bad_confidence(monkeypatch, tm
     items = ScholarReviewQueueStore(queue_path).load()
     assert items[0].system_standards == ["SS-11"]
     assert items[0].source_chunks == ["chunk-11"]
-    assert items[0].system_confidence == 0.0
+    assert items[0].system_confidence is None
 
 
 @pytest.mark.api

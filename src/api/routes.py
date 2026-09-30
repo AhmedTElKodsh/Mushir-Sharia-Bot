@@ -2,7 +2,7 @@ import json
 import re
 import uuid
 from inspect import Parameter, signature
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -262,11 +262,13 @@ def _metadata_list(value: Any) -> list[str]:
     return [str(value)]
 
 
-def _metadata_float(value: Any) -> float:
+def _metadata_float(value: Any) -> Optional[float]:
+    if isinstance(value, bool) or value is None:
+        return None
     try:
-        return float(value or 0.0)
+        return float(value)
     except (TypeError, ValueError):
-        return 0.0
+        return None
 
 
 def _sse(event: str, data: Dict[str, Any]) -> str:

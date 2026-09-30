@@ -137,14 +137,15 @@ class ScenarioExtractor:
     def _question_type(self, lowered: str) -> QuestionType:
         hard_permissibility_terms = (
             "halal", "haram", "riba", "ribawi", "usury", "usurious", "permissible", "allowed", "valid",
-            "sharia-compliant", "can ", "can i ", "can we ", "should i ", "should we ",
+            "sharia-compliant", "should i ", "should we ",
             "should the bank", "should a bank", "should the customer",
             "is it ok", "is it okay", "is that ok", "is that okay",
             "is this ok", "is this okay", "acceptable", "islamically",
             AR_HALAL, AR_HARAM, AR_ALLOWED, AR_VALID, AR_OK,
             AR_SHARIA_ADJECTIVE, AR_MATCHING, AR_RIBA, AR_RIBAWI, "\u0631\u0628\u0648\u064a\u0629",
         )
-        if any(term in lowered for term in hard_permissibility_terms):
+        # "can " must start a word: "American ", "scan " and "pecan " are not permission asks.
+        if re.search(r"(?<![a-z])can ", lowered) or any(term in lowered for term in hard_permissibility_terms):
             return QuestionType.PERMISSIBILITY
         if (
             any(term in lowered for term in ("maintenance", "\u0635\u064a\u0627\u0646\u0629"))

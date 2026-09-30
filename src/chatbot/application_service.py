@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import random
@@ -125,11 +126,32 @@ class ApplicationService:
         from src.models.decision_audit import prepare_decision_record
         effective_session = session_id or str(uuid4())
         effective_request = request_id or str(uuid4())
-        answer = self._answer(query, effective_session, effective_request, disclaimer_acknowledged, conversation_history)
-        record = prepare_decision_record(query, answer, session_id=effective_session, request_id=effective_request)
-        if self.decision_store.append(record) != record.review_id:
-            raise RuntimeError("decision review storage did not acknowledge the record")
+        # The decision record is the commit point: an answer that could not be
+        # recorded is never delivered, so the conversation must not advance either.
+        # Append-only audit/queue writes made by _answer cannot be withdrawn.
+        snapshot = self._snapshot_session(effective_session)
+        try:
+            answer = self._answer(query, effective_session, effective_request, disclaimer_acknowledged, conversation_history)
+            record = prepare_decision_record(query, answer, session_id=effective_session, request_id=effective_request)
+            if self.decision_store.append(record) != record.review_id:
+                raise RuntimeError("decision review storage did not acknowledge the record")
+        except Exception:
+            self._restore_session(effective_session, snapshot)
+            raise
         return answer
+
+    def _snapshot_session(self, session_id: str) -> Any:
+        state = self._session_state(session_id)
+        return copy.deepcopy(state) if state is not None else None
+
+    def _restore_session(self, session_id: str, snapshot: Any) -> None:
+        if not self.session_store:
+            return
+        if snapshot is None:
+            if hasattr(self.session_store, "delete_session"):
+                self.session_store.delete_session(session_id)
+        elif hasattr(self.session_store, "update_session"):
+            self.session_store.update_session(snapshot)
 
     def _answer(
         self,

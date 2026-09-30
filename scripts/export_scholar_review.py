@@ -65,7 +65,7 @@ def _row(item: dict) -> dict:
             "system_answer_en": item.get("system_answer_en", ""),
             "system_ruling": item.get("system_ruling", ""),
             "system_standards": _join(item.get("system_standards")),
-            "system_confidence": item.get("system_confidence", ""),
+            "system_confidence": "" if item.get("system_confidence") is None else item["system_confidence"],
             "flag_reason": item.get("flag_reason", ""),
             "source_chunks": _join(item.get("source_chunks")),
             "created_at": item.get("created_at", ""),

@@ -150,13 +150,19 @@ class DescribedOperationService:
                             "What fees or payment details in the repayment schedule explain the difference between the stated total and the deposit plus instalments?")
         else:
             reason = evaluation.reason
+            if evaluation.status == "evaluated":
+                # A rule-scoped result is not an overall ruling: rendering it and the
+                # remaining overall gates are unfinished, so the answer stays withheld.
+                reason = "approved_rule_evaluated_overall_gates_pending"
             if evaluation.status == "clarification_needed" and evaluation.question:
                 pending = evaluation.question_slot
                 question = evaluation.question
+        rule_evaluated = evaluation.status == "evaluated" and reason == "approved_rule_evaluated_overall_gates_pending"
         gates = (
             GateDecision(gate="intent_and_scope", status="passed", reason="personal_transaction_scope"),
             GateDecision(gate="typed_extraction", status="passed", reason="explicit_user_assertions_only"),
-            GateDecision(gate="material_fact", status="blocked", reason=reason),
+            GateDecision(gate="material_fact", status="passed" if rule_evaluated else "blocked",
+                         reason="approved_rule_material_facts_complete" if rule_evaluated else reason),
             GateDecision(gate="selective_answer", status="blocked", reason="no_overall_judgment_authorized"),
         )
         if question:
@@ -166,13 +172,20 @@ class DescribedOperationService:
         else:
             needed = ("agreement or repayment disclosure identifying the financier and complete payment terms",
                       "scholar-approved rule mapping to the verified contract mechanism")
+            if rule_evaluated:
+                needed = ("scholar review of the rule-scoped result and the remaining overall-conclusion gates",)
             decision = AnswerDecision(decision="INSUFFICIENT_DATA", reason=reason,
                                       needed_documents_or_reviews=needed, gates=gates)
-            answer_text = ("المعلومات المتاحة لا تكفي لتقييم المعاملة. أحتاج العقد أو بيان السداد الذي يوضح جهة التمويل "
+            answer_text = (
+                ("تنطبق قاعدة معتمدة على جانب واحد من هذه المعاملة، لكن نتيجة قاعدة واحدة ليست حكمًا شاملًا. "
+                 "تبقى مراجعة شرعية للنتيجة والضوابط المتبقية قبل أي خلاصة." if language == "ar" else
+                 "An approved rule applies to one aspect of this transaction, but a single rule's result is not an "
+                 "overall ruling. A scholar review of that result and the remaining required checks is still pending "
+                 "before any conclusion.") if rule_evaluated else ("المعلومات المتاحة لا تكفي لتقييم المعاملة. أحتاج العقد أو بيان السداد الذي يوضح جهة التمويل "
                            "وكامل شروط الدفع، ثم مطابقة الآلية مع قاعدة معتمدة من مراجع شرعي." if language == "ar" else
                            "The available facts are insufficient to assess this transaction. I need the agreement or repayment "
                            "disclosure identifying the financier and complete payment terms, followed by a scholar-approved "
-                           "rule mapping for the verified contract mechanism.")
+                           "rule mapping for the verified contract mechanism."))
         review = DecisionReviewRow(review_id=str(uuid4()), request_id=request_id, session_id=session_id,
                                    turn_id=turn_id, version=version, recorded_at=now, intent="described_operation",
                                    query=text, fact_snapshot=snapshot, decision=decision,

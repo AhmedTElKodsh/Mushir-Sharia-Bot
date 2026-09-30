@@ -156,7 +156,7 @@ class ScholarReviewQueueItem:
     system_answer_en: str = ""
     system_ruling: str = ""
     system_standards: List[str] = field(default_factory=list)
-    system_confidence: float = 0.0
+    system_confidence: Optional[float] = None  # None: the answer carried no calibrated score
     flag_reason: str = ""
     source_chunks: List[str] = field(default_factory=list)
     scholar_sign_off: str = "PENDING"
@@ -172,8 +172,9 @@ class ScholarReviewQueueItem:
             raise ValueError("flag_reason is required")
         if self.created_at.tzinfo is None:
             raise ValueError("created_at must include timezone")
-        confidence = max(0.0, min(float(self.system_confidence), 1.0))
-        object.__setattr__(self, "system_confidence", confidence)
+        if self.system_confidence is not None:
+            confidence = max(0.0, min(float(self.system_confidence), 1.0))
+            object.__setattr__(self, "system_confidence", confidence)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -229,7 +230,7 @@ class ScholarReviewQueueItem:
             system_answer_en=answer.answer if language != "ar" else "",
             system_ruling=str(verdict.get("verdict") or answer.status.value),
             system_standards=list(route.get("candidate_standards") or []),
-            system_confidence=float(metadata.get("confidence") or 0.0),
+            system_confidence=_optional_confidence(metadata.get("confidence")),
             flag_reason=flag_reason,
             source_chunks=list(metadata.get("retrieved_chunk_ids") or []),
             request_id=request_id or "",
@@ -509,3 +510,13 @@ def _join(value: Any) -> str:
     if isinstance(value, Iterable):
         return "|".join(str(item) for item in value)
     return str(value)
+
+
+def _optional_confidence(value: Any) -> Optional[float]:
+    """Return a numeric score, or None when the source carried none."""
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
