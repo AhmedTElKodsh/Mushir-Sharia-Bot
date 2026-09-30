@@ -23,11 +23,14 @@ services:
       - REQUIRE_DISCLAIMER_ACK=${REQUIRE_DISCLAIMER_ACK:-false}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - LOG_DIR=/app/logs
+      - DECISION_REVIEW_DB_PATH=${DECISION_REVIEW_DB_PATH:-/app/data/runtime/decision_reviews.sqlite3}
+      - DECISION_REVIEW_RETENTION_DAYS=${DECISION_REVIEW_RETENTION_DAYS:-365}
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - CORS_ORIGINS=${CORS_ORIGINS:-["*"]}
     volumes:
       - ./logs:/app/logs
+      - ./data/runtime:/app/data/runtime
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/ready"]
       interval: 30s

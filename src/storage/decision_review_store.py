@@ -1,10 +1,15 @@
 """Atomic local decision review storage; failed writes cannot acknowledge delivery."""
 import os
+from datetime import UTC, datetime, timedelta
 from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 
 from src.models.decision_audit import DecisionAuditRecord
+
+
+DEFAULT_DB_PATH = "data/runtime/decision_reviews.sqlite3"
+DEFAULT_RETENTION_DAYS = 365
 
 
 class SQLiteDecisionReviewStore:
@@ -35,6 +40,14 @@ class SQLiteDecisionReviewStore:
                 record.review_id, record.request_id, record.session_id, record.recorded_at.isoformat(), record.model_dump_json()))
         return record.review_id
 
+    def purge_older_than(self, days: int) -> int:
+        """Delete records past the retention window; returns the number removed."""
+        if type(days) is not int or days < 1:
+            raise ValueError("retention must be a positive number of days")
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
+        with self._connect() as conn:
+            return conn.execute("DELETE FROM decision_reviews WHERE recorded_at < ?", (cutoff,)).rowcount
+
     def get(self, review_id: str) -> DecisionAuditRecord | None:
         with self._connect() as conn:
             row = conn.execute("SELECT payload FROM decision_reviews WHERE review_id=?", (review_id,)).fetchone()
@@ -42,4 +55,12 @@ class SQLiteDecisionReviewStore:
 
 
 def configured_decision_store():
-    return SQLiteDecisionReviewStore(os.getenv("DECISION_REVIEW_DB_PATH", "data/runtime/decision_reviews.sqlite3"))
+    return SQLiteDecisionReviewStore(os.getenv("DECISION_REVIEW_DB_PATH") or DEFAULT_DB_PATH)
+
+
+def configured_retention_days() -> int:
+    """Conservative default: keep a year of review records unless the operator sets a window."""
+    try:
+        return max(1, int(os.getenv("DECISION_REVIEW_RETENTION_DAYS") or DEFAULT_RETENTION_DAYS))
+    except ValueError:
+        return DEFAULT_RETENTION_DAYS

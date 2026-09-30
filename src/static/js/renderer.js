@@ -506,17 +506,18 @@ function formatEvidence(evidence) {
   if (!sources.length) lines.push(t("captureUnknown"));
   sources.forEach(function(source) {
     var captured = source.captured_at && Date.parse(source.captured_at);
+    var name = source.document_id || t("unknownSource");
     if (!captured || captured > Date.now()) {
-      lines.push((source.document_id || "") + " — " + t("captureUnknown"));
+      lines.push(name + " — " + t("captureUnknown"));
     } else {
-      lines.push(t("captureAge", {source: source.document_id, date: source.captured_at, age: Math.floor((Date.now() - captured) / 86400000)}));
+      lines.push(t("captureAge", {source: name, date: source.captured_at, age: Math.floor((Date.now() - captured) / 86400000)}));
     }
   });
   return lines.join(" | ");
 }
 
 function renderEvidence(node, evidence) {
-  if (!node) return;
+  if (!node || !evidence) return;  // Restored legacy messages carry no evidence block.
   var label = node.querySelector(".evidence-summary");
   if (!label) {
     label = document.createElement("p");

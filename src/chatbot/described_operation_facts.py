@@ -17,6 +17,12 @@ from src.models.evidence import (
 _DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹٬٫", "01234567890123456789,.")
 _NUMBER = r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?(?![\w%]|[,.]\d)"
 _MONEY = rf"(?:EGP\s*)?(?P<amount>{_NUMBER})(?:\s*(?:EGP|جنيه(?:ات)?))?"
+_NEGATION = r"\b(?:not|no|or|either)\b|(?<!\w)(?:ليس|مش|بدون|او|أو)(?!\w)"
+MAX_INSTALMENTS = 1000
+
+
+def _plausible_count(digits: str) -> bool:
+    return len(digits) <= 4 and 0 < int(digits) <= MAX_INSTALMENTS
 
 
 def parse_schedule_reply(text: str, slot: str):
@@ -26,7 +32,7 @@ def parse_schedule_reply(text: str, slot: str):
         match = re.fullmatch(rf"{_MONEY}[.!]?", normalized, re.I)
         if match and re.search(r"\bEGP\b|جنيه", normalized, re.I):
             return Money(amount=Decimal(match["amount"].replace(",", "")), currency="EGP")
-    if slot == "instalment_count" and re.fullmatch(r"[0-9]+", normalized):
+    if slot == "instalment_count" and re.fullmatch(r"[0-9]{1,4}", normalized) and _plausible_count(normalized):
         return int(normalized)
     return None
 
@@ -67,11 +73,11 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
     def matches(pattern):
         for match in re.finditer(pattern, normalized, re.IGNORECASE):
             # Do not turn negated or alternative clauses into asserted facts.
-            prefix = re.split(r"[.!?؟;\n]", normalized[:match.start()])[-1]
+            prefix = re.split(r"[.!?؟;\n,،]|\bbut\b", normalized[:match.start()])[-1]
             suffix = normalized[match.end():]
             if re.match(r"\s+(?:\d|million\b|thousand\b|[km]\b|ألف|الف|مليون)", suffix, re.I):
                 continue
-            if (re.search(r"\b(?:not|no|or|either)\b|ليس|مش|بدون|(?:^|\s)(?:او|أو)(?:\s|$)", prefix, re.I)
+            if (re.search(_NEGATION, prefix, re.I)
                     or re.match(r"\s*(?:or\b|او\b|أو\b)", suffix, re.I)):
                 continue
             yield match
@@ -98,15 +104,16 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
     monthly = rf"(?<![\d.,-]){_MONEY}\s+(?:monthly for|شهريا لمدة)\s*(?P<count>\d+)(?![\d.,])\s*(?:months?\b|شهر)"
     for pattern in (schedule, monthly):
         for match in matches(pattern):
-            if int(match["count"]) > 0:
+            if _plausible_count(match["count"]):
                 add("instalment_count", int(match["count"]))
                 if not foreign_currency and re.search(r"\bEGP\b|جنيه", match[0], re.I):
                     add("instalment_amount", Money(amount=Decimal(match["amount"].replace(",", "")), currency="EGP"))
 
     # This identifies only the named party, not its regulatory role or mechanism.
     for match in matches(r"(?:\bfinancing party is|\bfinanced by|جهة التمويل هي|التمويل من)\s+([^.!?؟\n,،;]+)"):
-        party = match[1].strip()
-        if party and not re.search(r"\b(?:unknown|not|unsure|either|or)\b|معرفش|لا أعرف|مش عارف|او|أو", party, re.I):
+        party = re.split(r"\s+(?:and|with|but|then|which|paid)\s+|\s+و(?=\w)", match[1].strip(), maxsplit=1)[0].strip()
+        if party and not re.search(r"\d", party) and not re.search(
+                r"\b(?:unknown|not|unsure|either|or)\b|معرفش|لا أعرف|مش عارف|(?<!\w)(?:او|أو)(?!\w)", party, re.I):
             add("financing_party", party)
 
     facts = []

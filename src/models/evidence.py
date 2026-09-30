@@ -6,6 +6,8 @@ the existing answer API. Native Pydantic JSON methods are the wire interface.
 from __future__ import annotations
 
 from decimal import Decimal
+from ipaddress import ip_address
+from urllib.parse import urlsplit
 from typing import Annotated, Literal
 
 from pydantic import (
@@ -33,6 +35,34 @@ UnobservedReason = Literal[
 ]
 AccessStatus = Literal["accessible", "not_publicly_found", "login_gated", "access_blocked", "in_customer_schedule"]
 Intent = Literal["named_offer", "described_operation", "definition", "out_of_scope"]
+NON_HUMAN_REVIEWERS = frozenset({"auto", "automatic", "model", "llm", "model-confidence", "claude", "gpt", "system", "bot"})
+
+
+def require_human_reviewer(value: str) -> str:
+    """Approval identities must name a person; automatic identities never approve."""
+    if value.strip().lower() in NON_HUMAN_REVIEWERS:
+        raise ValueError("automatic identity cannot review or approve")
+    return value
+
+
+def _public_http_url(value):
+    if value is None:
+        return value
+    parts = urlsplit(value)
+    host = (parts.hostname or "").lower()
+    if parts.username or parts.password or parts.query or parts.fragment:
+        raise ValueError("provenance URLs must not carry credentials, query strings or fragments")
+    if host == "localhost" or host.endswith(".localhost"):
+        raise ValueError("provenance URLs must be public")
+    try:
+        address = ip_address(host)
+    except ValueError:
+        return value
+    if not address.is_global:
+        raise ValueError("provenance URLs must be public")
+    return value
+
+
 FACT_SLOTS = (
     "asset", "seller", "sales_channel", "financing_party", "contract_family",
     "cash_price", "financed_or_final_price", "down_payment", "instalment_count",
@@ -82,6 +112,16 @@ class CaptureManifest(EvidenceModel):
     access_status: AccessStatus
     document_version: Text
 
+    @field_validator("url", "final_url")
+    @classmethod
+    def public_url(cls, value):
+        return _public_http_url(value)
+
+    @field_validator("sha256")
+    @classmethod
+    def lowercase_digest(cls, value):
+        return value.lower()
+
 
 class SourceProvenance(EvidenceModel):
     kind: Literal["source"] = "source"
@@ -120,6 +160,13 @@ class Money(EvidenceModel):
     def exact_decimal(cls, value):
         if type(value) not in (int, Decimal, str):
             raise ValueError("money requires an integer, Decimal, or exact decimal string")
+        if type(value) is not int:
+            try:
+                digits = len(Decimal(value).as_tuple().digits)
+            except ArithmeticError:
+                return value  # Let field validation report the malformed amount.
+            if digits > 40:
+                raise ValueError("money amount has too many digits")
         return value
 
 
@@ -145,6 +192,13 @@ class FactCandidate(EvidenceModel):
         return self
 
 
+def _canonical_value(value):
+    """Numerically equal money is one value however its amount was spelled."""
+    if isinstance(value, Money):
+        return ("Money", Decimal(value.amount).normalize(), value.currency)
+    return (type(value).__name__, repr(value))
+
+
 class FactObservation(EvidenceModel):
     slot: Text  # Named companion slots and extensible rule-specific slots.
     scope: EvidenceScope
@@ -166,7 +220,7 @@ class FactObservation(EvidenceModel):
         elif self.status == "conflicting":
             if self.value is not None or self.source is not None or self.unobserved_reason or len(self.candidates) < 2:
                 raise ValueError("conflict requires at least two supported candidates and no selected value")
-            if len({(type(c.value).__name__, repr(c.value)) for c in self.candidates}) < 2:
+            if len({_canonical_value(c.value) for c in self.candidates}) < 2:
                 raise ValueError("conflict requires distinct values")
             supported = list(self.candidates)
         else:
@@ -254,7 +308,7 @@ class BuyerJourneyStep(EvidenceModel):
 
 
 class VerificationRecord(EvidenceModel):
-    reviewer_id: Text
+    reviewer_id: Annotated[Text, AfterValidator(require_human_reviewer)]
     recorded_at: AwareDatetime
     decision: Literal["pending", "verified", "rejected", "approved"]
     notes: Text

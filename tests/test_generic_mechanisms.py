@@ -93,3 +93,8 @@ def test_user_murabaha_label_and_configured_card_do_not_fill_personal_mechanism(
     facts = result.metadata["decision_review"]["fact_snapshot"]["facts"]
     assert next(f for f in facts if f["slot"] == "contract_family")["status"] == "unknown"
     app.llm_client.generate.assert_not_called()
+
+
+@pytest.mark.parametrize("query", ["ما هو هامش الربح؟", "What is the profit margin?"])
+def test_bare_profit_margin_wording_does_not_route_to_murabaha(query):
+    assert ContractFamilyRouter().classify(query).primary_family != RoutingFamily.MURABAHA

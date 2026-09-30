@@ -112,7 +112,13 @@ class ApplicationService:
         from src.chatbot.described_operation import DescribedOperationService
         from src.governance.rule_cards import load_rule_cards
         card_path = os.getenv("APPROVED_RULE_CARDS_PATH")
-        cards = load_rule_cards(card_path) if card_path else approved_rule_cards
+        cards = tuple(approved_rule_cards)  # An explicit argument outranks the environment.
+        if not cards and card_path:
+            try:
+                cards = load_rule_cards(card_path)
+            except (OSError, ValueError) as exc:
+                # Silently running without cards would abstain on everything unnoticed.
+                raise RuntimeError(f"APPROVED_RULE_CARDS_PATH could not be loaded: {exc}") from exc
         self.described_operations = DescribedOperationService(cards)
 
     def answer(
@@ -131,7 +137,9 @@ class ApplicationService:
         # Append-only audit/queue writes made by _answer cannot be withdrawn.
         snapshot = self._snapshot_session(effective_session)
         try:
-            answer = self._answer(query, effective_session, effective_request, disclaimer_acknowledged, conversation_history)
+            # Anonymous requests share one id with their audit record but never leave session state behind.
+            answer = self._answer(query, effective_session, effective_request, disclaimer_acknowledged,
+                                  conversation_history, keep_session=session_id is not None)
             record = prepare_decision_record(query, answer, session_id=effective_session, request_id=effective_request)
             if self.decision_store.append(record) != record.review_id:
                 raise RuntimeError("decision review storage did not acknowledge the record")
@@ -139,6 +147,15 @@ class ApplicationService:
             self._restore_session(effective_session, snapshot)
             raise
         return answer
+
+    MAX_SESSION_REVIEW_ROWS = 20
+
+    @classmethod
+    def _append_review_row(cls, state: Any, key: str, row: Any) -> None:
+        """Session copies are a bounded working set; the decision store holds the full record."""
+        rows = state.metadata.setdefault(key, [])
+        rows.append(row)
+        del rows[:-cls.MAX_SESSION_REVIEW_ROWS]
 
     def _snapshot_session(self, session_id: str) -> Any:
         state = self._session_state(session_id)
@@ -160,6 +177,7 @@ class ApplicationService:
         request_id: Optional[str] = None,
         disclaimer_acknowledged: bool = True,
         conversation_history: Optional[List[Dict[str, Any]]] = None,
+        keep_session: bool = True,
     ) -> AnswerContract:
         if not query or not query.strip():
             return self._empty_query_response()
@@ -199,7 +217,12 @@ class ApplicationService:
         from uuid import uuid4
         state = self._session_state(session_id)
         saved_operation = state.metadata.get("described_operation") if state else None
-        operation = OperationConversation.model_validate(saved_operation) if saved_operation else None
+        operation = None
+        if saved_operation:
+            try:
+                operation = OperationConversation.model_validate(saved_operation)
+            except ValueError:
+                state.metadata.pop("described_operation", None)  # Stale schema: start the description afresh.
         pending_structure = state.metadata.get("pending_structure_clarification") if state else None
         # A suspended transaction must not capture facts from the active topic.
         # Only a fresh personal description may switch out of that topic.
@@ -210,12 +233,12 @@ class ApplicationService:
                 query, session_id=effective_session, request_id=request_id or str(uuid4()),
                 previous=personal_context, language=response_language,
             )
-            state = state or self._session_state(session_id, create=True)
+            state = state or self._session_state(session_id, create=keep_session)
             if state:
                 state.metadata.pop("pending_structure_clarification", None)
                 state.metadata.pop("pending_scenario_clarification", None)
                 state.metadata["described_operation"] = updated_operation.model_dump(mode="json")
-                state.metadata.setdefault("operation_review_rows", []).append(contract.metadata["decision_review"])
+                self._append_review_row(state, "operation_review_rows", contract.metadata["decision_review"])
                 state.add_message("user", query)
                 state.add_message("assistant", contract.answer)
                 self._update_session_state(state)
@@ -227,7 +250,7 @@ class ApplicationService:
 
         structure_answer, next_structure = clarify_structure(query, cleaned_query, response_language, pending_structure)
         if structure_answer or pending_structure:
-            state = state or self._session_state(session_id, create=True)
+            state = state or self._session_state(session_id, create=keep_session)
             if state:
                 state.metadata.pop("pending_structure_clarification", None)
                 if next_structure:
@@ -236,7 +259,7 @@ class ApplicationService:
                     state.metadata.pop("pending_scenario_clarification", None)
                     if operation:
                         state.metadata["described_operation"] = operation.model_copy(update={"pending_slot": None}).model_dump(mode="json")
-                    state.metadata.setdefault("structure_review_rows", []).append(structure_answer.metadata["structure_clarification"])
+                    self._append_review_row(state, "structure_review_rows", structure_answer.metadata["structure_clarification"])
                     state.add_message("user", query)
                     state.add_message("assistant", structure_answer.answer)
                 self._update_session_state(state)

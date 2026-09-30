@@ -38,11 +38,16 @@ def main():
     args = parser.parse_args()
     if not args.query and not args.interactive:
         parser.error("--query is required unless --interactive is used")
+    if args.k < 1:
+        parser.error("--k must be at least 1")
     service = create_service()
     acknowledged = args.acknowledge_disclaimer
     if args.interactive and not acknowledged and os.getenv("REQUIRE_DISCLAIMER_ACK", "false").lower() == "true":
         print("Answers are informational; consult a qualified Sharia scholar for a binding ruling.")
-        acknowledged = input("Type 'I acknowledge' to continue: ").strip().lower() == "i acknowledge"
+        try:
+            acknowledged = input("Type 'I acknowledge' to continue: ").strip().lower() == "i acknowledge"
+        except (EOFError, KeyboardInterrupt):
+            return
         if not acknowledged:
             return
     service.k = args.k
@@ -50,7 +55,15 @@ def main():
     query = args.query
     while True:
         if query is None:
-            query = input("Question (exit to quit): ").strip()
+            try:
+                query = input("Question (exit to quit): ").strip()
+            except (EOFError, KeyboardInterrupt):
+                return
+        if not query.strip():
+            if not args.interactive:
+                return
+            query = None
+            continue
         if query.lower() in {"exit", "quit"}:
             return
         display_answer(service.answer(query, session_id=session_id, request_id=str(uuid.uuid4()),

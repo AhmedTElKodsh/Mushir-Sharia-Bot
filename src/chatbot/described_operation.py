@@ -62,8 +62,22 @@ class DescribedOperationService:
         # continue a transaction. A new question is routed independently.
         if re.search(r"[?؟]", text) or re.match(r"\s*(?:what|why|how|define|explain|ما هو|ما هي|اشرح)\b", text, re.I):
             return False
-        return bool((previous.pending_slot and len(text) <= 160) or re.search(
+        return bool(DescribedOperationService._answers_pending(text, previous.pending_slot) or re.search(
             r"total payable|final price|cash price|deposit|financed by|financing party|مقدم|السعر النهائي|التمويل من", text, re.I))
+
+    @classmethod
+    def _answers_pending(cls, text: str, slot: str | None) -> bool:
+        """A reply must look like an answer to the open question, not just be short."""
+        if not slot or len(text) > 160:
+            return False
+        if re.fullmatch(r"\s*(?:please\s+)?continue[.!]?\s*|\s*(?:تابع|اكمل)[.!]?\s*", text, re.I):
+            return True  # Unanswered filler still consumes the clarification budget.
+        if slot == "financing_party":
+            return bool(cls._financier_reply(text) or cls._does_not_know(text))
+        if slot == "payment_breakdown":
+            return True
+        return (parse_schedule_reply(text, slot) is not None
+                or parse_confirmed_schedule_reply(text, slot) is not None or cls._does_not_know(text))
 
     def answer(self, text: str, *, session_id: str, request_id: str,
                previous: OperationConversation | None, language: str):
@@ -158,6 +172,8 @@ class DescribedOperationService:
                 pending = evaluation.question_slot
                 question = evaluation.question
         rule_evaluated = evaluation.status == "evaluated" and reason == "approved_rule_evaluated_overall_gates_pending"
+        if not question:
+            pending = None  # Nothing is being asked, so no later message can answer it.
         gates = (
             GateDecision(gate="intent_and_scope", status="passed", reason="personal_transaction_scope"),
             GateDecision(gate="typed_extraction", status="passed", reason="explicit_user_assertions_only"),
@@ -236,7 +252,7 @@ class DescribedOperationService:
 
     @classmethod
     def _financier_reply(cls, text: str) -> str | None:
-        if cls._does_not_know(text) or re.search(r"\b(?:not|either|or)\b|مش|ليس|او|أو", text, re.I):
+        if cls._does_not_know(text) or re.search(r"\b(?:not|either|or)\b|(?<!\w)(?:مش|ليس|او|أو)(?!\w)", text, re.I):
             return None
         normalized = text.strip(" .!،")
         if re.fullmatch(r"(?:the )?(?:store|seller)(?: itself)?|المحل(?: نفسه)?|البائع(?: نفسه)?", normalized, re.I):

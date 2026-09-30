@@ -70,9 +70,9 @@ class AAOIFICitation:
     section_title: Optional[str] = None
     excerpt: Optional[str] = None
     confidence_score: Optional[float] = None
-    captured_at: Optional[str] = None
     quote_start: Optional[int] = None
     quote_end: Optional[int] = None
+    captured_at: Optional[str] = None  # Appended last so positional construction keeps its meaning.
 
     def __post_init__(self):
         if not self.document_id or not self.document_id.strip():
@@ -150,7 +150,9 @@ class AnswerContract:
 
     def __post_init__(self):
         from src.models.evidence_display import evidence_summary, without_answer_scores
-        self.metadata = without_answer_scores(self.metadata)
+        if not isinstance(self.status, ComplianceStatus):
+            raise ValueError("AnswerContract status must be a ComplianceStatus")
+        self.metadata = without_answer_scores(self.metadata or {})
         self.metadata["evidence"] = evidence_summary(self.status.value, self.citations)
         if not self.answer or not self.answer.strip():
             raise ValueError("AnswerContract answer cannot be empty")

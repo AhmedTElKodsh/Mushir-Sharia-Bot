@@ -266,7 +266,11 @@ def _process_stream_response(response: requests.Response, config: Config):
                         print(f"     Text: {truncate_text(data['text'], config.max_citation_preview)}")
                     elif 'evidence' in data:
                         print(f"     Evidence: {data['evidence'].get('status', 'unknown')}")
-                        print(f"     Source capture ages: {data['evidence'].get('sources', [])}")
+                        for source in data['evidence'].get('sources', []):
+                            age = source.get('age_days')
+                            print(f"     Source: {source.get('document_id') or 'unnamed'} | captured: "
+                                  f"{source.get('captured_at') or 'unknown'} | age: "
+                                  f"{f'{age} days' if age is not None else 'unknown'}")
                 except json.JSONDecodeError:
                     print(f"     [Invalid JSON data]")
 

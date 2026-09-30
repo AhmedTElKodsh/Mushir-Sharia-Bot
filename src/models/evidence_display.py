@@ -1,5 +1,8 @@
 """Descriptive evidence labels, never a probability of answer correctness."""
 from datetime import UTC, datetime
+import re
+
+_SCORE_KEY = re.compile(r"confidence|score|similarity|relevance|distance|rerank", re.I)
 
 
 def source_age(value, *, now=None):
@@ -20,8 +23,9 @@ def source_age(value, *, now=None):
 def without_answer_scores(value):
     if isinstance(value, dict):
         return {key: without_answer_scores(item) for key, item in value.items()
-                if key not in {"confidence", "confidence_score", "system_confidence"}
-                and not (isinstance(item, (int, float)) and ("confidence" in key or key in {"score", "similarity"}))}
+                if not (isinstance(key, str) and _SCORE_KEY.search(key)
+                        and (isinstance(item, (int, float)) and not isinstance(item, bool)
+                             or key in {"confidence", "confidence_score", "system_confidence"}))}
     if isinstance(value, (list, tuple)):
         return [without_answer_scores(item) for item in value]
     return value

@@ -19,8 +19,6 @@ Created the ignored `.venv` with Python 3.12.14 and installed `requirements.txt`
 - `tests/test_l1_contracts.py::test_application_service_passes_source_family_filter_and_strict_metadata_gate` expects `SS-03, SS-08, SS-19, SS-28`, but the current route returns `SS-03, SS-08` without the missing ontology additions.
 - `tests/evaluation/test_critical_goldset.py::TestCriticalGoldSet::test_ruling_correctness[GC-005]` expects `PROHIBITED`, while the fixture-backed runtime returns `INSUFFICIENT_DATA`. This is a mismatch with the old fixture expectation, not evidence of an unsafe permissibility answer. It requires review during the approved-rule runtime migration; changing the expectation alone would not establish correctness.
 
-## Evidence limits
-
 ## Shared-contract implementation checkpoint
 
 - Added `src/models/evidence.py` and `src/governance/rule_cards.py` with corresponding focused tests. Includes distinct fact statuses/scopes, exact-span and user-turn provenance, decimal monetary values, dossier observations, gate/review envelopes, and approved-only rule-card selection.
@@ -35,7 +33,7 @@ Created the ignored `.venv` with Python 3.12.14 and installed `requirements.txt`
 - Full product suite: **847 passed, 6 failed, 47 skipped**, 83.02 seconds. The six failures are exactly those listed above after removal of the ten ingestion import failures. Saved JUnit: `data/runtime/artifacts/poc-contract-tests.xml`.
 - A repeat intermediate boundary run timed out importing SciPy through the text splitter. Deferring Chroma and text-splitter imports resolved that preflight dependency. A subprocess regression verifies importing ingestion loads none of Torch, SentenceTransformers, Chroma or the splitter.
 
-## Evidence limits (continued)
+## Evidence limits
 
 Local tests use controlled fixtures. No live provider generation, model-index rebuild, market recrawl, scholar approval or deployment has been performed in this validation slice. A passing structural contract test does not establish that a quoted source is truthful, a reviewer identity is authentic, or the full V1.6 POC is release-ready.
 

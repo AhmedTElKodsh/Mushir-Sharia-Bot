@@ -1,8 +1,26 @@
 """Bounded structural questions; user replies never authorize a ruling."""
+from datetime import UTC, datetime, timedelta
 import re
 
 from src.chatbot.clarification_engine import ClarificationEngine
 from src.models.ruling import AnswerContract, ComplianceStatus
+
+
+SLOTS = ("resale_arranger", "underlying_sukuk_contract")
+PENDING_TTL = timedelta(minutes=30)
+
+
+def _live_pending(pending):
+    """Drop malformed or stale stored state instead of failing every later turn."""
+    if not isinstance(pending, dict) or pending.get("slot") not in SLOTS:
+        return None
+    if pending.get("language") not in {"ar", "en"} or not isinstance(pending.get("asked_count"), int):
+        return None
+    try:
+        created = datetime.fromisoformat(pending["created_at"])
+    except (KeyError, TypeError, ValueError):
+        return pending  # States stored before expiry existed stay usable.
+    return pending if datetime.now(UTC) - created <= PENDING_TTL else None
 
 
 def structure_slot(normalized):
@@ -21,12 +39,14 @@ def clarify_structure(query, normalized, language, pending=None):
     """Return (answer, pending state), or (None, None) for an independent query."""
     text = normalized.lower()
     slot = structure_slot(normalized)
+    pending = _live_pending(pending)
     independent = bool(re.search(r"^(what\b|how\b|why\b|is\b|are\b|can\b|does\b|define\b|tell me about\b|هل\b|ما |اشرح|عرف |explain\b)", text))
     if pending and slot != pending["slot"] and (slot or independent):
         pending = None
     if not slot and not pending:
         return None, None
-    current = dict(pending or {"slot": slot, "original_query": query, "asked_count": 0, "language": language})
+    current = dict(pending or {"slot": slot, "original_query": query, "asked_count": 0, "language": language,
+                                    "created_at": datetime.now(UTC).isoformat()})
     arabic = current["language"] == "ar"
     reply = query if pending else None
     if pending:

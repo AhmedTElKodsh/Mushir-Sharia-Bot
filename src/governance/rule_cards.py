@@ -13,7 +13,15 @@ from typing import Literal
 import yaml
 from pydantic import Field, field_validator, model_validator
 
-from src.models.evidence import EvidenceModel, Scalar, Text, Version
+from src.models.evidence import EvidenceModel, Scalar, Text, Version, require_human_reviewer
+
+MAX_RULE_FILE_BYTES = 1_000_000
+
+
+def _single_question(question: str) -> str:
+    if question.count("?") + question.count("\u061f") != 1 or "\n" in question or "\r" in question:
+        raise ValueError("each fact question must contain one question")
+    return question
 
 
 class _FrozenDict(dict):
@@ -40,8 +48,7 @@ class ScholarSignoff(EvidenceModel):
         if self.decision == "approved":
             if self.reviewer_id is None or self.date is None:
                 raise ValueError("approved signoff requires reviewer identity and date")
-            if self.reviewer_id.strip().lower() in {"auto", "model", "llm", "model-confidence"}:
-                raise ValueError("automatic identity cannot approve scholar rules")
+            require_human_reviewer(self.reviewer_id)
         return self
 
 
@@ -73,9 +80,13 @@ class RuleCard(EvidenceModel):
     @classmethod
     def freeze_questions(cls, value):
         for question in value.values():
-            if question.count("?") + question.count("؟") != 1 or "\n" in question or "\r" in question:
-                raise ValueError("each fact question must contain one question")
+            _single_question(question)
         return _FrozenDict(value)
+
+    @field_validator("unknown_fact_question")
+    @classmethod
+    def single_default_question(cls, value):
+        return _single_question(value)
 
     @model_validator(mode="after")
     def coherent_card(self):
@@ -106,7 +117,12 @@ class RuleCard(EvidenceModel):
 
 
 class _UniqueKeyLoader(yaml.SafeLoader):
-    """Reject duplicate keys and merge keys rather than silently overwriting."""
+    """Reject duplicate keys, merge keys and aliases rather than silently overwriting."""
+
+    def compose_node(self, parent, index):
+        if self.check_event(yaml.events.AliasEvent):
+            raise ValueError("YAML aliases are not supported")
+        return super().compose_node(parent, index)
 
 
 def _unique_mapping(loader, node, deep=False):
@@ -134,7 +150,10 @@ def load_rule_cards(source: str | Path | Mapping | Iterable[Mapping]) -> tuple[R
     or automatic supersession is invented by the loader.
     """
     if isinstance(source, (str, Path)):
-        payload = yaml.load(Path(source).read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
+        path = Path(source)
+        if path.stat().st_size > MAX_RULE_FILE_BYTES:
+            raise ValueError("rule file exceeds the size limit")
+        payload = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader)
     else:
         payload = source
     if isinstance(payload, Mapping):
