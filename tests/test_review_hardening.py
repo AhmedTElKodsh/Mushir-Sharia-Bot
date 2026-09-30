@@ -319,3 +319,98 @@ def test_citation_captured_at_and_readiness_store_are_published():
     assert rest.json()["citations"][0]["captured_at"] == "2026-01-01T00:00:00+00:00"
     assert "2026-01-01T00:00:00+00:00" in stream.text
     assert "decision_review_store" in ready.json()["infrastructure"]
+
+
+# ---- currency binding, dates, API boundary, retention, ingest positive path ----------------------------
+def test_foreign_amount_elsewhere_does_not_disable_egp_extraction():
+    facts = _extract("I paid deposit EGP 5000 for the iPhone; the phone list price abroad is USD 900")
+    assert facts["down_payment"].status == "user_reported"
+    assert facts["down_payment"].value.currency == "EGP"
+
+
+def test_foreign_amount_is_never_recorded_as_egp():
+    facts = _extract("I paid deposit USD 500 for the iPhone")
+    assert facts["down_payment"].status == "unknown"
+
+
+def test_future_dated_signoff_and_verification_are_rejected():
+    tomorrow = (datetime.now(UTC) + timedelta(days=30))
+    with pytest.raises(ValidationError):
+        card(scholar_signoff=dict(reviewer_id="fixture-reviewer", date=tomorrow.date().isoformat(), decision="approved"))
+    with pytest.raises(ValidationError):
+        VerificationRecord(reviewer_id="fixture-reviewer", recorded_at=tomorrow, decision="verified", notes="n")
+
+
+def test_api_hides_internal_decision_review_but_keeps_the_receipt():
+    from fastapi.testclient import TestClient
+    from src.api.dependencies import get_application_service
+    from src.api.main import create_app
+
+    class Service:
+        def answer(self, query, **kwargs):
+            return AnswerContract(answer="Needs documents", status=ComplianceStatus.INSUFFICIENT_DATA,
+                                  metadata={"decision_review": {"fact_snapshot": {"facts": []}},
+                                            "review_receipt": {"review_id": "r-1"}})
+
+    app = create_app()
+    app.dependency_overrides[get_application_service] = Service
+    with TestClient(app) as client:
+        body = client.post("/api/v1/query", json={"query": "q"}).json()
+        stream = client.post("/api/v1/query/stream", json={"query": "q"}).text
+    assert "decision_review" not in body["metadata"] and "decision_review" not in stream
+    assert body["metadata"]["review_receipt"]["review_id"] == "r-1"
+
+
+def test_startup_purges_expired_review_records(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from src.api.main import create_app
+    from src.models.decision_audit import prepare_decision_record
+    from src.storage.decision_review_store import SQLiteDecisionReviewStore
+
+    path = tmp_path / "startup.sqlite3"
+    monkeypatch.setenv("DECISION_REVIEW_DB_PATH", str(path))
+    monkeypatch.setenv("DECISION_REVIEW_RETENTION_DAYS", "30")
+    answer = AnswerContract(answer="a", status=ComplianceStatus.INSUFFICIENT_DATA)
+    stale = prepare_decision_record("q", answer, session_id="s", request_id="stale")
+    SQLiteDecisionReviewStore(path).append(
+        stale.model_copy(update={"recorded_at": datetime.now(UTC) - timedelta(days=90)}))
+    with TestClient(create_app()):
+        pass
+    assert SQLiteDecisionReviewStore(path).get(stale.review_id) is None
+
+
+def test_ingest_main_builds_the_index_through_the_lazy_imports(tmp_path, monkeypatch):
+    import sys
+    import types
+    from scripts import ingest
+
+    (tmp_path / "AAOIFI_Standard_99_en_Test.md").write_text("# Test\n\n" + "Evidence sentence. " * 120, encoding="utf-8")
+    upserts = []
+
+    class FakeArray(list):
+        def tolist(self):
+            return list(self)
+
+    class FakeModel:
+        def encode(self, chunks, normalize_embeddings=True):
+            return FakeArray([[0.1, 0.2] for _ in chunks])
+
+    class FakeCollection:
+        def upsert(self, **kwargs):
+            upserts.append(kwargs)
+
+    class FakeClient:
+        def __init__(self, path):
+            self.path = path
+
+        def get_or_create_collection(self, name, metadata=None):
+            return FakeCollection()
+
+    monkeypatch.setitem(sys.modules, "chromadb", types.SimpleNamespace(PersistentClient=FakeClient))
+    monkeypatch.setattr(ingest, "load_embedding_model", lambda *a, **k: FakeModel())
+    monkeypatch.setattr("sys.argv", ["ingest.py", "--corpus-dir", str(tmp_path), "--chroma-dir", str(tmp_path / "db"),
+                                     "--languages", "en", "--allow-uncataloged"])
+    (tmp_path / "db").mkdir()
+    assert ingest.main() == 0
+    assert upserts and sum(len(call["ids"]) for call in upserts) > 0
+    assert ingest.build_splitter().__class__.__name__ == "RecursiveCharacterTextSplitter"

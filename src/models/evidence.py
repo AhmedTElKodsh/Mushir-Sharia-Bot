@@ -5,6 +5,7 @@ the existing answer API. Native Pydantic JSON methods are the wire interface.
 """
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from ipaddress import ip_address
 from urllib.parse import urlsplit
@@ -312,6 +313,13 @@ class VerificationRecord(EvidenceModel):
     recorded_at: AwareDatetime
     decision: Literal["pending", "verified", "rejected", "approved"]
     notes: Text
+
+    @field_validator("recorded_at")
+    @classmethod
+    def not_in_the_future(cls, value):
+        if value > datetime.now(UTC) + timedelta(minutes=5):
+            raise ValueError("verification cannot be recorded in the future")
+        return value
 
 
 class Dossier(EvidenceModel):

@@ -1,0 +1,2 @@
+- `metadata.decision_review` (full fact snapshot) is no longer returned by `/api/v1/query` or the stream `done` event; clients keep `metadata.review_receipt`. The full record stays in the decision store.
+- The API purges decision-review records older than `DECISION_REVIEW_RETENTION_DAYS` at startup (a failed purge never blocks startup).

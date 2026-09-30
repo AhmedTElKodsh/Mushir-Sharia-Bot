@@ -85,8 +85,12 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
     if re.search(r"iphone|آيفون|ايفون|أيفون", normalized, re.I):
         add("asset", "iPhone")
     has_egp = bool(re.search(r"\bEGP\b|جنيه", normalized, re.I))
-    foreign_currency = bool(re.search(r"\b(?:USD|EUR|SAR|AED|GBP)\b|[$€£]|دولار|ريال|درهم|يورو", normalized, re.I))
-    if has_egp and not foreign_currency:
+    foreign = r"\b(?:USD|EUR|SAR|AED|GBP)\b|[$€£]|دولار|ريال|درهم|يورو"
+
+    def foreign_nearby(match):
+        return bool(re.search(foreign, normalized[max(0, match.start() - 12):match.end() + 12], re.I))
+
+    if has_egp:
         patterns = {
             "down_payment": rf"(?:\bdeposit|\bdown payment|ب?مقدم)\s*(?:of\s+|is\s+|[:=]\s*)?{_MONEY}",
             "cash_price": rf"(?:\bcash price|السعر النقدي|سعر الكاش)\s*(?:is\s+|[:=]\s*)?{_MONEY}",
@@ -94,10 +98,10 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
         }
         for slot, pattern in patterns.items():
             for match in matches(pattern):
-                if re.search(r"\bEGP\b|جنيه", match[0], re.I):
+                if re.search(r"\bEGP\b|جنيه", match[0], re.I) and not foreign_nearby(match):
                     add(slot, Money(amount=Decimal(match["amount"].replace(",", "")), currency="EGP"))
         for match in matches(rf"(?<![\d.,-]){_MONEY}\s+(?:down\b|مقدم)"):
-            if re.search(r"\bEGP\b|جنيه", match[0], re.I):
+            if re.search(r"\bEGP\b|جنيه", match[0], re.I) and not foreign_nearby(match):
                 add("down_payment", Money(amount=Decimal(match["amount"].replace(",", "")), currency="EGP"))
 
     schedule = rf"(?<![\d.,-])(?P<count>\d+)(?![\d.,])\s*(?:[x×]|instalments?\s+(?:of|at)|installments?\s+(?:of|at)|قسط\s*(?:كل قسط|بقيمة))\s*{_MONEY}"
@@ -106,7 +110,7 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
         for match in matches(pattern):
             if _plausible_count(match["count"]):
                 add("instalment_count", int(match["count"]))
-                if not foreign_currency and re.search(r"\bEGP\b|جنيه", match[0], re.I):
+                if re.search(r"\bEGP\b|جنيه", match[0], re.I) and not foreign_nearby(match):
                     add("instalment_amount", Money(amount=Decimal(match["amount"].replace(",", "")), currency="EGP"))
 
     # This identifies only the named party, not its regulatory role or mechanism.

@@ -6,7 +6,7 @@ or runtime integration is performed here. Historical versions remain available.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from datetime import date as CalendarDate
+from datetime import date as CalendarDate, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -49,6 +49,8 @@ class ScholarSignoff(EvidenceModel):
             if self.reviewer_id is None or self.date is None:
                 raise ValueError("approved signoff requires reviewer identity and date")
             require_human_reviewer(self.reviewer_id)
+            if self.date > CalendarDate.today() + timedelta(days=1):
+                raise ValueError("signoff date cannot be in the future")
         return self
 
 

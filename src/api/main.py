@@ -54,6 +54,11 @@ async def lifespan(app: FastAPI):
     app.state.audit_store = _build_audit_store()
     from src.storage.decision_review_store import configured_decision_store
     app.state.decision_store = configured_decision_store()
+    try:
+        from src.storage.decision_review_store import configured_retention_days
+        app.state.decision_store.purge_older_than(configured_retention_days())
+    except Exception:
+        print(_safe_fallback_message("Decision review retention purge"))
     app.state.cache_store = _build_cache_store()
     app.state.scholar_review_queue_store = _build_scholar_review_queue_store()
     # Eagerly build the retriever once at startup so all requests share one

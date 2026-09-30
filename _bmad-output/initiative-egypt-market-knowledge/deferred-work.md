@@ -6,3 +6,7 @@
 - source_plan: none
   summary: Review findings still open after the second fix pass (2026-09-30).
   evidence: Not done - per-amount currency binding in extract_operation_facts (any foreign currency still disables all EGP extraction); future-dated signoff and reviewer-registry validation; retention purge is available (purge_older_than) but nothing schedules it; audit payload is still stored three ways (typed_review, response metadata, session rows) and decision_review still returns to API clients; SQLite writes are synchronous (no threadpool); ingest.main() has no positive-path test; e2e/evidence-status.spec.ts was not run (no browser run in this session); dead AAOIFICitation.confidence_score field kept because scholar_review and tests still use it; eval fixtures keep synthetic confidence values by design; the 10 gold-set ruling and 2 routing-accuracy failures pre-date this work.
+
+- source_plan: none
+  summary: Closed in the third fix pass (2026-09-30) - no action needed, listed so the earlier entry is read correctly.
+  evidence: Per-amount currency binding, future-dated signoff/verification, startup retention purge, client-facing decision_review removal and the ingest.main() positive-path test are done (tests/test_review_hardening.py). Still open from the earlier entry - session and audit payload duplication inside the stores, synchronous SQLite writes, unrun e2e specs, dead AAOIFICitation.confidence_score, and the 12 pre-existing failures.

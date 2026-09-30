@@ -168,6 +168,7 @@ async def compliance_disclaimer():
 
 def _query_response(answer: AnswerContract) -> QueryResponse:
     payload = answer.to_dict()
+    payload["metadata"].pop("decision_review", None)  # Full fact snapshots are internal review data.
     payload["answer"] = _strip_answer_status_prefix(str(payload.get("answer") or ""))
     return QueryResponse(**payload)
 
