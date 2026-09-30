@@ -220,7 +220,7 @@ class DescribedOperationService:
                                              "decision_review": review.model_dump(mode="json"),
                                              "payment_consistency_check": payment_check,
                                              "approved_rule_evaluation": evaluation.model_dump(
-                                                 mode="json", exclude={"outcome", "supporting_facts"} if rule_evaluated else None)})
+                                                 mode="json", exclude={"outcome", "supporting_facts"} if evaluation.status == "evaluated" else None)})
         return contract, updated
 
     @staticmethod

@@ -517,12 +517,7 @@ function formatEvidence(evidence) {
 }
 
 function renderEvidence(node, evidence) {
-  if (!node) return;
-  if (!evidence) {  // Restored legacy messages carry no evidence block; drop any stale label.
-    var stale = node.querySelector(".evidence-summary");
-    if (stale) stale.remove();
-    return;
-  }
+  if (!node) return;  // A missing evidence block renders as "unavailable", never as "no sources".
   var label = node.querySelector(".evidence-summary");
   if (!label) {
     label = document.createElement("p");
