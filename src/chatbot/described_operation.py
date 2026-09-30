@@ -75,7 +75,8 @@ class DescribedOperationService:
         if slot == "financing_party":
             return bool(cls._financier_reply(text) or cls._does_not_know(text))
         if slot == "payment_breakdown":
-            return True
+            return bool(re.search(r"\d|fees?|charges?|insurance|admin|interest|رسوم|مصاريف|تأمين|فوائد|ضريبة", text, re.I)
+                        or cls._does_not_know(text))
         return (parse_schedule_reply(text, slot) is not None
                 or parse_confirmed_schedule_reply(text, slot) is not None or cls._does_not_know(text))
 
@@ -217,7 +218,8 @@ class DescribedOperationService:
                                              "requires_scholar_review": decision.decision == "INSUFFICIENT_DATA",
                                              "decision_review": review.model_dump(mode="json"),
                                              "payment_consistency_check": payment_check,
-                                             "approved_rule_evaluation": evaluation.model_dump(mode="json")})
+                                             "approved_rule_evaluation": evaluation.model_dump(
+                                                 mode="json", exclude={"outcome", "supporting_facts"} if rule_evaluated else None)})
         return contract, updated
 
     @staticmethod

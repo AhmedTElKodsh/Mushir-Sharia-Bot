@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from inspect import Parameter, signature
 from typing import Any, Dict, List, Optional
 
+import yaml
+
 from src.chatbot.commercial_assessment import (
     CommercialRuleEvaluator,
     EvidenceFamilyDetector,
@@ -116,7 +118,7 @@ class ApplicationService:
         if not cards and card_path:
             try:
                 cards = load_rule_cards(card_path)
-            except (OSError, ValueError) as exc:
+            except (OSError, ValueError, yaml.YAMLError) as exc:
                 # Silently running without cards would abstain on everything unnoticed.
                 raise RuntimeError(f"APPROVED_RULE_CARDS_PATH could not be loaded: {exc}") from exc
         self.described_operations = DescribedOperationService(cards)
@@ -144,8 +146,13 @@ class ApplicationService:
             if self.decision_store.append(record) != record.review_id:
                 raise RuntimeError("decision review storage did not acknowledge the record")
         except Exception:
-            self._restore_session(effective_session, snapshot)
+            try:
+                self._restore_session(effective_session, snapshot)
+            except Exception:
+                pass  # The original storage failure is the error the caller must see.
             raise
+        if session_id is None:
+            self._restore_session(effective_session, None)  # No caller handle exists, so no state may outlive the call.
         return answer
 
     MAX_SESSION_REVIEW_ROWS = 20
@@ -153,7 +160,9 @@ class ApplicationService:
     @classmethod
     def _append_review_row(cls, state: Any, key: str, row: Any) -> None:
         """Session copies are a bounded working set; the decision store holds the full record."""
-        rows = state.metadata.setdefault(key, [])
+        rows = state.metadata.get(key)
+        if not isinstance(rows, list):
+            rows = state.metadata[key] = []
         rows.append(row)
         del rows[:-cls.MAX_SESSION_REVIEW_ROWS]
 

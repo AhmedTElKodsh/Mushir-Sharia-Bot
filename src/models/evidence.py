@@ -6,7 +6,7 @@ the existing answer API. Native Pydantic JSON methods are the wire interface.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import Context, Decimal
 from ipaddress import ip_address
 from urllib.parse import urlsplit
 from typing import Annotated, Literal
@@ -50,14 +50,16 @@ def _public_http_url(value):
     if value is None:
         return value
     parts = urlsplit(value)
-    host = (parts.hostname or "").lower()
+    host = (parts.hostname or "").lower().rstrip(".")
     if parts.username or parts.password or parts.query or parts.fragment:
         raise ValueError("provenance URLs must not carry credentials, query strings or fragments")
-    if host == "localhost" or host.endswith(".localhost"):
+    if host == "localhost" or host.endswith((".localhost", ".local", ".internal", ".lan")):
         raise ValueError("provenance URLs must be public")
     try:
         address = ip_address(host)
     except ValueError:
+        if host.replace(".", "").isdigit():  # Shortened or integer IP forms such as 127.1 or 2130706433.
+            raise ValueError("provenance URLs must be public")
         return value
     if not address.is_global:
         raise ValueError("provenance URLs must be public")
@@ -196,7 +198,7 @@ class FactCandidate(EvidenceModel):
 def _canonical_value(value):
     """Numerically equal money is one value however its amount was spelled."""
     if isinstance(value, Money):
-        return ("Money", Decimal(value.amount).normalize(), value.currency)
+        return ("Money", Decimal(value.amount).normalize(Context(prec=60)), value.currency)
     return (type(value).__name__, repr(value))
 
 

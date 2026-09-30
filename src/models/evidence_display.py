@@ -20,12 +20,19 @@ def source_age(value, *, now=None):
         return unknown
 
 
+def _numeric(item):
+    if isinstance(item, bool):
+        return False
+    if isinstance(item, (int, float)):
+        return True
+    return isinstance(item, (list, tuple)) and bool(item) and all(_numeric(part) for part in item)
+
+
 def without_answer_scores(value):
     if isinstance(value, dict):
         return {key: without_answer_scores(item) for key, item in value.items()
                 if not (isinstance(key, str) and _SCORE_KEY.search(key)
-                        and (isinstance(item, (int, float)) and not isinstance(item, bool)
-                             or key in {"confidence", "confidence_score", "system_confidence"}))}
+                        and (_numeric(item) or key in {"confidence", "confidence_score", "system_confidence"}))}
     if isinstance(value, (list, tuple)):
         return [without_answer_scores(item) for item in value]
     return value

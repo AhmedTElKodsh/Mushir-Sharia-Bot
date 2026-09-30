@@ -18,9 +18,11 @@ def _live_pending(pending):
         return None
     try:
         created = datetime.fromisoformat(pending["created_at"])
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=UTC)
+        return pending if datetime.now(UTC) - created <= PENDING_TTL else None
     except (KeyError, TypeError, ValueError):
         return pending  # States stored before expiry existed stay usable.
-    return pending if datetime.now(UTC) - created <= PENDING_TTL else None
 
 
 def structure_slot(normalized):

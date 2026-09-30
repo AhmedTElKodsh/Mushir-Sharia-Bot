@@ -37,7 +37,7 @@ class SQLiteDecisionReviewStore:
         record = DecisionAuditRecord.model_validate(record)
         with self._connect() as conn:
             conn.execute("INSERT INTO decision_reviews VALUES (?, ?, ?, ?, ?)", (
-                record.review_id, record.request_id, record.session_id, record.recorded_at.isoformat(), record.model_dump_json()))
+                record.review_id, record.request_id, record.session_id, record.recorded_at.astimezone(UTC).isoformat(), record.model_dump_json()))
         return record.review_id
 
     def purge_older_than(self, days: int) -> int:
@@ -61,6 +61,7 @@ def configured_decision_store():
 def configured_retention_days() -> int:
     """Conservative default: keep a year of review records unless the operator sets a window."""
     try:
-        return max(1, int(os.getenv("DECISION_REVIEW_RETENTION_DAYS") or DEFAULT_RETENTION_DAYS))
+        days = int(os.getenv("DECISION_REVIEW_RETENTION_DAYS") or DEFAULT_RETENTION_DAYS)
     except ValueError:
         return DEFAULT_RETENTION_DAYS
+    return days if days >= 1 else DEFAULT_RETENTION_DAYS  # A typo must never shrink the audit window.

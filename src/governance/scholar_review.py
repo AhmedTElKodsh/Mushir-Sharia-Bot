@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
+import math
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
 
 from src.models.ruling import AnswerContract
@@ -172,6 +173,8 @@ class ScholarReviewQueueItem:
             raise ValueError("flag_reason is required")
         if self.created_at.tzinfo is None:
             raise ValueError("created_at must include timezone")
+        if self.system_confidence is not None and not math.isfinite(float(self.system_confidence)):
+            object.__setattr__(self, "system_confidence", None)
         if self.system_confidence is not None:
             confidence = max(0.0, min(float(self.system_confidence), 1.0))
             object.__setattr__(self, "system_confidence", confidence)
@@ -517,6 +520,7 @@ def _optional_confidence(value: Any) -> Optional[float]:
     if isinstance(value, bool) or value is None:
         return None
     try:
-        return float(value)
+        number = float(value)
     except (TypeError, ValueError):
         return None
+    return number if math.isfinite(number) else None

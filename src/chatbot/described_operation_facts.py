@@ -73,7 +73,7 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
     def matches(pattern):
         for match in re.finditer(pattern, normalized, re.IGNORECASE):
             # Do not turn negated or alternative clauses into asserted facts.
-            prefix = re.split(r"[.!?؟;\n,،]|\bbut\b", normalized[:match.start()])[-1]
+            prefix = re.split(r"[.!?؟;\n،]|(?<!\d),(?!\d)|\bbut\b", normalized[:match.start()])[-1]
             suffix = normalized[match.end():]
             if re.match(r"\s+(?:\d|million\b|thousand\b|[km]\b|ألف|الف|مليون)", suffix, re.I):
                 continue

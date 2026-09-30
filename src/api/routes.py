@@ -267,9 +267,10 @@ def _metadata_float(value: Any) -> Optional[float]:
     if isinstance(value, bool) or value is None:
         return None
     try:
-        return float(value)
+        number = float(value)
     except (TypeError, ValueError):
         return None
+    return number if number == number and abs(number) != float("inf") else None
 
 
 def _sse(event: str, data: Dict[str, Any]) -> str:

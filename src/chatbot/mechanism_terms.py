@@ -23,7 +23,9 @@ def _topic_matches(text):
     for match in _NAMED_TOPIC.finditer(text):
         # Negated labels cannot supply the family. A contrast starts a new clause.
         prefix = re.split(r"[.!?؟;,\n]|\b(?:but|however)\b|(?<!\w)(?:لكن|بل|انما)(?!\w)", text[:match.start()], flags=re.I)[-1]
-        yield match, not _NEGATED.search(prefix)
+        # Only a negation within a few words of the name negates it: "not permitted in a murabaha" still names murabaha.
+        nearby = " ".join(prefix.split()[-3:])
+        yield match, not _NEGATED.search(nearby)
 
 
 def generic_mechanism_unknown(query: str) -> bool:

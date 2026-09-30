@@ -10,3 +10,7 @@
 - source_plan: none
   summary: Closed in the third fix pass (2026-09-30) - no action needed, listed so the earlier entry is read correctly.
   evidence: Per-amount currency binding, future-dated signoff/verification, startup retention purge, client-facing decision_review removal and the ingest.main() positive-path test are done (tests/test_review_hardening.py). Still open from the earlier entry - session and audit payload duplication inside the stores, synchronous SQLite writes, unrun e2e specs, dead AAOIFICitation.confidence_score, and the 12 pre-existing failures.
+
+- source_plan: none
+  summary: Findings from the independent review of the fix commits (2026-09-30) that were judged and not fixed.
+  evidence: Concurrent requests on one session_id can race snapshot/restore (needs a per-session lock design); financier names are truncated at "and"/"with" (deliberate trade-off, needs confirmation UX); bare-number replies to money questions are still rejected (explicit-currency rule); retention purge runs at startup only; foreign-currency window is +/-12 characters rather than token-adjacent; DNS names that resolve to private ranges pass the public-URL check (no resolution is done); reviewer denylist is exact-match, not a registry.

@@ -502,7 +502,7 @@ function formatEvidence(evidence) {
   evidence = evidence || {};
   var labels = {clarification_required: "evidenceClarification", insufficient_evidence: "evidenceInsufficient", sources_available: "evidenceSources", no_sources: "evidenceNone"};
   var lines = [t("evidenceStatus", {status: t(labels[evidence.status] || "evidenceUnknown")})];
-  var sources = evidence.sources || [];
+  var sources = Array.isArray(evidence.sources) ? evidence.sources.filter(Boolean) : [];
   if (!sources.length) lines.push(t("captureUnknown"));
   sources.forEach(function(source) {
     var captured = source.captured_at && Date.parse(source.captured_at);
@@ -517,7 +517,12 @@ function formatEvidence(evidence) {
 }
 
 function renderEvidence(node, evidence) {
-  if (!node || !evidence) return;  // Restored legacy messages carry no evidence block.
+  if (!node) return;
+  if (!evidence) {  // Restored legacy messages carry no evidence block; drop any stale label.
+    var stale = node.querySelector(".evidence-summary");
+    if (stale) stale.remove();
+    return;
+  }
   var label = node.querySelector(".evidence-summary");
   if (!label) {
     label = document.createElement("p");
