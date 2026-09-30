@@ -20,7 +20,9 @@ Each of the five pilot entities has a dossier the named-offer lane can cite by s
 
 ## Requirements
 
-The spec's CAP-6 are this epic's requirement source; children cite those ids. Completed at inception.
+The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
+
+- CAP-6: Dossiers for five permitted pilot entities (BJ-00..02, BJ-04). Success: entity record, access decision with reason, capture manifest, field observations with spans, first gated step.
 
 ## Done when
 
@@ -46,3 +48,4 @@ Capability boundary: evidence acquisition. Files: a new journey-discovery pass b
 
 - Open question: O3, the final five pilot entities; the spec's shortlist (Contact, Souhoola, RUSHBRUSH, IKEA Egypt or Smart Furniture, one direct retailer with a named financier) stands until answered. A hitl entry at inception confirms them and each host's access decision.
 - Waits on epic-evidence-safe-runtime because: observation statuses and the dossier schema are its shared contracts. It can run beside epic-described-operation-lane (no shared code), but their Space deploys go one at a time.
+- Decision: Space deploys are serialized by `after`: epic-evidence-safe-runtime 7, then epic-described-operation-lane 6, then epic-pilot-dossiers 7.

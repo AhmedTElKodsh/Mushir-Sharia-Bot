@@ -20,7 +20,10 @@ Scholar review of the ~100-case frozen pilot set finds zero wrong verdicts on th
 
 ## Requirements
 
-The spec's CAP-7, CAP-8 are this epic's requirement source; children cite those ids. Completed at inception.
+The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
+
+- CAP-7: Pilot cases and judgment answers logged for bilingual scholar adjudication into a versioned frozen set apart from training. Success: ~100 frozen cases exported bilingually; decisions import with reviewer, date, rule/corpus version; set immutable per version.
+- CAP-8: V1.6 runs publicly on the HF Space. Success: /ready healthy; smoke passes EN, AR, unanswerable, one named-offer, one described-operation.
 
 ## Done when
 
@@ -47,3 +50,4 @@ Owns: The frozen-set format and versioning, adopted by epic-learned-behavior and
 - Decision: scholar decisions in the pilot round promote rule cards to `approved` inside V1.6; this epic owns that promotion (user's decision, 2026-09-30).
 - Open question: O5, the acceptable wrong-verdict rate for launch; V1.6 targets zero on the frozen set.
 - Handoff: epic-scholar-rule-cards builds the full client-rule card pipeline on this epic's review loop.
+- Assumption: V1.6 is not held for legal clearance; named-offer answers are public only after epic-named-offer-lane entry 8 (2026-09-30).

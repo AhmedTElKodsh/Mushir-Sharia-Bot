@@ -20,7 +20,10 @@ Every card in runtime use is scholar-approved, and synthetic material never reac
 
 ## Requirements
 
-The spec's CAP-9, CAP-11 are this epic's requirement source; children cite those ids. Completed at inception.
+The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
+
+- CAP-9: Client Sharia rule files become versioned rule cards with scholar sign-off and documented precedence against AAOIFI/IIFA. Success: no verdict from a card without an approved decision; every runtime card approved.
+- CAP-11: Scholar reviews one-clause counterfactual pairs from real templates. Success: synthetic material never retrievable in the named-company lane; pair decisions land as rule evidence.
 
 ## Done when
 

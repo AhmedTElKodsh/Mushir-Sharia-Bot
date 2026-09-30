@@ -1,0 +1,94 @@
+# tickets.toml — epic-scholar-rule-cards. Incepted 2026-09-30; order of tables is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Settle precedence against AAOIFI and IIFA"
+description = "Person decides how client rules and AAOIFI/IIFA rank on conflict (O1), and the decision is recorded in the card schema."
+verify = "A written precedence rule exists and every card's precedence_note follows it."
+covers = ["CAP-9"]
+after = ["5.4"]
+hitl = true
+risk = "medium"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/rule-card-schema.md"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Compile client rule files to draft cards"
+description = "Compiles the client's Sharia rule files and referenced AAOIFI/IIFA rules to draft rule cards with material facts and outcomes."
+verify = "Each source rule yields one draft card that passes the schema loader."
+covers = ["CAP-9"]
+after = [1]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/rule-card-schema.md"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Scholar approval flow"
+description = "Scholar approves, revises or rejects cards, and the runtime loads only approved ones. Also approves the archetype taxonomy and adds an evidence field to the card schema for counterfactual pair decisions."
+verify = "A test proves a pending card is ignored by the runtime and an approved one is used. The taxonomy is approved, and a pair decision can attach to a card."
+covers = ["CAP-9"]
+after = [2]
+hitl = true
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/rule-card-schema.md"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Counterfactual pair generator in an isolated store"
+description = "Generates one-clause counterfactual pairs from real templates into a synthetic-marked store separate from the dossier store."
+verify = "Generated pairs carry synthetic_counterfactual and sit outside the dossier store."
+covers = ["CAP-11"]
+after = ["3.6"]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/fact-and-evidence-model.md"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Prove synthetic material never reaches named-company retrieval"
+description = "Adds the test that synthetic rows are unreachable from the named-company lane by construction."
+verify = "The test fails if any synthetic row is returned by a named-company query."
+covers = ["CAP-11"]
+after = [4, "4.2"]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/architecture.md"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Scholar reviews counterfactual pairs"
+description = "Scholar judges the pairs and the decisions are stored as rule evidence linked to cards."
+verify = "A reviewed pair's decision appears as evidence on its card."
+covers = ["CAP-11"]
+after = [3, 5]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Deploy rule cards"
+description = "Deploys approved cards to the Space and smokes a verdict that cites rule id and version."
+verify = "`/ready` is healthy and a live verdict cites its rule_id and version."
+covers = ["CAP-9"]
+after = [3, 6]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 8
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from build records and deferred review findings of this epic."
+verify = "Full test suite passes with no behavior change."
+covers = ["CAP-9"]
+after = [1, 2, 3, 4, 5, 6, 7]
+hitl = false
+risk = "low"

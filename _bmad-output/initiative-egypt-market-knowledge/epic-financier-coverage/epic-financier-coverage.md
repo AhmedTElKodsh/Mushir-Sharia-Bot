@@ -20,7 +20,9 @@ The named-offer lane can answer at template level for every FRA consumer-finance
 
 ## Requirements
 
-The spec's CAP-12 are this epic's requirement source; children cite those ids. Completed at inception.
+The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
+
+- CAP-12: All 38 FRA consumer-finance licensees covered at template level; merchants link to financiers; Arabic, PDF, rendered pages with per-field freshness. Success: 38 dossiers; conflict/staleness markers tested; access gaps explicit.
 
 ## Done when
 

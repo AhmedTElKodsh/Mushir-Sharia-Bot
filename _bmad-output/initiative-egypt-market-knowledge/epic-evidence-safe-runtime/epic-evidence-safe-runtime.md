@@ -20,7 +20,10 @@ A retail buyer never receives a Sharia conclusion the evidence does not earn, an
 
 ## Requirements
 
-The spec's CAP-4, CAP-5 are this epic's requirement source; children cite those ids. Completed at inception.
+The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
+
+- CAP-4: Sharia conclusion only from an approved rule whose every material condition is observed or user-reported. Success: unknown/contradicted never yields permissibility; zero wrong verdicts on the frozen pilot set.
+- CAP-5: Evidence-status labels and source dates instead of numeric confidence. Success: no percentage on any answer surface; every answer states evidence status and source age.
 
 ## Done when
 

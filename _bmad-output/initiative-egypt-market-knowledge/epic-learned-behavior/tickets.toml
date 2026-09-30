@@ -1,0 +1,81 @@
+# tickets.toml — epic-learned-behavior. Incepted 2026-09-30; order of tables is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Archetype labels and entity-grouped splits"
+description = "Builds the labeled archetype dataset from the approved taxonomy with splits grouped by entity and frozen data excluded from training."
+verify = "A split check finds no entity in both train and held-out sets and no frozen case in training."
+covers = ["CAP-13"]
+after = ["6.3", "5.2", "8.2"]
+hitl = true
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/mechanism-archetypes.md"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Supervised archetype prior with calibration report"
+description = "Trains a prior that orders clarification questions and chooses documents to request, and reports calibration on held-out entities. Wires the ordering into clarification_engine.py without letting it decide."
+verify = "A calibration report on the entity-grouped held-out set exists."
+covers = ["CAP-13"]
+after = [1, "2.3"]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Firewall test: prior cannot change a decision or fill a slot"
+description = "Adds the test proving the prior has no write path to slots or decisions."
+verify = "The test fails if any code path lets the prior write a slot or alter a gate outcome."
+covers = ["CAP-13"]
+after = [2]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/architecture.md"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Behavior fine-tune dataset"
+description = "Builds fine-tune data for extraction, next question, abstention and explanation from accepted transcripts, excluding frozen data."
+verify = "A dataset manifest lists sources and shows zero frozen cases."
+covers = ["CAP-14"]
+after = ["5.2", "1.5", "5.4"]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Fine-tune against prompted baseline"
+description = "Trains the fine-tune, compares it with the prompted baseline on the frozen set, and the person decides adopt or drop."
+verify = "A comparison report exists and a decision to adopt only if it beats baseline is recorded."
+covers = ["CAP-14"]
+after = [4]
+hitl = true
+risk = "high"
+unknown = "training infrastructure and budget for the fine-tune; decide at start"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Deploy adopted behavior"
+description = "Deploys the prior and, if adopted, the fine-tune to the Space and smokes them."
+verify = "`/ready` is healthy and live smoke shows question order changed with decisions unchanged."
+covers = ["CAP-13", "CAP-14"]
+after = [3, 5]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from build records and deferred review findings of this epic."
+verify = "Full test suite passes with no behavior change."
+covers = ["CAP-13"]
+after = [1, 2, 3, 4, 5, 6]
+hitl = false
+risk = "low"

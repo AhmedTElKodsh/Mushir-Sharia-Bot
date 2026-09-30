@@ -1,0 +1,96 @@
+# tickets.toml — epic-pilot-dossiers. Incepted 2026-09-30; order of tables is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Append-only dossier store with current view"
+description = "Builds the SQLite dossier store: observations are append-only, the current view is the latest valid observation per field plus the latest failed attempt."
+verify = "A test recording a failed recrawl after a valid one leaves the older evidence and shows the failed attempt separately."
+covers = ["CAP-6"]
+after = ["1.1"]
+hitl = false
+risk = "medium"
+unknown = "whether the store reuses or extends src/institution_db/schema.py; decide at start"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/architecture.md", "_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/fact-and-evidence-model.md"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Confirm pilot entities and access decisions"
+description = "Person confirms the final five pilot entities (O3) and records each host's access decision from robots, terms and login rules, keeping B.TECH, Amazon and noon in the permission queue."
+verify = "A signed-off entity list exists with a recorded access decision and reason for each host."
+covers = ["CAP-6"]
+after = []
+hitl = true
+risk = "low"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/fact-and-evidence-model.md", ".planning/sharia-compliance-chatbot/docs/l6-egypt-institution-scrape/progressive-buyer-journey-crawl-plan.md"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Bounded journey discovery and captures"
+description = "Implements BJ-00..02: entity resolution, same-host link discovery to depth 2, and HTML plus PDF capture with hash, time, content type and language, stopping before any gated step."
+verify = "A run on one pilot host writes a link graph and capture manifest and records the first gated step without crossing it."
+covers = ["CAP-6"]
+after = [1, 2]
+hitl = false
+risk = "high"
+references = [".planning/sharia-compliance-chatbot/docs/l6-egypt-institution-scrape/progressive-buyer-journey-crawl-plan.md", "_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/architecture.md"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Observation extractor with spans and roles"
+description = "Extends institution_pipeline to extract BJ-04 field observations with source spans, document class and passage-established roles, storing provider Sharia self-labels as provider_claim."
+verify = "Extracted observations for a captured page each carry a span, and a provider self-label is stored as a claim rather than a finding."
+covers = ["CAP-6"]
+after = [1, 3]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/fact-and-evidence-model.md"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Summarizer carries only passage-established roles"
+description = "Fixes summarize_egypt_installment_market so a seeded financier name never becomes a relationship the passage does not establish."
+verify = "Re-running the summary on the existing market map drops relationships whose passage does not name the financier."
+covers = ["CAP-6"]
+after = []
+hitl = false
+risk = "medium"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/brownfield.md"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Crawl the five pilots into dossiers"
+description = "Runs discovery and extraction for the five pilot entities and assembles each dossier with entity record, access decision, link graph, manifest, observations and first gated step."
+verify = "Five dossiers exist and a reviewer spot-checks one span per dossier against its capture."
+covers = ["CAP-6"]
+after = [4, 5]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Ship the dossier store in the Space image"
+description = "Puts the SQLite dossier file in the Space image and deploys, one deploy at a time with epic-described-operation-lane."
+verify = "`/ready` is healthy and the deployed image can read a pilot dossier."
+covers = ["CAP-6"]
+after = [6, "2.6"]
+hitl = true
+risk = "medium"
+references = ["ops — .planning/sharia-compliance-chatbot/docs/ops/huggingface-spaces.md"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from build records and deferred review findings of this epic."
+verify = "Full test suite passes with no behavior change."
+covers = ["CAP-6"]
+after = [1, 2, 3, 4, 5, 6, 7]
+hitl = false
+risk = "low"

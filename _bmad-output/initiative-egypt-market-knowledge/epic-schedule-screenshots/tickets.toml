@@ -1,0 +1,71 @@
+# tickets.toml — epic-schedule-screenshots. Incepted 2026-09-30; order of tables is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Upload surface and redaction before reading"
+description = "Adds the API and UI upload surface for schedule screenshots and redacts identifying content before any extraction reads the image."
+verify = "A labeled sample has its identifiers redacted before the extractor sees the image."
+covers = ["CAP-10"]
+after = []
+hitl = false
+risk = "high"
+unknown = "whether redaction must run locally or may use the OpenRouter LLM; decide at start"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/fact-and-evidence-model.md"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Schedule extraction into user_reported slots"
+description = "Extracts price, down payment, tenor, instalment, return rate and fees from the redacted screenshot into user_reported slots."
+verify = "Extracted slots on a labeled schedule match the labels and carry user_reported status."
+covers = ["CAP-10"]
+after = [1, "2.1"]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/fact-and-evidence-model.md"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Ephemeral by default with opt-in retention"
+description = "Discards the upload after the answer unless the user opts in, under PDPL (Law 151/2020)."
+verify = "A test proves nothing is persisted without opt-in and a retained upload records the consent."
+covers = ["CAP-10"]
+after = [1, 2]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/spec-egypt-market-poc.md, section Constraints"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Labeled schedule set and accuracy report"
+description = "Person labels a set of real schedules and the team reports extraction accuracy on it."
+verify = "An accuracy report on the labeled set exists."
+covers = ["CAP-10"]
+after = [2]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Deploy schedule intake"
+description = "Deploys screenshot intake to the Space and smokes it with a redacted sample."
+verify = "`/ready` is healthy and a sample schedule fills the slots live."
+covers = ["CAP-10"]
+after = [2, 3, 4]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from build records and deferred review findings of this epic."
+verify = "Full test suite passes with no behavior change."
+covers = ["CAP-10"]
+after = [1, 2, 3, 4, 5]
+hitl = false
+risk = "low"

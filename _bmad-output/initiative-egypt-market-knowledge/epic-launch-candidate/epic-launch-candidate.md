@@ -20,7 +20,9 @@ Risk measured on held-out reviewed cases meets the scholar threshold (spec CAP-1
 
 ## Requirements
 
-The spec's CAP-15 are this epic's requirement source; children cite those ids. Completed at inception.
+The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
+
+- CAP-15: Selective answering at the scholar-set risk threshold, refresh loop, feedback-to-gold, controlled beta. Success: risk on held-out reviewed cases meets threshold; release checklist and scholar sign-off complete.
 
 ## Done when
 

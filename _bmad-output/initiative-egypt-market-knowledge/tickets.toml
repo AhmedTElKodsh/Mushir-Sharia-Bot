@@ -53,7 +53,7 @@ id = 8
 slug = "epic-financier-coverage"
 title = "All 38 FRA consumer-finance licensees are covered"
 covers = ["CAP-12"]
-after = [{ epic = 3, needs = "the dossier pipeline and store" }]
+after = [{ epic = 3, needs = "the dossier pipeline and store" }, { epic = 4, needs = "the named-offer lane that answers for the wider licensee set" }]
 
 [[epic]]
 id = 9

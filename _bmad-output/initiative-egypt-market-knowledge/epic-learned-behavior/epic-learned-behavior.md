@@ -20,7 +20,10 @@ Better next questions with a proven firewall between the prior and the verdict (
 
 ## Requirements
 
-The spec's CAP-13, CAP-14 are this epic's requirement source; children cite those ids. Completed at inception.
+The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
+
+- CAP-13: Supervised archetype prior orders questions and chooses documents. Success: entity-grouped calibration reported; test proves the prior never changes a decision or fills a slot.
+- CAP-14: Behavior fine-tune evaluated against the prompted baseline. Success: comparison on the frozen set; adopt only if it beats baseline.
 
 ## Done when
 

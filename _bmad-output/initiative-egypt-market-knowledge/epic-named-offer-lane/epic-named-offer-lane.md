@@ -20,7 +20,9 @@ On the live Space, a question about a pilot company returns dated, cited public 
 
 ## Requirements
 
-The spec's CAP-1 are this epic's requirement source; children cite those ids. Completed at inception.
+The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
+
+- CAP-1: Named company/seller/offer: resolved entity, product and financier roles plus dated public terms; every unobserved field unknown with a reason. Success: each claim cites an exact span and capture date; alias and wrong-company cases resolve or ask; no clause reported absent by inference.
 
 ## Done when
 
@@ -45,3 +47,4 @@ Capability boundary: the named-offer lane. Files: intent routing to the named-of
 - Decision: legal/defamation review of named-company outputs gates this epic's public exposure. A hitl entry at inception gets the review; until it clears, named-offer answers ship behind a flag (chosen by the agent at the user's request, 2026-09-30).
 - Waits on epic-described-operation-lane because: named-offer answers ask for the personal schedule through the same slots and gates.
 - Waits on epic-pilot-dossiers because: it reads the dossier store.
+- Decision: the V1.6 release smoke runs the named-offer case with the flag on for the reviewer only; the public flag lift (entry 8) waits on legal review. Recorded by the agent as an assumption for the user to confirm (2026-09-30).

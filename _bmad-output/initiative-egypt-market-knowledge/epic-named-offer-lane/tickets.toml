@@ -1,0 +1,105 @@
+# tickets.toml — epic-named-offer-lane. Incepted 2026-09-30; order of tables is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Entity resolution with alias and wrong-company handling"
+description = "Resolves a named company, seller or offer to a dossier entity using aliases and asks when the match is ambiguous or wrong. Also routes a named-offer intent to this lane."
+verify = "Alias cases resolve to the right entity and a wrong-company case asks instead of answering."
+covers = ["CAP-1"]
+after = ["1.1", "3.1", "3.2"]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/architecture.md"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Dossier lookup with span and date citations"
+description = "Answers a named-offer question from dossier observations, citing exact source span and capture date per claim and marking unobserved fields unknown with their reason."
+verify = "Every factual claim for a pilot entity has a span and date, and an unfound clause shows not_publicly_found rather than absent. Each turn has its review-log row."
+covers = ["CAP-1"]
+after = [1, "3.6"]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/fact-and-evidence-model.md"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Source and version gate for named-company conclusions"
+description = "Enforces gate 5: no named-company conclusion without matching seller, financier, product and version evidence plus an approved rule; a mismatched template version asks or returns INSUFFICIENT_DATA."
+verify = "A case with a mismatched template version returns a clarification or INSUFFICIENT_DATA and no conclusion."
+covers = ["CAP-1"]
+after = [2, "2.3", "1.6", "1.9"]
+hitl = false
+risk = "high"
+references = [".planning/sharia-compliance-chatbot/docs/l6-egypt-institution-scrape/dual-query-poc-answer-gates.md"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Ask for the personal schedule through the slots"
+description = "After company terms, asks for the missing personal schedule through the described-operation slots, keeping company evidence and user-supplied facts as separate inputs."
+verify = "A pilot-company question returns dated terms and asks one question for the schedule, and company evidence never fills a user slot."
+covers = ["CAP-1"]
+after = [3, "2.1"]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/fact-and-evidence-model.md"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Company-level wording and named-offer flag"
+description = "Applies the architecture's company-level wording rule and puts named-offer answers behind a feature flag on the public Space."
+verify = "Named-offer answers use the required wording, never state a company is haram, and are hidden when the flag is off."
+covers = ["CAP-1"]
+after = [4]
+hitl = false
+risk = "medium"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/architecture.md"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Legal review of named-company outputs"
+description = "Person obtains legal review of defamation exposure for company-level conclusions on the public Space."
+verify = "A written legal decision exists that clears, restricts or blocks named-company answers."
+covers = ["CAP-1"]
+after = []
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Deploy named-offer lane behind the flag"
+description = "Deploys the lane to the Space with the flag off and smokes it with the flag on internally."
+verify = "`/ready` is healthy and one named-offer smoke passes with the flag on for the reviewer only."
+covers = ["CAP-1"]
+after = [5, "3.7"]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 8
+type = "story"
+title = "Lift the flag after legal clearance"
+description = "Person turns the flag on for the public Space once legal review clears."
+verify = "The public Space answers a pilot named-offer question with dated cited terms."
+covers = ["CAP-1"]
+after = [6, 7]
+hitl = true
+risk = "low"
+
+[[entry]]
+id = 9
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from build records and deferred review findings of this epic."
+verify = "Full test suite passes with no behavior change."
+covers = ["CAP-1"]
+after = [1, 2, 3, 4, 5, 6, 7, 8]
+hitl = false
+risk = "low"

@@ -1,0 +1,83 @@
+# tickets.toml — epic-scholar-verified-v1-6-release. Incepted 2026-09-30; order of tables is build order.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Bilingual review export from both lanes"
+description = "Exports every judgment answer and pilot case with fact record, gate decisions and cited answer as bilingual scholar review rows through the existing review tooling."
+verify = "An export from a described-operation turn and a named-offer turn each yields a bilingual row with fact record and gate decisions."
+covers = ["CAP-7"]
+after = ["1.5", "2.5", "4.4"]
+hitl = false
+risk = "medium"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/brownfield.md"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Frozen-set format and immutable versioning"
+description = "Defines the frozen-set format, versioning and the rule that frozen data never trains a model and splits are grouped by entity."
+verify = "Attempting to change a released frozen-set version fails, and a training-data check rejects frozen cases."
+covers = ["CAP-7"]
+after = []
+hitl = false
+risk = "medium"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/release-ladder.md"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Author about 100 frozen pilot cases"
+description = "Person and agent author the frozen cases from the release-ladder list across both lanes and definitions in Arabic, English and code-mixed phrasing. Reuses epic-described-operation-lane's acceptance cases in the frozen-set format."
+verify = "About 100 cases cover every category in the release-ladder frozen-set list and export bilingually."
+covers = ["CAP-7"]
+after = [2]
+hitl = true
+risk = "medium"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/release-ladder.md"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Scholar import and rule-card promotion"
+description = "Imports scholar decisions with reviewer, date and rule/corpus version, and promotes approved decisions to approved rule cards."
+verify = "An imported decision records reviewer, date and version, and an approved one flips its card to approved with the version logged in answers."
+covers = ["CAP-7"]
+after = [1, 2]
+hitl = false
+risk = "high"
+references = ["_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/rule-card-schema.md"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Scholar adjudication round"
+description = "Scholar reviews the frozen set on the deployed lanes, and the team fixes or records every wrong verdict."
+verify = "Scholar review of the frozen set finds zero wrong verdicts."
+covers = ["CAP-7"]
+after = [3, 4, "2.6", "4.7"]
+hitl = true
+risk = "high"
+
+[[entry]]
+id = 6
+type = "story"
+title = "V1.6 release and live smoke"
+description = "Cuts V1.6 on the Hugging Face Space and runs the release checklist. The named-offer smoke runs with the flag on for the reviewer only; the public flag lift waits on legal review."
+verify = "`/ready` is healthy and live smoke passes for English, Arabic, unanswerable, one named-offer and one described-operation case."
+covers = ["CAP-8"]
+after = [5, "4.7"]
+hitl = true
+risk = "medium"
+references = ["ops — .planning/sharia-compliance-chatbot/docs/ops/huggingface-spaces.md"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at start from build records and deferred review findings of this epic."
+verify = "Full test suite passes with no behavior change."
+covers = ["CAP-7"]
+after = [1, 2, 3, 4, 5, 6]
+hitl = false
+risk = "low"

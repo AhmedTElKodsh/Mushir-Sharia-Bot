@@ -20,7 +20,10 @@ On the frozen iPhone story (deposit + 12 × EGP 3,000), the first reply has no v
 
 ## Requirements
 
-The spec's CAP-2, CAP-3 are this epic's requirement source; children cite those ids. Completed at inception.
+The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
+
+- CAP-2: Described operation captured across turns as typed slots with provenance. Success: frozen cases (incl. iPhone deposit + 12 x EGP 3,000) match expected slots; contradictions flagged; follow-up never overwrites a slot without reconciliation.
+- CAP-3: ANSWER / CLARIFICATION_NEEDED / INSUFFICIENT_DATA per the dual-query gates, one highest-impact question. Success: iPhone first reply has no verdict and asks who provides the plan; turn-limit exhaustion with a material fact missing is INSUFFICIENT_DATA naming the document.
 
 ## Done when
 

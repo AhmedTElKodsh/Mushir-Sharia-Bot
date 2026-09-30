@@ -20,7 +20,9 @@ Schedule facts reach the slots as `user_reported` without the document being kep
 
 ## Requirements
 
-The spec's CAP-10 are this epic's requirement source; children cite those ids. Completed at inception.
+The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
+
+- CAP-10: User shares an instalment-schedule screenshot; redacted, not retained unless opt-in. Success: extraction accuracy reported on labeled schedules; nothing persisted without opt-in.
 
 ## Done when
 
