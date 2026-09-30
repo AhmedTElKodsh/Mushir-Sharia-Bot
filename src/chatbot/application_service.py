@@ -3,6 +3,7 @@ import json
 import os
 import random
 import re
+import threading
 from dataclasses import dataclass
 from inspect import Parameter, signature
 from typing import Any, Dict, List, Optional
@@ -97,6 +98,8 @@ class ApplicationService:
         self.session_store = session_store
         self.audit_store = audit_store
         self.decision_store = decision_store
+        # Striped locks keep one session's snapshot/answer/commit/restore from interleaving with another request's.
+        self._session_locks = tuple(threading.RLock() for _ in range(64))
         self.cache_store = cache_store
         self.scholar_review_queue_store = scholar_review_queue_store
         self.scholar_sampling_rate = max(0.0, min(float(scholar_sampling_rate), 1.0))
@@ -137,6 +140,13 @@ class ApplicationService:
         # The decision record is the commit point: an answer that could not be
         # recorded is never delivered, so the conversation must not advance either.
         # Append-only audit/queue writes made by _answer cannot be withdrawn.
+        with self._session_locks[hash(effective_session) % len(self._session_locks)]:
+            return self._answer_and_commit(query, session_id, effective_session, effective_request,
+                                           disclaimer_acknowledged, conversation_history)
+
+    def _answer_and_commit(self, query, session_id, effective_session, effective_request,
+                           disclaimer_acknowledged, conversation_history) -> AnswerContract:
+        from src.models.decision_audit import prepare_decision_record
         snapshot = self._snapshot_session(effective_session)
         try:
             # Anonymous requests share one id with their audit record but never leave session state behind.

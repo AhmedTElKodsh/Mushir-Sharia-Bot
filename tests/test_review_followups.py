@@ -247,3 +247,88 @@ def test_records_are_stored_with_a_utc_timestamp_so_purge_compares_correctly(tmp
 
 
 from datetime import timezone  # noqa: E402  (kept beside its only user)
+
+
+# ---- remaining items: dedupe, locking, periodic purge, registry, names, bare numbers, currency ----------
+def test_audit_response_does_not_repeat_the_typed_review(tmp_path):
+    app = _service(tmp_path)
+    answer = app.answer(STORY, session_id="s1")
+    row = app.decision_store.get(answer.metadata["review_receipt"]["review_id"])
+    assert row.typed_review is not None
+    assert "decision_review" not in row.response["metadata"]
+
+
+def test_same_session_requests_never_overlap_through_the_commit_point(tmp_path):
+    import threading
+    import time
+    app = _service(tmp_path)
+    active, overlaps = [], []
+
+    def slow_answer(query, session_id, *args, **kwargs):
+        active.append(1)
+        if len(active) > 1:
+            overlaps.append(1)
+        time.sleep(0.05)
+        active.pop()
+        return AnswerContract(answer="a", status=ComplianceStatus.INSUFFICIENT_DATA)
+
+    app._answer = slow_answer
+    threads = [threading.Thread(target=app.answer, args=("q",), kwargs={"session_id": "same"}) for _ in range(4)]
+    [thread.start() for thread in threads]
+    [thread.join() for thread in threads]
+    assert overlaps == []
+
+
+def test_periodic_purge_runs_repeatedly_and_survives_a_failed_pass():
+    import asyncio
+    from src.api.main import _periodic_retention_purge
+    store = Mock()
+    store.purge_older_than.side_effect = [OSError("locked"), 0, 0]
+
+    async def run():
+        task = asyncio.create_task(_periodic_retention_purge(store, interval_seconds=0.01))
+        await asyncio.sleep(0.15)
+        task.cancel()
+
+    asyncio.run(run())
+    assert store.purge_older_than.call_count >= 2
+
+
+def test_reviewer_registry_restricts_identities_only_when_configured(tmp_path, monkeypatch):
+    from src.models.evidence import require_human_reviewer
+    assert require_human_reviewer("bob") == "bob"
+    registry = tmp_path / "reviewers.txt"
+    registry.write_text("# scholars\nAlice\n", encoding="utf-8")
+    monkeypatch.setenv("REVIEWER_REGISTRY_PATH", str(registry))
+    assert require_human_reviewer("alice ") == "alice "
+    with pytest.raises(ValueError, match="registry"):
+        require_human_reviewer("bob")
+    with pytest.raises(ValueError, match="automatic"):
+        require_human_reviewer("auto")
+
+
+@pytest.mark.parametrize("text, party", [
+    ("financed by Bank of Egypt and Gulf Finance", "Bank of Egypt and Gulf Finance"),
+    ("التمويل من بنك وطني", "بنك وطني"),
+    ("financed by Example Finance and I paid EGP 5000 down", "Example Finance"),
+])
+def test_financier_names_are_cut_only_where_a_new_clause_begins(text, party):
+    from tests.test_review_hardening import _extract
+    assert _extract(text)["financing_party"].value == party
+
+
+def test_bare_number_continues_the_transactions_single_currency():
+    from src.chatbot.described_operation_facts import known_currency, parse_schedule_reply
+    conversation = _pending_conversation("down_payment")
+    assert known_currency(conversation.snapshot) == "EGP"
+    assert parse_schedule_reply("5000", "down_payment", "EGP").currency == "EGP"
+    assert DescribedOperationService.accepts("5000", conversation)
+    assert parse_schedule_reply("5000", "down_payment") is None  # nothing known: never invent a currency
+    assert parse_schedule_reply("USD 5000", "down_payment", "EGP") is None
+    assert parse_schedule_reply("5000 dollars", "down_payment", "EGP") is None
+
+
+def test_currency_binds_to_the_amount_it_touches():
+    from tests.test_review_hardening import _extract
+    assert _extract("I paid deposit EGP 5000 (about USD 100)")["down_payment"].status == "user_reported"
+    assert _extract("I paid deposit EGP 5000 USD")["down_payment"].status == "unknown"

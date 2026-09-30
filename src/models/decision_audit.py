@@ -49,6 +49,8 @@ def prepare_decision_record(query, answer, *, session_id, request_id):
     review_id = str(uuid4())
     recorded_at = datetime.now(UTC)
     answer.metadata["review_receipt"] = {"review_id": review_id, "recorded_at": recorded_at.isoformat()}
+    response = answer.to_dict()
+    response["metadata"].pop("decision_review", None)  # typed_review already holds this snapshot
     return DecisionAuditRecord(review_id=review_id, request_id=request_id, session_id=session_id,
         recorded_at=recorded_at, query=query or "", fact_coverage="typed_snapshot" if typed else "not_extracted",
-        typed_review=typed, gates=tuple(gates[name] for name in GATES), response=answer.to_dict())
+        typed_review=typed, gates=tuple(gates[name] for name in GATES), response=response)

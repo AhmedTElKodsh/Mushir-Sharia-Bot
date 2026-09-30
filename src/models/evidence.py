@@ -5,6 +5,7 @@ the existing answer API. Native Pydantic JSON methods are the wire interface.
 """
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 from decimal import Context, Decimal
 from ipaddress import ip_address
@@ -39,10 +40,23 @@ Intent = Literal["named_offer", "described_operation", "definition", "out_of_sco
 NON_HUMAN_REVIEWERS = frozenset({"auto", "automatic", "model", "llm", "model-confidence", "claude", "gpt", "system", "bot"})
 
 
+def _reviewer_registry():
+    """Optional operator file of allowed reviewer ids, one per line; unset means the denylist alone applies."""
+    path = os.getenv("REVIEWER_REGISTRY_PATH")
+    if not path:
+        return None
+    with open(path, encoding="utf-8") as handle:
+        return {line.strip().lower() for line in handle if line.strip() and not line.startswith("#")}
+
+
 def require_human_reviewer(value: str) -> str:
     """Approval identities must name a person; automatic identities never approve."""
-    if value.strip().lower() in NON_HUMAN_REVIEWERS:
+    identity = value.strip().lower()
+    if identity in NON_HUMAN_REVIEWERS:
         raise ValueError("automatic identity cannot review or approve")
+    registry = _reviewer_registry()
+    if registry is not None and identity not in registry:
+        raise ValueError("reviewer is not in the operator's reviewer registry")
     return value
 
 

@@ -25,13 +25,23 @@ def _plausible_count(digits: str) -> bool:
     return len(digits) <= 4 and 0 < int(digits) <= MAX_INSTALMENTS
 
 
-def parse_schedule_reply(text: str, slot: str):
-    """Parse a direct answer to a specific schedule-field question, no inference."""
+def known_currency(snapshot) -> str | None:
+    """The one currency already stated in this transaction, or None when there is none or several."""
+    currencies = {fact.value.currency for fact in snapshot.facts
+                  if fact.status in {"user_reported", "observed"} and isinstance(fact.value, Money)}
+    return next(iter(currencies)) if len(currencies) == 1 else None
+
+
+def parse_schedule_reply(text: str, slot: str, assume_currency: str | None = None):
+    """Parse a direct answer to a specific schedule-field question, no inference beyond a stated currency."""
     normalized = text.translate(_DIGITS).strip()
     if slot in {"cash_price", "financed_or_final_price", "down_payment", "instalment_amount"}:
         match = re.fullmatch(rf"{_MONEY}[.!]?", normalized, re.I)
         if match and re.search(r"\bEGP\b|جنيه", normalized, re.I):
             return Money(amount=Decimal(match["amount"].replace(",", "")), currency="EGP")
+        # A bare number continues the currency the user already used; it never introduces one.
+        if match and assume_currency and not re.search(r"[A-Za-z$€£]|[\u0621-\u064a]", normalized):
+            return Money(amount=Decimal(match["amount"].replace(",", "")), currency=assume_currency)
     if slot == "instalment_count" and re.fullmatch(r"[0-9]{1,4}", normalized) and _plausible_count(normalized):
         return int(normalized)
     return None
@@ -88,7 +98,10 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
     foreign = r"\b(?:USD|EUR|SAR|AED|GBP)\b|[$€£]|دولار|ريال|درهم|يورو"
 
     def foreign_nearby(match):
-        return bool(re.search(foreign, normalized[max(0, match.start() - 12):match.end() + 12], re.I))
+        """A foreign currency token directly attached to this amount, before or after it."""
+        before = normalized[max(0, match.start() - 4):match.start()]
+        after = normalized[match.end():match.end() + 8]
+        return bool(re.search(rf"(?:{foreign})\s*$", before, re.I) or re.match(rf"\s*(?:{foreign})", after, re.I))
 
     if has_egp:
         patterns = {
@@ -115,7 +128,9 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
 
     # This identifies only the named party, not its regulatory role or mechanism.
     for match in matches(r"(?:\bfinancing party is|\bfinanced by|جهة التمويل هي|التمويل من)\s+([^.!?؟\n,،;]+)"):
-        party = re.split(r"\s+(?:and|with|but|then|which|paid)\s+|\s+و(?=\w)", match[1].strip(), maxsplit=1)[0].strip()
+        party = re.split(
+            r"\s+(?:and|with|but|then|which)\s+(?=(?:I|we|my|our|paid|EGP|\d))|\s+paid\s+|\s+و(?=(?:دفعت|اشتريت|انا|أنا|المقدم|مقدم))",
+            match[1].strip(), maxsplit=1)[0].strip()
         if party and not re.search(r"\d", party) and not re.search(
                 r"\b(?:unknown|not|unsure|either|or)\b|معرفش|لا أعرف|مش عارف|(?<!\w)(?:او|أو)(?!\w)", party, re.I):
             add("financing_party", party)

@@ -9,7 +9,7 @@ from pydantic import Field, StrictInt, model_validator
 
 from src.chatbot.described_operation_facts import (
     extract_operation_facts, reconcile_operation_facts, resolve_operation_fact,
-    parse_schedule_reply, parse_confirmed_schedule_reply,
+    parse_schedule_reply, parse_confirmed_schedule_reply, known_currency,
 )
 from src.models.evidence import (
     AnswerDecision, DecisionReviewRow, EvidenceModel, FactSnapshot, FactResolution, GateDecision,
@@ -62,11 +62,12 @@ class DescribedOperationService:
         # continue a transaction. A new question is routed independently.
         if re.search(r"[?؟]", text) or re.match(r"\s*(?:what|why|how|define|explain|ما هو|ما هي|اشرح)\b", text, re.I):
             return False
-        return bool(DescribedOperationService._answers_pending(text, previous.pending_slot) or re.search(
+        return bool(DescribedOperationService._answers_pending(
+            text, previous.pending_slot, known_currency(previous.snapshot)) or re.search(
             r"total payable|final price|cash price|deposit|financed by|financing party|مقدم|السعر النهائي|التمويل من", text, re.I))
 
     @classmethod
-    def _answers_pending(cls, text: str, slot: str | None) -> bool:
+    def _answers_pending(cls, text: str, slot: str | None, currency: str | None = None) -> bool:
         """A reply must look like an answer to the open question, not just be short."""
         if not slot or len(text) > 160:
             return False
@@ -77,7 +78,7 @@ class DescribedOperationService:
         if slot == "payment_breakdown":
             return bool(re.search(r"\d|fees?|charges?|insurance|admin|interest|رسوم|مصاريف|تأمين|فوائد|ضريبة", text, re.I)
                         or cls._does_not_know(text))
-        return (parse_schedule_reply(text, slot) is not None
+        return (parse_schedule_reply(text, slot, currency) is not None
                 or parse_confirmed_schedule_reply(text, slot) is not None or cls._does_not_know(text))
 
     def answer(self, text: str, *, session_id: str, request_id: str,
@@ -98,7 +99,7 @@ class DescribedOperationService:
         if previous and previous.pending_slot:
             old = next((fact for fact in previous.snapshot.facts if fact.slot == previous.pending_slot), None)
             if old and old.status == "conflicting":
-                value = parse_schedule_reply(text, previous.pending_slot)
+                value = parse_schedule_reply(text, previous.pending_slot, known_currency(previous.snapshot))
                 if value is None:
                     value = parse_confirmed_schedule_reply(text, previous.pending_slot)
                 if value is not None:

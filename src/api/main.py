@@ -1,4 +1,5 @@
 import json
+import asyncio
 import os
 import uuid
 from contextlib import asynccontextmanager
@@ -79,7 +80,22 @@ async def lifespan(app: FastAPI):
     )
     app.state.metrics = MetricsRegistry()
     app.state.infrastructure = _infrastructure_status(app)
-    yield
+    purge_task = asyncio.create_task(_periodic_retention_purge(app.state.decision_store))
+    try:
+        yield
+    finally:
+        purge_task.cancel()
+
+
+async def _periodic_retention_purge(store, interval_seconds: float = 24 * 3600):
+    """Enforce retention on long-lived processes; a failed pass is reported and retried next interval."""
+    from src.storage.decision_review_store import configured_retention_days
+    while True:
+        await asyncio.sleep(interval_seconds)
+        try:
+            await asyncio.to_thread(store.purge_older_than, configured_retention_days())
+        except Exception:
+            print(_safe_fallback_message("Decision review retention purge"))
 
 
 def _build_session_manager():
