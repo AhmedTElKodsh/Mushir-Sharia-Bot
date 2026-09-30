@@ -349,6 +349,8 @@ class ClarificationEngine:
             r"\busurious\b",
             r"\bvalid\b",
             r"\binvalid\b",
+            r"\bcompliant\b",
+            "متوافق",
             "حكم",  # حكم
             "يجوز",  # يجوز
             "جائز",  # جائز

@@ -112,7 +112,8 @@ def test_application_service_returns_canonical_answer_contract():
     assert result.metadata["prompt_version"] == "test-prompt"
     assert result.metadata["response_language"] == "en"
     assert result.metadata["retrieved_chunk_ids"] == ["chunk-1"]
-    assert result.metadata["confidence"] == pytest.approx(0.91)
+    assert "confidence" not in result.metadata
+    assert result.metadata["evidence"]["source_age_status"] == "unknown"
 
 
 @pytest.mark.service
@@ -194,6 +195,13 @@ def test_application_service_fails_closed_for_late_penalty_without_sharia_eviden
 def test_application_service_passes_source_family_filter_and_strict_metadata_gate(monkeypatch):
     from src.chatbot.application_service import ApplicationService
     from src.chatbot.citation_validator import CitationValidator
+    from src.ontology import ConceptOntology, ConceptOntologyEntry
+    from tests.ontology_fixtures import late_penalty_payload
+
+    # The specific commercial route must win over broad ontology fallback
+    # candidates, even when the optional ontology is present.
+    fixture_ontology = ConceptOntology([ConceptOntologyEntry.from_mapping(late_penalty_payload())])
+    monkeypatch.setattr(ConceptOntology, "load", classmethod(lambda cls, *args, **kwargs: fixture_ontology))
 
     retriever = RecordingRetriever([
         _chunk(
@@ -214,7 +222,7 @@ def test_application_service_passes_source_family_filter_and_strict_metadata_gat
 
     assert retriever.calls[0]["filters"] == {
         "source_family": "sharia_standard",
-        "standard_number": ["SS-03", "SS-08", "SS-19", "SS-28"],
+        "standard_number": ["SS-03", "SS-08"],
     }
     assert retriever.calls[0]["mode"] == "hybrid"
     assert result.status == ComplianceStatus.INSUFFICIENT_DATA
@@ -255,7 +263,7 @@ def test_application_service_retrieves_debt_late_fee_from_candidate_standards():
 
 
 @pytest.mark.service
-def test_application_service_fails_closed_for_plain_installment_permissibility_without_sharia_evidence():
+def test_application_service_clarifies_plain_personal_installments_without_inferring_murabaha():
     from src.chatbot.application_service import ApplicationService
     from src.chatbot.citation_validator import CitationValidator
 
@@ -274,11 +282,13 @@ def test_application_service_fails_closed_for_plain_installment_permissibility_w
         "I bought a car from the bank in installments with a 20% markup. Is it halal?"
     )
 
-    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.status == ComplianceStatus.CLARIFICATION_NEEDED
     assert result.citations == []
-    assert result.metadata["transaction_scenario"]["contract_family"] == "murabaha"
-    assert result.metadata["standards_route"]["primary"] == ["sharia_standard"]
-    assert result.metadata["verdict_contract"]["requires_scholar_review"] is True
+    facts = {fact["slot"]: fact for fact in result.metadata["decision_review"]["fact_snapshot"]["facts"]}
+    assert facts["contract_family"]["status"] == "unknown"
+    assert facts["financing_party"]["status"] == "unknown"
+    assert result.clarification_question.count("?") == 1
+    assert "Who provides" in result.clarification_question
 
 
 @pytest.mark.service

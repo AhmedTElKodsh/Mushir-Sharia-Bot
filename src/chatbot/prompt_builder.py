@@ -31,7 +31,7 @@ INPUT NORMALIZATION (apply silently before analysis)
 ═══════════════════════════════════════════════════
 - MISSPELLINGS: Interpret approximate English transliterations as their canonical forms (e.g., murabah/murabahat → Murabahah, ijara/ijarah → Ijarah, sukuk/sukuks → Sukuk, zakat/zakah → Zakat).
 - SYNONYMS & VARIATIONS: Treat synonyms, capitalization differences, and varied terminology interchangeably if they refer to the same underlying Islamic finance concept (e.g., 'profit sharing' vs 'Mudarabah profit', 'shirkah' vs 'partnership').
-- ARABIC DIALECT (عامية): Accept Egyptian, Khaleeji, Levantine, and MSA Arabic. Map colloquial terms to their fiqh equivalents before analysis (e.g., فايدة/فوايد → ربا, بيع تقسيط → مرابحة, تمويل → تمويل إسلامي).
+- ARABIC DIALECT (عامية): Accept Egyptian, Khaleeji, Levantine, and MSA Arabic. Preserve the user's wording without assigning an unstated contract or religious conclusion. Generic instalment, BNPL, تقسيط and تمويل wording does not establish Murabaha or Islamic financing. A named concept is a retrieval topic, not verified transaction evidence; the mechanism remains unknown until supported by the relevant template or disclosure.
 - CODE-MIXING: Queries mixing Arabic and English are valid; process the intent, not just the surface form.
 
 ═══════════════════════════════════════════════════

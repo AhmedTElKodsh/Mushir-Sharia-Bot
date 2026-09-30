@@ -58,7 +58,7 @@ class CitationValidator:
             section_number=section,
             section_title=metadata.get("section_title"),
             excerpt=quote,
-            confidence_score=self._chunk_score(chunk),
+            captured_at=metadata.get("captured_at"),
             quote_start=start,
             quote_end=end,
         )

@@ -77,7 +77,7 @@ class ScenarioExtractor:
         self._contract_classifier = contract_classifier or ContractTypeClassifier()
 
     _PERMISSIBILITY_TERMS = (
-        "halal", "haram", "riba", "ribawi", "permissible", "allowed", "valid", "sharia-compliant",
+        "halal", "haram", "riba", "ribawi", "usury", "usurious", "permissible", "allowed", "valid", "sharia-compliant",
         "compliant", "ruling", "can i ", "can we ", "should i ", "should we ",
         "is it ok", "is it okay", "acceptable", "islamically",
         AR_HALAL, AR_HARAM, AR_ALLOWED, AR_VALID, AR_RULING, AR_COMPLIANT,
@@ -136,7 +136,7 @@ class ScenarioExtractor:
 
     def _question_type(self, lowered: str) -> QuestionType:
         hard_permissibility_terms = (
-            "halal", "haram", "riba", "ribawi", "permissible", "allowed", "valid",
+            "halal", "haram", "riba", "ribawi", "usury", "usurious", "permissible", "allowed", "valid",
             "sharia-compliant", "can ", "can i ", "can we ", "should i ", "should we ",
             "should the bank", "should a bank", "should the customer",
             "is it ok", "is it okay", "is that ok", "is that okay",
@@ -197,6 +197,9 @@ class ScenarioExtractor:
 
     @staticmethod
     def _contract_family(lowered: str) -> ContractFamily:
+        from src.chatbot.mechanism_terms import generic_mechanism_unknown
+        if generic_mechanism_unknown(lowered):
+            return ContractFamily.UNKNOWN
         checks = (
             (ContractFamily.MURABAHA, ("murabaha", "murabahah", AR_MURABAHA, AR_MURABAHA_ALT)),
             (ContractFamily.IJARAH, ("ijarah", "ijara", "lease", "\u0625\u062c\u0627\u0631\u0629", "\u0627\u062c\u0627\u0631\u0629", "\u0627\u0644\u0627\u062c\u0627\u0631\u0629", "\u0627\u064a\u062c\u0627\u0631")),
@@ -212,10 +215,6 @@ class ScenarioExtractor:
         for family, terms in checks:
             if any(term in lowered for term in terms):
                 return family
-        if any(term in lowered for term in ("installment", "instalment", AR_INSTALLMENT, AR_INSTALLMENT_WITH_B)):
-            return ContractFamily.MURABAHA
-        if "buy now pay later" in lowered or "bnpl" in lowered:
-            return ContractFamily.MURABAHA
         if any(term in lowered for term in AR_SUPPLY_TERMS + AR_MANUFACTURING_TERMS):
             return ContractFamily.ISTISNA
         return ContractFamily.UNKNOWN

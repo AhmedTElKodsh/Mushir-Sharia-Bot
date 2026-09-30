@@ -99,7 +99,9 @@ def test_l5_rest_and_sse_share_final_answer_contract():
     assert stream.status_code == 200
     assert rest.json()["answer"] in stream.text
     assert rest.json()["citations"][0]["excerpt"] in stream.text
-    assert rest.json()["citations"][0]["confidence_score"] == 0.91
+    assert "confidence_score" not in rest.json()["citations"][0]
+    assert "confidence" not in rest.json()["metadata"]
+    assert rest.json()["metadata"]["evidence"]["source_age_status"] == "unknown"
 
 
 @pytest.mark.api

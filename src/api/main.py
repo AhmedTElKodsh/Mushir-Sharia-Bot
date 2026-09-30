@@ -52,6 +52,8 @@ async def lifespan(app: FastAPI):
     app.state.session_manager = _build_session_manager()
     app.state.rate_limiter = _build_rate_limiter()
     app.state.audit_store = _build_audit_store()
+    from src.storage.decision_review_store import configured_decision_store
+    app.state.decision_store = configured_decision_store()
     app.state.cache_store = _build_cache_store()
     app.state.scholar_review_queue_store = _build_scholar_review_queue_store()
     # Eagerly build the retriever once at startup so all requests share one
@@ -65,6 +67,7 @@ async def lifespan(app: FastAPI):
         clarification_service=ClarificationEngine(),
         session_store=app.state.session_manager,
         audit_store=app.state.audit_store,
+        decision_store=app.state.decision_store,
         cache_store=app.state.cache_store,
         scholar_review_queue_store=app.state.scholar_review_queue_store,
         scholar_sampling_rate=float(os.getenv("SCHOLAR_REVIEW_SAMPLE_RATE", "0.05")),
@@ -177,6 +180,7 @@ def _infrastructure_status(app: FastAPI):
         "session_store": type(app.state.session_manager).__name__,
         "rate_limit_store": type(app.state.rate_limiter).__name__,
         "audit_store": type(app.state.audit_store).__name__,
+        "decision_review_store": type(getattr(app.state, "decision_store", None)).__name__,
         "cache_store": type(app.state.cache_store).__name__,
     }
     retriever = getattr(app.state, "application_service", None)

@@ -278,7 +278,7 @@ def _query_events(application_service: ApplicationService, payload: QueryRequest
     try:
         answer = _answer_service(application_service, payload, request_id)
         response = _query_response(answer).model_dump(mode="json")
-        yield _sse("retrieval", {"confidence": response["metadata"].get("confidence", 0.0)})
+        yield _sse("retrieval", {"evidence": response["metadata"]["evidence"]})
         yield _sse("token", {"text": response["answer"]})
         for citation in response["citations"]:
             yield _sse("citation", citation)

@@ -7,12 +7,12 @@ from typing import Dict, Iterable, Optional, Tuple
 
 from src.models.commercial import ContractFamily
 from src.rag.query_preprocessor import QueryPreprocessor
+from src.chatbot.mechanism_terms import generic_mechanism_unknown, mechanism_routing_text
 
 
 @dataclass(frozen=True)
 class ContractClassification:
     contract_family: ContractFamily
-    confidence: float
     matched_terms: Tuple[str, ...] = ()
 
 
@@ -37,14 +37,8 @@ class ContractTypeClassifier:
         ),
         ContractFamily.MURABAHA: (
             r"\bmurabaha(?:h)?\b",
-            r"\binstall?ment sale\b",
-            r"\bdeferred sale\b",
-            r"\bbnpl\b",
             "\u0645\u0631\u0627\u0628\u062d\u0629",
             "\u0645\u0631\u0627\u0628\u062d\u0647",
-            "\u062a\u0642\u0633\u064a\u0637",
-            "\u0627\u0642\u0633\u0627\u0637",
-            "\u0628\u064a\u0639 \u0645\u0624\u062c\u0644",
         ),
         ContractFamily.IJARAH: (
             r"\bijara(?:h)?\b",
@@ -57,8 +51,6 @@ class ContractTypeClassifier:
             "\u062a\u0623\u062c\u064a\u0631",
             "\u0645\u0633\u062a\u0623\u062c\u0631",
             "\u0645\u0624\u062c\u0631",
-            "\u062a\u0645\u0648\u064a\u0644 \u0639\u0642\u0627\u0631\u064a",
-            "real estate financing",
         ),
         ContractFamily.MUDARABA: (r"\bmudaraba(?:h)?\b", "\u0645\u0636\u0627\u0631\u0628\u0629"),
         ContractFamily.MUSHARAKA: (r"\bmusharaka(?:h)?\b", "\u0645\u0634\u0627\u0631\u0643\u0629"),
@@ -80,29 +72,28 @@ class ContractTypeClassifier:
     }
 
     def classify(self, query: str) -> Optional[ContractClassification]:
-        text = QueryPreprocessor.normalize(query or "")
+        if generic_mechanism_unknown(query):
+            return None
+        text = mechanism_routing_text(query)
         lowered = text.lower()
-        expanded = QueryPreprocessor.expand_terms(query or "")
         best: Optional[ContractClassification] = None
         for family, patterns in self.FAMILY_PATTERNS.items():
-            matches = self._matches(lowered, expanded, patterns)
+            matches = self._matches(lowered, patterns)
             if not matches:
                 continue
-            confidence = min(0.99, 0.72 + (0.08 * len(matches)))
-            candidate = ContractClassification(family, confidence, tuple(matches))
-            if best is None or candidate.confidence > best.confidence:
+            candidate = ContractClassification(family, tuple(matches))
+            if best is None or len(candidate.matched_terms) > len(best.matched_terms):
                 best = candidate
         return best
 
     @staticmethod
-    def _matches(lowered: str, expanded: Iterable[str], patterns: Iterable[str]) -> Tuple[str, ...]:
-        expanded_terms = {term.lower() for term in expanded}
+    def _matches(lowered: str, patterns: Iterable[str]) -> Tuple[str, ...]:
         matches = []
         for pattern in patterns:
             normalized = QueryPreprocessor.normalize(pattern).lower()
             if pattern.startswith(r"\b"):
                 if re.search(pattern, lowered, flags=re.IGNORECASE):
                     matches.append(pattern)
-            elif normalized in lowered or normalized in expanded_terms:
+            elif normalized in lowered:
                 matches.append(pattern)
         return tuple(matches)

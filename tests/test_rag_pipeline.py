@@ -153,7 +153,8 @@ def test_query_preprocessor_expands_arabic_installment_and_late_penalty_terms():
     terms = QueryPreprocessor.expand_terms(query)
 
     assert QueryPreprocessor.detect_language(query) == "ar"
-    assert "murabaha" in terms
+    assert "installment plan" in terms
+    assert "murabaha" not in terms
     assert "late fee" in terms
 
 

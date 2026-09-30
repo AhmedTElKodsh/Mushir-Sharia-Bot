@@ -264,8 +264,9 @@ def _process_stream_response(response: requests.Response, config: Config):
                         raise RuntimeError(f"SSE error event: {data}")
                     if 'text' in data:
                         print(f"     Text: {truncate_text(data['text'], config.max_citation_preview)}")
-                    elif 'confidence' in data:
-                        print(f"     Confidence: {data['confidence']:.2f}")
+                    elif 'evidence' in data:
+                        print(f"     Evidence: {data['evidence'].get('status', 'unknown')}")
+                        print(f"     Source capture ages: {data['evidence'].get('sources', [])}")
                 except json.JSONDecodeError:
                     print(f"     [Invalid JSON data]")
 

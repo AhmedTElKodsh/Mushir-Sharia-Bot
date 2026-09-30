@@ -34,10 +34,10 @@ class TestSSEEventSchemas:
         assert data["request_id"] == "req-abc-123"
 
     def test_retrieval_event(self):
-        event = RetrievalEvent(confidence=0.87)
+        event = RetrievalEvent(evidence={"status": "insufficient_evidence"})
         data = event.model_dump(mode="json")
         assert data["event"] == "retrieval"
-        assert data["confidence"] == 0.87
+        assert data["evidence"]["status"] == "insufficient_evidence"
 
     def test_token_event(self):
         event = TokenEvent(text="The transaction complies")
@@ -98,10 +98,10 @@ class TestSSEFormatting:
         assert output.endswith("\n\n")
 
     def test_retrieval_sse_line(self):
-        event = RetrievalEvent(confidence=0.75)
+        event = RetrievalEvent(evidence={"status": "insufficient_evidence"})
         output = _sse("retrieval", event.model_dump(mode="json"))
         assert "event: retrieval" in output
-        assert '"confidence": 0.75' in output
+        assert '"status": "insufficient_evidence"' in output
 
     def test_token_sse_line(self):
         event = TokenEvent(text="Sharia-compliant")

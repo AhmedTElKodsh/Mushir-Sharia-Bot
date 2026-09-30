@@ -41,18 +41,17 @@ class RulingContext:
 @dataclass
 class RulingResult:
     permissibility: Permissibility
-    confidence: float = 0.0
     applicable_standards: List[str] = field(default_factory=list)
     conditions_met: List[str] = field(default_factory=list)
     conditions_violated: List[str] = field(default_factory=list)
+    conditions_unknown: List[str] = field(default_factory=list)
     alternative_views: List[str] = field(default_factory=list)
     requires_scholar_review: bool = False
     source_chunks: List[str] = field(default_factory=list)
     scholar_reviewed: bool = False
 
     def __post_init__(self) -> None:
-        self.confidence = max(0.0, min(1.0, float(self.confidence)))
-        if self.confidence < 0.75 or self.permissibility == Permissibility.DISPUTED:
+        if not self.scholar_reviewed or self.permissibility in {Permissibility.DISPUTED, Permissibility.INSUFFICIENT_DATA}:
             self.requires_scholar_review = True
 
 class ComplianceStatus(Enum):
@@ -71,6 +70,7 @@ class AAOIFICitation:
     section_title: Optional[str] = None
     excerpt: Optional[str] = None
     confidence_score: Optional[float] = None
+    captured_at: Optional[str] = None
     quote_start: Optional[int] = None
     quote_end: Optional[int] = None
 
@@ -81,13 +81,14 @@ class AAOIFICitation:
             raise ValueError("Citation standard_number cannot be empty")
 
     def to_dict(self) -> Dict:
+        from src.models.evidence_display import source_age
         return {
             "document_id": self.document_id,
             "standard_number": self.standard_number,
             "section_number": self.section_number,
             "section_title": self.section_title,
             "excerpt": self.excerpt,
-            "confidence_score": self.confidence_score,
+            "captured_at": source_age(self.captured_at)["captured_at"],
             "quote_start": self.quote_start,
             "quote_end": self.quote_end,
         }
@@ -148,6 +149,9 @@ class AnswerContract:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
+        from src.models.evidence_display import evidence_summary, without_answer_scores
+        self.metadata = without_answer_scores(self.metadata)
+        self.metadata["evidence"] = evidence_summary(self.status.value, self.citations)
         if not self.answer or not self.answer.strip():
             raise ValueError("AnswerContract answer cannot be empty")
         if self.status not in {
@@ -157,6 +161,9 @@ class AnswerContract:
             raise ValueError("Grounded answers must include at least one citation")
 
     def to_dict(self) -> Dict[str, Any]:
+        from src.models.evidence_display import evidence_summary, without_answer_scores
+        metadata = without_answer_scores(self.metadata)
+        metadata["evidence"] = evidence_summary(self.status.value, self.citations)
         return {
             "answer": self.answer,
             "status": self.status.value,
@@ -164,5 +171,5 @@ class AnswerContract:
             "reasoning_summary": self.reasoning_summary,
             "limitations": self.limitations,
             "clarification_question": self.clarification_question,
-            "metadata": self.metadata,
+            "metadata": metadata,
         }

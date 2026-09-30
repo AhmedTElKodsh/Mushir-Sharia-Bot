@@ -1,6 +1,18 @@
 import pytest
 
 
+def test_ingest_preflight_import_does_not_load_model_or_index_runtime():
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import sys; import scripts.ingest; "
+         "assert not {'torch', 'sentence_transformers', 'chromadb', 'langchain_text_splitters'} & sys.modules.keys()"],
+        capture_output=True, text=True, timeout=20,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.unit
 def test_ingest_selects_arabic_and_english_markdown(tmp_path):
     from scripts.ingest import detect_language, markdown_files
@@ -271,7 +283,7 @@ records:
     )
     monkeypatch.setattr(
         ingest,
-        "SentenceTransformer",
+        "load_embedding_model",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("model should not load")),
     )
 
@@ -326,7 +338,7 @@ def test_ingest_cli_refuses_uncataloged_rebuild_before_loading_model(tmp_path, m
     )
     monkeypatch.setattr(
         ingest,
-        "SentenceTransformer",
+        "load_embedding_model",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("model should not load")),
     )
 

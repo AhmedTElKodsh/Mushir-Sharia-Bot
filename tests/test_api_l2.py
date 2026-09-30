@@ -157,7 +157,9 @@ def test_query_stream_retrieves_generates_and_completes_when_ready():
         "citation",
         "done",
     ]
-    assert events[1]["data"]["confidence"] == 0.91
+    assert events[1]["data"]["evidence"]["status"] == "sources_available"
+    assert events[1]["data"]["evidence"]["source_age_status"] == "unknown"
+    assert "confidence" not in response.text
     assert events[2]["data"]["text"] == "According to AAOIFI [FAS-01 §1]."
     assert events[4]["data"]["answer"] == "According to AAOIFI [FAS-01 §1]."
 

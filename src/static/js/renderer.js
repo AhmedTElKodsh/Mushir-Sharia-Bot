@@ -289,7 +289,7 @@ function addMessage(kind, text) {
 }
 
 /**
- * Add a status event message (loading, confidence, etc.).
+ * Add a status event message (loading, evidence availability, etc.).
  * @param {string} text - Event text content
  * @returns {HTMLElement} The created DOM node
  */
@@ -493,6 +493,35 @@ function restoreMessages(savedMessages) {
     if (msg.role === "assistant" && msg.citations && msg.citations.length > 0) {
       renderCitations(node, msg.citations);
     }
+    if (msg.role === "assistant") renderEvidence(node, msg.evidence);
   }
   messages.scrollTop = messages.scrollHeight;
+}
+
+function formatEvidence(evidence) {
+  evidence = evidence || {};
+  var labels = {clarification_required: "evidenceClarification", insufficient_evidence: "evidenceInsufficient", sources_available: "evidenceSources", no_sources: "evidenceNone"};
+  var lines = [t("evidenceStatus", {status: t(labels[evidence.status] || "evidenceUnknown")})];
+  var sources = evidence.sources || [];
+  if (!sources.length) lines.push(t("captureUnknown"));
+  sources.forEach(function(source) {
+    var captured = source.captured_at && Date.parse(source.captured_at);
+    if (!captured || captured > Date.now()) {
+      lines.push((source.document_id || "") + " — " + t("captureUnknown"));
+    } else {
+      lines.push(t("captureAge", {source: source.document_id, date: source.captured_at, age: Math.floor((Date.now() - captured) / 86400000)}));
+    }
+  });
+  return lines.join(" | ");
+}
+
+function renderEvidence(node, evidence) {
+  if (!node) return;
+  var label = node.querySelector(".evidence-summary");
+  if (!label) {
+    label = document.createElement("p");
+    label.className = "evidence-summary";
+    node.appendChild(label);
+  }
+  label.textContent = formatEvidence(evidence);
 }

@@ -418,7 +418,7 @@ def test_cached_answer_preserves_validated_citation_metadata():
 
     assert answer.metadata["cache_hit"] is True
     assert answer.citations[0].excerpt == "AAOIFI requires ownership and risk transfer before resale."
-    assert answer.citations[0].confidence_score == pytest.approx(0.91)
+    assert answer.citations[0].confidence_score is None
     assert answer.citations[0].quote_start == 0
     assert answer.citations[0].quote_end == 62
 

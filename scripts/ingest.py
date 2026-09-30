@@ -7,13 +7,14 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence
+from typing import TYPE_CHECKING, Iterable, List, Optional, Sequence
 
-import chromadb
 import yaml
 from dotenv import load_dotenv
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from sentence_transformers import SentenceTransformer
+
+if TYPE_CHECKING:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from sentence_transformers import SentenceTransformer
 
 from src.governance.chunk_metadata import ParentChildChunkMetadataBuilder
 from src.governance.source_catalog import SourceCatalog, SourceCatalogRecord
@@ -23,6 +24,13 @@ DEFAULT_CHROMA_DIR = "./chroma_db_multilingual"
 DEFAULT_CORPUS_DIR = "./data/aaoifi_md"
 SUPPORTED_LANGUAGES = {"en", "ar"}
 EXCLUDED_MARKDOWN = {"INDEX.md", "CONVERSION_SUMMARY.md", ".gitkeep"}
+
+
+def load_embedding_model(model_name: str) -> SentenceTransformer:
+    """Load the optional native model runtime only after input validation."""
+    from sentence_transformers import SentenceTransformer
+
+    return SentenceTransformer(model_name)
 
 
 def detect_language(path: Path) -> str:
@@ -98,6 +106,8 @@ def standard_number(path: Path) -> str:
 
 
 def build_splitter() -> RecursiveCharacterTextSplitter:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+
     return RecursiveCharacterTextSplitter(
         chunk_size=512,
         chunk_overlap=50,
@@ -324,9 +334,11 @@ def main() -> int:
         )
 
     print(f"Loading embedding model: {args.model}")
-    model = SentenceTransformer(args.model)
+    model = load_embedding_model(args.model)
 
     print(f"Initializing ChromaDB at: {args.chroma_dir}")
+    import chromadb
+
     client = chromadb.PersistentClient(path=args.chroma_dir)
     if args.reset:
         reset_collection(client, args.collection)

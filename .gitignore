@@ -88,6 +88,7 @@ chroma/
 *.sqlite3
 
 # Generated review/evaluation scratch output
+_bmad/render/
 _bmad-output/diff_*.txt
 _bmad-output/implementation-artifacts/live-hard-case-*.json
 tests/evaluation/reports/ece_report_*.json

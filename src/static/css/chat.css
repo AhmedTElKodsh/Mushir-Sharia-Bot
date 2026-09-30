@@ -213,6 +213,13 @@ main {
   line-height: 1.35;
 }
 
+.evidence-summary {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+  margin-top: 0.75rem;
+}
+
 .message {
   max-width: var(--bubble-max-width);
   padding: 13px 16px;

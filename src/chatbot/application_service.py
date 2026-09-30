@@ -78,6 +78,8 @@ class ApplicationService:
         scholar_sampler=None,
         k: int = 5,
         threshold: float = 0.3,
+        approved_rule_cards=(),
+        decision_store=None,
     ):
         self.retriever = retriever
         self.llm_client = llm_client
@@ -91,6 +93,7 @@ class ApplicationService:
         self._clarification_service_injected = clarification_service is not None
         self.session_store = session_store
         self.audit_store = audit_store
+        self.decision_store = decision_store
         self.cache_store = cache_store
         self.scholar_review_queue_store = scholar_review_queue_store
         self.scholar_sampling_rate = max(0.0, min(float(scholar_sampling_rate), 1.0))
@@ -105,8 +108,30 @@ class ApplicationService:
         self.rule_evaluator = CommercialRuleEvaluator()
         from src.ontology.concept_ontology import ConceptOntology
         self.ontology = ConceptOntology.load()
+        from src.chatbot.described_operation import DescribedOperationService
+        from src.governance.rule_cards import load_rule_cards
+        card_path = os.getenv("APPROVED_RULE_CARDS_PATH")
+        cards = load_rule_cards(card_path) if card_path else approved_rule_cards
+        self.described_operations = DescribedOperationService(cards)
 
     def answer(
+        self, query: Optional[str], session_id: Optional[str] = None,
+        request_id: Optional[str] = None, disclaimer_acknowledged: bool = True,
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
+    ) -> AnswerContract:
+        if self.decision_store is None:
+            return self._answer(query, session_id, request_id, disclaimer_acknowledged, conversation_history)
+        from uuid import uuid4
+        from src.models.decision_audit import prepare_decision_record
+        effective_session = session_id or str(uuid4())
+        effective_request = request_id or str(uuid4())
+        answer = self._answer(query, effective_session, effective_request, disclaimer_acknowledged, conversation_history)
+        record = prepare_decision_record(query, answer, session_id=effective_session, request_id=effective_request)
+        if self.decision_store.append(record) != record.review_id:
+            raise RuntimeError("decision review storage did not acknowledge the record")
+        return answer
+
+    def _answer(
         self,
         query: Optional[str],
         session_id: Optional[str] = None,
@@ -140,10 +165,65 @@ class ApplicationService:
                 citations=[],
                 reasoning_summary="User requested a binding ruling or legal advice, which exceeds Mushir's scope.",
                 limitations=self._limitations(response_language),
-                metadata=self._metadata([], confidence=0.0, response_language=response_language),
+                metadata=self._metadata([], response_language=response_language),
             )
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
+
+        # Personal descriptions use typed session evidence before legacy family
+        # heuristics, caches, retrieval, or generation can supply missing facts.
+        from src.chatbot.described_operation import OperationConversation
+        from src.chatbot.structure_clarification import clarify_structure, structure_slot
+        from uuid import uuid4
+        state = self._session_state(session_id)
+        saved_operation = state.metadata.get("described_operation") if state else None
+        operation = OperationConversation.model_validate(saved_operation) if saved_operation else None
+        pending_structure = state.metadata.get("pending_structure_clarification") if state else None
+        # A suspended transaction must not capture facts from the active topic.
+        # Only a fresh personal description may switch out of that topic.
+        personal_context = None if pending_structure else operation
+        if not structure_slot(cleaned_query) and self.described_operations.accepts(query, personal_context):
+            effective_session = session_id or str(uuid4())
+            contract, updated_operation = self.described_operations.answer(
+                query, session_id=effective_session, request_id=request_id or str(uuid4()),
+                previous=personal_context, language=response_language,
+            )
+            state = state or self._session_state(session_id, create=True)
+            if state:
+                state.metadata.pop("pending_structure_clarification", None)
+                state.metadata.pop("pending_scenario_clarification", None)
+                state.metadata["described_operation"] = updated_operation.model_dump(mode="json")
+                state.metadata.setdefault("operation_review_rows", []).append(contract.metadata["decision_review"])
+                state.add_message("user", query)
+                state.add_message("assistant", contract.answer)
+                self._update_session_state(state)
+            self._audit(query, contract, effective_session, request_id)
+            if contract.status == ComplianceStatus.INSUFFICIENT_DATA:
+                self._append_scholar_review_queue(query=query, answer=contract, queue=ScholarReviewQueue.AUTO_FLAGGED,
+                    flag_reason="typed_operation_evidence_incomplete", session_id=effective_session, request_id=request_id)
+            return contract
+
+        structure_answer, next_structure = clarify_structure(query, cleaned_query, response_language, pending_structure)
+        if structure_answer or pending_structure:
+            state = state or self._session_state(session_id, create=True)
+            if state:
+                state.metadata.pop("pending_structure_clarification", None)
+                if next_structure:
+                    state.metadata["pending_structure_clarification"] = next_structure
+                if structure_answer:
+                    state.metadata.pop("pending_scenario_clarification", None)
+                    if operation:
+                        state.metadata["described_operation"] = operation.model_copy(update={"pending_slot": None}).model_dump(mode="json")
+                    state.metadata.setdefault("structure_review_rows", []).append(structure_answer.metadata["structure_clarification"])
+                    state.add_message("user", query)
+                    state.add_message("assistant", structure_answer.answer)
+                self._update_session_state(state)
+            if structure_answer:
+                self._audit(query, structure_answer, session_id, request_id)
+                if structure_answer.status == ComplianceStatus.INSUFFICIENT_DATA:
+                    self._append_scholar_review_queue(query=query, answer=structure_answer, queue=ScholarReviewQueue.AUTO_FLAGGED,
+                        flag_reason="structure_evidence_incomplete", session_id=session_id, request_id=request_id)
+                return structure_answer
 
         # Extract scenario first so it's available for routing
         pending_scenario_clarification = self._consume_pending_scenario_clarification(session_id)
@@ -171,9 +251,6 @@ class ApplicationService:
         if target_standards:
             standards_route.candidate_standards = sorted(set(standards_route.candidate_standards) | set(target_standards))
 
-        if cached := self._cached_answer(cleaned_query, standards_route):
-            return cached
-            
         from src.chatbot.contract_family_router import RetrievalMode
         known_family = None
         if family_result.mode in (RetrievalMode.SINGLE_PATH, RetrievalMode.MULTI_PATH):
@@ -193,6 +270,19 @@ class ApplicationService:
         if clarification_contract:
             return clarification_contract
 
+        # Legacy routing labels and retrieved standards are not approved rule
+        # evaluations. Until this path has a reconciled typed snapshot and an
+        # approved-card result, judgment requests must not reach cache or LLM.
+        # Productive clarification remains available above this boundary.
+        from src.chatbot.clarification_engine import ClarificationEngine
+        judgment_requires_approved_evidence = (
+            scenario.question_type == QuestionType.PERMISSIBILITY
+            or ClarificationEngine._is_judgment_query(analysis_query)
+        )
+        if not judgment_requires_approved_evidence:
+            if cached := self._cached_answer(cleaned_query, standards_route):
+                return cached
+
         rule_evaluation = self.rule_evaluator.evaluate(scenario, standards_route)
 
         if self.retriever is None:
@@ -208,7 +298,6 @@ class ApplicationService:
                     limitations=self._limitations(response_language),
                     metadata=self._metadata(
                         [],
-                        confidence=0.0,
                         response_language=response_language,
                         scenario=scenario,
                         standards_route=standards_route,
@@ -233,7 +322,6 @@ class ApplicationService:
                 limitations=self._limitations(response_language),
                 metadata=self._metadata(
                     [],
-                    confidence=0.0,
                     response_language=response_language,
                     scenario=scenario,
                     standards_route=standards_route,
@@ -264,7 +352,6 @@ class ApplicationService:
                     limitations=self._limitations(response_language),
                     metadata=self._metadata(
                         [],
-                        confidence=0.0,
                         response_language=response_language,
                         scenario=scenario,
                         standards_route=standards_route,
@@ -284,7 +371,6 @@ class ApplicationService:
                 limitations=self._limitations(response_language),
                 metadata=self._metadata(
                     [],
-                    confidence=0.0,
                     response_language=response_language,
                     scenario=scenario,
                     standards_route=standards_route,
@@ -309,7 +395,6 @@ class ApplicationService:
                 limitations=self._limitations(response_language),
                 metadata=self._metadata(
                     chunks,
-                    confidence=self._confidence(chunks),
                     response_language=response_language,
                     scenario=scenario,
                     standards_route=standards_route,
@@ -335,7 +420,6 @@ class ApplicationService:
                 limitations=self._limitations(response_language),
                 metadata=self._metadata(
                     chunks,
-                    confidence=self._confidence(chunks),
                     response_language=response_language,
                     scenario=scenario,
                     standards_route=standards_route,
@@ -409,6 +493,27 @@ class ApplicationService:
             )
             return unsupported_modern_asset_contract
 
+        if judgment_requires_approved_evidence:
+            contract = AnswerContract(
+                answer=self._rule_review_required_message(response_language),
+                status=ComplianceStatus.INSUFFICIENT_DATA,
+                reasoning_summary="No approved rule evaluation backed by a reconciled fact snapshot is available.",
+                limitations=self._limitations(response_language),
+                citations=self._citations_for_chunks(chunks),
+                metadata={"response_language": response_language,
+                          "transaction_scenario": scenario.to_dict(),
+                          "standards_route": standards_route.to_dict(),
+                          "rule_evaluation": rule_evaluation.to_dict(),
+                          "retrieved_chunk_ids": [self._chunk_id(chunk) for chunk in chunks],
+                          "requires_scholar_review": True,
+                          "approved_rule_gate": {"status": "blocked", "reason": "approved_evidence_not_available",
+                                                 "needed_review": "versioned scholar-approved rule and scoped material facts"}},
+            )
+            self._audit(cleaned_query, contract, session_id, request_id)
+            self._append_scholar_review_queue(query=cleaned_query, answer=contract, queue=ScholarReviewQueue.AUTO_FLAGGED,
+                flag_reason="approved_rule_evidence_unavailable", session_id=session_id, request_id=request_id)
+            return contract
+
         if self.llm_client is None:
             from src.chatbot.llm_client import GeminiClient
 
@@ -442,7 +547,6 @@ class ApplicationService:
                 limitations=self._limitations(response_language),
                 metadata=self._metadata(
                     chunks,
-                    confidence=self._confidence(chunks),
                     response_language=response_language,
                     scenario=scenario,
                     standards_route=standards_route,
@@ -463,7 +567,6 @@ class ApplicationService:
             limitations=self._limitations(response_language),
             metadata=self._metadata(
                 chunks,
-                confidence=self._confidence(chunks),
                 response_language=response_language,
                 scenario=scenario,
                 standards_route=standards_route,
@@ -484,13 +587,13 @@ class ApplicationService:
                 session_id=session_id,
                 request_id=request_id,
             )
-        # Auto-flag Q1 for low-confidence RAG
-        elif self._confidence(chunks) < 0.5 or status == ComplianceStatus.INSUFFICIENT_DATA:
+        # Incomplete answers need review independently of retrieval similarity.
+        elif status == ComplianceStatus.INSUFFICIENT_DATA:
             self._append_scholar_review_queue(
                 query=cleaned_query,
                 answer=contract,
                 queue=ScholarReviewQueue.AUTO_FLAGGED,
-                flag_reason="low_confidence_or_insufficient_data",
+                flag_reason="insufficient_evidence",
                 session_id=session_id,
                 request_id=request_id,
             )
@@ -954,7 +1057,7 @@ class ApplicationService:
                     section_number=citation.get("section_number"),
                     section_title=citation.get("section_title"),
                     excerpt=citation.get("excerpt"),
-                    confidence_score=citation.get("confidence_score"),
+                    captured_at=citation.get("captured_at"),
                     quote_start=citation.get("quote_start"),
                     quote_end=citation.get("quote_end"),
                 )
@@ -970,7 +1073,6 @@ class ApplicationService:
     def _metadata(
         self,
         chunks: List[Any],
-        confidence: float,
         response_language: str = "en",
         scenario: Any = None,
         standards_route: Any = None,
@@ -985,7 +1087,6 @@ class ApplicationService:
             "prompt_version": getattr(self.prompt_builder, "prompt_version", None),
             "response_language": response_language,
             "retrieved_chunk_ids": [self._chunk_id(chunk) for chunk in chunks],
-            "confidence": confidence,
         }
         if scenario is not None:
             metadata["transaction_scenario"] = scenario.to_dict()
@@ -1042,7 +1143,6 @@ class ApplicationService:
             limitations=self._limitations(response_language),
             metadata=self._metadata(
                 chunks,
-                confidence=self._confidence(chunks),
                 response_language=response_language,
                 scenario=scenario,
                 standards_route=standards_route,
@@ -1278,18 +1378,6 @@ class ApplicationService:
             return str(chunk.get("chunk_id") or chunk.get("id") or "")
         return str(getattr(chunk, "chunk_id", ""))
 
-    @staticmethod
-    def _confidence(chunks: List[Any]) -> float:
-        if not chunks:
-            return 0.0
-        scores = []
-        for chunk in chunks:
-            if isinstance(chunk, dict):
-                scores.append(float(chunk.get("similarity") or chunk.get("score") or 0.0))
-            else:
-                scores.append(float(getattr(chunk, "score", 0.0) or 0.0))
-        return sum(scores) / len(scores)
-
     def _definition_answer_if_supported(
         self,
         query: str,
@@ -1314,7 +1402,6 @@ class ApplicationService:
             limitations=self._limitations(response_language),
             metadata=self._metadata(
                 chunks,
-                confidence=self._confidence(chunks),
                 response_language=response_language,
             ),
         )
@@ -1541,7 +1628,6 @@ class ApplicationService:
                 limitations=self._limitations(response_language),
                 metadata=self._metadata(
                     [],
-                    confidence=0.0,
                     response_language=response_language,
                     scenario=scenario,
                     standards_route=standards_route,
@@ -1576,7 +1662,6 @@ class ApplicationService:
                 limitations=self._limitations(response_language),
                 metadata=self._metadata(
                     [],
-                    confidence=0.0,
                     response_language=response_language,
                 ),
             )

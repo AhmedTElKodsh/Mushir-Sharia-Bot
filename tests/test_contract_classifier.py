@@ -22,7 +22,8 @@ def test_contract_classifier_detects_contract_family(query, family):
 
     assert result is not None
     assert result.contract_family == family
-    assert result.confidence >= 0.72
+    assert result.matched_terms
+    assert not hasattr(result, "confidence")
 
 
 def test_contract_classifier_returns_none_for_generic_query():

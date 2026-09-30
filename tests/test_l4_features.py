@@ -2,7 +2,7 @@ import pytest
 
 
 @pytest.mark.unit
-def test_citation_validator_adds_confidence_and_quote_offsets():
+def test_citation_validator_adds_capture_date_and_quote_offsets():
     from src.chatbot.citation_validator import CitationValidator
     from src.models.schema import AAOIFICitation, SemanticChunk
 
@@ -20,7 +20,8 @@ def test_citation_validator_adds_confidence_and_quote_offsets():
 
     citation = CitationValidator().validate("Supported by [FAS-01 §1].", [chunk])[0]
 
-    assert citation.confidence_score == pytest.approx(0.87)
+    assert citation.confidence_score is None
+    assert citation.captured_at is None
     assert citation.excerpt.startswith("AAOIFI requires")
     assert citation.quote_start is not None
     assert citation.quote_end is not None
@@ -96,7 +97,7 @@ def test_citation_validator_rejects_section_citation_when_chunk_section_missing(
 
 
 @pytest.mark.service
-def test_application_service_uses_response_cache_for_identical_query():
+def test_application_service_uses_response_cache_for_identical_definition():
     from src.chatbot.application_service import ApplicationService
     from src.models.ruling import AAOIFICitation, ComplianceStatus
     from src.models.schema import AAOIFICitation as SchemaCitation
@@ -112,7 +113,7 @@ def test_application_service_uses_response_cache_for_identical_query():
             return [
                 SemanticChunk(
                     chunk_id="chunk-1",
-                    text="AAOIFI permits the transaction when risk transfer is clear.",
+                    text="Risk transfer means transferring responsibility for loss.",
                     citation=SchemaCitation(
                         standard_id="FAS-01",
                         section="1",
@@ -146,14 +147,14 @@ def test_application_service_uses_response_cache_for_identical_query():
         clarification_service=NoClarification(),
     )
 
-    first = service.answer("Is this compliant?")
-    second = service.answer("Is this compliant?")
+    first = service.answer("What is risk transfer?")
+    second = service.answer("What is risk transfer?")
 
-    assert first.status == ComplianceStatus.COMPLIANT
+    assert first.status == ComplianceStatus.INSUFFICIENT_DATA
     assert isinstance(second.citations[0], AAOIFICitation)
     assert second.metadata["cache_hit"] is True
     assert retriever.calls == 1
-    assert llm.calls == 1
+    assert llm.calls == 0
 
 
 @pytest.mark.api

@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from src.chatbot.mechanism_terms import generic_mechanism_unknown, mechanism_routing_text
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
@@ -133,7 +134,6 @@ _CONTAINER_PATTERNS: dict[ContractFamily, list[re.Pattern[str]]] = {
         re.compile(_normalize_arabic(r"مرابحة")),              # bare form
         re.compile(_normalize_arabic(r"بيع\s+المرابحة")),
         re.compile(_normalize_arabic(r"ثمن\s+المرابحة")),
-        re.compile(_normalize_arabic(r"هامش\s+الربح")),
         re.compile(_normalize_arabic(r"مرابحة\s+(للآمر|بالأمر|بالأمانة)\s+بالشراء")),
         re.compile(r"\bmurabaha\b", re.IGNORECASE),
         re.compile(r"\bmurabahah\b", re.IGNORECASE),
@@ -191,7 +191,6 @@ _CONTAINER_PATTERNS: dict[ContractFamily, list[re.Pattern[str]]] = {
 # {term: (ContractFamily, weight)}
 _RAW_SURFACE_SIGNALS: dict[str, tuple[ContractFamily, float]] = {
     # Murabaha surface
-    "هامش ربح":         (ContractFamily.MURABAHA, 0.40),
     "سعر التكلفة":      (ContractFamily.MURABAHA, 0.35),
     "markup":           (ContractFamily.MURABAHA, 0.35),
     "cost-plus":        (ContractFamily.MURABAHA, 0.35),
@@ -285,7 +284,7 @@ class ContractFamilyRouter:
         Evaluate container patterns and surface signals to determine routing
         mode, adjacent_families, signals dict, and clarification_hint.
         """
-        normalized = _normalize_arabic(query)
+        normalized = _normalize_arabic(mechanism_routing_text(query))
 
         # Detect comparative intent — forces MULTI_PATH (FM1 defense)
         query_intent = "STANDARD"
@@ -294,6 +293,14 @@ class ContractFamilyRouter:
 
         container_hits = self._extract_container_signals(normalized)
         surface_hits   = self._extract_surface_signals(normalized)
+
+        # Generic plans cannot acquire a contract family from clause vocabulary
+        # or a previous conversation topic. Explicit named concepts still route.
+        if generic_mechanism_unknown(query):
+            return ContractFamilyResult(primary_family=ContractFamily.AMBIGUOUS,
+                mode=RetrievalMode.CLARIFICATION,
+                clarification_hint="The financing mechanism needs the relevant agreement or disclosure.",
+                query_intent=query_intent)
 
         # Override rule: if any container fires, discard surface signals for OTHER families
         if container_hits:

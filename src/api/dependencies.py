@@ -8,7 +8,9 @@ from src.chatbot.session_manager import SessionManager
 
 def get_application_service(request: Request) -> ApplicationService:
     if not hasattr(request.app.state, "application_service"):
-        request.app.state.application_service = ApplicationService()
+        from src.storage.decision_review_store import configured_decision_store
+        request.app.state.application_service = ApplicationService(
+            session_store=get_session_manager(request), decision_store=configured_decision_store())
     return request.app.state.application_service
 
 

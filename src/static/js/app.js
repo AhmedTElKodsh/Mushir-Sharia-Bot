@@ -62,7 +62,14 @@ var I18N = {
     streaming: "Streaming...",
     emptyHistory: "No previous chats yet.",
     conversation: "Conversation",
-    retrieved: "Retrieved AAOIFI evidence - confidence {confidence}",
+    evidenceStatus: "Evidence status: {status}",
+    captureUnknown: "Source capture date and age: unknown",
+    captureAge: "{source} — captured: {date}; age: {age} days",
+    evidenceClarification: "Clarification required",
+    evidenceInsufficient: "Insufficient evidence",
+    evidenceSources: "Sources available",
+    evidenceNone: "No sources",
+    evidenceUnknown: "Evidence status unavailable",
     source: "AAOIFI source: {standard}{section}{page}{source}",
     sourceSection: " section {section}",
     reviewComplete: "Review complete: {status}",
@@ -106,7 +113,14 @@ var I18N = {
     streaming: "جارٍ التحليل...",
     emptyHistory: "لا توجد محادثات سابقة بعد.",
     conversation: "محادثة",
-    retrieved: "تم العثور على أدلة من أيوفي - درجة الثقة {confidence}",
+    evidenceStatus: "حالة الأدلة: {status}",
+    captureUnknown: "تاريخ جمع المصدر وعمره: غير معروف",
+    captureAge: "{source} — تاريخ الجمع: {date}؛ العمر: {age} يوم",
+    evidenceClarification: "يلزم توضيح",
+    evidenceInsufficient: "أدلة غير كافية",
+    evidenceSources: "مصادر متاحة",
+    evidenceNone: "لا توجد مصادر",
+    evidenceUnknown: "حالة الأدلة غير متاحة",
     source: "مصدر أيوفي: {standard}{section}{page}{source}",
     sourceSection: " القسم {section}",
     reviewComplete: "اكتملت المراجعة: {status}",
@@ -279,8 +293,7 @@ async function submitQuery() {
       },
 
       onRetrieval: function(data) {
-        var confidence = Number(data.confidence || 0).toFixed(2);
-        addEvent(t("retrieved", {confidence: confidence}));
+        addEvent(formatEvidence(data.evidence));
       },
 
       onCitation: function(data) {
@@ -333,6 +346,7 @@ async function submitQuery() {
         }
         context = data.metadata || context;
         if (data.status) renderBadge(data.status, currentAssistantNode);
+        renderEvidence(currentAssistantNode, data.metadata && data.metadata.evidence);
         addEvent(t("reviewComplete", {status: formatStatusLabel(data.status)}));
 
         var assistantContent = _assistantContent || data.answer || data.clarification_question || "";
@@ -342,7 +356,8 @@ async function submitQuery() {
             content: assistantContent,
             timestamp: Date.now(),
             status: data.status,
-            citations: _assistantCitations
+            citations: _assistantCitations,
+            evidence: data.metadata && data.metadata.evidence
           });
         }
         persistConversation();

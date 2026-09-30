@@ -1,0 +1,30 @@
+{
+  "source_dataset": "tests/data/gold_eval_set.json",
+  "source_sha256": "6f1fb5059eb29aa5adb37eaf8470bd24d4c01e29a204faa4947d621930a40407",
+  "recorded_at": "2026-09-30T13:05:53.254574+00:00",
+  "decision": "pending",
+  "reviewer_id": null,
+  "scope": "Dataset adjudication request, not a rule approval or relabeling",
+  "issues": [
+    {
+      "case_id": "TC-F1",
+      "query_en": "Is it permissible to delay delivery of the sold item in a deferred sale?",
+      "query_ar": "هل يجوز تأخير تسليم المبيع في البيع المؤجل؟",
+      "existing_contract_type": "murabaha",
+      "existing_ruling": "PROHIBITED",
+      "current_mechanism": "unknown",
+      "reason": "The query names a generic financing or deferred-sale arrangement without the asserted contract mechanism. The adopted spec requires supporting template or disclosure evidence.",
+      "requested_action": "Review the label or supply the missing case evidence; do not infer a mechanism from generic wording."
+    },
+    {
+      "case_id": "TC-G1",
+      "query_en": "Is it permissible for the bank to take a profit margin on real estate financing?",
+      "query_ar": "هل يجوز للبنك أن يأخذ هامش ربح على التمويل العقاري؟",
+      "existing_contract_type": "ijarah",
+      "existing_ruling": "CONDITIONAL",
+      "current_mechanism": "unknown",
+      "reason": "The query names a generic financing or deferred-sale arrangement without the asserted contract mechanism. The adopted spec requires supporting template or disclosure evidence.",
+      "requested_action": "Review the label or supply the missing case evidence; do not infer a mechanism from generic wording."
+    }
+  ]
+}

@@ -155,7 +155,7 @@ def test_generic_permissibility_wording_without_commercial_context_does_not_sour
         ("Based only on the accounting standard, tell me if this murabaha is permissible.", ContractFamily.MURABAHA),
         ("We donate late fees to charity, so is the murabaha clause allowed?", ContractFamily.MURABAHA),
         ("Can we trade receivables from murabaha at a discount?", ContractFamily.MURABAHA),
-        ("Is buy now pay later halal?", ContractFamily.MURABAHA),
+        ("Is buy now pay later halal?", ContractFamily.UNKNOWN),
         ("The bank gives cash and I repay more monthly. Is it halal?", ContractFamily.UNKNOWN),
         (
             "\u0647\u0644 \u064a\u062c\u0648\u0632 \u0641\u0631\u0636 \u063a\u0631\u0627\u0645\u0629 \u062a\u0623\u062e\u064a\u0631 \u0639\u0644\u0649 \u0627\u0644\u0639\u0645\u064a\u0644\u061f",
@@ -197,7 +197,7 @@ def test_commercial_permissibility_boundary_cases_route_to_sharia_family(query, 
 def test_query_expansion_handles_arabic_dialect_spelling_and_transliteration(query):
     terms = QueryPreprocessor.expand_terms(query)
 
-    assert terms & {"murabaha", "murabahah", "installment sale", "late payment", "late fee", "riba", "interest"}
+    assert terms & {"murabaha", "murabahah", "installment plan", "late payment", "late fee", "riba", "interest"}
 
 
 def test_query_preprocessor_expands_bounded_arabizi_finance_terms():

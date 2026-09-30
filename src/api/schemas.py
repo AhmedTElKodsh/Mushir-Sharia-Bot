@@ -46,7 +46,7 @@ class Citation(BaseModel):
     section_number: Optional[str] = None
     section_title: Optional[str] = None
     excerpt: Optional[str] = None
-    confidence_score: Optional[float] = None
+    captured_at: Optional[str] = None
     quote_start: Optional[int] = None
     quote_end: Optional[int] = None
 
@@ -140,10 +140,10 @@ class StartedEvent(BaseModel):
 
 
 class RetrievalEvent(BaseModel):
-    """Emitted after retrieval with the confidence score."""
+    """Descriptive evidence availability and source capture ages."""
 
     event: str = "retrieval"
-    confidence: float
+    evidence: Dict[str, Any]
 
 
 class TokenEvent(BaseModel):

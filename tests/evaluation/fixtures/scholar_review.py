@@ -2,6 +2,7 @@
 ScholarReviewQueue: captures answers that must be sent to Sharia Scholar review.
 
 Auto-enqueue triggers (from architecture agreement):
+  0. explicit runtime review flag or unavailable confidence (never assume 1.0)
   1. pipeline.confidence < 0.75
   2. cross-family terminology detected in answer
   3. forbidden citation detected in answer OR cited standards
@@ -29,7 +30,7 @@ class ReviewEntry:
     query: str
     answer: dict[str, Any]
     trigger_reason: str
-    confidence: float
+    confidence: float | None
 
 
 class ScholarReviewQueue:
@@ -46,13 +47,17 @@ class ScholarReviewQueue:
         """
         Returns True if enqueued, False if answer passed all thresholds.
         """
-        confidence = answer.get("confidence", 1.0)
+        confidence = answer.get("confidence")
         answer_text = answer.get("answer_text", "").lower()
         cited = [s.lower() for s in answer.get("cited_standards", [])]
 
         reasons: list[str] = []
 
-        if confidence < CONFIDENCE_THRESHOLD:
+        if answer.get("metadata", {}).get("requires_scholar_review"):
+            reasons.append("runtime_review_required")
+        if confidence is None:
+            reasons.append("confidence_unavailable")
+        elif confidence < CONFIDENCE_THRESHOLD:
             reasons.append(f"low_confidence({confidence:.2f})")
 
         for signal in CROSS_FAMILY_SIGNALS:
