@@ -48,3 +48,13 @@ Session: current walkthrough · Timestamp: 2026-10-01T20:31:07+03:00
 - Result: The pending files belong to this acquisition work. Capture/FRA/market checks passed (176); role-summary plus selected hostname checks passed (21, including nine role-summary checks); a further URL-safety selection passed (12). Selections overlap and are not summed as distinct tests. The 22-file foundation is committed as 124f1b4. Block 2 remains in progress; no provider outreach or block acceptance follows from publishing the repository.
 - Evidence: [narrative](acquisition-procedure-walkthrough-20261001-narrative.md), [priority proposal](../initiative-egypt-market-knowledge/acquisition-templates/provider-request-priorities-2026-10-01.md), [foundation verification](../initiative-egypt-market-knowledge/public-acquisition-verification-2026-10-01.md).
 - Open: Verify the commits, push the current feat/egypt-instalment-market-strategy branch and confirm its remote hash and clean working tree. Continue human examination of Block 2; do not mark it accepted automatically.
+
+## 06 — Broad strokes shape revised
+
+Session: current walkthrough · Timestamp: 2026-10-01T20:37:16+03:00
+
+- Action: User requested “Revise broad strokes” without specifying an alternative shape. Replaced the document inventory with five operating stages: scope, evidence target, route, acquisition/preservation, verification/next action. Each stage states its owner, output and supporting documents.
+- Result: Block 2 remains in progress and unaccepted. Original Intent remains accepted. Prior GitHub update verified: local/remote HEAD 8adb99b and clean working tree before this revision. No runtime behavior, provider ranking or source permissions changed.
+- Constraint: For subsequent operating blocks, lead with the action and expected output, then cite the supporting document. This is an inferred presentation preference, not a user-specified format; adapt if the user supplies a different shape. Do not present a third alternative shape without being asked.
+- Evidence: [revised Block 2](acquisition-procedure-walkthrough-20261001-narrative.md#blocks).
+- Open: Present the revised block for human examination; preserve the previously authorized clean-tree/GitHub workflow with a scoped documentation commit and verify publication.
