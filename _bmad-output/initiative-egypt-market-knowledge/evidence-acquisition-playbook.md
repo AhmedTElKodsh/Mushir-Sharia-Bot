@@ -162,6 +162,17 @@ Check page counts, annex references, amendments, fee tables and linked documents
 
 For public artifacts, preserve correction lineage and earlier valid observations alongside the latest failed attempt. For private documents, follow the spec's redaction, ephemeral-by-default and opt-in-retention requirements; define restricted reviewer access and approved disposal separately. Keep minimal non-sensitive deletion/audit records where appropriate. Do not apply “nothing is deleted” universally to customer documents, tokens or account details. Resolve any applicable review hold against the private-document policy before accepting such material; this proposal does not decide that conflict by retaining everything.
 
+### Human-review marks
+
+Adopted 2026-10-01 (walkthrough Block 5). Mark every record, field, conflict or outgoing request that needs or would benefit from a human reviewer:
+
+- `[HUMAN-REVIEW:NEEDED]`: not dispatched, accepted or used for a claim until the named human role reviews it.
+- `[HUMAN-REVIEW:BENEFICIAL]`: usable as recorded, but a human reviewer could confirm, correct or decide it.
+
+Each mark names the reviewer role (operator, second analyst, client or scholar) and the exact question. Marked items are prepared to be showable at the next scheduled human review (first: about 2026-10-15). Each one shows the original artifact, the literal observation, the conflict or gap, and the question. Unmarked work is ordered for the best eventual evidence instead. Clearing a mark records the reviewer, the time and the outcome. Every outgoing request is `[HUMAN-REVIEW:NEEDED]` (operator) before dispatch.
+
+**Single review.** When no second analyst is available, record a material field as `single-review` with its analyst and time, and mark it `[HUMAN-REVIEW:NEEDED]` (second analyst). It stays visible as a recorded observation but supports no accepted claim until a second human check against the original is recorded. This always applies to Arabic legal names, Arabic clause text and everyday-word matches such as أمان.
+
 ## 7. Scientific research and Egyptian legal review timing
 
 Research intent supports a transparent protocol and can help obtain cooperation. It is not a documented permission grant from a system owner. Collection and commercial reuse need separate decisions; a future launch review cannot retroactively establish the authority for today's access.
@@ -182,7 +193,7 @@ The table uses the checked-in 2026-10-01 worksheet as a dated research state, no
 | Contact | Identify the contracting party for a selected merchant/channel among the entities carrying the brand | Merchant or provider compliance request naming the exact arrangement; close only with the legal counterparty and applicable version, not a group-domain match |
 | Souhoola | Resolve the dated CI/BM/“Contact Investment” name observations and obtain complete operative terms | Preserve all observations; complete permitted render or official document pack; commercial-register/change records or authoritative written clarification with effective dates |
 | Aman | Distinguish holding company, consumer-finance licensee and other financing activities | Obtain the selected consumer-finance standard agreement and fee schedule; retain holding-company material only for its established role |
-| Halan | Establish a particular seller–financier relationship and actual applicable terms | Selected merchant/provider evidence and documents; keep it as the insufficient-evidence control until that specific gap closes |
+| Halan | Establish a particular seller–financier relationship and actual applicable terms | Selected merchant/provider evidence and documents; HALAN-01 is to be sent now (user decision 2026-10-01); insufficient evidence remains its recorded status until that specific gap closes |
 
 For each entity, first assemble existing valid public captures and a clause-completeness matrix. Then pursue the shortest eligible route for the remaining gaps. Parallel operator tasks may prepare source requests and document extraction; this plan itself does not send messages or collect gated material.
 

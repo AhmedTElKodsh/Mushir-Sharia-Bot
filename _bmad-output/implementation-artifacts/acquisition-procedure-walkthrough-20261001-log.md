@@ -88,3 +88,23 @@ Session: current walkthrough · Timestamp: 2026-10-01T20:46:26+03:00
 - Result: Blocks 1–4 accepted; Block 5 in progress. Proposed order and briefs are presented for examination. Ranking remains unaccepted, arrangement/recipient placeholders remain unresolved and no outreach or live provider verification occurred. Runtime code is unchanged.
 - Evidence: [current narrative](acquisition-procedure-walkthrough-20261001-narrative.md#blocks), [priority proposal](../initiative-egypt-market-knowledge/acquisition-templates/provider-request-priorities-2026-10-01.md), [acceptance procedure](../initiative-egypt-market-knowledge/evidence-acquisition-playbook.md#6-capture-acceptance-and-provenance).
 - Open: Examine the five-provider order and concrete requests with the user. Preserve the authorized clean-tree/GitHub workflow with a scoped documentation commit and remote verification.
+
+## 10 — Party review; operational Intent accepted; human-review marks adopted
+
+Session: party-mode review · Timestamp: 2026-10-01T21:19:57+03:00
+
+- Action: User requested a review of this narrative and log. Reviewers found: the proposed operational Intent had no acceptance gate; Block 5's readiness criterion was hidden because the dependency column was dropped; Block 4's second-analyst check assumed staff that do not exist; HALAN-01 conflicted with Halan's control role; SOUHOOLA-01 and CONTACT-01 share the observed name "Contact Investment for Consumer Finance"; entries 06–09 never recorded their commit hashes.
+- Decisions (user): accept the operational Intent inside Block 5; send HALAN-01 now; proceed with single review; mark everything that needs or would benefit from human review. Marked items are optimised to be showable by ~2026-10-15; unmarked work is optimised for the best eventual evidence.
+- Result: Block 5 now has a two-track order (marked items for the review; request content ranked HALAN, Contact, valU, Souhoola, Aman). Track 2's ranking is still unaccepted. A Block 4 amendment note adds single-review. Playbook §6 gains "Human-review marks"; §8 and the gap board drop Halan's control wording; the gap board's material-field matrix gains review status. The Contact brief lists the shared name as a lead to confirm or deny. The Halan brief carries an issue-ready draft: candidate scope Smart Furniture (unverified), recipient lead info@halan.com (unverified). Historical documents (pilot-five proposal, entity worksheet, review goals) keep their dated control wording. No outreach was sent and runtime code is unchanged.
+- Record correction: the commits after 8adb99b were f311503, f587a3b, 7eb4978 and 72cb3a7. Before this entry, HEAD = origin = 72cb3a7 with a clean walkthrough tree; only the party memlog was dirty.
+- Evidence: [narrative Block 5](acquisition-procedure-walkthrough-20261001-narrative.md#blocks), [human-review marks](../initiative-egypt-market-knowledge/evidence-acquisition-playbook.md#human-review-marks), [priority proposal](../initiative-egypt-market-knowledge/acquisition-templates/provider-request-priorities-2026-10-01.md), [gap board](../initiative-egypt-market-knowledge/acquisition-templates/pilot-gap-board.md).
+- Open: operator confirms HALAN-01's scope and recipient and sends it; accept or revise Track 2's ranking; route vocabulary drift (Blocks 2/3, playbook §4.4) not yet fixed; commit and push need fresh authorisation in this session.
+
+## 11 — Block 5 accepted; Halan context recorded; scoped commit
+
+Session: party-mode review · Timestamp: 2026-10-01T21:31:06+03:00
+
+- Action: User accepted Track 2's order (HALAN, Contact, valU, Souhoola, Aman), which closes Block 5, and authorised a commit and push excluding .gitignore. User also supplied context about Halan.
+- Result: Blocks 1–5 accepted; Block 6 next. The user's Halan note is recorded in the Halan brief and the narrative's Track 2 row as a statement, not a captured observation: Halan is a financial company comparable to Fawry and Aman, and inside its service sells goods directly for cash or instalments, sourced mainly through 2B and other providers. HALAN-01's scope may therefore be Halan's own in-app offer, with seller, supplier and financier as possibly separate parties. Choosing between that scope and Smart Furniture is [HUMAN-REVIEW:NEEDED] (operator). Nothing was sent.
+- Commit scope: this walkthrough's documents only. Changes made in parallel by other work (the .gitignore rule-card entries, rule-card drafts, code and tests, provider-request-letters-2026-10-01.md and the gap board's link to it, the party memlog) are left unstaged.
+- Open: the parallel letters file still scopes Halan to Smart Furniture and should be reconciled with the user's context. Route vocabulary drift is unresolved. Block 6 is unvisited.

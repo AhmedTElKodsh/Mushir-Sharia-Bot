@@ -1,10 +1,12 @@
 # Five provider evidence requests: priority proposal
 
-Prepared 2026-10-01 for the operating-procedure walkthrough. **Draft for examination; no request sent. The original walkthrough Intent is accepted; this ranking and operational refinement remain proposals.** This order uses dated project evidence, not a new provider verification or an estimate of response likelihood. Existing identity sign-off does not establish contract applicability or current acquisition permission.
+Prepared 2026-10-01 for the operating-procedure walkthrough. **Draft for examination; no request sent. The original walkthrough Intent is accepted. The operational Intent below and the revised ranking were accepted by the user in walkthrough Block 5 on 2026-10-01.** Human-review marks follow the [playbook](../evidence-acquisition-playbook.md#human-review-marks): marked items are prepared to be showable at the ~2026-10-15 review, and unmarked request content is ordered for the best eventual evidence. This order uses dated project evidence, not a new provider verification or an estimate of response likelihood. Existing identity sign-off does not establish contract applicability or current acquisition permission.
 
 Sources: [operating playbook](../evidence-acquisition-playbook.md), [dated identity worksheet](../pilot-entity-resolution.md), [gap board](pilot-gap-board.md), and [common request package](provider-request.md).
 
 ## Proposed operational intent
+
+**Status: accepted by the user on 2026-10-01 inside walkthrough Block 5.** The heading is kept so that existing links still resolve.
 
 The original implementation Intent establishes the public capture foundation. For this operating walkthrough, the proposed outcome is broader: build five scoped provider dossiers that establish the applicable contracting parties, complete agreement versions and material clauses, or preserve explicit unresolved gaps that prevent unsupported answers. This proposal does not change the historical implementation spec or declare any dossier complete.
 
@@ -18,17 +20,17 @@ This covers valU's agreement/app-role split, Contact's arrangement-specific coun
 
 ## Recommended request attention order
 
-Prioritize the effect of the missing fact on a valid answer, the specificity of the evidence already available, the dependencies before an applicable document can be requested, and the distinct evidence problem each dossier teaches. No market-share or response-rate assumptions are used.
+Revised 2026-10-01 for the best eventual evidence. The order weighs how much one answer unlocks, how specific the evidence already held is, and the dependencies before an applicable document can be requested. No market-share or response-rate assumptions are used. Items marked for human review are ordered separately, for the ~2026-10-15 review, in walkthrough Block 5.
 
 | Priority | Task | First request | Reason for position | Dependency before issuing |
 |---|---|---|---|---|
-| 1 | VALU-01 | Applicable blank finance agreement with all schedules; confirm finance and app-company roles | Clearest dated identity baseline; strongest starting dossier for establishing the complete contract-pack process | Select product, merchant/channel and period; confirm official document owner |
-| 2 | CONTACT-01 | Identify the legal contracting entity for the selected arrangement, then route the agreement request | Multiple entities make a brand-level request liable to return the wrong agreement; resolving the owner unlocks the dossier | Select an actual arrangement; describe it precisely without assuming a particular entity |
-| 3 | SOUHOOLA-01 | Complete operative terms/agreement plus dated clarification of the observed legal names | Existing partial terms give a concrete lead, while conflicting names and versions need explicit resolution | Identify selected product/channel and applicability period; distinguish website terms from finance agreement |
-| 4 | AMAN-01 | Consumer-finance agreement and schedules; distinguish licensee from holding and microfinance roles | Useful role-separation comparison after the reference dossier; holding footer supplies insufficient contract evidence | Select consumer-finance arrangement and official document owner |
-| 5 | HALAN-01 | Evidence naming the financier in a selected merchant arrangement, followed by applicable agreement | Relationship evidence is missing; an arbitrary brand contract would not close the actual gap | Identify a specific merchant offer/channel, or record that selection remains unresolved |
+| 1 | HALAN-01 | Evidence naming the financier in a selected merchant arrangement, followed by the applicable agreement | User decision: send now. The whole dossier is blocked on one relationship fact, and an arbitrary brand contract would not close it | Operator confirms the candidate scope and verifies the recipient `[HUMAN-REVIEW:NEEDED]` |
+| 2 | CONTACT-01 | Identify the legal contracting entity for the selected arrangement, listing “Contact Investment for Consumer Finance” as an observed name to confirm or deny; then route the agreement request | Multiple entities make a brand-level request liable to return the wrong agreement. One answer can unlock this dossier and inform SOUHOOLA-01 | Select an actual arrangement; describe it precisely without assuming a particular entity |
+| 3 | VALU-01 | Applicable blank finance agreement with all schedules; confirm finance and app-company roles | Identity is already supported by valU's own terms; the remaining gap is the operative contract | Select product, merchant/channel and period; confirm the official document owner |
+| 4 | SOUHOOLA-01 | Complete operative terms/agreement plus dated clarification of the observed legal names | The partial terms give a concrete lead. CONTACT-01 may inform the name question, but this request does not wait for it | Identify the selected product/channel and applicability period; distinguish website terms from the finance agreement |
+| 5 | AMAN-01 | Consumer-finance agreement and schedules; distinguish licensee from holding and microfinance roles | Role separation; the holding-company footer is insufficient contract evidence | Select a consumer-finance arrangement and the official document owner |
 
-This is an order for operator attention, not a serial waiting queue. Prepare all five briefs together. Contact's owner-identification request can proceed alongside valU's pack request once their scopes are resolved. Do not wait for one provider's response before preparing another. Halan remains an insufficient-evidence control only while its material relationship gap persists; adequate evidence must change that status.
+This is an order for operator attention, not a serial waiting queue. Prepare all five briefs together, and do not wait for one provider's response before preparing another. Every dispatch is `[HUMAN-REVIEW:NEEDED]` (operator). Halan is no longer held back as a control (user decision 2026-10-01). Its insufficient-evidence status stays factual while the relationship gap persists, and adequate evidence must change it.
 
 ## Procedure examination: operational refinements
 
@@ -52,11 +54,15 @@ Use these alongside the common request package. Replace scope placeholders befor
 
 **Close when:** Named parties and roles are supported by exact clauses; all referenced annexes are supplied or explicitly missing; material financial fields and applicability are evidenced. A general marketing brochure leaves the contract gap open.
 
+**Review marks:** `[HUMAN-REVIEW:NEEDED]` operator: scope, recipient and wording. `[HUMAN-REVIEW:BENEFICIAL]` scholar: given the app-company/financier split, whose obligations should the rule evaluate?
+
 ### 2. Contact — contracting-owner clarification first
 
 **Scope to fill:** [specific merchant/product offer], [channel], [period], [non-personal description of the arrangement].
 
-**First request:** Which legal entity signs or finances this arrangement? Please provide its exact legal name, relevant activity/licence identifier and a dated merchant/provider document naming its role. Please identify the document owner who can supply the applicable standard agreement and schedules.
+**First request:** Which legal entity signs or finances this arrangement? Please provide its exact legal name, relevant activity/licence identifier and a dated merchant/provider document naming its role. Please identify the document owner who can supply the applicable standard agreement and schedules. Please also confirm or deny whether “Contact Investment for Consumer Finance”, a name observed in earlier Souhoola terms, is an entity of your group, and give its relationship to this arrangement, if any. It is listed as an observation, not as an assumed relationship.
+
+**Review marks:** `[HUMAN-REVIEW:NEEDED]` operator: arrangement selection, recipient and wording. `[HUMAN-REVIEW:BENEFICIAL]` scholar: does the bot's clarifying question for an unresolved Contact entity ask for the right fact?
 
 **Follow-on:** Request the full applicable pack from that identified owner, including any merchant, agency or assignment document needed to explain the parties' obligations.
 
@@ -74,6 +80,8 @@ Use these alongside the common request package. Replace scope placeholders befor
 
 **Close when:** Complete relevant text is captured and cited; every observed name is retained; authoritative dated evidence reconciles the relationship, or the conflict remains explicitly open and prevents unsupported identity claims.
 
+**Review marks:** `[HUMAN-REVIEW:NEEDED]` operator: scope, recipient and wording. `[HUMAN-REVIEW:NEEDED]` second analyst: the Arabic BM/CI names are `single-review`. `[HUMAN-REVIEW:BENEFICIAL]` client: is a reconciliation of the three names already known?
+
 ### 4. Aman — consumer-finance role and obligations
 
 **Scope to fill:** [consumer-finance product], [merchant/channel], [cohort/period].
@@ -83,6 +91,8 @@ Use these alongside the common request package. Replace scope placeholders befor
 **Why:** The dated register candidate is Aman Consumer Finance; the site footer names the holding company. Parent-language differences are unresolved observations and should not be silently reconciled.
 
 **Close when:** The selected consumer-finance contract supports the parties, obligations and version applicability. Holding-company material and unrelated microfinance terms remain separate evidence.
+
+**Review marks:** `[HUMAN-REVIEW:NEEDED]` operator: scope, recipient and wording. `[HUMAN-REVIEW:NEEDED]` second analyst: أمان passage matches, because the word also means “safety”. `[HUMAN-REVIEW:BENEFICIAL]` client: which EN/AR parent-name observation is current?
 
 ### 5. Halan — merchant relationship before general contract collection
 
@@ -95,6 +105,21 @@ Use these alongside the common request package. Replace scope placeholders befor
 **Why:** A register candidate and a brand product page do not establish the selected merchant relationship. The worksheet records distinct consumer-finance and factoring entries.
 
 **Close when:** Exact passages support the selected relationship and contractual obligations. Keep insufficient evidence where the missing relationship or applicability remains unresolved.
+
+**Dispatch now (user decision 2026-10-01)** `[HUMAN-REVIEW:NEEDED]` operator: confirm the scope, verify the recipient, approve the wording and send. Nothing has been sent.
+
+- *User-supplied context (2026-10-01, not yet evidenced):* the user notes that the well-known company associated with the name Halan is a financial company, comparable to Fawry and Aman. Inside its service it offers goods for direct purchase in cash or in instalments, sourced mainly through 2B and other providers. Recorded as the user's statement, not a captured observation. If it holds, the selected arrangement may be Halan's own in-app goods offer, where seller, goods supplier (for example 2B) and financier can be different parties. The request must then ask which entity sells and which finances. `[HUMAN-REVIEW:NEEDED]` operator: choose between this in-app offer (with 2B as a candidate supplier) and the Smart Furniture candidate below, and confirm that "2B" means the merchant of that name.
+- *Candidate scope:* the Smart Furniture merchant claim from the [pilot-five proposal](../pilot-five-proposal.md), which has no verified page. The 2026-09-27 stored Smart Furniture passages quote “(ValU)”, not Halan, so this candidate is unconfirmed. If the operator selects a different offer, replace it.
+- *Recipient lead:* `info@halan.com`, from the FRA consumer-finance detail page (#23) captured 2026-10-01. This is a discovery lead, not a verified official channel or document-owner role.
+- *Entities to keep separate:* Halan for consumer finance co. / حالا للتمويل الاستهلاكي (FRA تمويل استهلاكي #23), and حالا لخدمات التمويل غير المصرفيه (FRA تخصيم #50, factoring).
+
+> **Subject:** Research request: financier for [selected merchant offer] instalments
+>
+> We are conducting a research-stage study of Egyptian consumer-financing arrangements. For instalment purchases offered at [selected merchant] through [channel] during [period], please identify the legal entity that finances the customer, with its regulator activity and licence reference. Please also provide a dated merchant or provider document naming that role. Please identify the applicable standard blank customer agreement and its schedules, and the team that owns those documents. Please state whether any factoring arrangement with the merchant is separate from the customer's finance agreement.
+>
+> We do not need customer identities, credit files, credentials or internal underwriting records. Please confirm the permitted internal research storage, access by named analyst and scholar reviewers, and the quotation conditions. Unanswered points will be recorded as unknown.
+
+**Other review marks:** `[HUMAN-REVIEW:BENEFICIAL]` scholar: is the bot's refusal for Halan shown at the right point while evidence is insufficient?
 
 ## Shared dispatch and acceptance record
 

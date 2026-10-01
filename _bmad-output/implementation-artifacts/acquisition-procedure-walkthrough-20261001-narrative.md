@@ -2,7 +2,7 @@
 
 Target: the operating evidence-acquisition playbook and its provider request and five-pilot gap-board templates.
 
-Review state: in progress. Original Block 1 and revised Blocks 2–4 accepted by the user; Block 5 is current. The overall review is not complete.
+Review state: in progress. Original Block 1 and revised Blocks 2–4 accepted by the user; the operational Intent and Block 5's Track 2 order were accepted on 2026-10-01; Block 6 is next. The overall review is not complete.
 
 ## Blocks
 
@@ -40,20 +40,42 @@ Review state: in progress. Original Block 1 and revised Blocks 2–4 accepted by
 
   **Check exact support and record the decision.** Map each literal observation to a page/span, table cell or screen; a second analyst checks material Arabic fields against the original, with corrections retained. Output: observed, conflicting or unknown fields on the [material-field matrix](../initiative-egypt-market-knowledge/acquisition-templates/pilot-gap-board.md#material-field-matrix), including reviewer, time and next action for gaps; an unobserved clause is unknown, and reuse rights and scholar-approved interpretation remain separate gates.
 
-- [ ] **Block 5 — Five-provider priority and concrete requests — in progress.**
+  *Amended 2026-10-01 by the Block 5 decision:* with no second analyst available, a material field is recorded as `single-review`, marked `[HUMAN-REVIEW:NEEDED]`, and supports no accepted claim until a second human check against the original is recorded. See the [playbook's human-review marks](../initiative-egypt-market-knowledge/evidence-acquisition-playbook.md#human-review-marks).
 
-  **Order attention by evidence impact and readiness.** Use the dated [identity worksheet](../initiative-egypt-market-knowledge/pilot-entity-resolution.md) and [priority proposal](../initiative-egypt-market-knowledge/acquisition-templates/provider-request-priorities-2026-10-01.md) to prioritize material gaps, specific existing leads and arrangement dependencies, without assuming market share or response probability. Output: the proposed operator-attention order below; prepare all briefs in parallel, and do not wait for one provider's reply before preparing another.
+- [x] **Block 5 — Operational Intent, five-provider priority and concrete requests — accepted 2026-10-01 (operational Intent and Track 2 order).**
 
-  | Priority | Provider/task | First request and expected evidence |
-  |---|---|---|
-  | 1 | valU / VALU-01 | Applicable blank finance agreement and all schedules, with the financier and app/payment operator roles distinguished. |
-  | 2 | Contact / CONTACT-01 | Identify the legal financier for the selected arrangement through a dated supporting document; then request that owner's agreement pack. |
-  | 3 | Souhoola / SOUHOOLA-01 | Complete applicable terms/agreement and annexes, plus authoritative dated clarification of the observed CI/BM/“Contact Investment” names. |
-  | 4 | Aman / AMAN-01 | Applicable consumer-finance agreement and schedules, with licensee/holding/microfinance roles kept distinct. |
-  | 5 | Halan / HALAN-01 | Dated evidence of the selected merchant–financier relationship, then its applicable agreement and schedules, distinguishing consumer finance from factoring. |
+  **Accept the operational Intent.** The user accepted the [operational Intent](../initiative-egypt-market-knowledge/acquisition-templates/provider-request-priorities-2026-10-01.md#proposed-operational-intent) inside this block: five scoped provider dossiers, each with an applicable, traceable evidence pack or an explicit unresolved record with owner and next action. Output: the outcome that Blocks 2–4 serve; analyst verification, acquisition/reuse rights and scholar-approved interpretation remain separate decisions.
 
-  **Make each brief issuable.** The operator resolves product, merchant/channel and period where needed, explicitly marks remaining discovery unknowns, verifies the official recipient/document-owner role and identifies the requested artifacts and research-use terms. Output: a scoped agreement request or a focused clarification request using the [provider-specific briefs](../initiative-egypt-market-knowledge/acquisition-templates/provider-request-priorities-2026-10-01.md#provider-specific-request-briefs) and [common package](../initiative-egypt-market-knowledge/acquisition-templates/provider-request.md); current placeholders are not ready-to-send letters and no outreach has been sent.
+  **Mark human review, then order two tracks.** Anything that needs or would benefit from a human reviewer carries `[HUMAN-REVIEW:NEEDED]` or `[HUMAN-REVIEW:BENEFICIAL]`, with the reviewer role and the exact question. Marked items are optimised to be showable at the human review around 2026-10-15; unmarked work is optimised for the best eventual evidence. Output: the two orders below, under the [playbook's human-review marks](../initiative-egypt-market-knowledge/evidence-acquisition-playbook.md#human-review-marks).
 
-  **Close only the supported task.** Apply Block 4's provenance, readability, completeness, applicability and exact-support checks to each response, assigning follow-ups to unanswered fields. Output: verified task-level evidence or an explicit gap on the [board](../initiative-egypt-market-knowledge/acquisition-templates/pilot-gap-board.md); the ranking remains unaccepted until this block is accepted, and Halan's insufficient-evidence status changes when adequate evidence arrives.
+  *Track 1 — marked items, showable by ~2026-10-15:*
+
+  | # | Mark | Item | Reviewer and question | Showable form |
+  |---|---|---|---|---|
+  | 1 | NEEDED | HALAN-01 dispatch draft | Operator (user): confirm the scope, verify the recipient and send | Issue-ready draft in the [Halan brief](../initiative-egypt-market-knowledge/acquisition-templates/provider-request-priorities-2026-10-01.md#5-halan--merchant-relationship-before-general-contract-collection) |
+  | 2 | NEEDED | Material fields per arrangement | Scholar: which fields does the applicable rule make material? | [Material-field matrix](../initiative-egypt-market-knowledge/acquisition-templates/pilot-gap-board.md#material-field-matrix) with every field still open |
+  | 3 | NEEDED | Single-review Arabic names and fields, including the 61 `pending_client_review` registry rows and the أمان everyday-word matches | Client or second reviewer: does the recorded literal match the original? | Original artifact and recorded literal, side by side |
+  | 4 | NEEDED | Scope and recipient for the VALU-01, CONTACT-01, SOUHOOLA-01 and AMAN-01 briefs | Operator: select product, merchant/channel and period; verify the official recipient | Briefs with the remaining blanks listed |
+  | 5 | BENEFICIAL | valU app company vs. legal financier | Scholar: whose obligations should the rule evaluate? | Worksheet passages naming both companies |
+  | 6 | BENEFICIAL | Souhoola's CI/BM/“Contact Investment” names | Client or scholar: is any reconciliation known? | All names verbatim; conflict still open |
+  | 7 | BENEFICIAL | Contact brand spread across six entities | Scholar: does the clarifying question ask for the right fact? | The bot's clarification next to the unresolved entities |
+  | 8 | BENEFICIAL | Halan: insufficient evidence, request pending | Scholar: is the refusal shown at the right point? | Gap record and the withheld answer |
+  | 9 | BENEFICIAL | Aman's EN/AR parent-name mismatch | Client: which observation is current? | Both footers verbatim |
+
+  *Track 2 — unmarked request content, best evidence eventually (order accepted 2026-10-01):*
+
+  | Priority | Provider/task | First request and expected evidence | Why this position |
+  |---|---|---|---|
+  | 1 | Halan / HALAN-01 | Dated evidence naming the financier for the selected merchant offer; then the applicable agreement and schedules, keeping consumer finance and factoring separate | User decision: send now. The whole dossier is blocked on one relationship fact. User-supplied context, not yet evidenced: Halan may itself sell goods in-app (sourced mainly via 2B and others), so the scope may be its own offer `[HUMAN-REVIEW:NEEDED]`. |
+  | 2 | Contact / CONTACT-01 | Identify the legal financier for the selected arrangement through a dated document, listing “Contact Investment for Consumer Finance” as an observed name to confirm or deny; then that owner's pack | One answer can unlock Contact's agreement request and inform SOUHOOLA-01. |
+  | 3 | valU / VALU-01 | Applicable blank finance agreement and all schedules, with the financier and app/payment operator roles distinguished | Identity is already supported by valU's own terms; the remaining gap is the operative contract. |
+  | 4 | Souhoola / SOUHOOLA-01 | Complete applicable terms/agreement and annexes, plus authoritative dated clarification of the observed names | Partly informed by CONTACT-01, but issued without waiting for it. |
+  | 5 | Aman / AMAN-01 | Applicable consumer-finance agreement and schedules, with licensee, holding and microfinance roles kept distinct | Role separation; holding-company text alone is insufficient. |
+
+  Prepare all briefs in parallel. No brief waits for another provider's reply, and every dispatch passes Track 1's operator review first.
+
+  **Make each brief issuable.** The operator resolves product, merchant/channel and period where needed, explicitly marks remaining discovery unknowns, verifies the official recipient/document-owner role and identifies the requested artifacts and research-use terms. Output: a scoped agreement request or a focused clarification request using the [provider-specific briefs](../initiative-egypt-market-knowledge/acquisition-templates/provider-request-priorities-2026-10-01.md#provider-specific-request-briefs) and [common package](../initiative-egypt-market-knowledge/acquisition-templates/provider-request.md); only the HALAN-01 draft is near issue-ready, and no outreach has been sent.
+
+  **Close only the supported task.** Apply Block 4's provenance, readability, completeness, applicability, exact-support and review-status checks to each response, assigning follow-ups to unanswered fields. Output: verified task-level evidence or an explicit gap on the [board](../initiative-egypt-market-knowledge/acquisition-templates/pilot-gap-board.md). Halan is no longer held back as a control: its insufficient-evidence status stays factual until adequate evidence arrives, and then it changes.
 
 - [ ] **Block 6 — Periphery and historical artifacts — unvisited.** Review supporting and historical records that provide context for the current operating procedure.
