@@ -43,3 +43,13 @@ def pytest_collection_modifyitems(config, items):
         reason = pending.get(callspec.id) if callspec else None
         if reason:
             item.add_marker(pytest.mark.xfail(reason=reason, strict=True))
+
+
+@pytest.fixture(autouse=True)
+def isolated_runtime_stores(tmp_path, monkeypatch):
+    """No app test may open the operator's review history or remote mirror."""
+    monkeypatch.setenv("DECISION_REVIEW_DB_PATH", str(tmp_path / "reviews.sqlite3"))
+    monkeypatch.setenv("DECISION_REVIEW_ARCHIVE_PATH", str(tmp_path / "archive.sqlite3"))
+    for key in ("DECISION_REVIEW_DATABASE_URL", "DATABASE_URL", "SPACE_ID", "SPACE_HOST"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("DECISION_REVIEW_REQUIRE_MIRROR", "false")

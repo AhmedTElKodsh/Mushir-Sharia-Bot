@@ -148,10 +148,15 @@ class AnswerContract:
     clarification_question: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    internal_signals: Dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
+
     def __post_init__(self):
         from src.models.evidence_display import evidence_summary, without_answer_scores
         if not isinstance(self.status, ComplianceStatus):
             raise ValueError("AnswerContract status must be a ComplianceStatus")
+        import copy
+        if (self.metadata or {}).get("router_signals") is not None:
+            self.internal_signals["router_signals"] = copy.deepcopy(self.metadata["router_signals"])
         self.metadata = without_answer_scores(self.metadata or {})
         self.metadata["evidence"] = evidence_summary(self.status.value, self.citations)
         if not self.answer or not self.answer.strip():

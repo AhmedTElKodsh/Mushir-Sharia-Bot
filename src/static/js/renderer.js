@@ -363,6 +363,77 @@ function renderBadge(status, targetNode) {
   return badge;
 }
 
+function renderTrace(trace, targetNode) {
+  if (!trace || typeof trace !== "object" || !targetNode || targetNode.parentNode !== messages) return null;
+  var lang = trace.understood_as && trace.understood_as.language === "ar" ? "ar" : "en";
+  var catalog = I18N[lang] || I18N.en;
+  function label(key) { return catalog[key] || I18N.en[key] || key; }
+  function line(container, title, value) {
+    var p = document.createElement("p");
+    var strong = document.createElement("strong");
+    strong.textContent = title + ": ";
+    p.appendChild(strong);
+    p.appendChild(document.createTextNode(String(value)));
+    container.appendChild(p);
+  }
+  var details = document.createElement("details");
+  details.className = "decision-trace";
+  details.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+  details.setAttribute("lang", lang);
+  var summary = document.createElement("summary");
+  summary.textContent = label("traceTitle");
+  details.appendChild(summary);
+  var body = document.createElement("div");
+  body.className = "decision-trace-body";
+  var understood = trace.understood_as || {};
+  var lanes = ["described_operation", "structure", "definition", "general"];
+  var lane = lanes.indexOf(understood.lane) >= 0 ? understood.lane : "general";
+  line(body, label("traceUnderstood"), label("traceLane_" + lane));
+  if (understood.mechanism && understood.mechanism !== "unknown") {
+    line(body, label("traceSlot_contract_family"), understood.mechanism);
+  } else if (understood.lane === "described_operation") {
+    line(body, label("traceSlot_contract_family"), label("traceMechanismUnknown"));
+  }
+  var statuses = {observed:["✓","traceObserved"], user_reported:["✓","traceReported"],
+                  unknown:["?","traceUnknown"], conflicting:["✗","traceConflicting"]};
+  function facts(title, values) {
+    if (!Array.isArray(values) || !values.length) return;
+    var heading = document.createElement("strong");
+    heading.textContent = title;
+    body.appendChild(heading);
+    var list = document.createElement("ul");
+    values.forEach(function(item) {
+      if (!item || !statuses[item.status]) return;
+      var row = document.createElement("li");
+      var status = statuses[item.status];
+      row.textContent = status[0] + " " + label("traceSlot_" + item.slot) +
+        " — " + label(status[1]) + (item.value == null ? "" : ": " + String(item.value));
+      list.appendChild(row);
+    });
+    body.appendChild(list);
+  }
+  facts(label("traceKnown"), trace.known);
+  facts(label("traceMissing"), trace.missing);
+  if (trace.question_asked) line(body, label("traceQuestion"), trace.question_asked);
+  var references = Array.isArray(trace.sources) ? trace.sources : [];
+  var names = references.filter(Boolean).map(function(ref) {
+    return [ref.standard, ref.section].filter(Boolean).join(" §") +
+      (ref.document_id && ref.document_id !== ref.standard ? " (" + ref.document_id + ")" : "");
+  });
+  line(body, label("traceSources"), names.length ? names.join("; ") : label("traceNoSources"));
+  var decision = trace.decided_by || {};
+  line(body, label("traceDecision"), label("traceReason_" + decision.reason_code));
+  if (Array.isArray(trace.would_decide) && trace.would_decide.length) {
+    facts(label("traceDecide"), trace.would_decide.map(function(item) {
+      return {slot:item.condition, status:item.state};
+    }));
+    line(body, label("traceDecide"), label("traceLegend"));
+  }
+  details.appendChild(body);
+  messages.insertBefore(details, targetNode);
+  return details;
+}
+
 // ---- Typing indicator & Error bubble (P2-S1) -------------------------------
 
 /**
@@ -489,6 +560,7 @@ function restoreMessages(savedMessages) {
     if (msg.role === "assistant" && msg.status && VALID_COMPLIANCE[msg.status]) {
       renderBadge(msg.status, node);
     }
+    if (msg.role === "assistant" && msg.decision_trace) renderTrace(msg.decision_trace, node);
     /* Post-process citations for persisted assistant messages */
     if (msg.role === "assistant" && msg.citations && msg.citations.length > 0) {
       renderCitations(node, msg.citations);

@@ -132,7 +132,8 @@ class ApplicationService:
         conversation_history: Optional[List[Dict[str, Any]]] = None,
     ) -> AnswerContract:
         if self.decision_store is None:
-            return self._answer(query, session_id, request_id, disclaimer_acknowledged, conversation_history)
+            result = self._answer(query, session_id, request_id, disclaimer_acknowledged, conversation_history)
+            return self._attach_decision_trace(result)
         from uuid import uuid4
         from src.models.decision_audit import prepare_decision_record
         effective_session = session_id or str(uuid4())
@@ -152,6 +153,7 @@ class ApplicationService:
             # Anonymous requests share one id with their audit record but never leave session state behind.
             answer = self._answer(query, effective_session, effective_request, disclaimer_acknowledged,
                                   conversation_history, keep_session=bool(session_id))
+            answer = self._attach_decision_trace(answer)
             record = prepare_decision_record(query, answer, session_id=effective_session, request_id=effective_request)
             if self.decision_store.append(record) != record.review_id:
                 raise RuntimeError("decision review storage did not acknowledge the record")
@@ -163,6 +165,14 @@ class ApplicationService:
             raise
         if not session_id:
             self._restore_session(effective_session, None)  # No caller handle exists, so no state may outlive the call.
+        return answer
+
+    @staticmethod
+    def _attach_decision_trace(answer):
+        """Attach only typed, public-safe decision facts before the audit commit."""
+        if isinstance(answer, AnswerContract):
+            from src.models.decision_trace import build_decision_trace
+            answer.metadata["decision_trace"] = build_decision_trace(answer)
         return answer
 
     MAX_SESSION_REVIEW_ROWS = 20
@@ -224,7 +234,7 @@ class ApplicationService:
                 citations=[],
                 reasoning_summary="User requested a binding ruling or legal advice, which exceeds Mushir's scope.",
                 limitations=self._limitations(response_language),
-                metadata=self._metadata([], response_language=response_language),
+                metadata={**self._metadata([], response_language=response_language), "decision_basis": "scope_refusal"},
             )
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
@@ -360,13 +370,13 @@ class ApplicationService:
                     citations=[],
                     reasoning_summary="Retrieval backend is not available.",
                     limitations=self._limitations(response_language),
-                    metadata=self._metadata(
+                    metadata={**self._metadata(
                         [],
                         response_language=response_language,
                         scenario=scenario,
                         standards_route=standards_route,
                         rule_evaluation=rule_evaluation,
-                    ),
+                    ), "retrieval_status": "unavailable"},
                 )
 
         try:
@@ -384,13 +394,13 @@ class ApplicationService:
                 citations=[],
                 reasoning_summary="Retrieval backend is not available.",
                 limitations=self._limitations(response_language),
-                metadata=self._metadata(
+                metadata={**self._metadata(
                     [],
                     response_language=response_language,
                     scenario=scenario,
                     standards_route=standards_route,
                     rule_evaluation=rule_evaluation,
-                ),
+                ), "retrieval_status": "unavailable"},
             )
         chunks = self._answer_admissible_chunks(chunks)
         retrieved_source_families = EvidenceFamilyDetector.families(chunks)
@@ -496,6 +506,7 @@ class ApplicationService:
                     ),
                 ),
             )
+            contract.metadata["decision_basis"] = "scholar_review_required"
             self._audit(cleaned_query, contract, session_id, request_id)
             self._append_scholar_review_queue(
                 query=cleaned_query,
@@ -546,6 +557,7 @@ class ApplicationService:
             candidate_standard_filter,
         )
         if unsupported_modern_asset_contract:
+            unsupported_modern_asset_contract.metadata["decision_basis"] = "unsupported_asset"
             self._audit(cleaned_query, unsupported_modern_asset_contract, session_id, request_id)
             self._append_scholar_review_queue(
                 query=cleaned_query,
@@ -1066,6 +1078,8 @@ class ApplicationService:
             return None
         answer = self._contract_from_dict(cached)
         answer.metadata = {**answer.metadata, "cache_hit": True}
+        if "decision_trace" not in answer.metadata:
+            answer.metadata["trace_unavailable"] = True
         return answer
 
     def _cache_answer(self, query: str, answer: AnswerContract, standards_route: Any = None) -> None:
@@ -1078,7 +1092,7 @@ class ApplicationService:
         self.cache_store.set_json(
             "response",
             self._cache_key(query, standards_route),
-            answer.to_dict(),
+            self._attach_decision_trace(answer).to_dict(),
             self.response_cache_ttl,
         )
 
@@ -1379,7 +1393,7 @@ class ApplicationService:
             citations=[],
             reasoning_summary="Empty or whitespace-only query.",
             limitations="Informational guidance only; consult a qualified Sharia scholar for a binding ruling.",
-            metadata={"response_language": "en", "cache_hit": False},
+            metadata={"response_language": "en", "cache_hit": False, "decision_basis": "empty_request"},
         )
 
     @staticmethod
@@ -1464,10 +1478,10 @@ class ApplicationService:
             citations=[citation],
             reasoning_summary=self._reasoning_summary(answer),
             limitations=self._limitations(response_language),
-            metadata=self._metadata(
+            metadata={**self._metadata(
                 chunks,
                 response_language=response_language,
-            ),
+            ), "answer_kind": "definition"},
         )
 
     @classmethod
@@ -1697,7 +1711,8 @@ class ApplicationService:
                     standards_route=standards_route,
                 ),
             )
-            contract.metadata["router_signals"] = getattr(family_result, "signals", {})
+            contract.internal_signals["router_signals"] = getattr(family_result, "signals", {})
+            contract.metadata["question_origin"] = "deterministic"
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
 
@@ -1729,8 +1744,9 @@ class ApplicationService:
                     response_language=response_language,
                 ),
             )
-            if hasattr(contract, "metadata"):
-                contract.metadata["router_signals"] = getattr(family_result, "signals", {})
+            contract.internal_signals["router_signals"] = getattr(family_result, "signals", {})
+            if not self._clarification_service_injected:
+                contract.metadata["question_origin"] = "deterministic"
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
         return None

@@ -1,10 +1,11 @@
-"""Decision review storage: a small local SQLite store, optionally mirrored to PostgreSQL.
+"""Decision review storage with a mandatory early-POC preservation hold.
 
 SQLite is the commit point for delivery: it is atomic and needs no network. When a
 PostgreSQL URL is configured, every record is also pushed to Postgres (the durable
 copy, since a free Space disk is ephemeral). Rows that could not be pushed stay in the
-SQLite outbox (synced=0) and are replayed in the background; they are never purged
-locally until confirmed remotely, and local history is kept short so the file stays small.
+SQLite outbox (synced=0) and are replayed in the background. All copies are
+preserved during scholar review; retention windows are reserved for a later
+explicitly activated policy.
 """
 import logging
 import os
@@ -25,6 +26,7 @@ DEFAULT_LOCAL_RETENTION_DAYS = 7
 MIRROR_RETRY_SECONDS = 30
 DEFAULT_KEEPALIVE_HOURS = 24
 DEFAULT_ARCHIVE_PATH = "data/runtime/decision_reviews_archive.sqlite3"
+EARLY_POC_REVIEW_HOLD = True
 
 
 class SQLiteDecisionReviewStore:
@@ -68,8 +70,8 @@ class SQLiteDecisionReviewStore:
         return DecisionAuditRecord.model_validate_json(row[0]) if row else None
 
     def delete(self, review_id: str) -> None:
-        with self._connect() as conn:
-            conn.execute("DELETE FROM decision_reviews WHERE review_id=?", (review_id,))
+        """Early POC review hold: direct maintenance cannot discard records."""
+        return None
 
     def pending(self, limit: int = 200) -> list[DecisionAuditRecord]:
         with self._connect() as conn:
@@ -90,13 +92,11 @@ class SQLiteDecisionReviewStore:
             conn.executemany("UPDATE decision_reviews SET synced=1 WHERE review_id=?", [(i,) for i in review_ids])
 
     def purge_older_than(self, days: int, *, only_synced: bool = False) -> int:
-        """Delete records past the window; with only_synced, never drop a row the mirror has not confirmed."""
+        """Validate a requested future retention window; preserve rows during review."""
         if type(days) is not int or days < 1:
             raise ValueError("retention must be a positive number of days")
-        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-        sql = "DELETE FROM decision_reviews WHERE recorded_at < ?" + (" AND synced=1" if only_synced else "")
-        with self._connect() as conn:
-            return conn.execute(sql, (cutoff,)).rowcount
+        return 0  # Review hold; a numeric retention setting cannot activate deletion.
+
 
 
 class MirroredDecisionReviewStore:
@@ -137,7 +137,7 @@ class MirroredDecisionReviewStore:
         except Exception as exc:
             self.last_sync_error = type(exc).__name__  # Never log the message: it may contain the URL.
             if self.require_mirror:
-                self.local.delete(review_id)  # Strict mode: unmirrored means unrecorded, so the answer is withheld.
+                # Preserve the failed attempt in the pending outbox; withhold delivery.
                 raise
             with self._lock:
                 self._retry_after = self._clock() + MIRROR_RETRY_SECONDS
@@ -202,21 +202,15 @@ class MirroredDecisionReviewStore:
                 return confirmed
 
     def purge_older_than(self, days: int) -> int:
-        removed = 0
-        try:
-            removed += self.remote.purge_older_than(days)
-        except Exception as exc:
-            self.last_sync_error = type(exc).__name__
-        # Keep the working file small, but only ever drop rows the remote has confirmed.
-        removed += self.local.purge_older_than(min(days, self.local_retention_days), only_synced=True)
-        if self.archive is not None:
-            removed += self.archive.purge_older_than(days)  # The archive follows the full retention window.
-        return removed
+        if type(days) is not int or days < 1:
+            raise ValueError("retention must be a positive number of days")
+        return 0  # Hold covers local working data, archive and remote mirror.
 
     def status(self) -> dict:
         return {"mirror": type(self.remote).__name__, "pending_sync": self.local.pending_count(),
                 "last_sync_error": self.last_sync_error, "require_mirror": self.require_mirror,
                 "archive_rows": self.archive.count() if self.archive is not None else None,
+                "review_hold": EARLY_POC_REVIEW_HOLD,
                 "last_keepalive": self.last_keepalive, "last_keepalive_error": self.last_keepalive_error}
 
 
@@ -269,8 +263,22 @@ def _int_env(name: str, default: int) -> int:
 
 
 def configured_decision_store():
-    local = SQLiteDecisionReviewStore(os.getenv("DECISION_REVIEW_DB_PATH") or DEFAULT_DB_PATH)
+    # A Space has ephemeral disk: an explicit false cannot downgrade its durability.
+    required = bool(os.getenv("SPACE_ID") or os.getenv("SPACE_HOST")) or os.getenv("DECISION_REVIEW_REQUIRE_MIRROR", "false").lower() == "true"
     url = _postgres_url()
+    if required and not url:
+        raise RuntimeError("Strict decision review mirroring requires a valid PostgreSQL URL")
+    if url:
+        from urllib.parse import urlparse
+        try:
+            parsed = urlparse(url)
+            port = parsed.port  # Access validates numeric syntax and range.
+            valid = bool(parsed.hostname and parsed.path.strip("/") and not parsed.fragment)
+        except ValueError:
+            valid = False
+        if not valid:
+            raise RuntimeError("Decision review mirror configuration is invalid")
+    local = SQLiteDecisionReviewStore(os.getenv("DECISION_REVIEW_DB_PATH") or DEFAULT_DB_PATH)
     if not url:
         return local
     from src.storage.postgres_decision_review_store import PostgresDecisionReviewStore
@@ -282,7 +290,7 @@ def configured_decision_store():
         remote = _DeferredPostgres(url)
     return MirroredDecisionReviewStore(
         local, remote,
-        require_mirror=(os.getenv("DECISION_REVIEW_REQUIRE_MIRROR", "false").lower() == "true"),
+        require_mirror=required,
         local_retention_days=_int_env("DECISION_REVIEW_LOCAL_RETENTION_DAYS", DEFAULT_LOCAL_RETENTION_DAYS),
         archive=configured_archive_store(),
         keepalive_hours=_int_env("DECISION_REVIEW_KEEPALIVE_HOURS", DEFAULT_KEEPALIVE_HOURS))

@@ -2,7 +2,8 @@
 from datetime import UTC, datetime
 import re
 
-_SCORE_KEY = re.compile(r"confidence|score|similarity|relevance|distance|rerank", re.I)
+_SCORE_KEY = re.compile(r"confidence|score|similarity|relevance|distance|rerank|threshold|weight", re.I)
+_NUMERIC_TEXT = re.compile(r"[+-]?(?:(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?%?|nan|inf(?:inity)?)", re.I)
 
 
 def source_age(value, *, now=None):
@@ -31,8 +32,10 @@ def _numeric(item):
 def without_answer_scores(value):
     if isinstance(value, dict):
         return {key: without_answer_scores(item) for key, item in value.items()
-                if not (isinstance(key, str) and _SCORE_KEY.search(key)
-                        and (_numeric(item) or key in {"confidence", "confidence_score", "system_confidence"}))}
+                if key not in {"router_signals", "internal_signals", "retrieval_signals"}
+                and not (isinstance(key, str) and _SCORE_KEY.search(key)
+                        and (_numeric(item) or isinstance(item, (dict, list, tuple))
+                             or (isinstance(item, str) and bool(_NUMERIC_TEXT.fullmatch(item.strip())))))}
     if isinstance(value, (list, tuple)):
         return [without_answer_scores(item) for item in value]
     return value

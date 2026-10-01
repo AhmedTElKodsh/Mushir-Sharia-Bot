@@ -118,7 +118,7 @@ def test_empty_db_path_env_falls_back_to_default(tmp_path, monkeypatch):
     assert store.configured_decision_store().path == (tmp_path / store.DEFAULT_DB_PATH).resolve()
 
 
-def test_purge_removes_only_expired_records(tmp_path):
+def test_poc_review_hold_preserves_expired_records(tmp_path):
     from src.storage.decision_review_store import SQLiteDecisionReviewStore, configured_retention_days
     from src.models.decision_audit import prepare_decision_record
     store = SQLiteDecisionReviewStore(tmp_path / "r.sqlite3")
@@ -127,8 +127,8 @@ def test_purge_removes_only_expired_records(tmp_path):
     new = prepare_decision_record("q", answer, session_id="s", request_id="new")
     store.append(old.model_copy(update={"recorded_at": datetime.now(UTC) - timedelta(days=400)}))
     store.append(new)
-    assert store.purge_older_than(configured_retention_days()) == 1
-    assert store.get(new.review_id) is not None and store.get(old.review_id) is None
+    assert store.purge_older_than(configured_retention_days()) == 0
+    assert store.get(new.review_id) is not None and store.get(old.review_id) is not None
     with pytest.raises(ValueError):
         store.purge_older_than(0)
 
@@ -361,7 +361,7 @@ def test_api_hides_internal_decision_review_but_keeps_the_receipt():
     assert body["metadata"]["review_receipt"]["review_id"] == "r-1"
 
 
-def test_startup_purges_expired_review_records(tmp_path, monkeypatch):
+def test_startup_preserves_expired_review_records_during_poc_hold(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
     from src.api.main import create_app
     from src.models.decision_audit import prepare_decision_record
@@ -376,7 +376,7 @@ def test_startup_purges_expired_review_records(tmp_path, monkeypatch):
         stale.model_copy(update={"recorded_at": datetime.now(UTC) - timedelta(days=90)}))
     with TestClient(create_app()):
         pass
-    assert SQLiteDecisionReviewStore(path).get(stale.review_id) is None
+    assert SQLiteDecisionReviewStore(path).get(stale.review_id) is not None
 
 
 def test_ingest_main_builds_the_index_through_the_lazy_imports(tmp_path, monkeypatch):

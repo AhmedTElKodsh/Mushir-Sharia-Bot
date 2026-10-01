@@ -12,6 +12,8 @@ Adding documents to the retrieval corpus is ingestion, not model training. Prese
 
 ## Required behavior cases
 
+**Ownership key:** A owns observable conversation/evidence/UI behavior in each row, including the current response's safe trace. For joint A+B rows, B owns expanded persistent lineage, classification, annotations and reproducibility versions; A still must preserve current records and private router signals. D owns actual named-financier acquisition, so unsupported named offers in A must be explicitly withheld. No behavior is removed by this ownership split.
+
 Each row needs a reproducible case with inputs and conversation history, expected observable behavior, actual response and decision record, evidence snapshot, result, and failure classification. Run relevant cases in English and Arabic; use Egyptian Arabic and mixed-language variants where specified. These are acceptance requirements to implement and verify, not results already achieved.
 
 | ID | Behavior and test input | Expected observation | Goal / checkpoint |
@@ -35,6 +37,10 @@ Each row needs a reproducible case with inputs and conversation history, expecte
 
 ## Evaluation and review records
 
+**Acceptance rubric:** Enumerate the applicable subcases in each of POC-01 through POC-16 and record exact test IDs. Each A-owned subcase must pass its expected observation locally; a skipped or unimplemented case is an explicit gap, not a pass. Language-sensitive cases require EN and AR variants, with Egyptian/mixed variants and numerals for POC-01. Unit/service, browser and live results are separate. All A cases passing local tests permits code completion, not a claim of deployed/model accuracy. A deployed smoke is additional: both language paths, clarification then reply, insufficient evidence, one supported definition, a panel restore, and failure handling where safely reproducible. Any omitted smoke case remains unverified for deployment.
+
+Count factual propositions as claims; count claim-to-passage links as citation checks; count complete scripted scenarios as tasks. Retain per-case counts and denominators with the result. An unavailable semantic claim-support check is not reported as passed merely because a citation identifier resolves.
+
 - Store every evaluation attempt and product answer/clarification/abstention, including failures, interrupted delivery and retries where recording is possible. A failed durable write must block delivery and produce an operational failure signal; do not claim that a failed write was preserved.
 - Preserve input turns and corrections, output, safe decision trace, observable execution events, internal thresholds and scores, retrieved chunk identifiers and available scores, source snapshots/hashes, gate reasons, timings, delivery status and error category. Keep hidden chain-of-thought and credentials out of the record.
 - Record run/case/session/turn/attempt IDs, parent retry or correction links, timestamp, model identifier, prompt/configuration version, code revision, corpus version and rule-set version. Record unavailable provenance explicitly rather than fabricating it.
@@ -52,9 +58,11 @@ During the hold, size monitoring, checksummed backups and lossless compression/d
 
 After the scholar finishes reviewing, the operator may explicitly enable 365-day retention and a configured storage cap. Record activation time, operator, policy version, age basis and eligible classes; show a dry-run count before applying deletion to existing history. Protect unsynced and still-held/unreviewed records. Verify archives and restore capability before eligible local eviction. If protected records prevent meeting the cap, report the pressure instead of deleting them.
 
+Shared evidence objects remain protected while any retained, archived, mirrored, held or unreviewed record references them. A minimal preservation hold is an A prerequisite; it cannot wait for B's later classification and compaction work.
+
 ## Execution checkpoints
 
 1. A: implement the decision panel and relevant conversation/evidence behaviors; attach case-level results for POC-01 through POC-16, clearly marking dependencies on B and unimplemented requirements.
 2. B: implement full internal recording, classification, review hold and later opt-in retention; run preservation, recovery and client non-disclosure tests.
 3. D: use verified dated financier evidence and an explicitly labeled insufficient-evidence case to prepare the scholar discussion; do not count proposed dossiers as completed coverage.
-4. Before a client showcase, run the selected cases against the deployed path and record its revision, corpus, configuration and known limitations. Scholar judgment accuracy remains unevaluated until reviewed labels exist.
+4. Before a client showcase, run the additional deployed smoke defined in the acceptance rubric and record its revision, corpus, configuration and known limitations. It does not replace complete local case coverage. Scholar judgment accuracy remains unevaluated until reviewed labels exist.

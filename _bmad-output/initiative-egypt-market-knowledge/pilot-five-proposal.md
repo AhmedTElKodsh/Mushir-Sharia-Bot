@@ -6,6 +6,8 @@ Proposed by Mary (analyst), 2026-10-01. Resolves open question O3 once the user 
 
 A pilot financier must (1) appear in the FRA register under a matching legal name, (2) have verified page evidence that merchants or the financier itself offer instalments through it, and (3) be crawlable without login, CAPTCHA or a permission we don't hold (spec Constraints).
 
+This is a proposal for four evidence-backed candidates plus one deliberately insufficient-evidence control (Halan). Halan does not satisfy criterion 2 and does not count as evidence-qualified coverage. Even the four candidates still require the licence/detail and dated-page rechecks below before dossier acceptance.
+
 ## The five
 
 | # | Financier | FRA register match (licence no.) | Verified merchant/self evidence | Why it's in |
@@ -14,7 +16,7 @@ A pilot financier must (1) appear in the FRA register under a matching legal nam
 | 2 | **Contact** | Contact co. (17) and related entities (8, 19) | 6 verified: own laptop, phone and car finance pages; Smart Furniture; Vodafone eShop | Both a self-published offer and merchant links; legal-name ambiguity across several Contact entities tests entity resolution |
 | 3 | **Souhoola** | CI Consumer Finance Souhoola co. (10) | 6 verified: IKEA Egypt, Smart Furniture, RUSHBRUSH, Jumia | Overlaps valU at the same merchants, so a "which financier?" clarification is real |
 | 4 | **Aman** | Aman Consumer Finance (43) — distinct from Aman for Micro-finance (4) | Aman store pages: electronics and phone instalments | Financier that also runs its own store; tests seller vs financier role split |
-| 5 | **Halan** | Halan for consumer finance co. (23) | 1 merchant claim (Smart Furniture), no verified page yet | Licensed and named by a merchant; the thin evidence is deliberate: it shows the scholar what an "unknown, with reason" dossier looks like |
+| 5 | **Halan — insufficient-evidence control** | Proposed match: Halan for consumer finance co. (23), detail verification pending | 1 merchant claim (Smart Furniture), no verified page yet | Deliberate "unknown, with reason" example; excluded from evidence-qualified coverage |
 
 Anchor merchants for the dossiers' link graph: IKEA Egypt, Smart Furniture and RUSHBRUSH. Each names two or more of the five.
 

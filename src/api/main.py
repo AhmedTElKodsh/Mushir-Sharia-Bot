@@ -21,6 +21,7 @@ from src.chatbot.clarification_engine import ClarificationEngine
 from src.chatbot.session_manager import SessionManager
 from src.governance.scholar_review import ScholarReviewQueueStore
 from src.observability.metrics import MetricsRegistry
+from src.storage.decision_review_store import EARLY_POC_REVIEW_HOLD
 from scripts.report_sharia_corpus_coverage import (
     DEFAULT_ACQUISITION_MANIFEST,
     load_acquisition_manifest,
@@ -548,6 +549,8 @@ def create_app() -> FastAPI:
                 "version_label": APP_VERSION_LABEL,
                 "infrastructure": app.state.infrastructure,
                 "decision_review_mirror": _mirror_status(app),
+                "decision_review_policy": {"review_hold": EARLY_POC_REVIEW_HOLD,
+                                           "age_deletion_active": not EARLY_POC_REVIEW_HOLD},
                 "checks": readiness["checks"],
                 "evidence_coverage": readiness["evidence_coverage"],
             },

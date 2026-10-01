@@ -21,6 +21,8 @@ context: ['{project-root}/.planning/sharia-compliance-chatbot/docs/runtime-safet
 
 **Approach:** Capture an internal-signals block and the decision trace (from plan A) into the existing decision-review record before client scrubbing. Promote classification fields to indexed columns. Add a review CLI to filter, export and report size. Add size management for the local store.
 
+**Current state at reviewed baseline `9497f47`:** The code still defaults to 365-day retention and a 7-day mirrored local window; strict mirroring defaults to false. Goal A now includes the minimal preservation hold, strict-configuration guard and private router-signal capture as prerequisites. B extends those protections; verify A's evidence before assuming they are active.
+
 ## Boundaries & Constraints
 
 **Always:** Extend the existing `decision_review_store` and mirror; no new store. Keep the "no answer delivered unless its record is committed" rule and the strict-mirror behavior. Internal signals live only in the review record; the client-facing response never carries them. Classification columns are derived from typed state at write time. Schema changes are additive and migrate existing rows (null classification is allowed).
@@ -70,6 +72,7 @@ context: ['{project-root}/.planning/sharia-compliance-chatbot/docs/runtime-safet
 - [ ] `scripts/review_answers.py` -- filter by lane/status/language/gate/since, output table/JSONL/CSV, `--stats` (counts per class plus DB size).
 - [ ] `tests/test_review_records.py` -- I/O matrix; record has signals while client JSON (REST and SSE) has none; migration on a legacy DB; compaction never drops unsynced rows.
 - [ ] Preservation tests -- records older than 365 days survive every maintenance route under the default hold, including configured age/cap values; explicit later activation respects protected rows; backup/restore preserves counts, payload hashes, annotations and source references; failed archive or full storage cannot silently discard history.
+- [ ] Evidence lifecycle -- shared/deduplicated evidence may be deleted only when no retained, archived, mirrored, held or unreviewed record references it. Verify mixed reviewed/unreviewed references before any source-object deletion.
 
 **Acceptance Criteria:**
 - Default configuration preserves all in-scope POC data until scholar review completion and explicit later policy activation; verify working store, archive, mirror and evidence references, not just remote rows.
@@ -79,7 +82,7 @@ context: ['{project-root}/.planning/sharia-compliance-chatbot/docs/runtime-safet
 
 ## Implementation Notes
 
-Current code inspected on 2026-10-01 still defaults to 365-day retention and a 7-day mirrored local window; strict mirroring defaults to false. These are implementation gaps against the clarified POC policy, not evidence that the hold is active. This plan change does not alter runtime configuration or deploy code.
+See current-state gaps above. A owns the minimum immediate preservation and router capture prerequisites; B owns complete classification, annotations, lineage and later explicit retention activation. Do not infer runtime completion from this plan.
 
 ## Plan Change Log
 

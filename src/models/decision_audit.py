@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import AwareDatetime, model_validator
+from pydantic import AwareDatetime, Field, model_validator
 from src.models.evidence import DecisionReviewRow, EvidenceModel, GateDecision, Text
 
 
@@ -21,6 +21,7 @@ class DecisionAuditRecord(EvidenceModel):
     typed_review: DecisionReviewRow | None = None
     gates: tuple[GateDecision, ...]
     response: dict[str, Any]
+    internal_signals: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def consistent_record(self):
@@ -53,4 +54,5 @@ def prepare_decision_record(query, answer, *, session_id, request_id):
     response["metadata"].pop("decision_review", None)  # typed_review already holds this snapshot
     return DecisionAuditRecord(review_id=review_id, request_id=request_id, session_id=session_id,
         recorded_at=recorded_at, query=query or "", fact_coverage="typed_snapshot" if typed else "not_extracted",
-        typed_review=typed, gates=tuple(gates[name] for name in GATES), response=response)
+        typed_review=typed, gates=tuple(gates[name] for name in GATES), response=response,
+        internal_signals=answer.internal_signals)

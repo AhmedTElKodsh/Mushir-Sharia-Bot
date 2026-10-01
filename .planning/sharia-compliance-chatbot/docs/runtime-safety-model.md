@@ -106,6 +106,8 @@ File: `src/models/evidence_display.py`.
 
 ## Decision-Review Store
 
+**Early POC review hold, updated 2026-10-01:** Age purges now return without deleting records in local SQLite, the archive and the Postgres mirror, including direct calls and scheduled startup/periodic paths. The 365-day and seven-day settings below describe a later policy and are inactive during this hold. A later implementation must require a recorded operator activation before any deletion. On a Space, `SPACE_ID`/`SPACE_HOST` or explicit strict mirroring requires a valid Postgres URL at startup; mirror-write failure withholds the answer and keeps the attempted record pending locally. These controls have local test coverage only; deployed configuration and persistence still need verification.
+
 Files: `src/storage/decision_review_store.py`, `src/models/decision_audit.py`.
 
 | Item | Value |
@@ -114,8 +116,8 @@ Files: `src/storage/decision_review_store.py`, `src/models/decision_audit.py`.
 | Location | `DECISION_REVIEW_DB_PATH`, default `data/runtime/decision_reviews.sqlite3`; docker-compose mounts `./data/runtime` |
 | Record | Query, response (without the duplicate `decision_review`), typed review row, all eight gate decisions, request and session ids |
 | Client sees | `metadata.review_receipt` only; `metadata.decision_review` is removed at the API boundary |
-| Retention | `DECISION_REVIEW_RETENTION_DAYS`, default 365; invalid or non-positive values fall back to 365 |
-| Purge | At startup and every 24 hours; a failed purge is logged and never blocks startup |
+| Retention | Early POC hold preserves all review rows. `DECISION_REVIEW_RETENTION_DAYS` defaults to 365 for a later explicitly activated policy and cannot lift the hold. |
+| Purge | Startup and 24-hour tasks call hold-protected methods and delete no rows during the hold. |
 | Not committed to git | `*.sqlite3` and the `-wal`/`-shm` side files are ignored |
 
 On Hugging Face Spaces the disk is not persistent unless persistent storage is enabled for the Space, so records do not survive a rebuild there. Plan this before any review-dependent use of the Space.

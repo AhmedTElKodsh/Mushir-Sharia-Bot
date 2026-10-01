@@ -127,7 +127,7 @@ def test_strict_mode_withholds_the_answer_when_the_mirror_is_down(tmp_path):
     rec = record()
     with pytest.raises(ConnectionError):
         store.append(rec)
-    assert store.local.get(rec.review_id) is None and store.local.pending_count() == 0
+    assert store.local.get(rec.review_id) is not None and store.local.pending_count() == 1
 
 
 def test_local_failure_fails_the_answer_without_touching_the_mirror(tmp_path):
@@ -138,15 +138,15 @@ def test_local_failure_fails_the_answer_without_touching_the_mirror(tmp_path):
     assert remote.calls == 0
 
 
-def test_get_falls_back_to_the_durable_copy_after_local_purge(tmp_path):
+def test_review_hold_keeps_local_copy_even_when_remote_is_down(tmp_path):
     store, remote = mirrored(tmp_path, local_retention_days=7)
     old = record(age_days=30)
     store.append(old)
     store.purge_older_than(365)
-    assert store.local.get(old.review_id) is None            # local file stays small
+    assert store.local.get(old.review_id) is not None
     assert store.get(old.review_id).review_id == old.review_id
     remote.down = True
-    assert store.get(old.review_id) is None                  # unreachable remote is a miss, not a crash
+    assert store.get(old.review_id).review_id == old.review_id
 
 
 def test_local_purge_never_drops_a_row_the_mirror_has_not_confirmed(tmp_path):
@@ -159,15 +159,15 @@ def test_local_purge_never_drops_a_row_the_mirror_has_not_confirmed(tmp_path):
     remote.down = False
     store.sync_pending()
     store.purge_older_than(365)
-    assert store.local.get(stuck.review_id) is None and stuck.review_id in remote.rows
+    assert store.local.get(stuck.review_id) is not None and stuck.review_id in remote.rows
 
 
-def test_remote_retention_follows_the_long_window(tmp_path):
+def test_review_hold_preserves_remote_rows_past_the_later_window(tmp_path):
     store, remote = mirrored(tmp_path)
     ancient = record(age_days=400)
     store.append(ancient)
     store.purge_older_than(365)
-    assert ancient.review_id not in remote.rows
+    assert ancient.review_id in remote.rows
 
 
 def test_legacy_sqlite_file_without_the_synced_column_is_migrated_and_replayed(tmp_path):
@@ -278,9 +278,9 @@ def test_postgres_get_accepts_jsonb_dicts_and_text_payloads():
     assert PostgresDecisionReviewStore("postgresql://u:p@h/db", psycopg_module=FakePsycopg()).get("x") is None
 
 
-def test_postgres_purge_validates_the_window_and_returns_the_count():
+def test_postgres_purge_validates_the_window_and_respects_the_hold():
     store = PostgresDecisionReviewStore("postgresql://u:p@h/db", psycopg_module=FakePsycopg())
-    assert store.purge_older_than(365) == 3
+    assert store.purge_older_than(365) == 0
     for bad in (0, -1, "30", 1.5):
         with pytest.raises(ValueError):
             store.purge_older_than(bad)
@@ -352,16 +352,16 @@ def archived(tmp_path, **kwargs):
     return store, remote, archive
 
 
-def test_archive_keeps_everything_while_the_working_file_stays_small(tmp_path):
+def test_archive_and_working_file_both_keep_history_during_review(tmp_path):
     store, remote, archive = archived(tmp_path, local_retention_days=7)
     old, fresh = record("old", age_days=30), record("fresh")
     store.append(old)
     store.append(fresh)
     store.purge_older_than(365)
-    assert store.local.get(old.review_id) is None            # working file purged
+    assert store.local.get(old.review_id) is not None
     assert archive.get(old.review_id) is not None and archive.count() == 2
     remote.down = True
-    assert store.get(old.review_id).review_id == old.review_id   # readable with the remote down and local purged
+    assert store.get(old.review_id).review_id == old.review_id
 
 
 def test_archive_holds_records_even_while_the_remote_is_paused(tmp_path):
@@ -379,13 +379,13 @@ def test_archive_failure_never_blocks_delivery(tmp_path):
     assert store.append(rec) == rec.review_id and rec.review_id in remote.rows
 
 
-def test_archive_follows_the_full_retention_window(tmp_path):
+def test_archive_retains_ancient_records_during_review(tmp_path):
     store, remote, archive = archived(tmp_path)
     ancient, recent = record("a", age_days=400), record("b", age_days=100)
     store.append(ancient)
     store.append(recent)
     store.purge_older_than(365)
-    assert archive.get(ancient.review_id) is None and archive.get(recent.review_id) is not None
+    assert archive.get(ancient.review_id) is not None and archive.get(recent.review_id) is not None
 
 
 def test_keepalive_pings_once_per_interval_and_records_failures(tmp_path):

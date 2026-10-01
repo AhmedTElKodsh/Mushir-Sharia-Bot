@@ -97,6 +97,4 @@ class PostgresDecisionReviewStore:
     def purge_older_than(self, days: int) -> int:
         if type(days) is not int or days < 1:
             raise ValueError("retention must be a positive number of days")
-        with self._connect() as conn:
-            return conn.execute("DELETE FROM decision_reviews WHERE recorded_at < now() - make_interval(days => %s)",
-                                (days,)).rowcount
+        return 0  # Early POC review hold applies to direct remote maintenance too.
