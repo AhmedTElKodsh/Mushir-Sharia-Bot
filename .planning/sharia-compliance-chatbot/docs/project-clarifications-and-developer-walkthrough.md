@@ -1,5 +1,7 @@
 # Mushir Project Clarifications And Developer Walkthrough
 
+> **Update 2026-10-01.** The verdict path described here predates the V1.6 rule-card gate. Mushir now gives a Sharia verdict only when a scholar-approved rule card covers the question; otherwise it defers and queues the question. Answer confidence scores were removed in favour of an evidence status (source dates and ages), and every answer is recorded before delivery. Test figures below are from June; the current suite is 1,234 passed, 12 waiting for a scholar. See [Runtime Safety Model](runtime-safety-model.md) where the two differ.
+
 Last refreshed: 2026-06-01
 Current app version: V1.5 (`1.5.0`)
 
@@ -1275,7 +1277,7 @@ The current SSE shape is useful, but true incremental LLM token streaming is a f
 A developer joining the project should read files in this order:
 
 1. `docs/project-clarifications-and-developer-walkthrough.md`
-2. `docs/client-plain-language-logic.md`
+2. `docs/client-guide.md`
 3. `src/api/main.py`
 4. `src/api/routes.py`
 5. `src/api/schemas.py`

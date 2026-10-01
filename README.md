@@ -14,7 +14,9 @@ Current app version: **V1.5** (`1.5.0`) as of 2026-06-01.
 
 Mushir is a RAG-based Islamic finance research assistant. It answers English and Arabic questions from the configured AAOIFI corpus, validates citations, asks focused clarification questions when facts are missing, and refuses binding fatwas, legal advice, and financial advice.
 
-The current V1.5 implementation is a FastAPI application with browser chat, REST API, SSE streaming, multilingual retrieval, OpenRouter generation, citation validation, readiness checks, deployment support, and guarded Egypt institution evidence-corpus exports. The active runtime remains a non-binding AAOIFI evidence assistant. The proposed future L6 direction is a rules-first Sharia commercial-process evaluator.
+The current V1.5 implementation is a FastAPI application with browser chat, REST API, SSE streaming, multilingual retrieval, OpenRouter generation, citation validation, readiness checks, deployment support, and guarded Egypt institution evidence-corpus exports.
+
+**V1.6 (in build):** Mushir gives a Sharia verdict only when a scholar-approved rule card covers the question; otherwise it defers and queues the question for review. Personal deal descriptions go through a typed-facts lane with at most two follow-up questions. Answers show source dates and ages instead of a confidence score, and every answer is recorded for review before delivery. No scholar has been appointed yet, so no rule card exists and permissibility questions currently defer. See the [Runtime Safety Model](.planning/sharia-compliance-chatbot/docs/runtime-safety-model.md) and the [Client Guide](.planning/sharia-compliance-chatbot/docs/client-guide.md).
 
 ## Features
 
@@ -68,7 +70,7 @@ Mushir must not be marketed as a fatwa engine. It provides evidence-backed, non-
 | `production pilot` | Institution-facing pilot with operational controls. | Controlled-beta gates plus auth, durable audit, durable rate/session/cache stores where replicated, Playwright e2e, and scholar-reviewed gold gates. |
 | `hard-Sharia ready` | Broad Shari'ah-standard evidence release. | Production-pilot gates plus complete governed SS-01..SS-60 coverage, Arabic/English parity, retrieval smoke, representative questions, and scholar-review evidence for every target standard. |
 
-Runtime badges are evidence labels, not fatwa labels: `Supported by retrieved evidence`, `Contradicted by retrieved evidence`, `Requires scholar review`, and `Insufficient source evidence`.
+Runtime badges are evidence labels, not fatwa labels: `Supported by retrieved evidence`, `Contradicted by retrieved evidence`, `Requires scholar review`, and `Insufficient source evidence`. From V1.6, a permissibility conclusion additionally requires a scholar-approved rule card, so judgment questions show `Requires scholar review` until cards exist.
 
 ## Quick Start
 
@@ -284,7 +286,7 @@ For the current maintained documentation set, start with:
 - `.planning/sharia-compliance-chatbot/docs/index.md` - Documentation map.
 - `.planning/sharia-compliance-chatbot/docs/project-documentation.md` - Full current technical documentation.
 - `.planning/sharia-compliance-chatbot/docs/pipeline-architecture-v2.md` - Visual architecture graphs for the new intelligent routing pipeline.
-- `.planning/sharia-compliance-chatbot/docs/client-plain-language-logic.md` - Simple client-facing explanation of the whole logic.
+- `.planning/sharia-compliance-chatbot/docs/client-guide.md` - Client-facing guide to the whole project, current behaviour and release plan.
 - `.planning/sharia-compliance-chatbot/docs/l6-egypt-institution-scrape/README.md` - Project-facing guide for the planned Egypt institution scraping/evidence corpus.
 - `project-context.md` - Implementation context and rules for AI agents and developers.
 
@@ -426,7 +428,7 @@ See `scripts/CONVERTER_IMPROVEMENTS.md` for enhancement ideas.
 Use these docs as the current roadmap sources:
 
 - `.planning/sharia-compliance-chatbot/docs/project-documentation.md` - implemented runtime and architecture.
-- `.planning/sharia-compliance-chatbot/docs/client-plain-language-logic.md` - non-technical client explanation of planning and implementation.
+- `.planning/sharia-compliance-chatbot/docs/client-guide.md` - non-technical client guide to planning, current behaviour and decisions needed.
 - `.planning/sharia-compliance-chatbot/docs/l5-production-readiness.md` - active L5 release/readiness runbook.
 - `.planning/sharia-compliance-chatbot/next-level-plans/README.md` - planning index.
 - `.planning/sharia-compliance-chatbot/next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` - proposed L6 future direction.

@@ -1,5 +1,7 @@
 # Brownfield: Existing State and V1.6 Blockers
 
+> **Status on 2026-10-01:** snapshot taken when the spec was written. Most V1.6 blockers listed here are now closed in code (rule-card gate, mechanism gate, evidence status, decision-review store, confidence removal); the environment notes (no `.venv`, 42 tests) are obsolete. Current state: [Runtime Safety Model](../../../.planning/sharia-compliance-chatbot/docs/runtime-safety-model.md).
+
 ## Existing assets (V1.5, 2026-09-29)
 
 | Asset | Location | State |

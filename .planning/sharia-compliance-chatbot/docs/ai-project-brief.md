@@ -1,5 +1,7 @@
 # Mushir AI Project Brief
 
+> **Update 2026-10-01.** The verdict path described here predates the V1.6 rule-card gate. Mushir now gives a Sharia verdict only when a scholar-approved rule card covers the question; otherwise it defers and queues the question. Answer confidence scores were removed in favour of an evidence status (source dates and ages), and every answer is recorded before delivery. Test figures below are from June; the current suite is 1,234 passed, 12 waiting for a scholar. See [Runtime Safety Model](runtime-safety-model.md) where the two differ.
+
 Last refreshed: 2026-06-01
 Current app version: V1.5 (`1.5.0`)
 
@@ -413,8 +415,8 @@ Green `/health` is not enough. Release confidence needs `/ready` plus a real que
 | Answer architecture | `.planning/sharia-compliance-chatbot/docs/chatbot-architecture.md` |
 | Production readiness | `.planning/sharia-compliance-chatbot/docs/l5-production-readiness.md` |
 | Deployment operations | `.planning/sharia-compliance-chatbot/docs/ops/deployment.md` and `.planning/sharia-compliance-chatbot/docs/ops/huggingface-spaces.md` |
-| Client explanation | `.planning/sharia-compliance-chatbot/docs/client-plain-language-logic.md` |
-| Source-governed roadmap | `.planning/sharia-compliance-chatbot/docs/client-source-governed-aaoifi-roadmap.md` |
+| Client explanation | `.planning/sharia-compliance-chatbot/docs/client-guide.md` |
+| Client decision document | `outputs/client-review-pack/index.html` |
 | L6 institution scrape | `.planning/sharia-compliance-chatbot/docs/l6-egypt-institution-scrape/README.md` |
 | Research evidence | `.planning/sharia-compliance-chatbot/docs/research/README.md` |
 | Maintained implementation tasks | `.planning/sharia-compliance-chatbot/docs/tasks.md` |

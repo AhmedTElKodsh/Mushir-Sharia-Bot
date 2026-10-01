@@ -1,5 +1,7 @@
 # BMAD Party-Mode Review Summary
 
+> **Status on 2026-10-01: historical record.** See the [Roadmap And Planning Index](README.md).
+
 **Date:** 2026-05-09
 
 **Review voices:** Winston (Architecture), Amelia (Engineering), John (Product), Murat (Test Architecture)

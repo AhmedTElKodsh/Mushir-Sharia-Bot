@@ -1,68 +1,105 @@
 # Mushir Documentation Index
 
-This index points to the current documentation set for Mushir. Older L0 and planning files remain useful historical context, but the files below are the best starting point for current development, review, client handoff, and release work.
+Last refreshed: 2026-10-01 · Live app V1.5 (`1.5.0`) · V1.6 dual-lane prototype in build
 
-Last refreshed: 2026-06-01. The current documentation set marks the app as V1.5 (`1.5.0`), reflects the guarded Egypt bank evidence scrape outputs, and still preserves the GC-001 construction delay-penalty clarification fix, SS-05/SS-11 istisna penalty routing, SS-30 tawarruq routing guard, evaluation fixture text-boundary fix, and the latest full-suite baseline (`619 passed, 48 skipped, 2 warnings`).
+## Status Right Now
 
-## Start Here
+| | |
+| --- | --- |
+| Active work | V1.6 dual-lane prototype for Egyptian instalment finance: [initiative](../../../_bmad-output/initiative-egypt-market-knowledge/initiative-egypt-market-knowledge.md) and [spec](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/spec-egypt-market-poc.md) |
+| Runtime rule | No Sharia verdict without a scholar-approved rule card; see [Runtime Safety Model](runtime-safety-model.md) |
+| Tests | 1,234 passed, 12 waiting for a scholar decision, 47 skipped; Playwright 30/30 |
+| Main blocker | **No scholar appointed.** Rule cards, the 12 open cases and the V1.6 exit gate all depend on one |
 
-- [Project Documentation](project-documentation.md): full current technical documentation for developers and maintainers.
-- [Version History](version-history.md): current app version, V1.5 evidence-corpus milestone, and verification notes.
-- [Project Clarifications And Developer Walkthrough](project-clarifications-and-developer-walkthrough.md): consolidated developer-facing walkthrough of the runtime flow, request contracts, ingestion, retrieval, source-family gates, deterministic definitions, commercial scenario metadata, Chroma/Qdrant setup, current limitations, and recommended enhancements, with Mermaid diagrams.
-- [Pipeline Architecture (V2)](pipeline-architecture-v2.md): visual diagrams for the Stage 1 & 2 Routing, Resolver, and Quality Gates logic.
-- [AI Project Brief](ai-project-brief.md): compact but detailed AI-agent handoff covering runtime contracts, source authority, L5/L6 status, commands, risks, and safe edit rules.
-- [Client Plain-Language Report](client-plain-language-logic.md): non-technical client explanation of project planning, implemented behavior, current limits, L5 readiness, and proposed L6 direction.
-- [Client Source-Governed Roadmap](client-source-governed-aaoifi-roadmap.md): visual client-facing explanation of the updated AAOIFI assistant logic, key terms, source governance, router plan, roadmap, risks, and acceptance checklist.
-- [Client Egypt Market AI Strategy](client-egypt-market-ai-strategy.md): client-facing explanation of how market data, scholar-approved rules and assistant behavior combine, how non-public contracts are handled, and the V1.6-V2.0 release plan.
-- [L6 Market Knowledge Strategy](../next-level-plans/L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md): technical decisions, release gates, V1.6 blockers and open decisions behind the client strategy.
-- [L6 Egypt Institution Scrape Workstream](l6-egypt-institution-scrape/README.md): project-facing guide for the planned public-source Egypt institution operations corpus.
+```mermaid
+flowchart LR
+    subgraph Client["For the client"]
+        CG["Client Guide"]
+        RP["Scholar Review Pack"]
+    end
+    subgraph Now["Current engineering"]
+        RSM["Runtime Safety Model"]
+        SPEC["V1.6 spec + initiative"]
+        PD["Project Documentation"]
+    end
+    subgraph Ops["Operations"]
+        DEP["Deployment / HF Spaces"]
+        REL["Release checklist"]
+    end
+    subgraph Hist["Record only"]
+        LEG["*-legacy client docs"]
+        PLAN["L0–L5 plans, May research"]
+    end
+    CG --> RP
+    RSM --> SPEC
+    PD --> RSM
+```
+
+## For The Client
+
+- [Mushir Client Guide](client-guide.md): the single client-facing guide: status, how Mushir answers, Egyptian market findings, the scholar's role, release plan and decisions needed.
+- [Scholar Review Pack](../../../outputs/client-review-pack/index.html): the decision document for the 12 questions waiting for a scholar, with options, a reply template and anticipated questions.
+
+## Start Here (Developers And Agents)
+
+- [Runtime Safety Model](runtime-safety-model.md): how V1.6 decides what Mushir may say: rule-card gate, described-operation lane, evidence status, decision-review store, test status and configuration. **Read this before the older pipeline docs.**
 - [Project Context](../../../project-context.md): concise implementation rules for AI agents and developers.
-- [Architecture](chatbot-architecture.md): deeper component-level architecture of the answer-generation path.
-- [Production Readiness](l5-production-readiness.md): runtime modes, release gates, and operational checks.
-- [Research Evidence Index](research/README.md): canonical research syntheses and raw evidence inventory.
-- [Rules-First Evaluator Research](research/l6-rules-first-evaluator-research.md): research synthesis for the post-L5 rules-first Sharia commercial-process evaluator direction.
-- [Legacy Gemini Architecture Research](research/legacy/gemini-architecture-research.md): original external blueprint; treat as implemented/partial/gap/spike input, not as the current architecture by itself.
-- [RAG and Model Intelligence OSS Research](research/rag-model-intelligence-open-source-research-2026-05-22.md): refreshed OSS/GitHub research matrix for improving retrieval, evaluation, ingestion, observability, structured outputs, Arabic NLP, and rules-first intelligence.
-- [Official-Source Crawler Research](research/deep_research_official_source_crawler_2026-05-22.md): CBE/FRA official-source crawler and provenance plan for the L6 evidence corpus.
-- [RAG and Crawler Implementation Plan](research/rag-model-intelligence-implementation-plan-2026-05-22.md): ordered implementation slices merging RAG/model intelligence with official-source crawler evidence gates.
-- [Spec Deep Research Report](research/l6-rules-first-evaluator-research.md): 2026-05-19 research input used to seed router, supersession, chunking, data-model, and evaluation planning.
-- [Project Logic Rethink](PROJECT-LOGIC-RETHINK-2026-05-19.md): current source-governed planning reset and implementation gap analysis.
+- [Egypt Market POC Spec](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/spec-egypt-market-poc.md): the canonical product contract (CAP-1..15), with companions for architecture, fact model, archetypes, rule cards and the [release ladder](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/release-ladder.md).
+- [Roadmap And Planning Index](../next-level-plans/README.md): L0–L5 history, the V1.6–V2.0 ladder mapped to epics, and current epic status.
+- [Deferred Work](../../../_bmad-output/initiative-egypt-market-knowledge/deferred-work.md): open known limits and items awaiting decisions.
+
+## Technical Reference
+
+These remain accurate for retrieval, ingestion, API surfaces and infrastructure. Their descriptions of how a **verdict** is produced predate the rule-card gate; where they differ, the Runtime Safety Model wins.
+
+- [Project Documentation](project-documentation.md): full technical documentation.
+- [Project Clarifications And Developer Walkthrough](project-clarifications-and-developer-walkthrough.md): code-path walkthrough with diagrams.
+- [Architecture](chatbot-architecture.md): component-level architecture of the answer path.
+- [Pipeline Architecture (V2)](pipeline-architecture-v2.md): routing, resolver and quality-gate diagrams.
+- [AI Project Brief](ai-project-brief.md): compact handoff for AI agents.
+- [Maintained Requirements](requirements.md), [Design](design.md), [Tasks](tasks.md): source-governed requirements and design from May–June 2026.
+- [Version History](version-history.md) and [CHANGELOG](../../../CHANGELOG.md).
+
+## Egyptian Market Workstream
+
+- [L6 Egypt Institution Scrape Workstream](l6-egypt-institution-scrape/README.md): registries, bank and FRA scrapes, outputs.
+- [Instalment Market Expansion](l6-egypt-institution-scrape/installment-market-expansion.md): the instalment market map (checked 2026-09-27).
+- [Progressive Buyer-Journey Crawl Plan](l6-egypt-institution-scrape/progressive-buyer-journey-crawl-plan.md) and [Dual-Query POC Answer Gates](l6-egypt-institution-scrape/dual-query-poc-answer-gates.md): adopted spec companions.
+- [L6 Market Knowledge Strategy](../next-level-plans/L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md): decision rationale behind the spec (rationale only; the spec is canonical).
 
 ## Operations
 
 - [Deployment](ops/deployment.md): local and deployment operations.
 - [Hugging Face Spaces](ops/huggingface-spaces.md): Docker Space deployment and verification.
-- [Release Checklist](ops/release-checklist.md): release go/no-go checklist.
-- [Scripts Guide](scripts-guide.md): scripts for ingestion, verification, evaluation, and deployment.
+- [Release Checklist](ops/release-checklist.md): go/no-go checklist.
+- [Production Readiness](l5-production-readiness.md): runtime modes and release gates (V1.5 era; add the decision-store checks from the Runtime Safety Model).
+- [Scripts Guide](scripts-guide.md): ingestion, verification, evaluation and deployment scripts.
 
-## Historical Planning
+## Research
 
-- [Next-Level Planning Index](../next-level-plans/README.md): historical L1-L4 plans and the L5 readiness plan.
-- [Maintained Requirements](requirements.md): source-governed product requirements.
-- [Maintained Design](design.md): current source-governed architecture plan.
-- [Maintained Tasks](tasks.md): implementation slices for source catalog, router seed verification, parent/child chunking, concept map, retrieval evaluation, feedback, L6 entry gates, and Gemini roadmap gap alignment.
-- [L6 Rules-First Evaluator Plan](../next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md): proposed post-L5 architecture for transaction schemas, source routing, executable rules, and non-fatwa verdicts.
-- [L6 Egypt Financial Institutions Evidence Corpus Plan](../next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md): public-source scraping, bounded discovery, contract evidence, gap marking, and scholar-review dataset plan.
-- [L0 Architecture](../../../_legacy/root-outline-docs/L0_ARCHITECTURE.md): original baseline architecture.
-- [Implementation Summary](../../../_legacy/root-outline-docs/IMPLEMENTATION_SUMMARY.md): earlier implementation summary.
+- [Research Evidence Index](research/README.md): research syntheses and raw evidence (May 2026).
+- [Hard-Case Gold Tests](research/hard-case-gold-tests-2026-05-25.md): HC-001..010, pending a scholar.
+
+## Record Only
+
+Kept for history; do not use them for current behaviour or figures.
+
+- Client documents superseded by the Client Guide: [plain-language report](client-plain-language-logic-legacy.md), [source-governed roadmap](client-source-governed-aaoifi-roadmap-legacy.md), [Egypt market strategy](client-egypt-market-ai-strategy-legacy.md), and the June `.docx` reports in `client-reports/` (`*-legacy.docx`).
+- May 2026 replanning: [Project Logic Rethink](PROJECT-LOGIC-RETHINK-2026-05-19.md), [Planning Update Summary](PLANNING_UPDATE_SUMMARY.md), [Agent Roundtable Summary](AGENT_ROUNDTABLE_SUMMARY.md), [L0 Review And L1–L4 Planning](L0-REVIEW-AND-L1-L4-PLANNING.md).
+- [AI Agent Project Handoff](AI_AGENT_PROJECT_HANDOFF.md): superseded by the AI Project Brief and Project Context.
+- [Implementation Plan](../implementation_plan.md): May 2026 plan.
+- [Legacy Gemini Architecture Research](research/legacy/gemini-architecture-research.md).
+- [L0 Architecture](../../../_legacy/root-outline-docs/L0_ARCHITECTURE.md) and [Implementation Summary](../../../_legacy/root-outline-docs/IMPLEMENTATION_SUMMARY.md).
 
 ## Most Common Tasks
 
-| Task | Best Doc |
+| Task | Best doc |
 | --- | --- |
-| Understand the whole app | [Project Documentation](project-documentation.md) |
-| Follow the code path with diagrams | [Project Clarifications And Developer Walkthrough](project-clarifications-and-developer-walkthrough.md) |
-| Brief a future AI agent | [AI Project Brief](ai-project-brief.md) |
-| Explain the system to a client | [Client Plain-Language Report](client-plain-language-logic.md) |
-| Explain the updated source-governed roadmap visually | [Client Source-Governed Roadmap](client-source-governed-aaoifi-roadmap.md) |
-| Give another AI agent the rules | [Project Context](../../../project-context.md) |
-| Run or deploy the app | [Deployment](ops/deployment.md) |
-| Verify production readiness | [Production Readiness](l5-production-readiness.md) |
-| Debug answer generation | [Architecture](chatbot-architecture.md) |
-| Inspect research evidence | [Research Evidence Index](research/README.md) |
-| Research RAG/model intelligence upgrades | [RAG and Model Intelligence OSS Research](research/rag-model-intelligence-open-source-research-2026-05-22.md) |
-| Plan official-source crawler and RAG upgrades | [RAG and Crawler Implementation Plan](research/rag-model-intelligence-implementation-plan-2026-05-22.md) |
-| Plan source-governed implementation slices | [Maintained Tasks](tasks.md) |
-| Prepare Egypt institution scraping | [L6 Egypt Institution Scrape Workstream](l6-egypt-institution-scrape/README.md) |
-| Explain the market-data and training strategy to the client | [Client Egypt Market AI Strategy](client-egypt-market-ai-strategy.md) |
-| Plan the next POC release | [L6 Market Knowledge Strategy](../next-level-plans/L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md) |
+| Explain Mushir to the client | [Client Guide](client-guide.md) |
+| Get scholar decisions on the 12 open cases | [Scholar Review Pack](../../../outputs/client-review-pack/index.html) |
+| Understand why Mushir deferred an answer | [Runtime Safety Model](runtime-safety-model.md) |
+| Know what V1.6 must deliver | [Spec](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/spec-egypt-market-poc.md) and [release ladder](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/release-ladder.md) |
+| See epic progress | [Roadmap And Planning Index](../next-level-plans/README.md) |
+| Brief an AI agent | [Project Context](../../../project-context.md) and [AI Project Brief](ai-project-brief.md) |
+| Debug retrieval or ingestion | [Project Documentation](project-documentation.md) and [Scripts Guide](scripts-guide.md) |
+| Deploy | [Hugging Face Spaces](ops/huggingface-spaces.md) |

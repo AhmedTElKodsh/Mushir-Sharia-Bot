@@ -1,5 +1,7 @@
 # L0 Review & L1-L4 Planning Summary
 
+> **Status on 2026-10-01: historical record** of the May 2026 planning. Current planning lives in the [Roadmap And Planning Index](../next-level-plans/README.md) and the [Runtime Safety Model](runtime-safety-model.md).
+
 **Date:** May 9, 2026  
 **Participants:** Winston (Architect), Amelia (Dev), John (PM), Mary (Analyst)
 

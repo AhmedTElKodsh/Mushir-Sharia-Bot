@@ -1,5 +1,7 @@
 # L6 Market Knowledge Strategy and POC Release Ladder
 
+> **Status on 2026-10-01: rationale only.** The canonical L6 contract is the [Egypt market POC spec](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/spec-egypt-market-poc.md) and its initiative. Since this was written: the first user is decided (retail buyer), rule cards can be approved inside V1.6, the confidence score is removed, and no scholar has been appointed yet.
+
 **Drafted:** 2026-09-29, after a BMAD party-mode strategy roundtable
 **Status:** proposed; open decisions listed at the end must be answered before V1.6 build starts
 **Builds on:**
@@ -7,7 +9,7 @@
 [L6 rules-first evaluator plan](L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md),
 [progressive buyer-journey crawl plan](../docs/l6-egypt-institution-scrape/progressive-buyer-journey-crawl-plan.md),
 [dual-query POC answer gates](../docs/l6-egypt-institution-scrape/dual-query-poc-answer-gates.md)
-**Client-facing version:** [client-egypt-market-ai-strategy.md](../docs/client-egypt-market-ai-strategy.md)
+**Client-facing version:** [client-guide.md](../docs/client-guide.md) (the earlier client strategy is kept as `client-egypt-market-ai-strategy-legacy.md`)
 
 ## Objective
 

@@ -1,5 +1,7 @@
 # Planning Update Summary
 
+> **Status on 2026-10-01: historical record** of the May 2026 planning. Current planning lives in the [Roadmap And Planning Index](../next-level-plans/README.md) and the [Runtime Safety Model](runtime-safety-model.md).
+
 **Date:** 2026-05-20
 **Status:** Maintained planning docs reformulated and extended with Egypt institution evidence-corpus planning
 **Trigger:** BMAD party-mode rethink of Mushir's app logic against the current implementation, official AAOIFI accounting standards page, `research/l6-rules-first-evaluator-research.md`, and the Egypt financial institutions refresh package.

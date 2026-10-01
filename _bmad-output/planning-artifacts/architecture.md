@@ -19,6 +19,8 @@ date: '2026-05-15'
 
 # Architecture Decision Document
 
+> **Status on 2026-10-01:** UX-track architecture from May 2026. For runtime decisions it is superseded by the [Runtime Safety Model](../../.planning/sharia-compliance-chatbot/docs/runtime-safety-model.md) and the [spec architecture](../initiative-egypt-market-knowledge/spec-egypt-market-poc/architecture.md). Its COMPLIANT / NON_COMPLIANT status model, `retrieval_score` / `llm_confidence` fields, confidence calibration and "ruling evaluator synthesizes rulings" no longer describe the product.
+
 _This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
 
 ## Project Context Analysis

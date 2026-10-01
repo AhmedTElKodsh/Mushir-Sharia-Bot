@@ -12,7 +12,7 @@ companions:
   - ../../../project-context.md
 sources:
   - ../../../.planning/sharia-compliance-chatbot/next-level-plans/L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md
-  - ../../../.planning/sharia-compliance-chatbot/docs/client-egypt-market-ai-strategy.md
+  - ../../../.planning/sharia-compliance-chatbot/docs/client-egypt-market-ai-strategy-legacy.md
 ---
 
 > **Canonical contract.** This SPEC and the files in `companions:` are the complete, preservation-validated contract for what to build, test, and validate. Source documents listed in frontmatter are for traceability — consult them only if you need narrative rationale or prose color this contract intentionally omits.

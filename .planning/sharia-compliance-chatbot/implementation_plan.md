@@ -1,4 +1,6 @@
 # Mushir Sharia-Bot — Implementation Plan
+
+> **Status on 2026-10-01: historical record (May 2026).** Its "locked decision" that a Sharia scholar reviews outputs continuously was never put in place: **no scholar has been engaged yet**, and nothing in Mushir is scholar-reviewed. Current state: [Runtime Safety Model](docs/runtime-safety-model.md) and [Client Guide](docs/client-guide.md).
 ## Post-Party-Mode Strategic Decisions Locked
 
 ---

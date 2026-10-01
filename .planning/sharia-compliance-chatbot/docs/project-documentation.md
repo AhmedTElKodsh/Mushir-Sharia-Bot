@@ -1,3 +1,5 @@
+
+> **Update 2026-10-01.** The verdict path described here predates the V1.6 rule-card gate. Mushir now gives a Sharia verdict only when a scholar-approved rule card covers the question; otherwise it defers and queues the question. Answer confidence scores were removed in favour of an evidence status (source dates and ages), and every answer is recorded before delivery. Test figures below are from June; the current suite is 1,234 passed, 12 waiting for a scholar. See [Runtime Safety Model](runtime-safety-model.md) where the two differ.
 ﻿# Mushir Project Documentation
 
 Mushir is a FastAPI-based Sharia compliance chatbot for Islamic finance questions. It uses retrieval-augmented generation (RAG) over AAOIFI Financial Accounting Standards excerpts, then validates that generated answers are grounded in retrieved citations.

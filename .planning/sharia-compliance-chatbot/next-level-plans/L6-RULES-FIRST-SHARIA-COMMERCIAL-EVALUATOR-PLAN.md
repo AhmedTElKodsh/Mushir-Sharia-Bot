@@ -1,5 +1,7 @@
 # L6 Rules-First Sharia Commercial Evaluator Plan
 
+> **Status on 2026-10-01: rationale only.** The canonical L6 contract is the [Egypt market POC spec](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/spec-egypt-market-poc.md) and its initiative. Its verdict contract (including `confidence` and `likely_*` statuses) was replaced by rule-card evaluation with ANSWER / CLARIFICATION_NEEDED / INSUFFICIENT_DATA. Its FAS-is-accounting-only boundary still holds.
+
 **Status:** Future post-L5 direction
 **Originally created:** 2026-05-18
 **Reformulated:** 2026-05-19 after BMAD project-logic rethink

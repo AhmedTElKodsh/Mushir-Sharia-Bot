@@ -1,3 +1,5 @@
+
+> **Superseded on 2026-10-01** by the [AI Project Brief](ai-project-brief.md), [Project Context](../../../project-context.md) and the [Runtime Safety Model](runtime-safety-model.md). Kept for the record; its contracts include fields such as `confidence` that no longer exist.
 ﻿# Mushir AI Agent Project Handoff
 
 Last updated: 2026-05-23  
@@ -67,7 +69,7 @@ High-value current docs:
 - `README.md`: public setup and status overview.
 - `.planning/sharia-compliance-chatbot/docs/ai-project-brief.md`: detailed AI-agent brief before this consolidation.
 - `.planning/sharia-compliance-chatbot/docs/project-documentation.md`: fuller technical docs.
-- `.planning/sharia-compliance-chatbot/docs/client-plain-language-logic.md`: stakeholder explanation.
+- `.planning/sharia-compliance-chatbot/docs/client-guide.md`: stakeholder explanation (the older client reports are kept as `*-legacy.md`).
 - `.planning/sharia-compliance-chatbot/docs/chatbot-architecture.md`: answer-generation architecture.
 - `.planning/sharia-compliance-chatbot/docs/l5-production-readiness.md`: release/readiness runbook.
 - `.planning/sharia-compliance-chatbot/next-level-plans/README.md`: historical and current roadmap index.

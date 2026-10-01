@@ -1,5 +1,7 @@
 # L5 Quality, Operations, and Release Readiness Plan
 
+> **Status on 2026-10-01: closed at V1.5.** Release gates for later versions are defined in the [release ladder](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/release-ladder.md).
+
 **Status:** Active  
 **Created:** 2026-05-11  
 **Purpose:** Prove the implemented Mushir runtime is trustworthy enough for demo or release.

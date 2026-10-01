@@ -2,7 +2,7 @@
 title: 'Restore evidence-safe answer surfaces after review fixes'
 type: bugfix
 created: '2026-09-30'
-status: in-progress
+status: done
 route: oneshot
 route_source: auto
 baseline_commit: 0e130f92858cf1f24aa92a323bac2701842301c3

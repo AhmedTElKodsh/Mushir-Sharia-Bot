@@ -1,5 +1,7 @@
 # L0 Implementation Review
 
+> **Status on 2026-10-01: historical record.** See the [Roadmap And Planning Index](README.md).
+
 **Date:** 2026-05-09
 
 **Purpose:** Reconcile the planning files with the current repository state before starting L1-L4 work.

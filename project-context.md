@@ -2,8 +2,19 @@
 
 This file is the working context for AI agents and developers making changes in this repository. Keep changes grounded in the current codebase, not in older roadmap language.
 
-Last refreshed: 2026-06-01
-Current app version: V1.5 (`1.5.0`)
+Last refreshed: 2026-10-01
+Current app version: V1.5 (`1.5.0`); V1.6 dual-lane prototype in build
+
+## V1.6 Runtime Rules (read first)
+
+These override older statements further down. Full detail: `.planning/sharia-compliance-chatbot/docs/runtime-safety-model.md`.
+
+- No Sharia verdict without a scholar-approved rule card (`src/governance/rule_cards.py`, `src/ontology/approved_card_evaluator.py`). Judgment questions never reach the cache or the LLM writer; without a card they defer and enqueue scholar review.
+- The contract mechanism is accepted only from a documented source; generic words such as "instalment" or "تقسيط" never set it (`src/chatbot/mechanism_terms.py`).
+- Personal deals go through the described-operation lane (`src/chatbot/described_operation*.py`): explicit user assertions only, at most 2 clarification questions, then `INSUFFICIENT_DATA` naming the documents needed.
+- No numeric confidence on any answer surface; answers carry `metadata.evidence` (sources, capture date, age). The API `Citation` exposes `captured_at`, not `confidence_score`.
+- Every answer is committed to the decision-review store before delivery (`src/storage/decision_review_store.py`); a failed write restores the session and raises.
+- **No scholar has been engaged.** Never describe any label, gold-set answer or rule card as scholar-approved. The 12 failing tests (GC-003..019, TC-F1, TC-G1) await scholar decisions; do not edit their expected answers.
 
 ## Product Purpose
 
@@ -187,11 +198,13 @@ Critical Sharia goldset and evaluation gate:
 .\.venv\Scripts\python.exe -m pytest tests\evaluation -q --timeout=90
 ```
 
-Current broad verification snapshot from 2026-05-31:
+Current broad verification snapshot from 2026-10-01:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q --timeout=90
-# 619 passed, 48 skipped, 2 warnings
+# 1234 passed, 12 failed (expected: awaiting scholar decisions), 47 skipped
+npx playwright test
+# 30 passed
 ```
 
 Fixture-backed retrieval-only baseline:
@@ -233,8 +246,8 @@ Scholar-review persistence:
 - `.planning/sharia-compliance-chatbot/docs/index.md`: planning documentation index and best starting point while the public `docs/` tree is being cleaned.
 - `.planning/sharia-compliance-chatbot/docs/project-documentation.md`: current full technical documentation.
 - `.planning/sharia-compliance-chatbot/docs/ai-project-brief.md`: detailed AI-agent handoff with runtime contracts, data authority ladder, L5/L6 status, commands, and safe edit rules.
-- `.planning/sharia-compliance-chatbot/docs/client-plain-language-logic.md`: client-facing report covering planning, implementation, current limits, L5 readiness, and L6 future direction.
-- `.planning/sharia-compliance-chatbot/docs/client-source-governed-aaoifi-roadmap.md`: visual client-facing roadmap for the updated source-governed AAOIFI assistant logic.
+- `.planning/sharia-compliance-chatbot/docs/client-guide.md`: the single client-facing guide (status, behaviour, market work, scholar role, release plan, decisions). Older client reports are kept as `*-legacy.md`.
+- `outputs/client-review-pack/index.html`: client decision document for the 12 cases waiting for a scholar.
 - `.planning/sharia-compliance-chatbot/docs/chatbot-architecture.md`: detailed answer-generation architecture.
 - `.planning/sharia-compliance-chatbot/docs/l5-production-readiness.md`: release/readiness runbook.
 - `.planning/sharia-compliance-chatbot/docs/research/l6-rules-first-evaluator-research.md`: research input for the L6 rules-first evaluator direction.

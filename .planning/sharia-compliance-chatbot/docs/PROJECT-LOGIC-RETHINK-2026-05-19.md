@@ -1,3 +1,5 @@
+
+> **Status on 2026-10-01: historical record** of the May 2026 planning. Current planning lives in the [Roadmap And Planning Index](../next-level-plans/README.md) and the [Runtime Safety Model](runtime-safety-model.md).
 ﻿# Project Logic Rethink: Source-Governed AAOIFI Assistant
 
 **Date:** 2026-05-19

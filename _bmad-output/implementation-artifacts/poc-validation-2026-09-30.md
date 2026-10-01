@@ -48,3 +48,8 @@ See `spec-evidence-status-surfaces.md`. Latest full run: **993 passed, 11 failed
 ## Generic mechanism continuation
 
 See `spec-mechanism-unknown-gate.md`. Final full suite: **1090 passed, 12 failed, 47 skipped**, 110.03 seconds (`data/runtime/artifacts/poc-mechanism-final-tests.xml`). Reviewer independently verified **96 generic-mechanism checks**. The remaining failures comprise ten existing ruling-correctness assertions and two PENDING gold-label conflicts, TC-F1 and TC-G1, which assume mechanisms from generic descriptions. Original gold labels are unchanged; `mechanism-label-review.json` records them with the source dataset hash for adjudication. Generic language, incidental insurance/manufacturing/interest, negation, session carry-over and an Arabic substring no longer supply a mechanism through the tested paths. User-reported mechanism labels cannot authorize approved-card selection.
+
+
+## Status on 2026-10-01
+
+After the review-fix passes (commits `eabea95`..`69eb5a2`, `79e9aa6`): full suite **1,234 passed, 12 failed, 47 skipped**; Playwright **30/30**. The 12 failures are the ten gold ruling cases and TC-F1/TC-G1, all awaiting scholar decisions; no gold labels were changed. The decision-review store (committed before delivery, 365-day retention) and the removal of confidence scores are described in `.planning/sharia-compliance-chatbot/docs/runtime-safety-model.md`. No scholar has been appointed.

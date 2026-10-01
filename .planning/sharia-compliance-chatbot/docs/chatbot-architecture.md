@@ -1,5 +1,7 @@
 # Chatbot Architecture
 
+> **Update 2026-10-01.** The verdict path described here predates the V1.6 rule-card gate. Mushir now gives a Sharia verdict only when a scholar-approved rule card covers the question; otherwise it defers and queues the question. Answer confidence scores were removed in favour of an evidence status (source dates and ages), and every answer is recorded before delivery. Test figures below are from June; the current suite is 1,234 passed, 12 waiting for a scholar. See [Runtime Safety Model](runtime-safety-model.md) where the two differ.
+
 This document describes the architecture of the Mushir Sharia Compliance Chatbot's answer generation system.
 
 Last refreshed: 2026-06-01

@@ -1,5 +1,7 @@
 # Mushir Client Strategy: Egyptian Instalment Market Knowledge and Release Plan
 
+> **Legacy document, kept for the record.** Superseded on 2026-10-01 by the [Mushir Client Guide](client-guide.md), which merges this document with the other client documents and reflects the current V1.6 behaviour (rule cards gate every verdict, no confidence score, no scholar appointed yet). Figures and status below are as of the date shown and are out of date.
+
 Last refreshed: 2026-09-29
 Current app version: V1.5 (`1.5.0`)
 Technical plan: [L6 Market Knowledge Strategy and POC Release Ladder](../next-level-plans/L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md)

@@ -1,5 +1,7 @@
 # Mushir Research Evidence Index
 
+> **Status on 2026-10-01:** these are May 2026 research syntheses, kept as reference. L5 is closed (V1.5 shipped) and current work is the V1.6 initiative; see the [Roadmap And Planning Index](../../next-level-plans/README.md).
+
 This folder holds research inputs that are allowed to influence Mushir planning. Research here is evidence and decision support; it is not production authority by itself.
 
 ## Canonical Syntheses

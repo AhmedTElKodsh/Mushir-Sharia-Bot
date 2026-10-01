@@ -1,5 +1,7 @@
 # Party Mode Session — RAG Chatbot Staging & Day-1 Plan
 
+> **Status on 2026-10-01: historical record** of the 7 May 2026 staging session.
+
 **Date:** 2026-05-07
 **Project:** Mushir-Sharia-Bot
 **Topic:** Stage RAG chatbot build after Gem prototype success. Simple → complex. Day-1 visible result. Review of `.kiro/specs/sharia-compliance-chatbot/` (requirements.md, design.md, tasks.md).

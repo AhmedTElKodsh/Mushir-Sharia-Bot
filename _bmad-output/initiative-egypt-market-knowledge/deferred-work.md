@@ -1,3 +1,22 @@
+# Deferred Work (initiative ledger)
+
+## Open Now (summary, 2026-10-01)
+
+This ledger is canonical; entries below are append-only history. Still open:
+
+| # | Item | Waits for |
+| --- | --- | --- |
+| 1 | 12 stale test expectations (GC-003, 005, 007, 008, 009, 010, 012, 016, 017, 019; TC-F1, TC-G1) | A scholar decision per case ([review pack](../../outputs/client-review-pack/index.html)) |
+| 2 | Semantic mechanism evidence and claim-scoped verdict eligibility (claim-support gate, ticket T6) | Pilot dossiers and runtime adoption |
+| 3 | Private document locators for schedule intake | V1.7 |
+| 4 | DNS names resolving to private addresses pass the public-URL check | Fetch-time check in acquisition code |
+| 5 | Negation masks a contract name only within three preceding words | Clause-aware parsing |
+| 6 | SQLite writes and LLM calls are synchronous inside async routes | Performance work |
+| 7 | `AAOIFICitation.confidence_score` kept internally | Scholar-review code cleanup |
+
+Closed since the earlier entries: Playwright UI specs ran 30/30 on 2026-10-01 (Chromium installed); the broken `.venv` noted in the former implementation-artifacts ledger was rebuilt.
+
+## History
 
 - source_plan: none
   summary: Fix the remaining bmad-review findings (robustness, validation, Arabic word boundaries, session-state hardening, CLI, UI, API contract, retention and missing verification-gap tests).
@@ -26,3 +45,11 @@
 - source_plan: none
   summary: Closed in the code-fix round (2026-10-01): negation scope, fetch-time URL safety, REST threadpool.
   evidence: mechanism_terms now scopes negation by clause (permission words flip it); src/acquisition/url_safety.py refuses hosts resolving to non-public addresses and re-validates every redirect hop, used by the crawler and scraper; REST /query runs the service in the threadpool. Left on purpose - AAOIFICitation.confidence_score (four test files construct it to prove legacy input never leaks). Provenance URL validation in models still cannot resolve DNS by design; fetch-time is the enforcement point. Still open - the 12 stale test expectations (need scholar/product owner).
+
+- source_plan: `_bmad-output/implementation-artifacts/deferred-work.md` (moved here 2026-10-01)
+  summary: Enforce semantic mechanism evidence and claim-scoped verdict eligibility during runtime adoption.
+  evidence: Structural source classes cannot distinguish marketing self-labels from mechanism clauses; blocked conclusion gates may coexist with independently supported facts under the adopted dual-query contract. Runtime must enforce that separation explicitly.
+
+- source_plan: `_bmad-output/implementation-artifacts/deferred-work.md` (moved here 2026-10-01)
+  summary: Add private document locators when V1.7 schedule intake is implemented.
+  evidence: CaptureManifest requires public HTTP(S) provenance; local uploads need a distinct immutable locator and the planned consent/redaction controls. Private agreement intake is excluded from V1.6.

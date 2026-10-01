@@ -1,5 +1,7 @@
 # BMAD Roundtable Summary: Project Logic Rethink
 
+> **Status on 2026-10-01: historical record** of the May 2026 planning. Current planning lives in the [Roadmap And Planning Index](../next-level-plans/README.md) and the [Runtime Safety Model](runtime-safety-model.md).
+
 **Date:** 2026-05-20
 **Mode:** `bmad-party-mode` planning review
 **Participants:** Winston, Amelia, Mary, Murat

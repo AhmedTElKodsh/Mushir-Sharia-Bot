@@ -1,5 +1,7 @@
 # L6 Egypt Financial Institutions Evidence Corpus Plan
 
+> **Status on 2026-10-01: rationale only.** The canonical L6 contract is the [Egypt market POC spec](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/spec-egypt-market-poc.md) and its initiative. The whole-sector census is narrowed to consumer-finance financiers (pilot-dossiers, financier-coverage epics). Its crawl ethics and bounded-discovery rules remain the reference.
+
 **Status:** Planning and implementation-prep workstream
 **Created:** 2026-05-20
 **Scope:** Public-source discovery, scraping, extraction, and scholar-review dataset preparation for Egyptian financial institutions. This is not a live chatbot feature until the evidence, review, and answer-admissibility gates pass.

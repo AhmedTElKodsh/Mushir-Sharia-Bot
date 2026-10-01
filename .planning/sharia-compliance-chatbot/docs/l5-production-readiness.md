@@ -1,5 +1,7 @@
 # L5 Production Readiness Runbook
 
+> **Update 2026-10-01.** The verdict path described here predates the V1.6 rule-card gate. Mushir now gives a Sharia verdict only when a scholar-approved rule card covers the question; otherwise it defers and queues the question. Answer confidence scores were removed in favour of an evidence status (source dates and ages), and every answer is recorded before delivery. Test figures below are from June; the current suite is 1,234 passed, 12 waiting for a scholar. See [Runtime Safety Model](runtime-safety-model.md) where the two differ.
+
 This runbook defines the demo/release checks for the implemented Mushir runtime.
 
 Last refreshed: 2026-06-01. Current app version: V1.5 (`1.5.0`). Current local verification baseline: full pytest suite `619 passed, 48 skipped, 2 warnings`; critical goldset `19 passed, 19 skipped`; evaluation suite `96 passed, 44 skipped`. V1.5 targeted verification covered the versioning/static/API and L6 institution evidence slices.

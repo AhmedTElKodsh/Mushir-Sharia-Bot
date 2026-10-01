@@ -11,7 +11,7 @@ The detailed planning source is:
 
 The 2026-09-29 market strategy and POC release ladder that builds on this
 workstream is `.planning/sharia-compliance-chatbot/next-level-plans/L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md`
-(client version: `../client-egypt-market-ai-strategy.md`). Instalment-market
+(client version: `../client-guide.md`). Instalment-market
 methodology, buyer-journey enrichment and POC answer gates are in
 [installment-market-expansion.md](installment-market-expansion.md),
 [progressive-buyer-journey-crawl-plan.md](progressive-buyer-journey-crawl-plan.md)

@@ -3,7 +3,7 @@ gsd_state_version: 1.1
 milestone: source-governed-mushir
 milestone_name: Source-Governed Mushir Planning
 status: active
-last_updated: "2026-05-24"
+last_updated: "2026-10-01"
 canonical_root: ".planning/sharia-compliance-chatbot"
 ---
 
@@ -25,13 +25,15 @@ evidence, and L6 scrape artifacts do not mix with unrelated project planning.
 | Purpose | File |
 | --- | --- |
 | Current planning and documentation index | `.planning/sharia-compliance-chatbot/docs/index.md` |
-| Next-level roadmap | `.planning/sharia-compliance-chatbot/next-level-plans/README.md` |
-| Current requirements | `.planning/sharia-compliance-chatbot/docs/requirements.md` |
-| Current design | `.planning/sharia-compliance-chatbot/docs/design.md` |
-| Current task backlog | `.planning/sharia-compliance-chatbot/docs/tasks.md` |
-| L5 readiness plan | `.planning/sharia-compliance-chatbot/next-level-plans/L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md` |
-| L6 rules-first evaluator plan | `.planning/sharia-compliance-chatbot/next-level-plans/L6-RULES-FIRST-SHARIA-COMMERCIAL-EVALUATOR-PLAN.md` |
-| L6 Egypt institution evidence-corpus plan | `.planning/sharia-compliance-chatbot/next-level-plans/L6-EGYPT-FINANCIAL-INSTITUTIONS-EVIDENCE-CORPUS-PLAN.md` |
+| Roadmap (L0–V2.0, epic status) | `.planning/sharia-compliance-chatbot/next-level-plans/README.md` |
+| Active work: V1.6 initiative | `_bmad-output/initiative-egypt-market-knowledge/initiative-egypt-market-knowledge.md` |
+| Canonical L6 contract | `_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/spec-egypt-market-poc.md` |
+| Current runtime behaviour | `.planning/sharia-compliance-chatbot/docs/runtime-safety-model.md` |
+| Client guide | `.planning/sharia-compliance-chatbot/docs/client-guide.md` |
+| Open known limits | `_bmad-output/initiative-egypt-market-knowledge/deferred-work.md` |
+| Requirements / design / tasks (May–June 2026) | `.planning/sharia-compliance-chatbot/docs/requirements.md`, `design.md`, `tasks.md` |
+| L5 readiness plan (closed at V1.5) | `.planning/sharia-compliance-chatbot/next-level-plans/L5-QUALITY-OPS-RELEASE-READINESS-PLAN.md` |
+| L6 plans (rationale only) | `.planning/sharia-compliance-chatbot/next-level-plans/L6-*.md` |
 | Historical UI phase summaries | `.planning/sharia-compliance-chatbot/phases/` |
 
 ## Folder Roles

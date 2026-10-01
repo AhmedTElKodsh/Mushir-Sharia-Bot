@@ -1,5 +1,7 @@
 # Mushir Client Report: Planning, Implementation, And How The Chatbot Works
 
+> **Legacy document, kept for the record.** Superseded on 2026-10-01 by the [Mushir Client Guide](client-guide.md), which merges this document with the other client documents and reflects the current V1.6 behaviour (rule cards gate every verdict, no confidence score, no scholar appointed yet). Figures and status below are as of the date shown and are out of date.
+
 Last refreshed: 2026-06-01
 Current app version: V1.5 (`1.5.0`)
 
