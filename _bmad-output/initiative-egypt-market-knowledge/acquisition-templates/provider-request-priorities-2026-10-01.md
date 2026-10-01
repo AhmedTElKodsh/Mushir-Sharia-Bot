@@ -106,18 +106,23 @@ Use these alongside the common request package. Replace scope placeholders befor
 
 **Close when:** Exact passages support the selected relationship and contractual obligations. Keep insufficient evidence where the missing relationship or applicability remains unresolved.
 
-**Dispatch now (user decision 2026-10-01)** `[HUMAN-REVIEW:NEEDED]` operator: confirm the scope, verify the recipient, approve the wording and send. Nothing has been sent.
+**Dispatch now (user decision 2026-10-01). Scope confirmed by the user on 2026-10-01: Halan Shop, in-app, appliances/electronics on a 6/12/36-month plan, October 2026.** `[HUMAN-REVIEW:NEEDED]` operator: verify the recipient, approve the wording and send. Nothing has been sent.
 
-- *User-supplied context (2026-10-01, not yet evidenced):* the user notes that the well-known company associated with the name Halan is a financial company, comparable to Fawry and Aman. Inside its service it offers goods for direct purchase in cash or in instalments, sourced mainly through 2B and other providers. Recorded as the user's statement, not a captured observation. If it holds, the selected arrangement may be Halan's own in-app goods offer, where seller, goods supplier (for example 2B) and financier can be different parties. The request must then ask which entity sells and which finances. `[HUMAN-REVIEW:NEEDED]` operator: choose between this in-app offer (with 2B as a candidate supplier) and the Smart Furniture candidate below, and confirm that "2B" means the merchant of that name.
-- *Candidate scope:* the Smart Furniture merchant claim from the [pilot-five proposal](../pilot-five-proposal.md), which has no verified page. The 2026-09-27 stored Smart Furniture passages quote “(ValU)”, not Halan, so this candidate is unconfirmed. If the operator selects a different offer, replace it.
+- *Source identified by the user:* https://halan.com/.
+- *Manual public review of halan.com, 2026-10-01* (browser reading only: no hashed capture or access decision; `single-review`, `[HUMAN-REVIEW:NEEDED]` second analyst):
+  - `/shop/` (EN) describes **Halan Shop**, "an exclusive on-app experience" selling electronics, home appliances and mobile phones, plus **Halan Gomla** wholesale groceries. Payment is cash, card, or "flexible payment plans … over 6, 12, or 36 months", with a limit "of up to 500,000 L.E.".
+  - `/ar/shop/` redirects to `/ar/shop-2/` and names حالا شوب and حالا جملة, with "قدم على رصيد تقسيط وقسّط براحتك حتى 36 شهر".
+  - The home page also offers the Halan Card (instalments "over 36 months and more"), personal loans, and gold "in convenient installments over 12 months".
+  - None of `/`, `/shop/`, `/ar/shop-2/`, `/about/` or `/halan-card/` names a legal entity or a goods supplier.
+- *Open fact:* which entity sells Halan Shop goods to the customer, which entity finances the plan, and whether any third-party supplier is a party to the customer's agreement. `[HUMAN-REVIEW:BENEFICIAL]` scholar: are Halan's gold instalments, and a shop whose seller may also be its lender, in scope for the first review?
+- *Fallback scope (superseded):* the Smart Furniture merchant claim from the [pilot-five proposal](../pilot-five-proposal.md). It has no verified page, and the 2026-09-27 stored passages quote “(ValU)”, not Halan.
 - *Recipient lead:* `info@halan.com`, from the FRA consumer-finance detail page (#23) captured 2026-10-01. This is a discovery lead, not a verified official channel or document-owner role.
 - *Entities to keep separate:* Halan for consumer finance co. / حالا للتمويل الاستهلاكي (FRA تمويل استهلاكي #23), and حالا لخدمات التمويل غير المصرفيه (FRA تخصيم #50, factoring).
 
-> **Subject:** Research request: financier for [selected merchant offer] instalments
+> **Subject:** Research request: seller and financier for Halan Shop instalment purchases
 >
-> We are conducting a research-stage study of Egyptian consumer-financing arrangements. For instalment purchases offered at [selected merchant] through [channel] during [period], please identify the legal entity that finances the customer, with its regulator activity and licence reference. Please also provide a dated merchant or provider document naming that role. Please identify the applicable standard blank customer agreement and its schedules, and the team that owns those documents. Please state whether any factoring arrangement with the merchant is separate from the customer's finance agreement.
->
-> We do not need customer identities, credit files, credentials or internal underwriting records. Please confirm the permitted internal research storage, access by named analyst and scholar reviewers, and the quotation conditions. Unanswered points will be recorded as unknown.
+> We are conducting a research-stage study of Egyptian consumer-financing arrangements. For appliance and electronics purchases in Halan Shop, in the Halan app, on a 6, 12 or 36-month plan during October 2026, please identify which legal entity sells the goods to the customer and which legal entity finances the plan, each with its regulator activity and licence reference where applicable. Please also state whether any third-party supplier is a party to the customer's agreement. Please provide a dated document naming these roles. Please identify the applicable standard blank customer agreement and its schedules, and the team that owns those documents. Please state whether any factoring arrangement is separate from the customer's finance agreement.
+>> We do not need customer identities, credit files, credentials or internal underwriting records. Please confirm the permitted internal research storage, access by named analyst and scholar reviewers, and the quotation conditions. Unanswered points will be recorded as unknown.
 
 **Other review marks:** `[HUMAN-REVIEW:BENEFICIAL]` scholar: is the bot's refusal for Halan shown at the right point while evidence is insufficient?
 

@@ -108,3 +108,19 @@ Session: party-mode review · Timestamp: 2026-10-01T21:31:06+03:00
 - Result: Blocks 1–5 accepted; Block 6 next. The user's Halan note is recorded in the Halan brief and the narrative's Track 2 row as a statement, not a captured observation: Halan is a financial company comparable to Fawry and Aman, and inside its service sells goods directly for cash or instalments, sourced mainly through 2B and other providers. HALAN-01's scope may therefore be Halan's own in-app offer, with seller, supplier and financier as possibly separate parties. Choosing between that scope and Smart Furniture is [HUMAN-REVIEW:NEEDED] (operator). Nothing was sent.
 - Commit scope: this walkthrough's documents only. Changes made in parallel by other work (the .gitignore rule-card entries, rule-card drafts, code and tests, provider-request-letters-2026-10-01.md and the gap board's link to it, the party memlog) are left unstaged.
 - Open: the parallel letters file still scopes Halan to Smart Furniture and should be reconciled with the user's context. Route vocabulary drift is unresolved. Block 6 is unvisited.
+
+## 12 — Halan public site reviewed manually; HALAN-01 scope proposed
+
+Session: party-mode review · Timestamp: 2026-10-01T21:39:24+03:00
+
+- Action: User identified Halan as https://halan.com/. Read /, /shop/, /ar/shop/ (which redirects to /ar/shop-2/), /about/ and /halan-card/ in the browser. This was manual public review only: no hashed capture and no access decision.
+- Result: Halan Shop (in-app electronics, appliances and mobiles) and Halan Gomla (wholesale groceries) are sold for cash or card, or on 6/12/36-month plans with a limit up to 500,000 EGP. No page read names a legal entity, a supplier or 2B. The proposed HALAN-01 scope is now Halan Shop, with Smart Furniture as the fallback. The letter adds the seller/financier/supplier question. Observations are single-review. Gold instalments are flagged [HUMAN-REVIEW:BENEFICIAL] for the scholar.
+- Open: operator confirms the scope and sends; the parallel letters file still uses Smart Furniture; commit not yet authorised for this change.
+
+## 13 — HALAN-01 scope confirmed; 2B statement withdrawn
+
+Session: party-mode review · Timestamp: 2026-10-01T21:41:51+03:00
+
+- Action: User confirmed the Halan Shop scope, asked for the 2B statement to be removed, and authorised a commit and push before opening Block 6.
+- Result: The Halan brief now fixes the scope (Halan Shop, in-app, appliances/electronics on a 6/12/36-month plan, October 2026). The letter is filled in for that scope, Smart Furniture is marked superseded, and the user's 2B/supplier statement is removed from the brief and the narrative. Entries 11–12 are left unchanged, as this log is append-only; this entry supersedes their 2B content. The recipient is still unverified and nothing has been sent.
+- Open: Block 6. The parallel letters file still uses Smart Furniture.
