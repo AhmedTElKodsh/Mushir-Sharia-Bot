@@ -2,6 +2,8 @@
 
 Proposed by Mary (analyst), 2026-10-01. Resolves open question O3 once the user confirms. Sources: FRA register export `data/runtime/artifacts/l6_scrape/fra_registry/2026-09-23/all/fra_all_companies.csv` (328 rows) and crawl summary `installment_market/2026-09-27/summary/20260927T024008Z-faabcb` (86 entities, 85 payment relationships, 52 with verified page evidence).
 
+> **Update 2026-10-01:** licence numbers in the table below are ambiguous on their own; FRA numbers repeat across activity registers. See [pilot-entity-resolution.md](pilot-entity-resolution.md) for (activity, licence) keys, literal EN/AR names from FRA and each financier's site, and the draft access decisions. User confirmed the five with Halan as control; scholar meeting about 2026-10-15.
+
 ## Selection rule
 
 A pilot financier must (1) appear in the FRA register under a matching legal name, (2) have verified page evidence that merchants or the financier itself offer instalments through it, and (3) be crawlable without login, CAPTCHA or a permission we don't hold (spec Constraints).

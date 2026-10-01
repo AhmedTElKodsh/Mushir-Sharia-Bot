@@ -24,15 +24,80 @@ ENTITY_FIELDS = (
 )
 RELATION_FIELDS = (
     "stage", "category", "seller", "sales_channel", "listed_entity", "listed_role",
-    "financing_entity", "payment_model", "ordinary_payment_context", "commerce_mode", "claim_scope", "claim",
+    "financing_entity", "financing_alias_matched", "seeded_not_established",
+    "payment_model", "ordinary_payment_context", "provider_claim", "commerce_mode", "claim_scope", "claim",
     "status", "availability_status", "source_url", "source_final_url", "captured_at",
     "evidence_snippet", "raw_sha256", "raw_path",
 )
 ACCESS_LIMITED = {"robots_disallowed", "robots_unavailable", "blocked_by_security", "fetch_error", "http_error", "page_error"}
+# Extra spellings per financier, keyed by _key(name). Each is a literally observed string, never a
+# translation or transliteration made here. Sources: FRA consumer-finance register company_name_ar
+# (data/runtime/artifacts/l6_scrape/fra_registry/2026-09-23/consumer-finance/), and the B.TECH capture
+# (installment_market/2026-09-27/product_market/.../raw/001-74848286393bcfab.html, "تقسيط مايلو من بي تك").
+# Candidates CSV rows may add more through an optional "aliases" column ("|"-separated).
+FINANCIER_ALIASES: dict[str, tuple[str, ...]] = {
+    # FRA: "... فاليو للتمويل الاستهلاكي ..."; valugroup.com/terms-and-conditions and /ar (captured
+    # 2026-10-01, entity_resolution/2026-10-01/manifest.jsonl) also spell the brand "ڤاليو" (veh, not feh).
+    "valu": ("فاليو", "ڤاليو"),
+    "souhoola": ("سهوله",),  # FRA: "... للتمويل الاستهلاكي سهوله ..."
+    "contact": ("كونتكت",),  # FRA: "كونتكت للتمويل" (several Contact legal entities share the brand)
+    "aman": ("امان",),       # FRA: "امان للتمويل الاستهلاكي"
+    "halan": ("حالا",),      # FRA: "حالا للتمويل الاستهلاكي"
+    "mylo": ("مايلو",),      # B.TECH page: "تقسيط مايلو من بي تك"
+}
+# Aliases that are also everyday words (Contact; أمان "safety", سهولة "ease", حالا "right away"); a match on
+# one of these is counted in the manifest so a reviewer can check it.
+COMMON_WORD_ALIASES = frozenset({"contact", "امان", "سهوله", "حالا"})
+_AR_DIACRITICS = re.compile("[ً-ْٰـ]")  # harakat, superscript alef, tatweel
+SHARIA_SELF_LABEL = re.compile(
+    r"(?<!\w)(?:shari'?ah?(?:[- ]compliant)?|islamic(?: finance| banking| window)?|halal"
+    r"|(?:ال)?شريعه(?: الاسلاميه)?|(?:ال)?اسلامي(?:ه)?|حلال)(?!\w)"
+)
 
 
 def _key(name: str) -> str:
     return re.sub(r"[^\w]", "", name.casefold())
+
+
+def _normalize(text: str) -> str:
+    """Casefold Latin; fold Arabic orthographic variants only (alef forms, taa marbuta, alef maqsura, marks)."""
+    text = _AR_DIACRITICS.sub("", text.casefold())
+    return text.translate(str.maketrans({"أ": "ا", "إ": "ا", "آ": "ا", "ٱ": "ا", "ة": "ه", "ى": "ي"}))
+
+
+def _alias_in(alias: str, normalized_passage: str) -> bool:
+    """Whole-word match; spacing and punctuation between a name's tokens may vary (FAB Misr / FABMISR)."""
+    tokens = re.findall(r"[^\W_]+", _normalize(alias))
+    if not tokens:
+        return False
+    pattern = r"(?<![^\W_])" + r"[\W_]*".join(map(re.escape, tokens)) + r"(?![^\W_])"
+    return re.search(pattern, normalized_passage) is not None
+
+
+def _established_financiers(seeded: str, passage: str, aliases: dict[str, set[str]]) -> tuple[list[str], list[str], list[str]]:
+    """Split seeded financier names into those the passage names (with the alias seen) and the rest."""
+    normalized = _normalize(passage)
+    kept, matched, dropped = [], [], []
+    for name in (x.strip() for x in seeded.split("|")):
+        if not name:
+            continue
+        hit = next((a for a in (name, *sorted(aliases.get(_key(name), ()))) if _alias_in(a, normalized)), None)
+        if hit is None:
+            dropped.append(name)
+        else:
+            kept.append(name)
+            matched.append(f"{name}:{hit}")
+    return kept, matched, dropped
+
+
+def _count(joined: str) -> int:
+    return sum(1 for x in joined.split("|") if x.strip())
+
+
+def _provider_claim(passage: str) -> str:
+    """A provider's Sharia self-label is its own claim about itself, never a finding of compliance."""
+    labels = dict.fromkeys(m.group(0) for m in SHARIA_SELF_LABEL.finditer(_normalize(passage)))
+    return " | ".join(f"sharia_self_label:{label}" for label in labels)
 
 
 def _ordinary_payment_context(snippet: str) -> str:
@@ -100,6 +165,11 @@ def summarize(date_root: Path, candidates_csv: Path, output_dir: Path) -> dict:
         record["roles"].add(candidate["role"])
         record["categories"].add(candidate["category"])
         record["discovery_sources"].add(candidate["discovery_source_url"])
+    aliases: dict[str, set[str]] = defaultdict(set)
+    for key, spellings in FINANCIER_ALIASES.items():
+        aliases[key].update(spellings)
+    for candidate in candidates:
+        aliases[_key(candidate["entity"])].update(x.strip() for x in (candidate.get("aliases") or "").split("|") if x.strip())
 
     relationships: list[dict[str, str]] = []
     for claim in claims:
@@ -111,11 +181,13 @@ def summarize(date_root: Path, candidates_csv: Path, output_dir: Path) -> dict:
         if claim.get("discovery_source_url"):
             record["discovery_sources"].add(claim["discovery_source_url"])
         status = claim["status"]
+        # Only a verified passage can establish a role; a seeded financier it does not name is set aside.
+        passage = claim.get("evidence_snippet", "") if status == "verified_page_evidence" else ""
+        financiers, alias_hits, not_established = _established_financiers(claim.get("financing_entity", ""), passage, aliases)
         if status == "verified_page_evidence":
             record["page_evidence_claims"] += 1
             record["evidence_urls"].add(claim["source_url"])
-            if claim.get("financing_entity"):
-                record["named_financing_entities"].update(x.strip() for x in claim["financing_entity"].split("|") if x.strip())
+            record["named_financing_entities"].update(financiers)
         elif status in ACCESS_LIMITED:
             record["access_limited_claims"] += 1
         elif status == "claim_not_found":
@@ -131,9 +203,12 @@ def summarize(date_root: Path, candidates_csv: Path, output_dir: Path) -> dict:
         relationships.append({
             "stage": stage, "category": claim["category"], "seller": seller,
             "sales_channel": channel, "listed_entity": entity, "listed_role": role,
-            "financing_entity": claim.get("financing_entity", ""),
+            "financing_entity": "|".join(financiers),
+            "financing_alias_matched": " | ".join(alias_hits),
+            "seeded_not_established": "|".join(not_established),
             "payment_model": claim.get("payment_model", ""),
-            "ordinary_payment_context": _ordinary_payment_context(claim.get("evidence_snippet", "")) if status == "verified_page_evidence" else "",
+            "ordinary_payment_context": _ordinary_payment_context(passage),
+            "provider_claim": _provider_claim(passage),
             "commerce_mode": claim.get("commerce_mode", ""),
             "claim_scope": claim.get("claim_scope", ""), "claim": claim["claim"],
             "status": status, "availability_status": claim.get("availability_status", ""),
@@ -176,12 +251,19 @@ def summarize(date_root: Path, candidates_csv: Path, output_dir: Path) -> dict:
         "distinct_selling_entities_with_page_evidence": len({r["seller"] for r in relationships if r["seller"] and r["status"] == "verified_page_evidence"}),
         "candidate_only_entities": sum(r["best_evidence_status"] == "lead_only" for r in entity_rows),
         "status_counts": dict(sorted(Counter(r["status"] for r in relationships).items())),
+        "seeded_financing_links": sum(_count(r["financing_entity"]) + _count(r["seeded_not_established"]) for r in relationships),
+        "established_financing_links": sum(_count(r["financing_entity"]) for r in relationships),
+        "seeded_not_established_links": sum(_count(r["seeded_not_established"]) for r in relationships),
+        "established_by_common_word_alias": sum(
+            _normalize(hit.split(":", 1)[1]) in COMMON_WORD_ALIASES
+            for r in relationships for hit in r["financing_alias_matched"].split(" | ") if hit),
+        "rows_with_provider_claim": sum(bool(r["provider_claim"]) for r in relationships),
         "input_stage_csvs": {stage: str(path) for stage, path in selected.items()},
         "entity_csv": str(entity_csv),
         "entity_csv_sha256": "sha256:" + hashlib.sha256(entity_csv.read_bytes()).hexdigest(),
         "relationship_csv": str(relation_csv),
         "relationship_csv_sha256": "sha256:" + hashlib.sha256(relation_csv.read_bytes()).hexdigest(),
-        "scope_note": "A page match is evidence of words on that page, not current eligibility, seller-specific checkout, FRA status, or Sharia compliance. Lead-only entities require verification.",
+        "scope_note": "A page match is evidence of words on that page, not current eligibility, seller-specific checkout, FRA status, or Sharia compliance. A financing_entity is kept only when the verified passage names it; seeded names it does not name are in seeded_not_established. provider_claim records a page's own Sharia self-label, never a finding. Lead-only entities require verification.",
     }
     (output_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return manifest
