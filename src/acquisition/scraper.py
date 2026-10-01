@@ -5,6 +5,7 @@ from playwright.async_api import async_playwright, Browser, Page
 from bs4 import BeautifulSoup
 from src.config.logging_config import setup_logging
 from src.models.document import AAOIFIDocument
+from src.acquisition.url_safety import ensure_public_url
 
 logger = setup_logging()
 
@@ -43,6 +44,11 @@ class AAOIFIScraper:
 
     async def scrape_standard(self, standard_url: str) -> Optional[AAOIFIDocument]:
         """Download and parse individual standard."""
+        try:
+            ensure_public_url(standard_url)
+        except ValueError as exc:
+            logger.warning(f"Refusing to scrape {standard_url}: {exc}")
+            return None
         async with async_playwright() as p:
             browser: Browser = await p.chromium.launch(headless=True)
             page: Page = await browser.new_page()

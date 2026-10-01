@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from src.acquisition.url_safety import fetch_public
 from src.acquisition.egypt_financial.models import Base, InstitutionRegistry, DocumentArtifact, DiscoveryStatus, DocumentType
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/runtime/l6_evidence.db")
@@ -68,9 +69,7 @@ class CrawlerEngine:
         # In a real scenario, this would use Playwright to render JS
         try:
             headers = {'User-Agent': 'Mushir-Evidence-Bot/1.0'}
-            resp = requests.get(url, headers=headers, timeout=10)
-            resp.raise_for_status()
-            return resp.content
+            return fetch_public(url, get=requests.get, headers=headers, timeout=10)
         except Exception as e:
             print(f"Failed to fetch {url}: {e}")
             return b""

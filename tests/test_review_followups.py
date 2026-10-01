@@ -468,3 +468,117 @@ def test_startup_survives_a_failing_purge(tmp_path, monkeypatch):
 def test_blank_non_interactive_query_makes_no_service_call(monkeypatch):
     from tests.test_review_hardening import _run_cli
     assert _run_cli(monkeypatch, ["--query", "   "], []).calls == []
+
+
+# ---- code-fix round: negation scope, fetch-time URL safety, threadpool route -------------------------
+@pytest.mark.parametrize("text, kept", [
+    ("this is not an actual real murabaha, it is ijara", False),
+    ("What is not permitted in a murabaha?", True),
+    ("Isn't murabaha allowed?", True),
+    ("installment sale that is not an Islamic murabaha", False),
+    ("تقسيط ليس مرابحة", False),
+    ("لا يجوز في مرابحة", True),
+])
+def test_negation_scope_follows_the_clause_not_a_word_window(text, kept):
+    routed = mechanism_routing_text(text)  # The preprocessor normalises ta-marbuta, so Arabic appears as مرابحه.
+    assert ("murabaha" in routed or "مرابحه" in routed) is kept
+
+
+def _resolver(*addresses):
+    return lambda host, port: [(2, 1, 6, "", (address, port)) for address in addresses]
+
+
+@pytest.mark.parametrize("address", ["127.0.0.1", "10.0.0.5", "169.254.169.254", "::1", "192.168.1.9"])
+def test_hostnames_resolving_to_private_ranges_are_refused_at_fetch_time(address):
+    from src.acquisition.url_safety import ensure_public_url
+    with pytest.raises(ValueError, match="non-public"):
+        ensure_public_url("https://innocent.example.org/a", resolver=_resolver(address))
+
+
+def test_public_hosts_pass_and_mixed_resolution_is_refused():
+    from src.acquisition.url_safety import ensure_public_url
+    assert ensure_public_url("https://example.org/a", resolver=_resolver("93.184.216.34")).endswith("/a")
+    with pytest.raises(ValueError):
+        ensure_public_url("https://example.org/a", resolver=_resolver("93.184.216.34", "10.0.0.1"))
+
+
+@pytest.mark.parametrize("url", ["file:///etc/passwd", "ftp://example.org/a", "https://user:pw@example.org/a", "https:///a"])
+def test_non_http_or_credentialed_urls_are_refused_before_resolution(url):
+    from src.acquisition.url_safety import ensure_public_url
+    with pytest.raises(ValueError):
+        ensure_public_url(url, resolver=_resolver("93.184.216.34"))
+
+
+def test_unresolvable_host_is_refused():
+    from src.acquisition.url_safety import ensure_public_url
+
+    def failing(host, port):
+        raise OSError("no such host")
+
+    with pytest.raises(ValueError, match="does not resolve"):
+        ensure_public_url("https://nowhere.example/a", resolver=failing)
+
+
+def test_redirect_hops_are_each_validated_and_never_followed_blindly():
+    from src.acquisition.url_safety import fetch_public
+
+    class Resp:
+        def __init__(self, location=None):
+            self.headers = {"Location": location} if location else {}
+            self.is_redirect = bool(location)
+            self.content = b"body"
+
+        def raise_for_status(self):
+            return None
+
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append((url, kwargs["allow_redirects"]))
+        return Resp("http://internal.example/secret") if url.endswith("/start") else Resp()
+
+    def resolver(host, port):
+        address = "10.0.0.1" if host.startswith("internal") else "93.184.216.34"
+        return [(2, 1, 6, "", (address, port))]
+
+    with pytest.raises(ValueError, match="non-public"):
+        fetch_public("https://example.org/start", get=get, resolver=resolver)
+    assert calls == [("https://example.org/start", False)]  # the private hop was refused before any request
+
+
+def test_public_redirect_chain_is_followed_and_loops_are_capped():
+    from src.acquisition.url_safety import fetch_public
+
+    class Resp:
+        def __init__(self, location=None):
+            self.headers = {"Location": location} if location else {}
+            self.is_redirect = bool(location)
+            self.content = b"done"
+
+        def raise_for_status(self):
+            return None
+
+    public = lambda host, port: [(2, 1, 6, "", ("93.184.216.34", port))]
+    hops = iter([Resp("/next"), Resp()])
+    assert fetch_public("https://example.org/start", get=lambda *a, **k: next(hops), resolver=public) == b"done"
+    with pytest.raises(ValueError, match="too many redirects"):
+        fetch_public("https://example.org/loop", get=lambda *a, **k: Resp("/loop"), resolver=public)
+
+
+def test_rest_query_does_not_run_the_service_on_the_event_loop():
+    import threading
+    from src.api.dependencies import get_application_service
+    from src.api.main import create_app
+
+    seen = {}
+
+    class Service:
+        def answer(self, query, **kwargs):
+            seen["thread"] = threading.current_thread()
+            return AnswerContract(answer="a", status=ComplianceStatus.INSUFFICIENT_DATA)
+
+    app = create_app()
+    app.dependency_overrides[get_application_service] = Service
+    with TestClient(app) as client:
+        assert client.post("/api/v1/query", json={"query": "What is murabaha?"}).status_code == 200
+    assert seen["thread"] is not threading.main_thread()

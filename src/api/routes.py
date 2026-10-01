@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterable, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from src.api.dependencies import get_application_service, get_rate_limiter, get_session_manager
 from src.api.rate_limit import InMemoryRateLimiter, RateLimitDecision
@@ -81,7 +82,7 @@ async def query(
     if validation_error:
         return _error_response("VALIDATION_ERROR", validation_error, request.state.request_id, status_code=422)
     try:
-        answer = _answer_service(application_service, payload, request.state.request_id)
+        answer = await run_in_threadpool(_answer_service, application_service, payload, request.state.request_id)
     except Exception as exc:
         request_id = request.state.request_id
         return _error_response("SERVICE_ERROR", _service_error_message(exc), request_id, status_code=500)

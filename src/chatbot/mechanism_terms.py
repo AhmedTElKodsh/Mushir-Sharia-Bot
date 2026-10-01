@@ -19,13 +19,29 @@ _NAMED_TOPIC = re.compile(
 _NEGATED = re.compile(r"\b(?:not|without|isn't|isnt|aren't|never)\b|(?<!\w)(?:ليس|ليست|مش|بدون|غير|لا)(?!\w)", re.I)
 
 
+_PERMISSION = re.compile(
+    r"\b(?:permitted|permissible|allowed|valid|lawful|legal|compliant|halal|haram|ok|okay|forbidden|prohibited)\b"
+    r"|(?<!\w)(?:يجوز|جائز|جايز|حلال|حرام|مباح|ممنوع)(?!\w)", re.I)
+
+
+def _negates_the_name(prefix, suffix):
+    """A negation negates the contract name unless it is really negating a permission word around it."""
+    last = None
+    for found in _NEGATED.finditer(prefix):
+        last = found
+    if last is None:
+        return False
+    if _PERMISSION.search(prefix[last.end():]):  # "not permitted in a murabaha"
+        return False
+    clause_after = re.split(r"[.!?؟;,\n]|\bbut\b", suffix, maxsplit=1, flags=re.I)[0]
+    return not _PERMISSION.search(clause_after)  # "isn't murabaha allowed?"
+
+
 def _topic_matches(text):
     for match in _NAMED_TOPIC.finditer(text):
         # Negated labels cannot supply the family. A contrast starts a new clause.
         prefix = re.split(r"[.!?؟;,\n]|\b(?:but|however)\b|(?<!\w)(?:لكن|بل|انما)(?!\w)", text[:match.start()], flags=re.I)[-1]
-        # Only a negation within a few words of the name negates it: "not permitted in a murabaha" still names murabaha.
-        nearby = " ".join(prefix.split()[-3:])
-        yield match, not _NEGATED.search(nearby)
+        yield match, not _negates_the_name(prefix, text[match.end():])
 
 
 def generic_mechanism_unknown(query: str) -> bool:

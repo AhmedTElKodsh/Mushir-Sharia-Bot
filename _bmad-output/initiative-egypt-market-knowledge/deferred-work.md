@@ -22,3 +22,7 @@
 - source_plan: none
   summary: Known trade-off after the final review pass (2026-10-01): negation masking window.
   evidence: mechanism_terms._topic_matches treats a negation as applying to a contract name only within the three preceding words, so "this is not an actual real murabaha" still affirms murabaha, while "what is not permitted in a murabaha" correctly keeps it. Widening the window re-breaks the second case; a parse-based approach (negation scope by clause head) is the real fix.
+
+- source_plan: none
+  summary: Closed in the code-fix round (2026-10-01): negation scope, fetch-time URL safety, REST threadpool.
+  evidence: mechanism_terms now scopes negation by clause (permission words flip it); src/acquisition/url_safety.py refuses hosts resolving to non-public addresses and re-validates every redirect hop, used by the crawler and scraper; REST /query runs the service in the threadpool. Left on purpose - AAOIFICitation.confidence_score (four test files construct it to prove legacy input never leaks). Provenance URL validation in models still cannot resolve DNS by design; fetch-time is the enforcement point. Still open - the 12 stale test expectations (need scholar/product owner).
