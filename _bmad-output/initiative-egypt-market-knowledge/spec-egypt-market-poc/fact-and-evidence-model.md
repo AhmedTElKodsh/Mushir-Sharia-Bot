@@ -41,7 +41,7 @@ Entity and aliases; official domain; roles, each with its own evidence; product/
 
 | # | Channel | Gate | Version |
 | --- | --- | --- | --- |
-| 1 | Public provider terms + FRA standard form | Robots, terms, no login bypass | V1.6 |
+| 1 | Public provider terms + FRA standard form | Current exact URL/terms decision; separate robots/security/auth states; no login bypass | V1.6 |
 | 2 | Direct provider request | Written permission recorded | V1.6+ |
 | 3 | User schedule screenshot | Redaction, ephemeral, opt-in donation, PDPL | V1.7 |
 | 4 | Staff own agreements from real small purchases | Scholar approval (O2), own documents and consent | V1.7 if approved |
@@ -50,3 +50,9 @@ Entity and aliases; official domain; roles, each with its own evidence; product/
 ## Access boundary
 
 Stop before registration, OTP, credit inquiry, agreement acceptance, card entry, payment or order submission; record the first gated step as a result. Search results are leads, not evidence. Amazon (robots disallowed), noon (robots unavailable) and B.TECH (terms forbid scraping) stay in a permission queue.
+
+## Public acquisition foundation (2026-10-01)
+
+The [operative playbook](../evidence-acquisition-playbook.md) defines independent terms, robots, security, authentication, permission and reuse decisions. `src/acquisition/public_capture.py` captures explicitly reviewed URLs with current exact scopes and immutable run manifests; the identity CLI uses it. Normal missing/empty robots requires a matching payload-bound acknowledgement. Malformed/unreachable/security responses cannot use a broad unavailable acknowledgement. Source-issued exceptions are separately referenced and cannot defeat live access controls.
+
+Raw HTTP bytes, decoded bytes and extraction JSON have distinct hashes/locators. HTTP acquisition completeness is separate from extraction status, document completeness, version and applicability. PDF page anchors and HTML literal observations do not yet integrate into the dossier observation store or establish passage-level financing roles. Automated discovery/browser/OCR and private intake remain pending. Public correction history does not impose indefinite private-document retention.

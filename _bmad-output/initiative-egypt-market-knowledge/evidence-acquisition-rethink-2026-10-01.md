@@ -1,36 +1,13 @@
-# Evidence acquisition playbook
+# Evidence acquisition rethink: a research plan for accurate Egyptian financing data
 
-Adopted 2026-10-01 after the [review](evidence-acquisition-review-2026-10-01.md) and [research rethink](evidence-acquisition-rethink-2026-10-01.md). The [reviewed baseline](evidence-acquisition-playbook-reviewed-baseline-2026-10-01.md) preserves the original. This is the operating research procedure; the implementation-status section governs which capabilities are executable. Proposed future channels remain explicitly deferred.
+Prepared 2026-10-01. Status: **proposed operating procedure**, supported by a document review and current technical/legal source checks. This document does not establish new provider permission, completed acquisitions, deployed collectors, or legal clearance. The [preserved original](evidence-acquisition-playbook-reviewed-baseline-2026-10-01.md) remains the reviewed baseline; full findings are in [the review](evidence-acquisition-review-2026-10-01.md).
 
-## Implemented public capture foundation
 
-`scripts/capture_entity_identity_pages.py` is a CLI over `src/acquisition/public_capture.py`. It requires a current scoped JSON decision, checks every request/redirect, classifies robots and access failures, preserves original/decoded bytes and extracted text with hashes, and refuses existing run directories. It makes no import-time writes. PDF text has page numbers; encrypted, malformed and scanned files retain explicit extraction gaps.
-
-```powershell
-.\.venv\Scripts\python.exe scripts/capture_entity_identity_pages.py `
-  _bmad-output/initiative-egypt-market-knowledge/acquisition-templates/pilot-urls.txt `
-  --decisions _bmad-output/initiative-egypt-market-knowledge/acquisition-templates/access-decisions.empty.json `
-  --output-root data/runtime/artifacts/l6_scrape/public_capture `
-  --run-id pilot-access-gap-20261001
-```
-
-The supplied empty decisions intentionally grant nothing: gap records are written with zero HTTP requests. Follow the [schema instructions](acquisition-templates/README.md) to create real decisions. The fictional example is not a live permission. Exact path/query scopes include `/robots.txt` explicitly and cover each redirect destination independently. Historical broad unavailable acknowledgements are not imported as current authority.
-
-Exit 0 means every requested artifact was captured; exit 2 reports acquisition gaps; exit 1 reports configuration/output failure. Capture success does not establish readable complete terms, applicability or scholar approval. PDF bytes can be captured with an extraction gap; unreadable or shell HTML remains a capture gap with preserved diagnostic bytes. Inspect extraction status and supporting passages.
-
-Defaults are one serial collector, at least two seconds between same-host requests, three MiB per wire/decoded response, 100 requests per run, five redirect hops and at most two additional content retries. Retry-After or crawl delays over 60 seconds defer the route; unreachable robots remains a policy gap. Usable robots policies are cached only within a run for at most 24 hours; transient failures can be retried after their cooldown. Robots parsing is limited to 512 KiB and 10,000 rules, with linear wildcard matching. URLs are limited to 8,192 ASCII/percent-encoded characters. DNS preflights are time-bounded; each production HTTP operation has a 25-second deadline including its DNS lookup. An attempt has one separately bounded 25-second collector preflight plus that HTTP budget (at most 50 seconds before pacing/retry waits); redirects and retries are separate budgeted attempts. At most eight unresolved DNS workers can remain outstanding. TLS verification stays enabled, with no credentials or inherited proxy configuration. The connected IP is drawn from the validated public DNS answer; the original hostname remains the TLS certificate/SNI name. Host pacing and Retry-After deadlines apply across URLs and origins sharing the hostname. Security/auth refusals pause that hostname for the run.
-
-Each run contains `manifest.jsonl` (every request decision, attempt, selected safe headers, cooldowns and outcomes linked by capture/request IDs), immutable `raw/<sha256>.bin`, separately hashed `derived/` artifacts and `summary.json`. HTML identity candidates retain their own normalized source text, SHA-256, exact Unicode offsets and truncation indicators; PDF page text is bounded to 100 pages. Its isolated worker has a 512 MiB process-memory cap, eight seconds of CPU time and a ten-second parent deadline; unavailable limits produce a gap. Mixed text/scanned PDFs identify every page needing OCR. Analysts separately record effective/publication dates, scope, version, completeness and claim-to-span applicability. Diagnostic responses are not evidence. Previous runs are never overwritten.
-
-The [five-pilot task board](acquisition-templates/pilot-gap-board.md) and [provider request package](acquisition-templates/provider-request.md) are ready. No provider outreach or new permission is established. Automatic link graphs, browser/API acquisition, OCR automation, full dossier integration and private intake remain unimplemented. Existing public/private version and retention boundaries continue to apply.
-
-## Method status
-
-Existing dated records establish regulator/first-party identity captures and one partial Souhoola browser excerpt. They do not establish complete operative contracts. HTTP HTML/PDF capture is now fixture-tested. Official disclosures, registry extracts, complete manual browser capture, source-provided exports/APIs/allowlisting and supervised research are eligible research routes subject to their own scope and rights. Customer-document intake remains deferred to its separate private protocol. Archive title observations are dated samples; they do not establish continuous naming history.
+Follow-up: this historical proposal was adopted into the [operative playbook](evidence-acquisition-playbook.md), with the public capture foundation implemented on 2026-10-01. Other channels remain governed by that playbook's implementation status. This proposal does not establish live provider permission or completed contract dossiers.
 
 ## 1. Acquire the missing fact, then choose the transport
 
-This procedure closes specific evidence gaps using the existing source inventory. A firewall is a transport problem; a missing fee schedule is an evidence problem. Opening more pages does not necessarily solve the latter.
+The existing playbook is a useful source inventory. Its next version should become a procedure for closing specific evidence gaps. A firewall is a transport problem; a missing fee schedule is an evidence problem. Opening more pages does not necessarily solve the latter.
 
 For each research question, create an acquisition task with:
 
@@ -49,13 +26,13 @@ RFC 9309 says robots instructions are not access authorization. It distinguishes
 
 Keep `robots_state`, `terms_state`, `security_state`, `authentication_state`, `source_permission`, and `reuse_rights` separately. Record the response status, content type, and body classification. A 200 HTML challenge page is not a successfully obtained robots policy; a 200 application shell is not the same thing as a valid empty robots file.
 
-The existing public acquisition spec stops at robots restrictions, terms restrictions, authentication, CAPTCHA, and security gates. This procedure adds scoped routes for acquiring missing evidence; the public implementation enforces the boundaries stated above. Existing operator acknowledgements remain evidence of the operator's project decision. They are not permission issued by FRA, Souhoola, or another website owner.
+The existing public acquisition spec stops at robots restrictions, terms restrictions, authentication, CAPTCHA, and security gates. This proposal adds better routes around missing evidence; it does not silently change those implemented or specified boundaries. Existing operator acknowledgements remain evidence of the operator's project decision. They are not permission issued by FRA, Souhoola, or another website owner.
 
 **An effective authorized override is issued by the source:** a path-specific permission, official export, API credential for the documented research scope, research portal, or owner-configured WAF exception. Store its issuer, authority, hosts/paths, allowed methods, request limits, dates, expiry/revocation conditions, and permitted uses. If it differs from the public-crawl policy, record it as a separate permitted acquisition channel and carry the change through the spec before implementation.
 
 ## 3. Obstacle decision table
 
-These adopted project decisions distinguish failure classes. The implementation-status section identifies which routes are executable.
+These are proposed project decisions. They deliberately distinguish failure classes rather than treating every obstacle as a reason to retry with a different identity.
 
 | Observed condition | Next acquisition action | Evidence/result to retain |
 |---|---|---|
@@ -76,13 +53,13 @@ These adopted project decisions distinguish failure classes. The implementation-
 
 Apply the most restrictive unresolved condition when several occur together. An allowed public home page does not authorize a restricted document path. Re-evaluate each redirect, CDN document host, embedded frame and data endpoint needed for an automated acquisition; ordinary page rendering does not authorize arbitrary secondary crawling.
 
-**Adopted starting budgets:** one automated worker per host, minimum two seconds between permitted requests, at most two additional retries for a transient content failure, and a predeclared page/byte budget. These are engineering defaults, not measurements or guarantees of permission. Source limits and Retry-After take precedence. For robots, refresh before a new batch and no later than the adopted policy TTL; do not reuse a stale acknowledgement after the access state changes. RFC 6585 defines 429 and the optional Retry-After signal. [RFC 6585, section 4](https://www.rfc-editor.org/rfc/rfc6585.html#section-4)
+**Proposed starting budgets:** one automated worker per host, minimum two seconds between permitted requests, at most two additional retries for a transient content failure, and a predeclared page/byte budget. These are engineering defaults, not measurements or guarantees of permission. Source limits and Retry-After take precedence. For robots, refresh before a new batch and no later than the adopted policy TTL; do not reuse a stale acknowledgement after the access state changes. RFC 6585 defines 429 and the optional Retry-After signal. [RFC 6585, section 4](https://www.rfc-editor.org/rfc/rfc6585.html#section-4)
 
 ## 4. Acquisition methods that materially extend the toolbox
 
 ### 4.1 Repair permitted delivery and extraction
 
-Use HTTP capture for normal public HTML and downloadable documents. Correct charset decoding, compression handling, redirect classification, language selection, and HTML-versus-PDF detection. Retain the original bytes before cleaning. An encoding or parser failure should not become a missing-facts conclusion.
+Use HTTP capture for normal public HTML and downloadable documents. Correct charset decoding, compression handling, redirect classification, language selection, and HTML-versus-PDF detection. Retain the original bytes before cleaning. A encoding or parser failure should not become a missing-facts conclusion.
 
 Discover documents through the site's linked terms, help, FAQ, product and disclosure pages; permitted sitemaps; official investor-relations document libraries; and regulator publication pages. Keep a bounded link graph. Record every candidate document's title, publisher, date, and the page that linked it. Search exact Arabic and English legal names and known register identifiers to locate candidate sources; search snippets remain leads.
 
@@ -188,7 +165,7 @@ For each entity, first assemble existing valid public captures and a clause-comp
 
 Suggested closure matrix fields: identity; parties/roles; cash price; financed principal; contractual total payable; instalment count/dates; mandatory fees; late/default provisions; early settlement; ownership/delivery; applicable annexes; effective period; explicit unknowns. These guide completeness; the scholar's applicable rule ultimately determines which facts are material.
 
-## 9. Historical observations from the pre-implementation review
+## 9. What the local review actually established
 
 - The original playbook's “every technique was used or tested” sentence is contradicted by its planned/recommended/deferred rows. Methods need per-route status and capture/attempt IDs.
 - The entity-resolution manifest contains two explicit operator acknowledgements for FRA and Souhoola and fourteen earlier correction records. Their stated scope excludes security-block circumvention. They remain historical project decisions.
@@ -197,7 +174,7 @@ Suggested closure matrix fields: identity; parties/roles; cash price; financed p
 - The checked-in identity worksheet says site terms had not been reviewed for any host in that acquisition pass. An Allow directive cannot close that separate check.
 - The present spec defers private agreement intake beyond V1.6 and requires redacted, ephemeral handling by default. The playbook's account/manual rows and universal retention sentence need reconciliation with that version boundary.
 
-These historical findings describe the reviewed baseline. The public capture foundation above is now implemented; provider requests, complete five-dossier evidence and legal clearance are not established by this build.
+These findings support a proposal. They do not demonstrate a new crawler, a successful new provider request, complete five-dossier evidence, or legal clearance.
 
 ## 10. Scientific validity of the acquired dataset
 
@@ -220,4 +197,4 @@ If “inside data” means unpublished underwriting rules, confidential pricing,
 5. Private collection uses its own approved intake/retention procedure and does not enter the public evidence store through an informal manual exception.
 6. The output reports closed gaps and unresolved gaps by dossier, rather than presenting request count, page count or tool success as financing accuracy.
 
-The public acquisition decision record, failure classification and reproducible capture foundation are implemented in this build. Full automatic discovery, browser/OCR automation, dossier-store integration, source outreach and private intake remain separate work. The related spec and pilot acceptance describe that boundary without declaring the epic complete.
+The next implementation scope should be the public acquisition decision record, failure classification and reproducible capture path. Source-request tracking and a separate private research protocol can follow as their own scoped work. This review does not alter tickets, the spec, access acknowledgements or runtime code.

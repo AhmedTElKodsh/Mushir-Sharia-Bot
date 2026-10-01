@@ -2,6 +2,7 @@
 id: SPEC-egypt-market-poc
 companions:
   - architecture.md
+  - ../evidence-acquisition-playbook.md
   - fact-and-evidence-model.md
   - mechanism-archetypes.md
   - rule-card-schema.md
@@ -82,7 +83,8 @@ Later versions (see `release-ladder.md`):
 - Generic instalment, BNPL, تقسيط or تمويل wording never establishes a contract mechanism or archetype.
 - No named-company Sharia verdict without matching seller, financier, product and version evidence plus an approved rule.
 - Company evidence and user-supplied facts are separate inputs; neither fills the other's gaps; a missing clause is unknown, never absent.
-- No bypass of robots, site terms, login, CAPTCHA or security controls; stop before registration, OTP, credit inquiry, agreement acceptance, card entry or payment; B.TECH automation requires permission.
+- Public automation requires a current exact-origin/path-scoped terms/access record. Robots allowance is not authorization; missing/empty robots needs a current payload-bound operator acknowledgement, while malformed/unreachable policy and security/auth refusals remain gaps. A source-issued scoped robots exception never defeats a live security/login/CAPTCHA block. Stop before registration, OTP, credit inquiry, agreement acceptance, card entry or payment; B.TECH automation requires permission.
+- Public capture runs retain immutable source/derived artifacts, separate extraction/applicability states and failed attempts. Private/manual gated intake is a separately authorized protocol, deferred beyond V1.6; changing capture method never grants retention/redistribution rights.
 - Synthetic counterfactual material never enters named-company evidence or retrieval.
 - A provider's Sharia self-label is stored as a claim, never as a finding; Mushir never issues fatwas.
 - Frozen evaluation data never trains a model; splits are grouped by entity.

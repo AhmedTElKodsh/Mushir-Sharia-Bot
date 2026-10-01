@@ -1,0 +1,16 @@
+[
+  {
+    "decision_id": "FICTIONAL-NOT-LIVE-PERMISSION",
+    "origin": "https://research.example",
+    "allowed_paths": ["/robots.txt", "/terms", "/documents/standard.pdf"],
+    "terms_state": "reviewed_allowed",
+    "terms_reference": "Fictional terms review; replace with actual evidence",
+    "reviewed_by": "Fictional analyst",
+    "reviewed_at": "2026-10-01T00:00:00Z",
+    "expires_at": "2026-10-02T00:00:00Z",
+    "revoked": false,
+    "robots_acknowledgement": {},
+    "source_permission": {},
+    "reuse_rights": "internal_research_only"
+  }
+]

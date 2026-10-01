@@ -47,6 +47,8 @@ flowchart LR
 
 The existing one-page claim checker (`scripts/scrape_egypt_installment_market.py`) and its immutable runs stay as they are. `journey_discovery` is a separate bounded pass writing to an append-only observation store. PDF handling comes before JavaScript rendering.
 
+The public capture foundation is `src/acquisition/public_capture.py`, exposed by `scripts/capture_entity_identity_pages.py`. It accepts reviewed exact URL decisions, records independent policy/gate outcomes, and writes immutable per-run raw/decoded/extraction artifacts with hashes and PDF page references. It does not yet implement the link graph, observation-store write path, browser/OCR automation or private intake. The [playbook](../evidence-acquisition-playbook.md) specifies those boundaries and supplies operator templates.
+
 ## Components (V1.6)
 
 | Component | Responsibility | Location |

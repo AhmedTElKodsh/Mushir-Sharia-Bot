@@ -29,7 +29,7 @@ The spec's capability ids are this epic's requirement source (covers cites them 
 1. Five dossiers exist, each with an entity record, access decision with reason, link graph, capture manifest (URL, time, hash, content type, language), field observations with spans, and the first gated step recorded.
 2. The store is append-only: the current view is the latest valid observation per field plus the latest failed attempt, and a test proves a partial or failed recrawl never erases older evidence.
 3. `scripts/summarize_egypt_installment_market.py` emits only roles the passage establishes; a provider's Sharia self-label is stored as a `provider_claim`, never a finding.
-4. No capture crosses robots, site terms, login, CAPTCHA or any gated step; B.TECH, Amazon and noon stay in the permission queue.
+4. Every public route has current scoped terms/access decisions and separate robots/security/auth outcomes; source-issued scoped robots exceptions are recorded, and no capture crosses a live login, CAPTCHA/security or gated step. B.TECH, Amazon and noon stay in the permission queue without source permission. Private/manual gated intake is separately authorized and deferred.
 5. Deployed to the Hugging Face Space per the release-ladder deploy rules: `/ready` healthy and a real-query smoke for what this epic delivers. The dossier SQLite file ships in the image.
 
 ## Boundaries
@@ -45,6 +45,8 @@ Capability boundary: evidence acquisition. Files: a new journey-discovery pass b
 - spec — _bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/brownfield.md, sections Existing assets and V1.6 blockers
 
 ## Notes
+
+- 2026-10-01: The reviewed hybrid procedure is adopted in `evidence-acquisition-playbook.md`; the public HTML/PDF capture foundation is implemented separately from the legacy market checker. Full link discovery, dossier-store/observation integration, current pilot access decisions, complete contracts and deployment remain pending. This foundation does not complete CAP-6 or this epic.
 
 - Open question: O3, the final five pilot entities; the spec's shortlist (Contact, Souhoola, RUSHBRUSH, IKEA Egypt or Smart Furniture, one direct retailer with a named financier) stands until answered. A hitl entry at inception confirms them and each host's access decision.
 - Waits on epic-evidence-safe-runtime because: observation statuses and the dossier schema are its shared contracts. It can run beside epic-described-operation-lane (no shared code), but their Space deploys go one at a time.

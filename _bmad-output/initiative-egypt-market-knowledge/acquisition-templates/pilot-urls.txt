@@ -1,0 +1,6 @@
+# Dated public research seeds; no current approval is implied.
+valu-terms https://valugroup.com/terms-and-conditions
+contact-home https://contact.eg/en
+souhoola-terms https://souhoola.com/terms-conditions
+aman-home https://aman.eg/en
+halan-product https://halan.com/personal-lending/

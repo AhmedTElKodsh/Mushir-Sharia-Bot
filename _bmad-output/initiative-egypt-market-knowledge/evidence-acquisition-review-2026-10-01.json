@@ -1,0 +1,317 @@
+[
+  {
+    "lens": "adversarial",
+    "location": "The toolbox, best evidence first",
+    "trigger_condition": "The statement that every technique was used or tested on 2026-10-01 conflicts with rows explicitly marked Planned, Recommended, Next step, or deferred.",
+    "guard_snippet": "Give each technique a verified state: exercised with capture IDs, tested unsuccessfully with attempt IDs, planned, or deferred. Limit the introductory empirical claim to methods supported by those records.",
+    "potential_consequence": "Readers may treat proposed acquisition routes as demonstrated capabilities and overestimate the completeness of the pilot evidence."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The line we hold, and why it helps us / Decision rules when something blocks us",
+    "trigger_condition": "A firewall page returned from robots.txt is classified as unavailable directives and may enable fetching after operator acknowledgement, while a firewall or security block elsewhere requires a stop.",
+    "guard_snippet": "Classify a security response at the robots endpoint as blocked_by_security. Make operator acknowledgement record awareness only; require a separately documented basis before any acquisition affected by the security block resumes.",
+    "potential_consequence": "The same security restriction may produce opposite collection decisions depending on which endpoint exposes it."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The line we hold, and why it helps us",
+    "trigger_condition": "Robots directives, site terms, authentication, security restrictions, and legal authorization are grouped together without identifying which rule is a project policy and which concerns an access control or legal obligation.",
+    "guard_snippet": "Track robots policy, terms restrictions, security response, authentication requirement, source permission, and legal review as separate fields. State that this project's robots stop is an operational policy and that robots availability or allowance does not establish authorization.",
+    "potential_consequence": "Operators may interpret a robots allowance or missing file as permission, or misstate the legal meaning of a robots restriction."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The line we hold, and why it helps us",
+    "trigger_condition": "The project constraint forbids crossing login or gated steps, but later rows permit captures through the operator's own account without explaining whether that is an authorized exception.",
+    "guard_snippet": "Distinguish public automated discovery from separately approved authenticated manual research. Cite the governing project exception or require a documented permission decision before authenticated evidence enters that workflow.",
+    "potential_consequence": "Operators may treat account ownership as sufficient to override a stricter project constraint."
+  },
+  {
+    "lens": "adversarial",
+    "location": "Decision rules when something blocks us / Terms of use forbid scraping",
+    "trigger_condition": "Manual capture of single pages is offered after terms prohibit scraping without checking whether the applicable terms also restrict copying, research reuse, disclosure, or redistribution.",
+    "guard_snippet": "Record the relevant terms and distinguish permission to view, permission to capture, and permission to reuse or distribute. Route unclear or restricted manual reuse to a source-permission request.",
+    "potential_consequence": "Changing the capture method may be mistaken for resolving a restriction that also applies to subsequent use."
+  },
+  {
+    "lens": "adversarial",
+    "location": "Decision rules when something blocks us / CAPTCHA",
+    "trigger_condition": "The CAPTCHA row says Never solve but directs operators to manual capture without defining whether a CAPTCHA encountered during the manual route is an authorized user interaction or remains a project stop.",
+    "guard_snippet": "Define the manual route precisely: use already authorized accessible material or request source assistance; any permitted normal human challenge completion must have an explicit project authorization basis and must not become outsourced automated challenge solving.",
+    "potential_consequence": "Different operators will apply incompatible rules to the same challenged page and produce inconsistent acquisition records."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The toolbox, best evidence first / Public archives",
+    "trigger_condition": "The claim that Souhoola's site never adopted the FRA BM name is inferred from archived page titles across a period without stating snapshot coverage or uncertainty.",
+    "guard_snippet": "Replace the universal conclusion with the observed result: identified snapshots retained the stated title on specified dates. Record archive gaps and preserve the unresolved relationship among the names.",
+    "potential_consequence": "Incomplete archival observations may be promoted into a definitive historical claim."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The toolbox, best evidence first / Public archives",
+    "trigger_condition": "Archives are offered as a response to present-day blocks without requiring the archived content's original date, applicable period, completeness, or current relevance to be assessed.",
+    "guard_snippet": "Store snapshot timestamp, retrieval timestamp, original URL, archive URL, completeness checks, and historical/current applicability. Require current corroboration before historical terms support a present-offer claim.",
+    "potential_consequence": "Expired fee schedules, former entities, or superseded contracts may be presented as current evidence."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The toolbox, best evidence first / Product documents",
+    "trigger_condition": "The playbook prioritizes actual mechanisms and terms but does not specify the contextual fields needed to connect a contract or fee schedule to the offer under investigation.",
+    "guard_snippet": "Require document version and effective date, financing entity, merchant, channel, product, eligibility or customer cohort, transaction date, fees, repayment schedule, and referenced annexes. Mark missing applicability facts explicitly.",
+    "potential_consequence": "A genuine first-party document may be applied to the wrong merchant plan, product, entity, or period."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The toolbox, best evidence first / Regulator records and App-store listings",
+    "trigger_condition": "Email domains and publishing entities are described as linking companies to sites or apps without a verification rule for brand operators, affiliates, shared group domains, or the actual financing counterparty.",
+    "guard_snippet": "Treat domain and publisher matches as relationship leads. Establish the financing entity separately through an applicable contract, regulator identity, and corroborating first-party evidence; record each relationship's type and confidence.",
+    "potential_consequence": "An app operator, holding company, or related affiliate may be mistaken for the entity financing a transaction."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The toolbox, best evidence first / Ask the source",
+    "trigger_condition": "The source-request method lacks a defined request package and a way to assess whether a response is authoritative, complete, and applicable.",
+    "guard_snippet": "Provide a request template for dated standard agreements, annexes, fee schedules, entity identity, applicability, and reuse permissions. Preserve the complete response and attachments, responder role, channel, date, and unresolved questions.",
+    "potential_consequence": "An informal support reply may be treated as equivalent to a controlled contractual or compliance document."
+  },
+  {
+    "lens": "adversarial",
+    "location": "Decision rules when something blocks us / robots.txt unavailable",
+    "trigger_condition": "A universal spacing floor of two seconds is the only stated rate-management rule, with no handling for Retry-After, HTTP 429, repeated failures, or source-specific limits.",
+    "guard_snippet": "Use documented source limits where available, honor Retry-After, define bounded exponential backoff and retry budgets, and stop repeated blocked or overloaded responses. Record request count and timing.",
+    "potential_consequence": "A nominally polite crawler may continue stressing a site or repeatedly retry a restriction without an auditable stopping rule."
+  },
+  {
+    "lens": "adversarial",
+    "location": "Provenance fields every capture carries",
+    "trigger_condition": "The listed provenance fields do not identify which stored bytes are hashed or preserve a reproducible acquisition record for rendered, manual, archived, or extracted evidence.",
+    "guard_snippet": "Assign capture IDs and retain a raw artifact locator, artifact hash definition, extraction hash, tool and version, response status and relevant headers, render conditions, and extraction lineage. Link claims to exact page, section, or screen spans.",
+    "potential_consequence": "A hash and URL may be insufficient to reproduce the observation or prove that extracted text faithfully represents the captured source."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The toolbox, best evidence first / Rendering client-side pages and Operator manual capture",
+    "trigger_condition": "Rendered and manual evidence can depend on locale, session state, consent choices, offer selection, or personalization, but those conditions are not recorded.",
+    "guard_snippet": "Record language, selected offer, capture sequence, authentication category, relevant session or consent state, and visible applicability context without retaining credentials or session secrets. Link multi-screen captures in order.",
+    "potential_consequence": "A personalized or incomplete screen may be generalized as a universal public offer and cannot be independently reconstructed."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The toolbox, best evidence first / Customer-supplied documents / Provenance fields every capture carries",
+    "trigger_condition": "Customer agreements are admitted with consent, while the blanket Nothing is deleted rule provides no privacy, redaction, access, retention, withdrawal, or correction treatment for sensitive documents.",
+    "guard_snippet": "Separate restricted originals from sanitized research derivatives. Define purpose-specific consent, access controls, sensitive-field minimization, retention and deletion rules, and append-only audit metadata that can survive deletion of personal content.",
+    "potential_consequence": "The evidence store may retain and expose customer identifiers or financial details indefinitely despite a legitimate request or obligation to remove them."
+  },
+  {
+    "lens": "adversarial",
+    "location": "Name handling (standing rule)",
+    "trigger_condition": "The instruction never to settle disagreement and to let the client decide provides no evidence-based resolution procedure or distinction between display preferences and legal identity facts.",
+    "guard_snippet": "Keep original name observations intact, but maintain separately sourced relationship and identity determinations with effective dates, supporting records, reviewer authority, and unresolved status. Client preference must not replace factual corroboration.",
+    "potential_consequence": "A subjective naming decision may silently become the legal identity used for contracts, regulator linkage, or financial conclusions."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The line we hold, and why it helps us / Legal exposure",
+    "trigger_condition": "The playbook invokes Egyptian cybercrime law and legal caution but has no research-stage authorization record or distinction between permission to acquire now and permission to reuse at product launch.",
+    "guard_snippet": "Add acquisition-stage and reuse-stage review checkpoints covering the relevant access, terms, privacy, confidentiality, and licensing questions. Record reviewed legal sources and decisions; do not defer all authorization assessment until launch.",
+    "potential_consequence": "The team may assume that a scientific purpose or a future launch review resolves obligations arising during present collection."
+  },
+  {
+    "lens": "adversarial",
+    "location": "The toolbox, best evidence first",
+    "trigger_condition": "The toolbox lists useful source categories but does not turn difficult cases into a prioritized acquisition plan with explicit closure criteria.",
+    "guard_snippet": "For each blocked evidence need, identify the exact missing fact, ranked public and source-authorized routes, owner, request or capture status, expected artifact, and acceptance criterion. Include source-provided exports, permissioned APIs, documented public downloads, and authorized supervised document review where appropriate.",
+    "potential_consequence": "Blocked cases may cycle through alternative sources without obtaining the precise fact needed for an accurate dossier."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:14,38 — Robots availability and decision rules",
+    "trigger_condition": "Robots response is denied, rate-limited, malformed, or a security page.",
+    "guard_snippet": "Classify robots responses separately; operator acknowledgement cannot convert denial or security blocking into permission.",
+    "potential_consequence": "Acknowledgement permits fetching despite an unresolved denial or security block."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:38 — Decision rules when something blocks us",
+    "trigger_condition": "Robots or site terms change after acknowledgement or between collection batches.",
+    "guard_snippet": "Revalidate host policy before each batch and invalidate acknowledgements when policy or access state changes.",
+    "potential_consequence": "Collection continues under obsolete access conditions."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:31,38,44 — Permission and acknowledgement",
+    "trigger_condition": "Permission expires, is revoked, or excludes requested paths, methods, or downstream uses.",
+    "guard_snippet": "Record permission issuer, scope, allowed methods, reuse rights, expiry, and revocation; enforce them before capture.",
+    "potential_consequence": "An earlier permission becomes blanket authorization for later unsupported collection."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:23,38-44,52 — Discovery, access decisions, and final URL",
+    "trigger_condition": "A sitemap, PDF link, or redirect leads to another host or restricted path.",
+    "guard_snippet": "Evaluate destination host and path permissions before following every redirect or discovered link.",
+    "potential_consequence": "An allowed starting URL silently crosses into a restricted destination."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:24,41 — Client-side rendering",
+    "trigger_condition": "Rendering requests APIs, frames, or resources beyond the approved page scope.",
+    "guard_snippet": "Apply access checks to browser requests and stop rendering when required requests cross approved boundaries.",
+    "potential_consequence": "A public-page render collects data through an unapproved secondary endpoint."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:40-41 — Security blocking versus rendered content",
+    "trigger_condition": "HTTP 200 contains a challenge, error template, empty app shell, or partial content.",
+    "guard_snippet": "Validate expected substantive content after rendering; classify challenges and incomplete shells before evidence ingestion.",
+    "potential_consequence": "Blocked or empty responses are stored as successful evidence."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:38-44 — Decision rules when something blocks us",
+    "trigger_condition": "Requests time out, disconnect, return transient server errors, or receive throttling.",
+    "guard_snippet": "Record transient failures separately, honor Retry-After, and use bounded retries only where access remains permitted.",
+    "potential_consequence": "Temporary failure becomes apparent absence, or repeated requests aggravate throttling."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:42 — CAPTCHA",
+    "trigger_condition": "An operator supplies a capture obtained after a CAPTCHA or security challenge.",
+    "guard_snippet": "Record the access route and operator authority; manual submission never authorizes automated challenge handling.",
+    "potential_consequence": "A manual capture silently legitimizes subsequent automated collection through the challenge."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:12,30,43 — Login and app-only flows",
+    "trigger_condition": "The collector possesses valid credentials and interprets the automated-fetch column as permission.",
+    "guard_snippet": "Stop automated acquisition at login or app gates; accept authorized account captures through the manual route.",
+    "potential_consequence": "Owned credentials trigger automated gated collection contrary to the stated project boundary."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:30,32,43-44 — Manual and customer-supplied evidence",
+    "trigger_condition": "Account access is authorized but research retention, sharing, or publication rights are unspecified.",
+    "guard_snippet": "Record capture, retention, reviewer access, and redistribution permissions separately before ingesting nonpublic evidence.",
+    "potential_consequence": "Entitlement to view becomes assumed permission to retain or disclose private material."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:25,39 — Public archives",
+    "trigger_condition": "An archive snapshot is unavailable, incomplete, redirected, or missing linked terms and assets.",
+    "guard_snippet": "Record original URL, snapshot timestamp, replay URL, archive identity, completeness, and failed dependencies.",
+    "potential_consequence": "An incomplete replay is treated as a complete historical source."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:25-29,48,52 — Source versions and dates",
+    "trigger_condition": "A historical filing or cached document is captured today but describes an earlier entity or offer.",
+    "guard_snippet": "Record publication, effective, and snapshot dates separately from captured_at; mark applicability and currentness explicitly.",
+    "potential_consequence": "The capture date makes historical evidence appear current."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:29,32 — Product and customer documents",
+    "trigger_condition": "A contract lacks pages, annexes, amendments, signatures, or the applicable fee schedule.",
+    "guard_snippet": "Check document completeness and linked instruments; withhold mechanism conclusions when material provisions are missing.",
+    "potential_consequence": "An incomplete agreement supports an inaccurate financing-mechanism conclusion."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:29-30,32 — PDFs and manual app captures",
+    "trigger_condition": "OCR, printing, scrolling, or screenshot selection omits or corrupts material text.",
+    "guard_snippet": "Preserve original captures and verify extracted material against page images; flag unreadable or omitted regions.",
+    "potential_consequence": "A valid hash preserves inaccurate extraction without revealing the transcription error."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:29,32,43 — Applicability of account and offer evidence",
+    "trigger_condition": "A captured offer depends on customer, merchant, product, region, or campaign-specific conditions.",
+    "guard_snippet": "Record offer context and applicability; do not generalize personalized or merchant-specific terms to the brand.",
+    "potential_consequence": "One customer's agreement is presented as the company's general financing terms."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:31 — Ask the source",
+    "trigger_condition": "A reply comes from an unverified sender or answers only part of the request.",
+    "guard_snippet": "Verify respondent authority, preserve the complete exchange, and label unanswered facts and qualified statements.",
+    "potential_consequence": "An unauthenticated or partial reply becomes authoritative confirmation."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:48 — Name handling",
+    "trigger_condition": "Client review resolves a disagreement without documenting evidence, effective dates, or the decision.",
+    "guard_snippet": "Append the review decision, reviewer, timestamp, evidence references, temporal scope, and unresolved qualifications.",
+    "potential_consequence": "A client decision silently replaces an auditable source disagreement."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:48,52 — Evidence hashes and correction records",
+    "trigger_condition": "The source disappears or changes and the hash has no retrievable original artifact.",
+    "guard_snippet": "Link each hash to a preserved immutable artifact, extraction version, and correction lineage.",
+    "potential_consequence": "Reviewers cannot reproduce the cited evidence from its URL and hash."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "evidence-acquisition-playbook.md:32,52 — Private evidence retention",
+    "trigger_condition": "Private evidence contains personal data, credentials, or information whose retention consent is withdrawn.",
+    "guard_snippet": "Restrict private evidence access, define retention and deletion rules, and retain only non-sensitive audit tombstones.",
+    "potential_consequence": "The nothing-is-deleted rule preserves private information indefinitely despite withdrawn authority."
+  },
+  {
+    "lens": "structure",
+    "pass": "structure",
+    "original_text": "§The toolbox, best evidence first — 512 words appears before §Decision rules when something blocks us — 177 words.",
+    "revised_text": "**MOVE** the decision table directly after the opening access boundary; follow it with the toolbox.",
+    "changes": "Operators encounter eleven methods before learning which are applicable to their obstacle. The reordered sequence becomes: establish the access boundary → identify the obstacle → select a permitted method → capture evidence. Moves the existing 177-word section; **0-word reduction**."
+  },
+  {
+    "lens": "structure",
+    "pass": "structure",
+    "original_text": "§The toolbox, best evidence first — opening sentence and the “Example from 2026-10-01” column mix completed observations, planned acquisition, recommended outreach and deferred product work.",
+    "revised_text": "**MOVE** dated observations into a clearly labelled “Pilot observations and pending work — 2026-10-01” subsection after the operational instructions. Keep the technique descriptions together in the method reference.",
+    "changes": "Distinguish reusable instructions from the dated implementation state without discarding either. Preserve the link to `pilot-entity-resolution.md` alongside the observations. Reorganizes material inside the existing 512-word section; **0-word reduction**, excluding any added headings."
+  },
+  {
+    "lens": "structure",
+    "pass": "structure",
+    "original_text": "§The toolbox, best evidence first — single numbered sequence combines regulator records, rendering, archives, product documents, operator capture and outreach.",
+    "revised_text": "**QUESTION** whether “best evidence first” and the numbered order are intended to express authority, acquisition sequence, or effort. Organize the existing entries around the operator’s goal, with access method as a separate field.",
+    "changes": "The current table mixes evidence sources with acquisition mechanisms, so its ranking gives an operator no consistent basis for choosing the next step. Reorganize existing content into consistent fields such as “Source or method,” “Evidence obtained,” and “When to use”; preserve every existing technique and example. Applies to the 512-word section; **0-word reduction**."
+  },
+  {
+    "lens": "structure",
+    "pass": "structure",
+    "original_text": "§Decision rules when something blocks us — each row is independently useful, but the document does not state how to resolve multiple conditions on the same source.",
+    "revised_text": "**CONDENSE** the existing access conditions into a short, explicit decision sequence above the table; retain the table as the quick reference.",
+    "changes": "The operational reader needs to know how the access checks relate before choosing HTTP fetching, browser rendering or an alternative source. Build the sequence from the existing conditions rather than introduce new policy. Reorganizes the 177-word section; **0-word reduction** if the sequence replaces equivalent table wording."
+  },
+  {
+    "lens": "structure",
+    "pass": "structure",
+    "original_text": "§Provenance fields every capture carries — 34 words at the end, after §Name handling — 84 words.",
+    "revised_text": "**MOVE** provenance immediately after the method-selection instructions, under “Record the capture”; place name handling after it under “Record company names.”",
+    "changes": "Capture metadata is a prerequisite for producing usable evidence, while name handling is a specialized downstream rule. The revised sequence follows the operator’s work: acquire → record capture → record extracted names. Moves the existing 34-word section; **0-word reduction**."
+  },
+  {
+    "lens": "structure",
+    "pass": "structure",
+    "original_text": "§The line we hold, and why it helps us — 202 words of access boundaries and rationale precede the first actionable decision table.",
+    "revised_text": "**MOVE** the evidence-value and legal-exposure rationale below the quick decision table, while keeping the access boundary, project constraint and unavailable-versus-disallowed distinction at the start.",
+    "changes": "Preserve the prerequisite rules but let an operator reach the operational decision sooner. The explanatory paragraphs remain available to readers who need their rationale. Reorganizes the existing 202-word section; **0-word reduction**."
+  },
+  {
+    "lens": "structure",
+    "pass": "structure",
+    "original_text": "§Name handling — 84 words; §Provenance fields — 34 words. The document ends with fields rather than an explicit completion checkpoint.",
+    "revised_text": "**MERGE** these into a final “Capture completion check” section with two subsections: capture record and company-name rows.",
+    "changes": "The guide model needs a clear end condition. Turn the existing requirements into a short checklist so the operator can determine whether the acquisition record is complete. Preserve the exact-name, pending-review and append-only correction requirements. Reorganizes **118 existing words**; **0-word reduction**, excluding any added heading."
+  },
+  {
+    "lens": "structure",
+    "pass": "structure",
+    "original_text": "The document uses two compact tables, followed by short name-handling and provenance sections.",
+    "revised_text": "**PRESERVE** the table format, standalone distinction between “unavailable” and “disallowed,” and concrete pilot examples.",
+    "changes": "These support scanning and comprehension. Relocate and label the examples instead of deleting them; retain the key access distinction as an early callout. Preserves existing material within the 1,087-word document; **0-word reduction**."
+  }
+]

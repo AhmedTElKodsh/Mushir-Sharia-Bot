@@ -1,59 +1,22 @@
-"""Robots-respecting capture of entity-identity pages (FRA detail + financier sites).
+"""Capture explicitly approved public identity/documents into an immutable run.
 
-Usage: .venv/Scripts/python scripts/capture_entity_identity_pages.py URLS_FILE  (lines: "<label> <url>")
-
-Stores raw bytes with sha256 and a JSONL manifest. Extracts only literal name
-strings as they appear (title, og:site_name, legal-name lines); never translates.
+Usage: python scripts/capture_entity_identity_pages.py URLS_FILE --decisions JSON
+       --output-root DIRECTORY [--run-id UNIQUE_ID]
 """
-import hashlib, json, re, sys, time, urllib.robotparser
-from datetime import datetime, UTC
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import sys
+import uuid
+from datetime import UTC, datetime
 from html import unescape
 from pathlib import Path
-from urllib.parse import urlparse, urljoin
 
-import requests
-sys.path.insert(0, ".")
-from src.acquisition.url_safety import ensure_public_url
-
-UA = "MushirResearchBot/0.1 (+public-source compliance research; contact: local)"
-OUT = Path("data/runtime/artifacts/l6_scrape/entity_resolution/2026-10-01")
-RAW = OUT / "raw"; RAW.mkdir(parents=True, exist_ok=True)
-robots_cache = {}
-
-
-def robots_ok(url):
-    p = urlparse(url); base = f"{p.scheme}://{p.netloc}"
-    if base not in robots_cache:
-        rp = urllib.robotparser.RobotFileParser()
-        try:
-            r = requests.get(base + "/robots.txt", headers={"User-Agent": UA}, timeout=15)
-            if r.status_code >= 500:
-                robots_cache[base] = ("robots_unavailable", None)
-            elif r.status_code == 200 and not re.search(r"(?im)^\s*(?:user-agent|allow|disallow|crawl-delay)\s*:", r.text):
-                robots_cache[base] = ("robots_unavailable", None)  # project rule: no directives = unavailable
-            else:
-                rp.parse(r.text.splitlines() if r.status_code == 200 else [])
-                robots_cache[base] = ("ok", rp)
-        except requests.RequestException as e:
-            robots_cache[base] = ("robots_unavailable", None)
-    state, rp = robots_cache[base]
-    if state != "ok":
-        return False, state
-    return (True, "allowed") if rp.can_fetch(UA, url) else (False, "robots_disallowed")
-
-
-def fetch(url, hops=5):
-    for _ in range(hops + 1):
-        ok, why = robots_ok(url)
-        if not ok:
-            return None, url, why
-        ensure_public_url(url)
-        r = requests.get(url, headers={"User-Agent": UA, "Accept-Language": "ar,en;q=0.8"}, timeout=25, allow_redirects=False)
-        if r.is_redirect and r.headers.get("Location"):
-            url = urljoin(url, r.headers["Location"]); continue
-        return r, url, f"http_{r.status_code}"
-    return None, url, "too_many_redirects"
-
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from src.acquisition.public_capture import PublicCollector, load_decisions
 
 LEGAL = re.compile(r"[^<>\n]{0,80}(?:S\.?A\.?E|S\.A\.M|ش\.?\s?م\.?\s?م|ش\.?\s?م\.?\s?م\.?\s?م|للتمويل الاستهلاكي|Consumer Finance|©|Copyright|حقوق)[^<>\n]{0,80}", re.I)
 LICENCE = re.compile(r"[^<>\n]{0,60}(?:ترخيص|رخصة|licen[cs]e|FRA|الهيئة العامة للرقابة المالية|Financial Regulatory Authority)[^<>\n]{0,60}", re.I)
@@ -73,32 +36,55 @@ def extract(html):
     alt = re.findall(r'(?i)<link[^>]+hreflang=["\']([^"\']+)["\'][^>]*href=["\']([^"\']+)', html)
     txt = text_of(html)
     uniq = lambda xs: list(dict.fromkeys(x.strip() for x in xs if x.strip()))[:12]
+    observations, truncated = [], False
+    for kind, pattern in (("legal_name_candidate", LEGAL), ("licence_candidate", LICENCE)):
+        seen = set()
+        for match in pattern.finditer(txt):
+            literal = match.group().strip()
+            if not literal or literal in seen:
+                continue
+            if len(seen) >= 12:
+                truncated = True
+                break
+            seen.add(literal)
+            start = match.start() + len(match.group()) - len(match.group().lstrip())
+            observations.append({"kind": kind, "text": literal, "start": start, "end": start + len(literal),
+                                 "source_pointer": "/literal_identity/source_text"})
     return {"title": unescape(title.group(1)).strip() if title else None, "html_lang": lang.group(1) if lang else None,
             "og_site_name": meta("og:site_name"), "og_title": meta("og:title"), "hreflang": alt[:6],
-            "legal_name_lines": uniq(LEGAL.findall(txt)), "licence_lines": uniq(LICENCE.findall(txt))}
+            "legal_name_lines": uniq(LEGAL.findall(txt)), "licence_lines": uniq(LICENCE.findall(txt)),
+            "source_text": txt, "source_text_sha256": hashlib.sha256(txt.encode("utf-8")).hexdigest(),
+            "offset_unit": "unicode_code_points", "observations": observations,
+            "observations_truncated": truncated, "candidate_limit_per_kind": 12}
 
 
-def main(urls_file):
-    manifest = (OUT / "manifest.jsonl").open("a", encoding="utf-8")
-    for line in Path(urls_file).read_text(encoding="utf-8").splitlines():
-        if not line.strip() or line.startswith("#"):
-            continue
-        label, url = line.split(None, 1)
-        rec = {"label": label, "requested_url": url, "captured_at": datetime.now(UTC).isoformat()}
-        try:
-            r, final, status = fetch(url)
-            rec.update(final_url=final, status=status)
-            if r is not None and r.content:
-                sha = hashlib.sha256(r.content).hexdigest()
-                (RAW / f"{sha}.html").write_bytes(r.content)
-                html = r.content.decode(r.encoding or "utf-8", errors="replace") if not r.apparent_encoding else r.content.decode("utf-8", errors="replace")
-                rec.update(sha256=sha, content_type=r.headers.get("Content-Type"), bytes=len(r.content), extracted=extract(html))
-        except Exception as e:  # recorded, never silently dropped
-            rec.update(status="fetch_error", error=f"{type(e).__name__}: {str(e)[:160]}")
-        manifest.write(json.dumps(rec, ensure_ascii=False) + "\n"); manifest.flush()
-        print(json.dumps({k: rec.get(k) for k in ("label", "status", "final_url")}, ensure_ascii=False))
-        time.sleep(2)
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("urls_file", type=Path)
+    parser.add_argument("--decisions", required=True, type=Path)
+    parser.add_argument("--output-root", required=True, type=Path)
+    parser.add_argument("--run-id", default=None)
+    parser.add_argument("--max-requests", type=int, default=100)
+    args = parser.parse_args(argv)
+    run_id = args.run_id or datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ-") + uuid.uuid4().hex[:12]
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,100}", run_id):
+        parser.error("run-id must be a simple unique name without path components")
+    try:
+        decisions = load_decisions(args.decisions)
+        inputs = []
+        for line in args.urls_file.read_text(encoding="utf-8-sig").splitlines():
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            label, url = line.split(None, 1)
+            inputs.append((label, url.strip()))
+        collector = PublicCollector(args.output_root / run_id, decisions, max_requests=args.max_requests)
+        results = [collector.capture(label, url, extractor=extract) for label, url in inputs]
+        summary = collector.finish(results)
+        print(json.dumps({"output": str(collector.output), **summary}, ensure_ascii=False))
+        return 0 if all(result["state"] == "captured" for result in results) else 2
+    except (ValueError, TypeError, OSError) as exc:
+        parser.exit(1, f"Capture configuration/output error: {type(exc).__name__}\n")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    raise SystemExit(main())
