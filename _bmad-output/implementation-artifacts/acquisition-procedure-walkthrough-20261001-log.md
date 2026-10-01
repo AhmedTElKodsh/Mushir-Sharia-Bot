@@ -78,3 +78,13 @@ Session: current walkthrough · Timestamp: 2026-10-01T20:43:19+03:00
 - Result: Blocks 1–3 accepted; Block 4 in progress. Readiness/field labels are manual procedure vocabulary, not new runtime enums. Provider ranking remains unaccepted. No outreach, live acquisition or runtime change occurred.
 - Evidence: [revised scope/routes and current capture/claims block](acquisition-procedure-walkthrough-20261001-narrative.md#blocks), [acceptance procedure](../initiative-egypt-market-knowledge/evidence-acquisition-playbook.md#6-capture-acceptance-and-provenance), [material-field matrix](../initiative-egypt-market-knowledge/acquisition-templates/pilot-gap-board.md#material-field-matrix).
 - Open: Examine capture and claim acceptance with the user. Preserve the authorized clean-tree/GitHub workflow with a scoped documentation commit and remote verification.
+
+## 09 — Capture/claims assessed, revised and accepted; five-provider requests opened
+
+Session: current walkthrough · Timestamp: 2026-10-01T20:46:26+03:00
+
+- Action: User selected Thoughts, Revise, then acceptance/next block for capture and claim acceptance. Revised Block 4 around five independent checks (provenance, readability, completeness, applicability, exact support), stated second-analyst checking of material Arabic fields and clarified historical preservation versus present applicability. Presented Block 5 before marking revised Block 4 accepted.
+- Findings: Hash integrity alone does not verify source authority; readability and complete referenced instruments are different checks. Missing annexes leave affected claims unknown without discarding supported identity observations. A failed refresh must not silently promote older evidence into a current-applicability claim. These are operating checks, not newly implemented runtime states.
+- Result: Blocks 1–4 accepted; Block 5 in progress. Proposed order and briefs are presented for examination. Ranking remains unaccepted, arrangement/recipient placeholders remain unresolved and no outreach or live provider verification occurred. Runtime code is unchanged.
+- Evidence: [current narrative](acquisition-procedure-walkthrough-20261001-narrative.md#blocks), [priority proposal](../initiative-egypt-market-knowledge/acquisition-templates/provider-request-priorities-2026-10-01.md), [acceptance procedure](../initiative-egypt-market-knowledge/evidence-acquisition-playbook.md#6-capture-acceptance-and-provenance).
+- Open: Examine the five-provider order and concrete requests with the user. Preserve the authorized clean-tree/GitHub workflow with a scoped documentation commit and remote verification.
