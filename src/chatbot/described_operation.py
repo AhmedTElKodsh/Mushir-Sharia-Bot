@@ -63,7 +63,7 @@ class DescribedOperationService:
             return True
         if previous is None:
             return False
-        if DescribedOperationService._does_not_know(text):
+        if DescribedOperationService._does_not_know(text) or DescribedOperationService._guesses(text):
             return True
         if previous.pending_slot == "scenario_switch":
             return True
@@ -116,10 +116,18 @@ class DescribedOperationService:
         transaction_id = previous.transaction_id if previous else str(uuid4())
         version = previous.snapshot.version + 1 if previous else 1
         turn_id = str(uuid4())
+        guessed_reply = bool(previous and self._guesses(text))
         incoming = extract_operation_facts(confirmed_purchase.pending_purchase_text if confirmed_purchase else text,
             session_id=session_id, transaction_id=transaction_id,
             turn_id=confirmed_purchase.pending_purchase_turn_id if confirmed_purchase else turn_id,
             version=version, recorded_at=confirmed_purchase.pending_purchase_recorded_at if confirmed_purchase else now)
+        if guessed_reply:
+            # A value offered as a guess is not an assertion: the turn contributes no facts.
+            incoming = incoming.model_copy(update={"facts": tuple(
+                fact if fact.status == "unknown" else fact.model_copy(update={
+                    "status": "unknown", "value": None, "source": None, "candidates": (),
+                    "unobserved_reason": "in_customer_schedule"})
+                for fact in incoming.facts)})
         if confirmed_purchase:
             incoming = incoming.model_copy(update={"recorded_at": now})
         if previous and not self._explicit_correction(text):
@@ -129,7 +137,7 @@ class DescribedOperationService:
                     and old_asset.value != new_asset.value):
                 return self._switch_question(text, previous, request_id, language)
         direct_schedule_reply = False
-        if previous and previous.pending_slot:
+        if previous and previous.pending_slot and not guessed_reply:
             old = next((fact for fact in previous.snapshot.facts if fact.slot == previous.pending_slot), None)
             if old:
                 value = parse_schedule_reply(text, previous.pending_slot, known_currency(previous.snapshot))
@@ -143,7 +151,7 @@ class DescribedOperationService:
                                                 "unobserved_reason": None}) if fact.slot == old.slot else fact
                         for fact in incoming.facts)})
                     direct_schedule_reply = True
-        if previous and previous.pending_slot == "financing_party":
+        if previous and previous.pending_slot == "financing_party" and not guessed_reply:
             party = self._financier_reply(re.split(r"[;؛]", text)[0])
             if party:
                 items = list(incoming.facts)
@@ -184,7 +192,7 @@ class DescribedOperationService:
         question = None
         conflicts = [fact.slot for fact in snapshot.facts if fact.status == "conflicting"]
         payment_check = self._payment_check(facts)
-        unavailable_reply = bool(previous and self._does_not_know(text))
+        unavailable_reply = bool(previous and (self._does_not_know(text) or guessed_reply))
         if unavailable_reply:
             reason = "material_evidence_incomplete"
         elif conflicts:
@@ -254,6 +262,9 @@ class DescribedOperationService:
                            "The available facts are insufficient to assess this transaction. I need the agreement or repayment "
                            "disclosure identifying the financier and complete payment terms, followed by a scholar-approved "
                            "rule mapping for the verified contract mechanism."))
+            if guessed_reply:
+                answer_text = ("لا أستطيع تخمين بيانات العقد أو الحكم عليه. " if language == "ar" else
+                               "I can't guess contract facts or a ruling. ") + answer_text
             if unavailable_reply:
                 answer_text += (" اطلب من البائع اسم جهة التمويل ونسخة من العقد وجدول الرسوم والسداد؛ إذا تعذر الوصول إليها يبقى التقييم محجوبًا."
                                 if language == "ar" else
@@ -304,6 +315,13 @@ class DescribedOperationService:
     @staticmethod
     def _does_not_know(text: str) -> bool:
         return bool(re.search(r"\b(?:I don't know|I do not know|unknown|unsure|not sure|I (?:won't|will not|refuse to) (?:share|say|provide)|(?:cannot|can't|unable to) (?:access|get|open|provide))\b|مش عارف|معرفش|لا أعرف|لا اعرف|لا أدري|لا ادري|لن أشارك|لن اشارك|مش هقول|لا أستطيع|لا استطيع|مش قادر", text, re.I))
+
+    @staticmethod
+    def _guesses(text: str) -> bool:
+        """An invitation to guess supplies no fact; the guessed value must never be recorded."""
+        return bool(re.search(r"\b(?:just guess|guess (?:it|the|for me|yourself|which|who)|best guess|you (?:guess|decide|pick|choose)|"
+                              r"whatever you think|probably|most likely)\b|خم+ّ?ن|توقع(?:ك)?|غالب[اًا]+|على الأغلب|"
+                              r"(?:اختار|قرر|اختر) (?:انت|أنت)|(?:انت|أنت) (?:اختار|قرر)|زي ما تشوف", text, re.I))
 
     @staticmethod
     def _explicit_correction(text):

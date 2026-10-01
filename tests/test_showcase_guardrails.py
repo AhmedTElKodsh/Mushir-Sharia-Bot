@@ -88,15 +88,37 @@ def test_guessing_request_never_yields_a_verdict_even_when_the_writer_guesses(qu
     assert answer.metadata.get('approved_rule_gate', {}).get('status') != 'approved'
 
 
-@pytest.mark.parametrize('reply', ['Just guess the company, probably valU or Souhoola', 'خمن انت، غالبًا فاليو أو سهولة'])
-def test_guessed_financier_stays_unknown_and_assessment_withheld(reply):
-    service = ApplicationService(retriever=FakeRetriever([_chunk()]), llm_client=FakeLLM('COMPLIANT: guessed [FAS-01 §1].'))
-    first = service.answer('I bought an iPhone for 60000 EGP in instalments, is it halal?', session_id='guess-1')
+@pytest.mark.parametrize('reply, language', [
+    ('Just guess the company, probably valU or Souhoola', 'en'),
+    ('You decide which financier it is.', 'en'),
+    ('خمن انت، غالبًا فاليو أو سهولة', 'ar'),
+    ('على الأغلب سهولة، اختار انت', 'ar'),
+])
+def test_guessed_financier_stays_unknown_and_assessment_withheld(reply, language):
+    from tests.test_described_operation_flow import STORY, service
+    app = service()
+    first = app.answer(STORY, session_id='guess')
     assert first.status == ComplianceStatus.CLARIFICATION_NEEDED
-    second = service.answer(reply, session_id='guess-1')
-    assert second.status in {ComplianceStatus.INSUFFICIENT_DATA, ComplianceStatus.CLARIFICATION_NEEDED}
-    known = {item['slot']: item for item in second.metadata['decision_trace']['known']}
-    assert 'financing_party' not in known
-    # Known gap (case ledger): a guessed reply currently leaves the described-operation lane
-    # instead of re-asking for the agreement; the safety outcome above still holds.
-    assert 'valU' not in second.answer and 'فاليو' not in second.answer
+    second = app.answer(reply, session_id='guess')
+    trace = second.metadata['decision_trace']
+    # The guess stays inside the transaction: no verdict, no recorded financier, no repeated question.
+    assert trace['understood_as']['lane'] == 'described_operation'
+    assert second.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert second.clarification_question is None
+    assert 'financing_party' not in {item['slot'] for item in trace['known']}
+    assert 'financing_party' in {item['slot'] for item in trace['missing']}
+    assert ("لا أستطيع تخمين" if language == 'ar' else "I can't guess") in second.answer
+    assert 'valU' not in second.answer and 'فاليو' not in second.answer and 'سهولة' not in second.answer
+    # Earlier facts survive the guessed turn.
+    assert {item['slot'] for item in trace['known']} >= {'down_payment', 'instalment_count', 'instalment_amount'}
+
+
+@pytest.mark.parametrize('reply', ['Probably the deposit was 4000 EGP, just guess the rest.', 'غالبًا المقدم كان ٤٠٠٠ جنيه، خمن الباقي'])
+def test_guessed_amount_never_overwrites_a_reported_fact(reply):
+    from tests.test_described_operation_flow import STORY, service
+    app = service()
+    before = {i['slot']: i.get('value') for i in app.answer(STORY, session_id='g')
+              .metadata['decision_trace']['known']}
+    after = app.answer(reply, session_id='g').metadata['decision_trace']
+    assert {i['slot']: i.get('value') for i in after['known']}['down_payment'] == before['down_payment']
+    assert 'down_payment' not in {i['slot'] for i in after['missing']}
