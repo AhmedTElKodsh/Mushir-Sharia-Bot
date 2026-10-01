@@ -41,6 +41,8 @@ context: ['{project-root}/.planning/sharia-compliance-chatbot/docs/runtime-safet
 
 **Decisions (user, 2026-10-01):** The "what would decide this" list comes from the described-operation lane's material fact slots, with state ✓/?/✗. No rule cards are drafted in this goal; cards replace the slot list once scholar-approved cards exist. The full plan is kept despite exceeding 1600 tokens.
 
+**Scope extension (user, 2026-10-01):** Add important showcase behaviors and test them. The required cases and observable expectations are specified in [the POC behavior contract](poc-showcase-behavior-evaluation.md), POC-01 through POC-16. The panel must reflect real behavior; a display-only implementation cannot mark unimplemented conversation or evidence requirements complete.
+
 </frozen-after-approval>
 
 ## Code Map
@@ -60,6 +62,7 @@ context: ['{project-root}/.planning/sharia-compliance-chatbot/docs/runtime-safet
 ## Tasks & Acceptance
 
 **Execution:**
+- [ ] Implement and verify the A-owned behavior cases in [the POC behavior contract](poc-showcase-behavior-evaluation.md); record each case's status and evidence, with B-dependent recording checks tracked explicitly.
 - [ ] `src/models/decision_trace.py` -- new `DecisionTrace` builder: sections + reason codes, from typed inputs only; `to_client()` returns strings/ids/statuses, no numbers.
 - [ ] `src/chatbot/application_service.py` -- build a trace on every return branch, attach `metadata["decision_trace"]`; drop numeric `router_signals` from client metadata (keep them in the internal review record).
 - [ ] `src/chatbot/described_operation.py` -- expose slots, the asked question and the decide-list (material facts with status), with no outcome.
@@ -69,12 +72,15 @@ context: ['{project-root}/.planning/sharia-compliance-chatbot/docs/runtime-safet
 - [ ] `e2e/decision-trace.spec.ts` -- EN+AR panel collapsed by default, expands, survives reload, old message has no panel.
 
 **Acceptance Criteria:**
+- Each A-owned POC behavior requirement has a reproducible test and recorded result; mocks, live model/retrieval tests, and UI tests are distinguished. Missing implementation or a failed required behavior stays visible as an acceptance gap.
 - Given any answer branch, when the response is serialized for REST or SSE, then `metadata.decision_trace` exists and contains no float or percentage derived from scores or thresholds.
 - Given the full product suite, when run, then 0 failures beyond the 12 strict xfails, and `test_evidence_display` guards still pass.
 
 ## Implementation Notes
 
 ## Plan Change Log
+
+- 2026-10-01: User authorized additional important behaviors and tests. Added the linked 16-case evaluation contract, including corrections, unknown replies, session separation, source support, numeric boundaries, failure recovery and accessibility. No passing runtime result is implied by this plan update.
 
 ## Review Triage Log
 

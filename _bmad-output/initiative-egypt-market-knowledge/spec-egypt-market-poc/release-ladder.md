@@ -1,5 +1,13 @@
 # Release Ladder (Hugging Face Space, from V1.5)
 
+## Pre-scholar developer/client showcase iterations
+
+Early showcase iterations may precede the scholar-reviewed V1.6 milestone below. Their scope is supported explanations, Arabic/English understanding, guided clarification, citations, safe abstention and structured decision explanations. They must not claim reviewed judgment accuracy or bypass the approved-rule gate. Use [the POC behavior and evaluation contract](../poc-showcase-behavior-evaluation.md) for the 16 required behavior cases and versioned evidence of results.
+
+Preserve all in-scope POC review records and supporting evidence until the scholar finishes reviewing. Age retention and storage-cap eviction are disabled by default across all stores; later 365-day retention and caps require explicit policy activation after review completion. Goal B defines implementation and verification; this planning requirement is not proof that the runtime hold is already active.
+
+## Scholar-reviewed milestones
+
 | Version | Capabilities | Exit gate |
 | --- | --- | --- |
 | V1.6 Dual-lane POC | CAP-1..CAP-8 | ~100 scholar-reviewed frozen pilot cases, zero wrong verdicts; V1.6 blockers in `brownfield.md` closed; live smoke passes |
