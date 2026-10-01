@@ -58,3 +58,13 @@ Session: current walkthrough · Timestamp: 2026-10-01T20:37:16+03:00
 - Constraint: For subsequent operating blocks, lead with the action and expected output, then cite the supporting document. This is an inferred presentation preference, not a user-specified format; adapt if the user supplies a different shape. Do not present a third alternative shape without being asked.
 - Evidence: [revised Block 2](acquisition-procedure-walkthrough-20261001-narrative.md#blocks).
 - Open: Present the revised block for human examination; preserve the previously authorized clean-tree/GitHub workflow with a scoped documentation commit and verify publication.
+
+## 07 — Thoughts on broad strokes; acceptance and scope/routes opened
+
+Session: current walkthrough · Timestamp: 2026-10-01T20:39:32+03:00
+
+- Action: User requested Thoughts on broad strokes followed by explicit acceptance and next block. Assessed the five stages, presented the next block and marked revised Block 2 accepted. Expanded Block 3 using the action/output presentation preference.
+- Findings: Stage ownership and outputs support a usable workflow. Unknown financier/version fields must remain research targets rather than assumed prerequisites. Route changes require independent access/rights records; public fixture capture and source/manual methods must retain their separate implementation states. No new material contradiction requiring a broad-strokes rewrite was identified in this examination.
+- Result: Blocks 1 and 2 accepted; Block 3 in progress. Provider priority and proposed operational Intent are not separately accepted by this transition. No provider outreach, live acquisition or runtime testing occurred.
+- Evidence: [Block 3](acquisition-procedure-walkthrough-20261001-narrative.md#blocks), [scope and obstacle procedures](../initiative-egypt-market-knowledge/evidence-acquisition-playbook.md), [gap board](../initiative-egypt-market-knowledge/acquisition-templates/pilot-gap-board.md).
+- Open: Examine task scope and routes with the user. Preserve the authorized clean-tree/GitHub workflow with a scoped narrative/log commit and verify the remote hash.
