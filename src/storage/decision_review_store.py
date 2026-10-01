@@ -1,15 +1,28 @@
-"""Atomic local decision review storage; failed writes cannot acknowledge delivery."""
+"""Decision review storage: a small local SQLite store, optionally mirrored to PostgreSQL.
+
+SQLite is the commit point for delivery: it is atomic and needs no network. When a
+PostgreSQL URL is configured, every record is also pushed to Postgres (the durable
+copy, since a free Space disk is ephemeral). Rows that could not be pushed stay in the
+SQLite outbox (synced=0) and are replayed in the background; they are never purged
+locally until confirmed remotely, and local history is kept short so the file stays small.
+"""
+import logging
 import os
-from datetime import UTC, datetime, timedelta
+import threading
+import time
 from contextlib import contextmanager
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import sqlite3
 
 from src.models.decision_audit import DecisionAuditRecord
 
+logger = logging.getLogger("sharia_bot")
 
 DEFAULT_DB_PATH = "data/runtime/decision_reviews.sqlite3"
 DEFAULT_RETENTION_DAYS = 365
+DEFAULT_LOCAL_RETENTION_DAYS = 7
+MIRROR_RETRY_SECONDS = 30
 
 
 class SQLiteDecisionReviewStore:
@@ -22,6 +35,9 @@ class SQLiteDecisionReviewStore:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("CREATE TABLE IF NOT EXISTS decision_reviews (review_id TEXT PRIMARY KEY, request_id TEXT NOT NULL, session_id TEXT NOT NULL, recorded_at TEXT NOT NULL, payload TEXT NOT NULL)")
             conn.execute("CREATE INDEX IF NOT EXISTS decision_reviews_request ON decision_reviews(request_id)")
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(decision_reviews)")}
+            if "synced" not in columns:  # Older files: existing rows count as unsynced and are pushed on first sync.
+                conn.execute("ALTER TABLE decision_reviews ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
 
     @contextmanager
     def _connect(self):
@@ -33,29 +49,186 @@ class SQLiteDecisionReviewStore:
         finally:
             conn.close()
 
-    def append(self, record: DecisionAuditRecord) -> str:
+    def append(self, record: DecisionAuditRecord, *, synced: bool = False) -> str:
         record = DecisionAuditRecord.model_validate(record)
         with self._connect() as conn:
-            conn.execute("INSERT INTO decision_reviews VALUES (?, ?, ?, ?, ?)", (
-                record.review_id, record.request_id, record.session_id, record.recorded_at.astimezone(UTC).isoformat(), record.model_dump_json()))
+            conn.execute(
+                "INSERT INTO decision_reviews (review_id, request_id, session_id, recorded_at, payload, synced) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (record.review_id, record.request_id, record.session_id,
+                 record.recorded_at.astimezone(UTC).isoformat(), record.model_dump_json(), int(synced)))
         return record.review_id
-
-    def purge_older_than(self, days: int) -> int:
-        """Delete records past the retention window; returns the number removed."""
-        if type(days) is not int or days < 1:
-            raise ValueError("retention must be a positive number of days")
-        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
-        with self._connect() as conn:
-            return conn.execute("DELETE FROM decision_reviews WHERE recorded_at < ?", (cutoff,)).rowcount
 
     def get(self, review_id: str) -> DecisionAuditRecord | None:
         with self._connect() as conn:
             row = conn.execute("SELECT payload FROM decision_reviews WHERE review_id=?", (review_id,)).fetchone()
         return DecisionAuditRecord.model_validate_json(row[0]) if row else None
 
+    def delete(self, review_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM decision_reviews WHERE review_id=?", (review_id,))
+
+    def pending(self, limit: int = 200) -> list[DecisionAuditRecord]:
+        with self._connect() as conn:
+            rows = conn.execute("SELECT payload FROM decision_reviews WHERE synced=0 ORDER BY recorded_at LIMIT ?",
+                                (limit,)).fetchall()
+        return [DecisionAuditRecord.model_validate_json(row[0]) for row in rows]
+
+    def pending_count(self) -> int:
+        with self._connect() as conn:
+            return conn.execute("SELECT COUNT(*) FROM decision_reviews WHERE synced=0").fetchone()[0]
+
+    def mark_synced(self, review_ids) -> None:
+        with self._connect() as conn:
+            conn.executemany("UPDATE decision_reviews SET synced=1 WHERE review_id=?", [(i,) for i in review_ids])
+
+    def purge_older_than(self, days: int, *, only_synced: bool = False) -> int:
+        """Delete records past the window; with only_synced, never drop a row the mirror has not confirmed."""
+        if type(days) is not int or days < 1:
+            raise ValueError("retention must be a positive number of days")
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
+        sql = "DELETE FROM decision_reviews WHERE recorded_at < ?" + (" AND synced=1" if only_synced else "")
+        with self._connect() as conn:
+            return conn.execute(sql, (cutoff,)).rowcount
+
+
+class MirroredDecisionReviewStore:
+    """Local SQLite commit point plus a durable remote copy fed through the local outbox."""
+
+    def __init__(self, local: SQLiteDecisionReviewStore, remote, *, require_mirror: bool = False,
+                 local_retention_days: int = DEFAULT_LOCAL_RETENTION_DAYS, clock=time.monotonic):
+        self.local = local
+        self.remote = remote
+        self.require_mirror = require_mirror
+        self.local_retention_days = local_retention_days
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._retry_after = 0.0
+        self.last_sync_error: str | None = None
+
+    @property
+    def path(self):
+        return self.local.path
+
+    def append(self, record: DecisionAuditRecord) -> str:
+        review_id = self.local.append(record)  # A local failure fails the answer: nothing was recorded.
+        if self._clock() < self._retry_after and not self.require_mirror:
+            return review_id  # Remote recently failed: the row waits in the outbox for the sync task.
+        try:
+            self.remote.append(record)
+            self.local.mark_synced([review_id])
+            self.last_sync_error = None
+        except Exception as exc:
+            self.last_sync_error = type(exc).__name__  # Never log the message: it may contain the URL.
+            if self.require_mirror:
+                self.local.delete(review_id)  # Strict mode: unmirrored means unrecorded, so the answer is withheld.
+                raise
+            with self._lock:
+                self._retry_after = self._clock() + MIRROR_RETRY_SECONDS
+            logger.warning("decision review mirror unavailable (%s); record queued locally", self.last_sync_error)
+        return review_id
+
+    def get(self, review_id: str) -> DecisionAuditRecord | None:
+        found = self.local.get(review_id)
+        if found is not None:
+            return found
+        try:
+            return self.remote.get(review_id)  # Older than the short local window.
+        except Exception:
+            return None
+
+    def sync_pending(self, batch: int = 200) -> int:
+        """Replay the outbox to the remote store; returns how many rows were confirmed."""
+        confirmed = 0
+        while True:
+            records = self.local.pending(batch)
+            if not records:
+                self.last_sync_error = None
+                return confirmed
+            try:
+                self.remote.append_many(records)
+            except Exception as exc:
+                self.last_sync_error = type(exc).__name__
+                return confirmed
+            self.local.mark_synced([record.review_id for record in records])
+            confirmed += len(records)
+            if len(records) < batch:
+                self.last_sync_error = None
+                return confirmed
+
+    def purge_older_than(self, days: int) -> int:
+        removed = 0
+        try:
+            removed += self.remote.purge_older_than(days)
+        except Exception as exc:
+            self.last_sync_error = type(exc).__name__
+        # Keep the local file small, but only ever drop rows the remote has confirmed.
+        removed += self.local.purge_older_than(min(days, self.local_retention_days), only_synced=True)
+        return removed
+
+    def status(self) -> dict:
+        return {"mirror": type(self.remote).__name__, "pending_sync": self.local.pending_count(),
+                "last_sync_error": self.last_sync_error, "require_mirror": self.require_mirror}
+
+
+class _DeferredPostgres:
+    """Postgres store whose connection could not be made at boot; it connects on first use."""
+
+    def __init__(self, url: str):
+        self._url = url
+        self._store = None
+        self._lock = threading.Lock()
+
+    def _real(self):
+        with self._lock:
+            if self._store is None:
+                from src.storage.postgres_decision_review_store import PostgresDecisionReviewStore
+                self._store = PostgresDecisionReviewStore(self._url)
+            return self._store
+
+    def append(self, record):
+        return self._real().append(record)
+
+    def append_many(self, records):
+        return self._real().append_many(records)
+
+    def get(self, review_id):
+        return self._real().get(review_id)
+
+    def purge_older_than(self, days):
+        return self._real().purge_older_than(days)
+
+
+def _postgres_url():
+    url = os.getenv("DECISION_REVIEW_DATABASE_URL") or os.getenv("DATABASE_URL") or ""
+    # DATABASE_URL may be a sqlite:/// SQLAlchemy URL used elsewhere; only Postgres URLs enable the mirror.
+    return url if url.startswith(("postgres://", "postgresql://")) else None
+
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        value = int(os.getenv(name) or default)
+    except ValueError:
+        return default
+    return value if value >= 1 else default
+
 
 def configured_decision_store():
-    return SQLiteDecisionReviewStore(os.getenv("DECISION_REVIEW_DB_PATH") or DEFAULT_DB_PATH)
+    local = SQLiteDecisionReviewStore(os.getenv("DECISION_REVIEW_DB_PATH") or DEFAULT_DB_PATH)
+    url = _postgres_url()
+    if not url:
+        return local
+    from src.storage.postgres_decision_review_store import PostgresDecisionReviewStore
+    try:
+        remote = PostgresDecisionReviewStore(url)
+    except Exception as exc:
+        # An unreachable mirror at boot must not stop the service; the outbox covers it.
+        logger.warning("decision review mirror unavailable at startup (%s)", type(exc).__name__)
+        remote = _DeferredPostgres(url)
+    return MirroredDecisionReviewStore(
+        local, remote,
+        require_mirror=(os.getenv("DECISION_REVIEW_REQUIRE_MIRROR", "false").lower() == "true"),
+        local_retention_days=_int_env("DECISION_REVIEW_LOCAL_RETENTION_DAYS", DEFAULT_LOCAL_RETENTION_DAYS))
 
 
 def configured_retention_days() -> int:

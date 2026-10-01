@@ -81,10 +81,14 @@ async def lifespan(app: FastAPI):
     app.state.metrics = MetricsRegistry()
     app.state.infrastructure = _infrastructure_status(app)
     purge_task = asyncio.create_task(_periodic_retention_purge(app.state.decision_store))
+    sync_task = (asyncio.create_task(_periodic_store_sync(app.state.decision_store))
+                 if hasattr(app.state.decision_store, "sync_pending") else None)
     try:
         yield
     finally:
         purge_task.cancel()
+        if sync_task:
+            sync_task.cancel()
 
 
 async def _periodic_retention_purge(store, interval_seconds: float = 24 * 3600):
@@ -96,6 +100,21 @@ async def _periodic_retention_purge(store, interval_seconds: float = 24 * 3600):
             await asyncio.to_thread(store.purge_older_than, configured_retention_days())
         except Exception:
             print(_safe_fallback_message("Decision review retention purge"))
+
+
+async def _periodic_store_sync(store, interval_seconds: float | None = None):
+    """Replay the local decision-review outbox to the durable mirror; runs at boot, then on an interval."""
+    if interval_seconds is None:
+        try:
+            interval_seconds = max(5.0, float(os.getenv("DECISION_REVIEW_SYNC_INTERVAL_SECONDS") or 60))
+        except ValueError:
+            interval_seconds = 60.0
+    while True:
+        try:
+            await asyncio.to_thread(store.sync_pending)
+        except Exception:
+            print(_safe_fallback_message("Decision review mirror sync"))
+        await asyncio.sleep(interval_seconds)
 
 
 def _build_session_manager():
@@ -192,6 +211,15 @@ def _build_cache_store():
 
 def _build_scholar_review_queue_store():
     return ScholarReviewQueueStore(os.getenv("SCHOLAR_REVIEW_QUEUE_PATH", "data/scholar_review_queue.jsonl"))
+
+
+def _mirror_status(app: FastAPI):
+    """Live outbox depth and last error; null when decision reviews are not mirrored."""
+    store = getattr(app.state, "decision_store", None)
+    try:
+        return store.status() if hasattr(store, "status") else None
+    except Exception:
+        return {"error": "status_unavailable"}
 
 
 def _infrastructure_status(app: FastAPI):
@@ -519,6 +547,7 @@ def create_app() -> FastAPI:
                 "version": APP_VERSION,
                 "version_label": APP_VERSION_LABEL,
                 "infrastructure": app.state.infrastructure,
+                "decision_review_mirror": _mirror_status(app),
                 "checks": readiness["checks"],
                 "evidence_coverage": readiness["evidence_coverage"],
             },

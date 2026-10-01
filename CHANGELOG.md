@@ -25,3 +25,4 @@ All notable changes to Mushir. Versions follow the [release ladder](_bmad-output
 
 - Versioned app (API metadata, health/readiness, chat header).
 - Guarded Egypt institution evidence corpus: 2,154 registry records; bounded bank scrape (14 sites, 69 operation records for review).
+- Decision reviews can be mirrored to PostgreSQL (e.g. Supabase free tier): set `DECISION_REVIEW_DATABASE_URL` (or a `postgres://` `DATABASE_URL`). SQLite stays the local commit point and keeps only `DECISION_REVIEW_LOCAL_RETENTION_DAYS` (default 7) of confirmed rows; unconfirmed rows wait in a local outbox and are replayed in the background. `DECISION_REVIEW_REQUIRE_MIRROR=true` makes an unreachable mirror withhold answers instead of queueing. `/ready` reports `decision_review_mirror` (outbox depth, last error class).
