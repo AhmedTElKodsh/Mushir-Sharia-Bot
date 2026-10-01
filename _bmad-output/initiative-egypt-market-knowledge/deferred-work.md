@@ -53,3 +53,11 @@ Closed since the earlier entries: Playwright UI specs ran 30/30 on 2026-10-01 (C
 - source_plan: `_bmad-output/implementation-artifacts/deferred-work.md` (moved here 2026-10-01)
   summary: Add private document locators when V1.7 schedule intake is implemented.
   evidence: CaptureManifest requires public HTTP(S) provenance; local uploads need a distinct immutable locator and the planned consent/redaction controls. Private agreement intake is excluded from V1.6.
+
+- source_plan: none
+  summary: Durable early-stage review records for every answer (answer, full decision trace, internal threshold numbers, gate results, retrieved sources), classified by lane, outcome, language and gate, with storage-size management (compaction/rotation).
+  evidence: Split from the POC showcase slice on 2026-10-01 (user chose sequential plan->build->test per goal); depends on the decision trace built first, and extends the existing audit_store.py / decision_review_store.py rather than adding a new store.
+
+- source_plan: none
+  summary: Mary proposes five pilot financiers for next week's scholar meeting, from the FRA consumer-finance register and the 2026-09-24/27 crawl coverage.
+  evidence: Split from the POC showcase slice on 2026-10-01; an analysis deliverable (resolves open question O3) rather than code, done after the reasoning panel and review records.
