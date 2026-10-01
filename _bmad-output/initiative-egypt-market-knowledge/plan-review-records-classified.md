@@ -82,6 +82,8 @@ context: ['{project-root}/.planning/sharia-compliance-chatbot/docs/runtime-safet
 
 ## Implementation Notes
 
+**Current-state update (2026-10-01, after A milestone `07207d7`):** the frozen "Current state" paragraph above describes baseline `9497f47` and is now stale. A's prerequisites have local test evidence: SQLite/PostgreSQL purge entry points and direct SQLite delete preserve all rows under the hard-coded POC review hold; required-but-invalid strict mirror configuration fails closed; numeric router signals live in a private internal audit field and are scrubbed from public metadata. See [Goal A preservation prerequisites](goal-a-case-results-2026-10-01.md#preservation-prerequisites). No B task below is complete.
+
 See current-state gaps above. A owns the minimum immediate preservation and router capture prerequisites; B owns complete classification, annotations, lineage and later explicit retention activation. Do not infer runtime completion from this plan.
 
 ## Plan Change Log

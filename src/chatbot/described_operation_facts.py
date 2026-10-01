@@ -92,8 +92,11 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
                 continue
             yield match
 
-    if re.search(r"iphone|آيفون|ايفون|أيفون", normalized, re.I):
-        add("asset", "iPhone")
+    for pattern, asset in ((r"iphone|آيفون|ايفون|أيفون", "iPhone"),
+                           (r"\blaptop\b|لابتوب|حاسوب محمول", "laptop"),
+                           (r"\bcar\b|سيارة|عربية", "car")):
+        if re.search(pattern, normalized, re.I):
+            add("asset", asset)
     has_egp = bool(re.search(r"\bEGP\b|جنيه", normalized, re.I))
     foreign = r"\b(?:USD|EUR|SAR|AED|GBP)\b|[$€£]|دولار|ريال|درهم|يورو"
 
@@ -108,6 +111,7 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
             "down_payment": rf"(?:\bdeposit|\bdown payment|ب?مقدم)\s*(?:of\s+|is\s+|[:=]\s*)?{_MONEY}",
             "cash_price": rf"(?:\bcash price|السعر النقدي|سعر الكاش)\s*(?:is\s+|[:=]\s*)?{_MONEY}",
             "financed_or_final_price": rf"(?:\btotal payable|\bfinal price|اجمالي المبلغ|إجمالي المبلغ|السعر النهائي)\s*(?:is\s+|[:=]\s*)?{_MONEY}",
+            "instalment_amount": rf"(?:\binstal+ment amount|قيمة القسط)\s*(?:is\s+|[:=]\s*)?{_MONEY}",
         }
         for slot, pattern in patterns.items():
             for match in matches(pattern):
@@ -116,6 +120,9 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
         for match in matches(rf"(?<![\d.,-]){_MONEY}\s+(?:down\b|مقدم)"):
             if re.search(r"\bEGP\b|جنيه", match[0], re.I) and not foreign_nearby(match):
                 add("down_payment", Money(amount=Decimal(match["amount"].replace(",", "")), currency="EGP"))
+    for match in matches(r"(?:\bnumber of instal+ments|\binstal+ment count|عدد الأقساط)\s*(?:is\s+|[:=]\s*)?(\d+)"):
+        if _plausible_count(match[1]):
+            add("instalment_count", int(match[1]))
 
     schedule = rf"(?<![\d.,-])(?P<count>\d+)(?![\d.,])\s*(?:[x×]|instalments?\s+(?:of|at)|installments?\s+(?:of|at)|قسط\s*(?:كل قسط|بقيمة))\s*{_MONEY}"
     monthly = rf"(?<![\d.,-]){_MONEY}\s+(?:monthly for|شهريا لمدة)\s*(?P<count>\d+)(?![\d.,])\s*(?:months?\b|شهر)"
@@ -191,7 +198,8 @@ def reconcile_operation_facts(previous: FactSnapshot, incoming: FactSnapshot) ->
     return incoming.model_copy(update={"facts": tuple(merged.values())})
 
 
-def resolve_operation_fact(previous: FactSnapshot, incoming: FactSnapshot, *, slot: str):
+def resolve_operation_fact(previous: FactSnapshot, incoming: FactSnapshot, *, slot: str,
+                           basis: str = "user_confirmed_schedule"):
     """Explicitly select a new assertion while retaining the prior conflict.
 
     The conversation adapter must establish a confirmation of the requested
@@ -202,6 +210,6 @@ def resolve_operation_fact(previous: FactSnapshot, incoming: FactSnapshot, *, sl
     selected = next((fact for fact in incoming.facts if fact.slot == slot), None)
     if old is None or selected is None:
         raise ValueError("resolution requires an existing slot and an incoming assertion")
-    resolution = FactResolution(previous_fact=old, selected_fact=selected)
+    resolution = FactResolution(previous_fact=old, selected_fact=selected, basis=basis)
     return reconciled.model_copy(update={"facts": tuple(
         selected if fact.slot == slot else fact for fact in reconciled.facts)}), resolution

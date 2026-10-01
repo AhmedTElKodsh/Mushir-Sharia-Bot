@@ -73,6 +73,7 @@ class AAOIFICitation:
     quote_start: Optional[int] = None
     quote_end: Optional[int] = None
     captured_at: Optional[str] = None  # Appended last so positional construction keeps its meaning.
+    source_version: Optional[str] = None
 
     def __post_init__(self):
         if not self.document_id or not self.document_id.strip():
@@ -91,6 +92,7 @@ class AAOIFICitation:
             "captured_at": source_age(self.captured_at)["captured_at"],
             "quote_start": self.quote_start,
             "quote_end": self.quote_end,
+            "source_version": self.source_version,
         }
 
 

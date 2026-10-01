@@ -137,6 +137,16 @@ var I18N = {
     traceReason_retrieval_unavailable: "The evidence service was unavailable.",
     traceReason_no_sources: "No cited source supports a response here.",
     traceReason_definition_cited: "A definition was located in a cited source.",
+    traceReason_definition_support_unavailable: "No literal passage defining the requested concept was found.",
+    traceReason_private_reasoning_requested: "A brief evidence explanation is available; private internal reasoning is unavailable.",
+    traceReason_generated_claim_unverified: "The generated claim could not be verified against the cited passage and was withheld.",
+    traceReason_literal_passage_cited: "The displayed quotation matches the cited source passage; assessment remains withheld.",
+    traceReason_purpose_needed: "The purpose of the request needs clarification.",
+    traceReason_purpose_unavailable: "The purpose of the request remains unknown.",
+    traceReason_scenario_switch_confirmation: "Please confirm whether this describes a separate purchase.",
+    traceReason_scenario_scope_unresolved: "The transaction scope is unresolved.",
+    traceReason_current_offer_unverified: "Current offer documents are not verified.",
+    traceReason_source_versions_conflict: "The applicable source version is unresolved.",
     traceReason_clarification_requested: "A clarifying question was requested; see below.",
     traceReason_assessment_withheld: "Sources were found, but assessment remains withheld.",
     traceReason_cited_answer: "This response includes cited references.",
@@ -248,6 +258,16 @@ var I18N = {
     traceReason_retrieval_unavailable: "خدمة الأدلة غير متاحة.",
     traceReason_no_sources: "لا يوجد مصدر مذكور لهذه الاستجابة.",
     traceReason_definition_cited: "عُثر على تعريف في مصدر مذكور.",
+    traceReason_definition_support_unavailable: "لم يُعثر على مقطع حرفي يعرّف المفهوم المطلوب.",
+    traceReason_private_reasoning_requested: "يتوفر شرح موجز للأدلة؛ التفكير الداخلي الخاص غير متاح.",
+    traceReason_generated_claim_unverified: "لم يُتحقق من الادعاء المولّد في المقطع المستشهد به، لذلك حُجب.",
+    traceReason_literal_passage_cited: "الاقتباس المعروض يطابق المقطع المستشهد به؛ التقييم ما زال محجوبًا.",
+    traceReason_purpose_needed: "يلزم توضيح الغرض من الطلب.",
+    traceReason_purpose_unavailable: "الغرض من الطلب ما زال غير معلوم.",
+    traceReason_scenario_switch_confirmation: "يرجى تأكيد ما إذا كان هذا شراءً منفصلًا.",
+    traceReason_scenario_scope_unresolved: "نطاق المعاملة لم يُحسم.",
+    traceReason_current_offer_unverified: "مستندات العرض الحالي غير موثقة.",
+    traceReason_source_versions_conflict: "نسخة المصدر المناسبة لم تُحسم.",
     traceReason_clarification_requested: "طُلب توضيح؛ انظر السؤال أدناه.",
     traceReason_assessment_withheld: "عُثر على مصادر لكن التقييم ما زال معلقاً.",
     traceReason_cited_answer: "تتضمن هذه الاستجابة مراجع مذكورة.",
@@ -366,6 +386,21 @@ async function submitQuery() {
   var currentRequestId = "";
   currentAssistantNode = null;
   streamActive = true;
+  var failureRecorded = false;
+
+  function failStream(message) {
+    if (failureRecorded) return;
+    failureRecorded = true;
+    streamActive = false;
+    appState.streaming = false;
+    abortTypewriter();
+    removeTypingIndicator();
+    if (currentAssistantNode) currentAssistantNode.remove();
+    currentAssistantNode = null;
+    renderErrorBubble(message);
+    messagesArray.push({role: "assistant", content: message, timestamp: Date.now(), status: "error", citations: []});
+    persistConversation();
+  }
 
   try {
     appState.streaming = true;
@@ -384,9 +419,8 @@ async function submitQuery() {
     });
 
     if (!response.ok) {
-      removeTypingIndicator();
       var responseRequestId = response.headers.get("X-Request-ID") || "";
-      renderErrorBubble(await formatHttpError(response, responseRequestId));
+      failStream(await formatHttpError(response, responseRequestId));
       send.disabled = false;
       send.textContent = t("ask");
       return;
@@ -433,26 +467,22 @@ async function submitQuery() {
       },
 
       onError: function(data) {
-        streamActive = false;
-        appState.streaming = false;
-        abortTypewriter();
-        removeTypingIndicator();
         var errorMessage = formatSafeStreamError(data, currentRequestId);
-        renderErrorBubble(errorMessage);
-        messagesArray.push({
-          role: "assistant",
-          content: errorMessage,
-          timestamp: Date.now(),
-          status: "error",
-          citations: []
-        });
-        persistConversation();
+        failStream(errorMessage);
       },
 
       onDone: function(data) {
         streamActive = false;
         appState.streaming = false;
         abortTypewriter();
+        removeTypingIndicator();
+        // The final response is the committed canonical answer; tokens are provisional.
+        _assistantContent = stripAnswerStatusPrefix(data.answer);
+        if (!currentAssistantNode) currentAssistantNode = addMessage("assistant", _assistantContent);
+        else {
+          currentAssistantNode.textContent = _assistantContent;
+          _applyDirection(currentAssistantNode, _assistantContent);
+        }
 
         if (currentAssistantNode && _assistantCitations.length > 0) {
           renderCitations(currentAssistantNode, _assistantCitations);
@@ -486,45 +516,21 @@ async function submitQuery() {
       },
 
       onStreamError: function(err) {
-        streamActive = false;
-        appState.streaming = false;
-        abortTypewriter();
-        removeTypingIndicator();
         var connectionMessage = t("connectionInterrupted") + formatRequestIdSuffix(currentRequestId);
-        renderErrorBubble(connectionMessage);
-        messagesArray.push({
-          role: "assistant",
-          content: connectionMessage,
-          timestamp: Date.now(),
-          status: "error",
-          citations: []
-        });
-        persistConversation();
+        failStream(connectionMessage);
       },
 
       onComplete: function() {
         if (streamActive) {
-          removeTypingIndicator();
-          renderErrorBubble(t("connectionInterrupted") + formatRequestIdSuffix(currentRequestId));
+          failStream(t("connectionInterrupted") + formatRequestIdSuffix(currentRequestId));
         }
         send.disabled = false;
         send.textContent = t("ask");
       }
     });
   } catch (error) {
-    appState.streaming = false;
-    abortTypewriter();
-    removeTypingIndicator();
     var requestMessage = t("serviceUnavailable");
-    renderErrorBubble(requestMessage);
-    messagesArray.push({
-      role: "assistant",
-      content: requestMessage,
-      timestamp: Date.now(),
-      status: "error",
-      citations: []
-    });
-    persistConversation();
+    failStream(requestMessage);
     send.disabled = false;
     send.textContent = t("ask");
   }

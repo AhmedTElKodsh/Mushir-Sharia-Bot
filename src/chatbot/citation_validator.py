@@ -11,7 +11,7 @@ class CitationValidator:
     citation_pattern = re.compile(
         r"\[[^\]]*?(?:(?:AAOIFI\s+)?(?P<family>FAS|SS|GS)-?(?P<number>\d+)"
         r"|(?:AAOIFI\s+)?(?:Shari'?ah|Sharia)\s+Standard\s*-?(?P<sharia_number>\d+))"
-        r"(?:\s*(?:§|section|القسم)\s*(?P<section>[A-Za-z0-9.\-]+))?"
+        r"(?:[\s,،]*(?:§|section|القسم)\s*(?P<section>[A-Za-z0-9./\-]+))?"
         r"[^\]]*\]",
         re.IGNORECASE,
     )
@@ -32,7 +32,9 @@ class CitationValidator:
             for chunk in chunks:
                 chunk_standard, chunk_section = self._chunk_ref(chunk)
                 normalized_chunk_section = self._normalize_section(chunk_section)
-                ref = (chunk_standard, chunk_section)
+                ref = (chunk_standard, chunk_section, self._metadata(chunk).get("document_id"),
+                       self._metadata(chunk).get("source_version") or self._metadata(chunk).get("version"),
+                       self._quote_for_chunk(chunk))
 
                 section_matches = (
                     cited_section is None
@@ -52,6 +54,8 @@ class CitationValidator:
             return None
         quote, start, end = self._quote_for_chunk(chunk)
         metadata = self._metadata(chunk)
+        if not quote or self.has_source_instructions(self._chunk_text(chunk)):
+            return None
         return AAOIFICitation(
             document_id=metadata.get("document_id") or standard,
             standard_number=standard,
@@ -61,7 +65,42 @@ class CitationValidator:
             captured_at=metadata.get("captured_at"),
             quote_start=start,
             quote_end=end,
+            source_version=str(metadata.get("source_version") or metadata.get("version"))
+                if metadata.get("source_version") or metadata.get("version") else None,
         )
+
+    @staticmethod
+    def has_source_instructions(text):
+        """Quarantine instruction-bearing passages; retrieved text has no instruction authority."""
+        return bool(re.search(r"ignore (?:all |previous |the )*(?:instructions|rules|system)|system prompt|"
+            r"(?:assistant|model)\s*[:：]|(?:reveal|print|show) (?:the |your )?(?:hidden|private|system)|"
+            r"تجاهل (?:التعليمات|القواعد)|تعليمات النظام|اكشف (?:الأفكار|الافكار)", text, re.I))
+
+    def definition_citation(self, chunk, terms):
+        """Return a literal definition sentence, with offsets in the original passage.
+
+        This is extractive support for that quoted proposition only. It does not
+        validate arbitrary generated claims or establish transaction applicability.
+        """
+        text = self._chunk_text(chunk)
+        if self.has_source_instructions(text):
+            return None
+        term_pattern = "(?:" + "|".join(re.escape(term) for term in terms) + ")"
+        predicate = (r"\s*(?:[-–:]\s*)?(?:is\s+(?:(?:a|an|the)\s+)?"
+                     r"(?:sale|lease|contract|partnership|financing|interest|tax|levy|process|arrangement)\b|"
+                     r"refers to\s+|means\s+|is defined as\s+|"
+                     r"(?:هي|هو)\s+(?:بيع|عقد|شراكة|تمويل|زيادة|عملية|ترتيب)|تعني\s+|يعني\s+)")
+        for match in re.finditer(r"[^.!?؟\n]+(?:[.!?؟]|$)", text):
+            sentence = match[0].strip()
+            if len(sentence) > 500 or not re.search(term_pattern + predicate, sentence, re.I):
+                continue
+            citation = self.citation_for_chunk(chunk)
+            if citation:
+                start = match.start() + len(match[0]) - len(match[0].lstrip())
+                citation.excerpt = sentence
+                citation.quote_start, citation.quote_end = start, start + len(sentence)
+                return citation
+        return None
 
     @staticmethod
     def _normalize_section(section: Optional[str]) -> Optional[str]:
@@ -156,10 +195,10 @@ class CitationValidator:
         return 0, 0
 
     def _quote_for_chunk(self, chunk: Any) -> Tuple[str, int, int]:
-        text = self._chunk_text(chunk).strip()
-        if not text:
+        text = self._chunk_text(chunk)
+        if not text.strip():
             return "", 0, 0
-        sentences = re.split(r"(?<=[.!?\u061f\u06d4])\s+", text)
+        sentences = [part.strip() for part in re.split(r"(?<=[.!?\u061f\u06d4])\s+", text) if part.strip()]
         quote = next((sentence for sentence in sentences if len(sentence) >= 40), sentences[0])
         quote = quote[:500]
         start = text.find(quote)
@@ -174,7 +213,7 @@ class CitationValidator:
         metadata = dict(getattr(chunk, "metadata", {}) or {})
         citation = getattr(chunk, "citation", None)
         metadata.update({
-            "document_id": getattr(citation, "source_file", None),
+            "document_id": metadata.get("document_id") or getattr(citation, "source_file", None),
             "section_title": metadata.get("section_title") or getattr(citation, "section", None),
         })
         return metadata

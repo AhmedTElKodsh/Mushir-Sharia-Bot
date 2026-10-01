@@ -288,12 +288,13 @@ class FactResolution(EvidenceModel):
     """A user confirms their own conflicting assertions; not document verification."""
     previous_fact: FactObservation
     selected_fact: FactObservation
-    basis: Literal["user_confirmed_schedule"] = "user_confirmed_schedule"
+    basis: Literal["user_confirmed_schedule", "explicit_user_correction"] = "user_confirmed_schedule"
 
     @model_validator(mode="after")
     def own_assertions_only(self):
         old, selected = self.previous_fact, self.selected_fact
-        if old.status != "conflicting" or selected.status != "user_reported":
+        allowed_old = {"conflicting", "user_reported"} if self.basis == "explicit_user_correction" else {"conflicting"}
+        if old.status not in allowed_old or selected.status != "user_reported":
             raise ValueError("resolution requires a conflict and a new user assertion")
         if old.slot != selected.slot or old.scope != selected.scope:
             raise ValueError("resolution must retain the fact slot and transaction scope")
@@ -307,6 +308,9 @@ class FactResolution(EvidenceModel):
         if any(not isinstance(candidate.source, UserTurnProvenance)
                or candidate.source.session_id != selected.source.session_id for candidate in old.candidates):
             raise ValueError("a user can resolve only their own assertions, not observed source conflicts")
+        if old.status == "user_reported" and (not isinstance(old.source, UserTurnProvenance)
+                or old.source.session_id != selected.source.session_id):
+            raise ValueError("a user can correct only their own assertions")
         return self
 
 

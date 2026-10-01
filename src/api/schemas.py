@@ -47,6 +47,7 @@ class Citation(BaseModel):
     section_title: Optional[str] = None
     excerpt: Optional[str] = None
     captured_at: Optional[str] = None
+    source_version: Optional[str] = None
     quote_start: Optional[int] = None
     quote_end: Optional[int] = None
 

@@ -308,11 +308,14 @@ def test_application_service_bypasses_response_cache_in_eval_mode(monkeypatch):
     from src.storage.cache import InMemoryCacheStore
 
     class Retriever:
+        calls = 0
+
         def retrieve(self, query, k=5, threshold=0.3):
+            Retriever.calls += 1
             return [
                 SemanticChunk(
                     chunk_id="chunk-1",
-                    text="AAOIFI requires ownership and risk transfer before resale.",
+                    text="Murabaha is a sale at cost plus an agreed profit.",
                     citation=AAOIFICitation(
                         standard_id="FAS-01",
                         section="1",
@@ -354,23 +357,26 @@ def test_application_service_bypasses_response_cache_in_eval_mode(monkeypatch):
             )
     service.family_router = FakeFamilyRouter()
 
-    service.answer("What is the definition of profit?")
-    service.answer("What is the definition of profit?")
+    service.answer("What is murabaha?")
+    service.answer("What is murabaha?")
     monkeypatch.setenv("RAG_EVAL_MODE", "true")
-    service.answer("What is the definition of profit?")
+    service.answer("What is murabaha?")
 
-    assert llm.calls == 2
+    # Extractive definitions never call the writer; eval mode must skip the cached copy.
+    assert Retriever.calls == 2
+    assert llm.calls == 0
 
 
 @pytest.mark.service
-def test_cached_answer_preserves_validated_citation_metadata():
+@pytest.mark.parametrize("legacy_verdict", [False, True])
+def test_cached_answer_preserves_validated_citation_metadata(legacy_verdict):
     from src.chatbot.application_service import ApplicationService
     from src.models.ruling import AAOIFICitation, AnswerContract, ComplianceStatus
     from src.storage.cache import InMemoryCacheStore
 
     cached = AnswerContract(
-        answer="COMPLIANT: Supported by [FAS-01 §1].",
-        status=ComplianceStatus.COMPLIANT,
+        answer="COMPLIANT: Supported by [FAS-01 §1]." if legacy_verdict else "Quotation [FAS-01 §1].",
+        status=ComplianceStatus.COMPLIANT if legacy_verdict else ComplianceStatus.INSUFFICIENT_DATA,
         citations=[
             AAOIFICitation(
                 document_id="FAS-01.md",
@@ -417,6 +423,12 @@ def test_cached_answer_preserves_validated_citation_metadata():
     answer = service.answer(query)
 
     assert answer.metadata["cache_hit"] is True
+    if legacy_verdict:
+        # A cached verdict without an evaluated approved rule is withheld, not replayed.
+        assert answer.status == ComplianceStatus.INSUFFICIENT_DATA
+        assert answer.citations == []
+        assert answer.metadata["approved_rule_gate"]["reason"] == "verdict_without_approved_rule"
+        return
     assert answer.citations[0].excerpt == "AAOIFI requires ownership and risk transfer before resale."
     assert answer.citations[0].confidence_score is None
     assert answer.citations[0].quote_start == 0

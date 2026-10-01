@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from src.config.logging_config import setup_logging
 from src.governance.source_catalog import is_answer_admissible_metadata
 from src.models.chunk import SemanticChunk
+from src.rag.score_policy import finite_score, validated_threshold
 
 logger = setup_logging()
 
@@ -85,6 +86,9 @@ class QdrantVectorStore:
         threshold: float = 0.7,
         filters: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
+        threshold = validated_threshold(threshold)
+        if k <= 0:
+            return []
         try:
             results = self.client.query_points(
                 collection_name=self.collection_name,
@@ -97,8 +101,8 @@ class QdrantVectorStore:
 
         chunks: List[Dict[str, Any]] = []
         for point in results.points:
-            score = float(point.score or 0.0)
-            if score < threshold:
+            score = finite_score(getattr(point, "score", None))
+            if score is None or score < threshold:
                 continue
             payload = dict(point.payload or {})
             if filters and not self._metadata_matches_filters(payload, filters):

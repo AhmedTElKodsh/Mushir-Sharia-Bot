@@ -113,7 +113,7 @@ def test_application_service_uses_response_cache_for_identical_definition():
             return [
                 SemanticChunk(
                     chunk_id="chunk-1",
-                    text="Risk transfer means transferring responsibility for loss.",
+                    text="Murabaha is a sale at cost plus an agreed profit.",
                     citation=SchemaCitation(
                         standard_id="FAS-01",
                         section="1",
@@ -147,8 +147,8 @@ def test_application_service_uses_response_cache_for_identical_definition():
         clarification_service=NoClarification(),
     )
 
-    first = service.answer("What is risk transfer?")
-    second = service.answer("What is risk transfer?")
+    first = service.answer("What is murabaha?")
+    second = service.answer("What is murabaha?")
 
     assert first.status == ComplianceStatus.INSUFFICIENT_DATA
     assert isinstance(second.citations[0], AAOIFICitation)

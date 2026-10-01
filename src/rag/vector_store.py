@@ -3,6 +3,7 @@ from chromadb.config import Settings
 from typing import List, Optional, Dict, Any
 from src.models.chunk import SemanticChunk
 from src.config.logging_config import setup_logging
+from src.rag.score_policy import finite_score, validated_threshold
 
 logger = setup_logging()
 
@@ -46,6 +47,9 @@ class VectorStore:
         self, query_embedding: List[float], k: int = 5, threshold: float = 0.7
     ) -> List[Dict[str, Any]]:
         """Retrieve top-k similar chunks."""
+        threshold = validated_threshold(threshold)
+        if k <= 0:
+            return []
         results = self.collection.query(
             query_embeddings=[query_embedding],
             n_results=k,
@@ -54,7 +58,10 @@ class VectorStore:
         for i, (chunk_id, doc, meta, dist) in enumerate(
             zip(results["ids"][0], results["documents"][0], results["metadatas"][0], results["distances"][0])
         ):
-            similarity = 1 - dist  # cosine distance to similarity
+            distance = finite_score(dist)
+            if distance is None:
+                continue
+            similarity = 1 - distance  # cosine distance to similarity
             if similarity >= threshold:
                 chunks.append({
                     "chunk_id": chunk_id,

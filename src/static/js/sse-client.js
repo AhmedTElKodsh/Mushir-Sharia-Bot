@@ -45,16 +45,25 @@ function processSseStream(reader, callbacks, conversationHistory) {
   var decoder = new TextDecoder();
   var buffer = "";
   var reading = true;
+  var terminal = false;
+
+  function dispatch(block) {
+    if (terminal) return;
+    var type = processBlock(block, callbacks);
+    terminal = type === "done" || type === "error";
+  }
 
   function readChunk() {
     if (!reading) return;
     reader.read().then(function(result) {
       if (result.done) {
         reading = false;
+        buffer += decoder.decode();
         // Flush any remaining event in the buffer
         if (buffer.trim().length > 0) {
-          processBlock(buffer, callbacks);
+          dispatch(buffer);
         }
+        if (!terminal) throw new Error("Stream ended before its final response");
         if (callbacks.onComplete) callbacks.onComplete();
         return;
       }
@@ -62,18 +71,18 @@ function processSseStream(reader, callbacks, conversationHistory) {
       buffer += decoder.decode(result.value, { stream: true });
 
       // Split on double newline (SSE event boundary)
-      var parts = buffer.split("\n\n");
+      var parts = buffer.split(/\r?\n\r?\n/);
       // Keep the last (possibly incomplete) part in the buffer
       buffer = parts.pop() || "";
 
       for (var i = 0; i < parts.length; i++) {
-        processBlock(parts[i], callbacks);
+        dispatch(parts[i]);
       }
 
       readChunk();
     }).catch(function(err) {
       reading = false;
-      if (callbacks.onStreamError) callbacks.onStreamError(err);
+      if (!terminal && callbacks.onStreamError) callbacks.onStreamError(err);
       if (callbacks.onComplete) callbacks.onComplete();
     });
   }
@@ -89,21 +98,26 @@ function processSseStream(reader, callbacks, conversationHistory) {
 function processBlock(block, callbacks) {
   var eventType = "";
   var eventData = null;
-  var lines = block.split("\n");
+  var lines = block.split(/\r?\n/);
+  var dataLines = [];
 
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i];
     if (line.startsWith("event: ")) eventType = line.slice(7);
     if (line.startsWith("data: ")) {
-      try {
-        eventData = JSON.parse(line.slice(6));
-      } catch (e) {
-        eventData = { raw: line.slice(6) };
-      }
+      dataLines.push(line.slice(6));
     }
   }
 
   if (!eventType) return;
+  eventData = JSON.parse(dataLines.join("\n"));
+  if (!eventData || typeof eventData !== "object" || Array.isArray(eventData)) {
+    throw new Error("Invalid stream event payload");
+  }
+  if (eventType === "done" && (typeof eventData.answer !== "string" || !eventData.answer.trim() ||
+      ["COMPLIANT", "NON_COMPLIANT", "PARTIALLY_COMPLIANT", "INSUFFICIENT_DATA", "CLARIFICATION_NEEDED"].indexOf(eventData.status) < 0)) {
+    throw new Error("Invalid final stream response");
+  }
 
   switch (eventType) {
     case "started":
@@ -127,4 +141,5 @@ function processBlock(block, callbacks) {
     default:
       break;
   }
+  return eventType;
 }

@@ -188,61 +188,23 @@ class TestRetrieveEdgeCases:
         result = pipeline.retrieve("test query", k=-1, threshold=0.3)
         assert result == []
 
-    def test_retrieve_clamps_negative_threshold_to_zero(self):
-        """retrieve(threshold=-0.5) should clamp to 0.0."""
+    @pytest.mark.parametrize("threshold", [-0.5, 2.0])
+    def test_retrieve_rejects_out_of_range_threshold_before_embedding(self, threshold):
+        """An out-of-range threshold is a configuration error, not something to clamp silently."""
         from src.rag.pipeline import RAGPipeline
 
         class FakeModel:
             def encode(self, q, normalize_embeddings=False):
-                from unittest.mock import Mock
-                return Mock(tolist=lambda: [0.1] * 768)
-
-        class FakeCollection:
-            def query(self, query_embeddings, n_results):
-                return {
-                    "documents": [["Test excerpt"]],
-                    "metadatas": [[{"source_file": "FAS-01.md", "section": "1"}]],
-                    "distances": [[1.0]],  # max distance = min similarity
-                    "ids": [["chunk-1"]],
-                }
+                raise AssertionError("embedding must not run with an invalid threshold")
 
         pipeline = RAGPipeline.__new__(RAGPipeline)
         pipeline.vector_store = None
         pipeline.embedding_generator = None
         pipeline.model = FakeModel()
-        pipeline.collection = FakeCollection()
+        pipeline.collection = None
 
-        # threshold=-0.5 clamped to 0.0 — should include this chunk (similarity=0.0 >= 0.0)
-        result = pipeline.retrieve("test", k=1, threshold=-0.5)
-        assert len(result) == 1
-
-    def test_retrieve_clamps_threshold_above_one_to_one(self):
-        """retrieve(threshold=2.0) should clamp to 1.0 (no chunks match)."""
-        from src.rag.pipeline import RAGPipeline
-
-        class FakeModel:
-            def encode(self, q, normalize_embeddings=False):
-                from unittest.mock import Mock
-                return Mock(tolist=lambda: [0.1] * 768)
-
-        class FakeCollection:
-            def query(self, query_embeddings, n_results):
-                return {
-                    "documents": [["Test excerpt"]],
-                    "metadatas": [[{"source_file": "FAS-01.md", "section": "1"}]],
-                    "distances": [[0.5]],  # similarity = 0.5
-                    "ids": [["chunk-1"]],
-                }
-
-        pipeline = RAGPipeline.__new__(RAGPipeline)
-        pipeline.vector_store = None
-        pipeline.embedding_generator = None
-        pipeline.model = FakeModel()
-        pipeline.collection = FakeCollection()
-
-        # threshold=2.0 clamped to 1.0 — no chunk has similarity >= 1.0
-        result = pipeline.retrieve("test", k=1, threshold=2.0)
-        assert result == []
+        with pytest.raises(ValueError, match="threshold"):
+            pipeline.retrieve("test", k=1, threshold=threshold)
 
 
 class TestArabicQueryExpansion:

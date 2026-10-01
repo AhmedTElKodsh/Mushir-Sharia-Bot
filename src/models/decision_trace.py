@@ -11,6 +11,11 @@ _STRUCTURE_SLOTS = {"resale_arranger", "underlying_sukuk_contract"}
 _DECISION_BASES = {
     "scope_refusal": "scope", "empty_request": "scope",
     "scholar_review_required": "review", "unsupported_asset": "source",
+    "purpose_needed": "clarification", "current_offer_unverified": "source",
+    "purpose_unavailable": "scope",
+    "private_reasoning_requested": "scope", "generated_claim_unverified": "source",
+    "literal_passage_cited": "source",
+    "source_versions_conflict": "source", "definition_support_unavailable": "source",
 }
 
 
@@ -66,7 +71,7 @@ def build_decision_trace(answer) -> dict:
                 "section": c.section_number, "captured_at": c.to_dict()["captured_at"],
                 "quote_start": str(c.quote_start) if c.quote_start is not None else None,
                 "quote_end": str(c.quote_end) if c.quote_end is not None else None,
-                "version": None}
+                "version": c.source_version}
                for c in answer.citations]
     if metadata.get("trace_unavailable"):
         gate, reason_code = "unavailable", "legacy_trace_unavailable"
@@ -78,10 +83,13 @@ def build_decision_trace(answer) -> dict:
         reason = review.decision.reason
         # A review reason is a typed code. Never pass an arbitrary reason through to the client.
         allowed_reasons = {"financing_party_unknown", "conflicting_user_facts", "payment_total_discrepancy",
-                           "mechanism_unknown", "approved_rule_evaluated_overall_gates_pending"}
+                           "mechanism_unknown", "approved_rule_evaluated_overall_gates_pending",
+                           "scenario_switch_confirmation", "scenario_scope_unresolved"}
         reason_code = reason if reason in allowed_reasons else "material_evidence_incomplete"
         if reason_code == "approved_rule_evaluated_overall_gates_pending":
             gate = "selective_answer"
+        if reason_code == "scenario_scope_unresolved":
+            gate = "scope"
     elif metadata.get("disclaimer_required"):
         gate, reason_code = "scope", "disclaimer_required"
     elif "structure_clarification" in metadata:

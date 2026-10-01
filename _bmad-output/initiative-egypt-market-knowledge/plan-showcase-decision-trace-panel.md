@@ -3,7 +3,7 @@ title: 'Showcase decision-trace panel above every answer'
 type: 'feature'
 ticket: ''
 created: '2026-10-01'
-status: 'in-progress'
+status: 'in-review'
 baseline_commit: '9497f47e6a44ac8ba076860ef846ea0e3a50a8bf'
 route: 'full'
 route_source: 'auto'
@@ -103,6 +103,19 @@ A implements/tests observable conversation, evidence and UI behavior in the 16-c
 
 ## Implementation Notes
 
+### Authorized continuation after milestone 07207d7
+
+The user said proceed with the remaining Goal A work. Preserve the working implementation and frozen intent; continue the incomplete cases in the case ledger. This is a resumed build, so keep the original baseline_commit. Implement A-owned observable requirements and local reproducible coverage. B-owned expanded lineage/retention activation and D-owned live offer acquisition remain explicit dependencies. Live/model/deployed validation is additional and may remain unavailable; do not invent results.
+
+1. `src/chatbot/application_service.py`, `src/chatbot/citation_validator.py` and focused tests: extract an explicit supported definition from mixed definition/judgment requests and present it alongside a withheld assessment or the existing single clarification, without granting judgment authority or using a cached judgment. Validate literal cited passages and refuse absent/wrong sections, irrelevant definition passages and source-embedded instructions. Preserve citation passage identity; unknown versions remain explicit. A matching citation alone is never a semantic claim-support pass. Use extractive, source-limited explanation when arbitrary generated claims cannot be verified. No invented translation is necessary: label an original-language quotation honestly inside an Arabic/English explanation.
+2. `src/chatbot/application_service.py`, `src/models/decision_trace.py`, evidence display and tests: handle stale dated evidence and conflicting source versions conservatively for claims that depend on unresolved freshness/identity; retain age/provenance, never merge incompatible offer claims or invent inspection of inaccessible agreements. POC-10 tests must distinguish stable standard definitions from current offer assertions. D may remain unavailable; withhold named-offer claims safely.
+3. `src/chatbot/described_operation.py`, `src/chatbot/described_operation_facts.py`, clarification routing and service tests: finish EN/AR conversation subcases in POC-01..06, including explicit requested-language override, language switches preserving facts, purposeful broad clarification, compound and unambiguous short replies, explicit corrections with history, unknown/refusal replies, and ambiguous/new purchase/session isolation. Preserve unknown currency and mechanism; keep one highest-impact question. Do not change the scholar-approved evaluator to satisfy pending gold cases.
+4. `src/rag/pipeline.py`, `src/rag/qdrant_store.py`, relevant adapters and tests: pin below/equal/above retrieval cutoffs, fail safely for missing or non-finite scores/configuration, and prove high relevance cannot bypass missing facts/rules. Numeric diagnostics remain internal. Diagnostic fallback must not promote invalid signals into answer evidence.
+5. Application/input/source guardrails and service/API tests: cover guessing requests, claimed scholar authority, retrieved-text prompt injection, hidden-thought requests, unknown/ambiguous entities, conditional arithmetic with unknown fees, and failure behavior. Public trace contains typed facts/fixed codes only. No uncommitted substantive SSE output. Add interrupted SSE/retry observable tests, while keeping B-owned persistent retry/delivery lineage clearly incomplete.
+6. `tests/` and `goal-a-case-results-2026-10-01.md`: complete paired material-change/paraphrase regressions and enumerate each A subcase with exact nodes and actual result. B-owned version attribution stays a dependency. Existing passing UI checks cover POC-15; broaden only if changed code needs it. Update this spec's checkboxes honestly; full Goal A is not done while required A behavior is unimplemented or failed.
+
+Run focused tests as changes are made, then the full Python acceptance command. Browser tests may need a single worker on this machine; avoid simultaneous full Python/browser processes because earlier runs encountered host memory pressure. Protect operator stores; never print payloads or credentials. Do not commit or push from the implementation subagent; the primary agent handles verification/review and version control.
+
 The first implementation slice includes the bilingual structured panel, REST/SSE and browser-history projection, cache persistence, private router signals and preservation prerequisites. [Case evidence and remaining gaps](goal-a-case-results-2026-10-01.md) keep expanded POC acceptance open. The status remains in-progress; review of this slice does not complete the 16-case contract.
 
 Final verification: 1,322 Python tests passed, 48 skipped, 12 strict expected failures; 35 browser tests passed with one worker. Browser evidence is local/mock and the retrieval index was unavailable; deployed/model behavior is unverified.
@@ -157,3 +170,7 @@ Values are user-reported text, never computed scores. `reason_code` maps to bili
 **Commands:**
 - `.venv/Scripts/python -m pytest tests -q --timeout=90` -- expected: 0 failed, 12 xfailed
 - `npx playwright test e2e/decision-trace.spec.ts e2e/evidence-status.spec.ts` -- expected: all pass
+
+### Retrieval and answer delivery continuation
+
+The primary agent implemented finite numeric retrieval gates at adapters, pipeline and custom service providers, with inclusive cutoff tests. Arbitrary generated factual claims are withheld unless the entire displayed proposition is a literal cited span; this conservative extractive policy does not claim semantic inference accuracy. A policy version separates old cache keys. Private-thought requests receive a fixed public explanation. SSE parsing requires a valid terminal response, discards partial output on failures, supports fragmented UTF-8/CRLF, and restores the canonical final response on retry. These changes implement authorized continuation items 4 and 5; independent review and complete verification remain pending.

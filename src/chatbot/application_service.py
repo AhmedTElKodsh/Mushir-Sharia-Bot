@@ -133,6 +133,8 @@ class ApplicationService:
     ) -> AnswerContract:
         if self.decision_store is None:
             result = self._answer(query, session_id, request_id, disclaimer_acknowledged, conversation_history)
+            result = self._add_requested_definition(query, result)
+            result = self._enforce_verdict_authority(result)
             return self._attach_decision_trace(result)
         from uuid import uuid4
         from src.models.decision_audit import prepare_decision_record
@@ -153,6 +155,8 @@ class ApplicationService:
             # Anonymous requests share one id with their audit record but never leave session state behind.
             answer = self._answer(query, effective_session, effective_request, disclaimer_acknowledged,
                                   conversation_history, keep_session=bool(session_id))
+            answer = self._add_requested_definition(query, answer)
+            answer = self._enforce_verdict_authority(answer)
             answer = self._attach_decision_trace(answer)
             record = prepare_decision_record(query, answer, session_id=effective_session, request_id=effective_request)
             if self.decision_store.append(record) != record.review_id:
@@ -165,6 +169,30 @@ class ApplicationService:
             raise
         if not session_id:
             self._restore_session(effective_session, None)  # No caller handle exists, so no state may outlive the call.
+        return answer
+
+    _VERDICT_STATUSES = frozenset({ComplianceStatus.COMPLIANT, ComplianceStatus.NON_COMPLIANT,
+                                   ComplianceStatus.PARTIALLY_COMPLIANT})
+
+    @classmethod
+    def _enforce_verdict_authority(cls, answer):
+        """Final invariant: only an evaluated, scholar-approved rule may carry a verdict.
+
+        Independent of routing, cache and claim-support checks, so a misrouted
+        question or a cached legacy answer cannot deliver a generated verdict.
+        """
+        if not isinstance(answer, AnswerContract) or answer.status not in cls._VERDICT_STATUSES:
+            return answer
+        evaluation = answer.metadata.get("approved_rule_evaluation")
+        if isinstance(evaluation, dict) and evaluation.get("status") == "evaluated":
+            return answer
+        language = answer.metadata.get("response_language") if answer.metadata.get("response_language") in {"en", "ar"} else "en"
+        answer.status = ComplianceStatus.INSUFFICIENT_DATA
+        answer.answer = cls._rule_review_required_message(language)
+        answer.citations = []
+        answer.metadata.pop("decision_basis", None)
+        answer.metadata["requires_scholar_review"] = True
+        answer.metadata["approved_rule_gate"] = {"status": "blocked", "reason": "verdict_without_approved_rule"}
         return answer
 
     @staticmethod
@@ -212,6 +240,15 @@ class ApplicationService:
             return self._empty_query_response()
         cleaned_query = self._normalize_query(query.strip())
         response_language = self._detect_language(cleaned_query)
+        if re.search(r"chain[- ]of[- ]thought|(?:hidden|private|internal)\s+(?:thoughts?|reasoning)|"
+                     r"سلسلة التفكير|(?:الأفكار|الافكار|التفكير)\s+(?:الداخلية|الخفي|الخفية)", cleaned_query, re.I):
+            text = ("أستطيع عرض شرح موجز للأدلة والمعلومات الناقصة وسبب الرد، دون عرض التفكير الداخلي الخاص."
+                    if response_language == "ar" else
+                    "I can show a brief explanation of the evidence, missing information and response basis. Private internal reasoning is unavailable.")
+            contract = AnswerContract(answer=text, status=ComplianceStatus.INSUFFICIENT_DATA,
+                metadata={"response_language": response_language, "decision_basis": "private_reasoning_requested"})
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
         if self._requires_disclaimer(disclaimer_acknowledged):
             question = self._disclaimer_acknowledgement_question(response_language)
             contract = AnswerContract(
@@ -256,10 +293,15 @@ class ApplicationService:
         # A suspended transaction must not capture facts from the active topic.
         # Only a fresh personal description may switch out of that topic.
         personal_context = None if pending_structure else operation
-        if not structure_slot(cleaned_query) and self.described_operations.accepts(query, personal_context):
+        operation_query = self._without_language_instruction(query)
+        purpose_answer = self._purpose_clarification(operation_query, response_language, session_id, keep_session)
+        if purpose_answer:
+            self._audit(query, purpose_answer, session_id, request_id)
+            return purpose_answer
+        if not structure_slot(cleaned_query) and self.described_operations.accepts(operation_query, personal_context):
             effective_session = session_id or str(uuid4())
             contract, updated_operation = self.described_operations.answer(
-                query, session_id=effective_session, request_id=request_id or str(uuid4()),
+                operation_query, session_id=effective_session, request_id=request_id or str(uuid4()),
                 previous=personal_context, language=response_language,
             )
             state = state or self._session_state(session_id, create=keep_session)
@@ -411,6 +453,10 @@ class ApplicationService:
             standards_route,
         )
         chunks = candidate_matched_chunks
+        source_limit = self._source_limit_contract(cleaned_query, chunks, response_language)
+        if source_limit:
+            self._audit(cleaned_query, source_limit, session_id, request_id)
+            return source_limit
         if not chunks:
             empty_families: set[SourceFamily] = set()
             if should_fail_closed_for_source_gap(scenario, standards_route, empty_families):
@@ -546,6 +592,13 @@ class ApplicationService:
             self._audit(cleaned_query, definition_contract, session_id, request_id)
             self._cache_answer(cleaned_query, definition_contract, standards_route)
             return definition_contract
+        if self._is_definition_query(cleaned_query):
+            contract = AnswerContract(answer=("لم أعثر على مقطع يعرّف المفهوم المطلوب؛ لا أستطيع اختراع شرح أو مرجع."
+                if response_language == "ar" else "I found no passage defining the requested concept; I cannot invent an explanation or reference."),
+                status=ComplianceStatus.INSUFFICIENT_DATA, metadata={"response_language": response_language,
+                "answer_kind": "definition", "decision_basis": "definition_support_unavailable"})
+            self._audit(cleaned_query, contract, session_id, request_id)
+            return contract
 
         unsupported_modern_asset_contract = self._unsupported_modern_asset_contract(
             cleaned_query,
@@ -633,13 +686,29 @@ class ApplicationService:
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract
         status = self._status_from_answer(answer, citations)
-        if status == ComplianceStatus.INSUFFICIENT_DATA and not citations:
+        # Reference resolution is not claim support. The early POC admits only
+        # a literal cited passage here; arbitrary generated assertions are withheld.
+        literal = self.citation_validator.citation_pattern.sub("", answer).strip()
+        literal = re.sub(r"^(?:NON[_ -]?COMPLIANT|PARTIALLY[_ -]?COMPLIANT|COMPLIANT|INSUFFICIENT_DATA)\s*:\s*", "", literal, flags=re.I)
+        literal = literal.strip(' \n\r\t"“”«»')
+        supported = next((c for c in citations if literal and c.excerpt and literal in c.excerpt), None)
+        status = ComplianceStatus.INSUFFICIENT_DATA
+        if supported is not None:
+            answer = self._definition_answer_text(literal, self._inline_citation_marker(supported), response_language)
+            citations = [supported]
+            # Link the exact displayed proposition, rather than the whole excerpt.
+            offset = supported.excerpt.index(literal)
+            supported.quote_start = (supported.quote_start or 0) + offset
+            supported.quote_end = supported.quote_start + len(literal)
+            supported.excerpt = literal
+        else:
             answer = self._insufficient_data_message(response_language)
+            citations = []
         contract = AnswerContract(
             answer=answer,
             status=status,
             citations=citations,
-            reasoning_summary=self._reasoning_summary(answer),
+            reasoning_summary="Literal source support checked; unverified generated claims withheld.",
             limitations=self._limitations(response_language),
             metadata=self._metadata(
                 chunks,
@@ -650,6 +719,8 @@ class ApplicationService:
                 candidate_standard_filter=candidate_standard_filter,
             ),
         )
+        contract.metadata["claim_support"] = "literal_quote_only" if supported else "unverified_withheld"
+        contract.metadata["decision_basis"] = "literal_passage_cited" if supported else "generated_claim_unverified"
         self._audit(cleaned_query, contract, session_id, request_id)
         
         # User-flag Q3 (if user feedback indicates issue)
@@ -693,8 +764,10 @@ class ApplicationService:
     ) -> List[Any]:
         filters = self._retrieval_filters(standards_route)
         mode = os.getenv("RETRIEVAL_MODE", "dense")
+        from src.rag.score_policy import meets_threshold, validated_threshold
+        threshold = validated_threshold(threshold)
         try:
-            return self.retriever.retrieve(
+            chunks = self.retriever.retrieve(
                 query,
                 k=k,
                 threshold=threshold,
@@ -704,7 +777,9 @@ class ApplicationService:
         except TypeError as exc:
             if not self._legacy_retriever_signature_error(exc):
                 raise
-            return self.retriever.retrieve(query, k=k, threshold=threshold)
+            chunks = self.retriever.retrieve(query, k=k, threshold=threshold)
+        return [chunk for chunk in chunks if meets_threshold(
+            chunk.get("similarity", chunk.get("score")) if isinstance(chunk, dict) else getattr(chunk, "score", None), threshold)]
 
     @staticmethod
     def _retrieval_filters(standards_route: Any = None) -> Optional[Dict[str, Any]]:
@@ -721,8 +796,15 @@ class ApplicationService:
 
     @staticmethod
     def _answer_admissible_chunks(chunks: List[Any]) -> List[Any]:
+        import math
         admissible = []
         for chunk in chunks:
+            signal = (chunk.get("similarity", chunk.get("score")) if isinstance(chunk, dict)
+                      else getattr(chunk, "score", None))
+            if signal is not None and (type(signal) not in {int, float} or not math.isfinite(signal)):
+                continue
+            if CitationValidator.has_source_instructions(ApplicationService._chunk_text(chunk)):
+                continue
             metadata = chunk.get("metadata", {}) if isinstance(chunk, dict) else getattr(chunk, "metadata", {}) or {}
             if not is_answer_admissible_metadata(
                 metadata,
@@ -1098,6 +1180,7 @@ class ApplicationService:
 
     def _cache_key(self, query: str, standards_route: Any = None) -> str:
         payload = {
+            "public_answer_policy": "literal-support-v2",
             "query": query.strip().lower(),
             "prompt_version": getattr(self.prompt_builder, "prompt_version", None),
             "model_name": getattr(self.llm_client, "model_name", None),
@@ -1138,6 +1221,7 @@ class ApplicationService:
                     captured_at=citation.get("captured_at"),
                     quote_start=citation.get("quote_start"),
                     quote_end=citation.get("quote_end"),
+                    source_version=citation.get("source_version"),
                 )
                 for citation in data.get("citations", [])
             ],
@@ -1291,6 +1375,11 @@ class ApplicationService:
         """
         if not query:
             return "en"
+        requested = list(re.finditer(r"(?:answer|respond|reply|explain)\s+(?:to me\s+)?in\s+(English|Arabic)|"
+            r"(?:اجب|أجب|رد|اشرح|جاوب)\s*(?:ب|بال)(العربية|عربية|الانجليزية|الإنجليزية|انجليزي|انجليزى|انجليزيه)", query, re.I))
+        if requested:
+            value = requested[-1][1] or requested[-1][2]
+            return "ar" if value.lower() == "arabic" or "عرب" in value else "en"
         arabic_chars = sum(1 for c in query if '\u0600' <= c <= '\u06ff')
         ratio = arabic_chars / len(query)
         return "ar" if arabic_chars >= 12 or ratio > 0.35 else "en"
@@ -1456,6 +1545,116 @@ class ApplicationService:
             return str(chunk.get("chunk_id") or chunk.get("id") or "")
         return str(getattr(chunk, "chunk_id", ""))
 
+    @staticmethod
+    def _without_language_instruction(query):
+        stripped = re.sub(r"(?:please\s+)?(?:answer|respond|reply|explain)\s+(?:to me\s+)?in\s+(?:English|Arabic)|"
+            r"(?:اجب|أجب|رد|اشرح|جاوب)\s*(?:ب|بال)(?:العربية|عربية|الانجليزية|الإنجليزية|انجليزي|انجليزى|انجليزيه)",
+            "", query or "", flags=re.I)
+        return stripped.strip(" .,:،") if stripped != query else query
+
+    def _purpose_clarification(self, query, language, session_id, keep_session):
+        broad = bool(re.fullmatch(r"\s*(?:please )?(?:help(?: me)?(?: with)?|I need help(?: with)?)\s+(?:financ(?:e|ing)|instal+ments?|BNPL)[.!?]?\s*|"
+            r"\s*(?:ساعدني|عايز مساعدة|أريد مساعدة|اريد مساعدة)\s*(?:في|بخصوص)?\s*(?:التمويل|التقسيط)[.!؟]?\s*", query, re.I))
+        state = self._session_state(session_id)
+        pending = bool(state and state.metadata.pop("purpose_clarification", None))
+        if pending:
+            self._update_session_state(state)
+        if not broad and not pending:
+            return None
+        if pending and not broad:
+            if self._is_definition_query(self._normalize_query(query)):
+                return None
+            if re.search(r"\b(?:my|a) (?:purchase|transaction|agreement|contract)\b|شراء|معاملة|عقدي", query, re.I):
+                question = ("مين مقدم خطة التقسيط: المحل نفسه ولا بنك أو شركة تمويل؟" if language == "ar" else
+                            "Who provides the instalment plan—the store itself, or a bank or finance company?")
+                # Purpose alone is not a transaction fact. A full description on
+                # this turn continues through the typed operation lane normally.
+                if self.described_operations.accepts(query):
+                    return None
+                reason = "financing_party_unknown"
+            elif re.search(r"definition|meaning|تعريف|معنى", query, re.I):
+                question = ("أي مفهوم تريد تعريفه؟" if language == "ar" else "Which concept would you like defined?")
+                reason = "purpose_needed"
+            else:
+                return AnswerContract(answer=("حدد المفهوم أو أرسل وصف المعاملة وجهة التمويل؛ لا تتوافر معلومات لتقييمها."
+                    if language == "ar" else "Name the concept or describe the transaction and financing party; an assessment is unavailable without those details."),
+                    status=ComplianceStatus.INSUFFICIENT_DATA, metadata={"response_language": language,
+                    "decision_basis": "purpose_unavailable"})
+        else:
+            question = ("هل تريد تعريف مفهوم، أم فهم شروط معاملة تخصك، أم شرحًا محاسبيًا؟" if language == "ar" else
+                        "Would you like a concept definition, help understanding your transaction terms, or an accounting explanation?")
+            reason = "purpose_needed"
+            state = state or self._session_state(session_id, create=keep_session)
+            if state:
+                state.metadata["purpose_clarification"] = True
+        if state:
+            state.add_message("user", query)
+            state.add_message("assistant", question)
+            self._update_session_state(state)
+        return AnswerContract(answer=question, status=ComplianceStatus.CLARIFICATION_NEEDED,
+            clarification_question=question, metadata={"response_language": language,
+            "decision_basis": reason if reason == "purpose_needed" else None, "question_origin": "deterministic"})
+
+    @staticmethod
+    def _definition_terms(query):
+        groups = (("murabaha", "murabahah", "المرابحة", "مرابحة"),
+                  ("ijara", "ijarah", "الإجارة", "إجارة", "الاجارة", "اجارة"),
+                  ("mudaraba", "mudarabah", "المضاربة", "مضاربة"),
+                  ("musharaka", "musharakah", "المشاركة", "مشاركة"),
+                  ("tawarruq", "التورق", "تورق"), ("sukuk", "الصكوك", "صكوك"),
+                  ("salam", "السلم"), ("istisna", "istisna'a", "الاستصناع", "استصناع"),
+                  ("riba", "الربا", "ربا"), ("zakat", "الزكاة", "زكاة"))
+        return next((group for group in groups if any(re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", query, re.I)
+                                                    for term in group)), ())
+
+    def _add_requested_definition(self, query, answer):
+        """Supplement a withheld mixed request with a separately supported quotation."""
+        if not isinstance(answer, AnswerContract) or not query or answer.metadata.get("answer_kind") == "definition":
+            return answer
+        if answer.metadata.get("decision_basis") in {"scope_refusal", "current_offer_unverified"} or answer.metadata.get("disclaimer_required"):
+            return answer
+        match = re.search(r"(?:what (?:is|are)|define|explain|ما هي|ما هو|ما معنى|اشرح|عرف)\s+"
+            r"(murabaha[h]?|ijara[h]?|mudaraba[h]?|musharaka[h]?|tawarruq|sukuk|riba|zakat|المرابحة|مرابحة|الإجارة|الاجارة|المضاربة|المشاركة|التورق|الصكوك|الربا|الزكاة)", query, re.I)
+        if not match or self._is_definition_query(self._normalize_query(query)):
+            return answer
+        definition_query = "What is " + match[1] + "?"
+        try:
+            if self.retriever is None:
+                return answer
+            chunks = self._answer_admissible_chunks(self._retrieve(definition_query, k=max(self.k * 8, 40), threshold=self.threshold))
+            limit = self._source_limit_contract(definition_query, chunks, answer.metadata.get("response_language", "en"))
+            definition = None if limit else self._definition_answer_if_supported(definition_query, chunks, answer.metadata.get("response_language", "en"))
+        except Exception:
+            definition = None
+        if definition:
+            answer.answer = definition.answer + "\n\n" + answer.answer
+            answer.citations = definition.citations
+            answer.metadata["supported_definition"] = {"claim_support": "literal_quote_only", "assessment": "withheld"}
+        return answer
+
+    def _source_limit_contract(self, query, chunks, language):
+        """An unresolved document identity or current-offer request cannot authorize claims."""
+        current_offer = bool(re.search(r"\b(?:current|today|latest|offer|BNPL provider)\b|العرض|عروض|حاليا|الحالي|النهارده", query, re.I))
+        grouped = {}
+        for chunk in chunks:
+            terms = self._definition_terms(query) if self._is_definition_query(query) else ()
+            citation = (self.citation_validator.definition_citation(chunk, terms) if terms else
+                        self.citation_validator.citation_for_chunk(chunk))
+            if citation:
+                grouped.setdefault((citation.standard_number, citation.section_number), []).append(citation)
+        conflicting = any(len({c.source_version for c in items if c.source_version}) > 1
+                          and len({c.excerpt for c in items}) > 1 for items in grouped.values())
+        if not current_offer and not conflicting:
+            return None
+        reason = "current_offer_unverified" if current_offer else "source_versions_conflict"
+        text = (("لا تتوافر مستندات عرض حالي موثقة؛ تاريخ المقطع أو اسم الشركة لا يثبت شروط عقدك. اطلب نسخة العقد وبيان العرض من جهة التمويل."
+                 if language == "ar" else "Verified current-offer documents are unavailable; a passage date or company name does not establish your contract terms. Request the agreement and offer disclosure from the financier.")
+                if current_offer else ("نسخ المصادر تختلف ولم تُحسم هوية النسخة المناسبة؛ سأحجب الشرح المعتمد عليها إلى أن تُراجع الوثائق."
+                 if language == "ar" else "Source versions differ and the applicable version is unresolved; I am withholding the explanation that depends on them until the documents are reviewed."))
+        return AnswerContract(answer=text, status=ComplianceStatus.INSUFFICIENT_DATA,
+            citations=[c for items in grouped.values() for c in items], metadata={"response_language": language,
+            "decision_basis": reason, "source_limitation": reason})
+
     def _definition_answer_if_supported(
         self,
         query: str,
@@ -1464,10 +1663,19 @@ class ApplicationService:
     ) -> Optional[AnswerContract]:
         if not self._is_definition_query(query):
             return None
-        chunk = self._best_definition_chunk(query, chunks)
-        if chunk is None:
-            return None
-        citation = self.citation_validator.citation_for_chunk(chunk)
+        if self.citation_validator.citation_pattern.search(query):
+            resolved = {(c.document_id, c.section_number, c.source_version) for c in
+                        self.citation_validator.validate(query, chunks)}
+            chunks = [chunk for chunk in chunks if (c := self.citation_validator.citation_for_chunk(chunk))
+                      and (c.document_id, c.section_number, c.source_version) in resolved]
+        terms = self._definition_terms(query)
+        import math
+        def valid_signal(chunk):
+            raw = (chunk.get("similarity", chunk.get("score")) if isinstance(chunk, dict)
+                   else getattr(chunk, "score", None))
+            return type(raw) in {int, float} and math.isfinite(raw) and 0 <= raw <= 1
+        citation = next((citation for chunk in chunks if valid_signal(chunk)
+                         if (citation := self.citation_validator.definition_citation(chunk, terms))), None) if terms else None
         if citation is None:
             return None
         marker = self._inline_citation_marker(citation)
@@ -1476,12 +1684,12 @@ class ApplicationService:
             answer=answer,
             status=ComplianceStatus.INSUFFICIENT_DATA,
             citations=[citation],
-            reasoning_summary=self._reasoning_summary(answer),
+            reasoning_summary="Extractive definition from the identified source passage; transaction assessment withheld.",
             limitations=self._limitations(response_language),
             metadata={**self._metadata(
                 chunks,
                 response_language=response_language,
-            ), "answer_kind": "definition"},
+            ), "answer_kind": "definition", "claim_support": "literal_quote_only"},
         )
 
     @classmethod
@@ -1497,6 +1705,10 @@ class ApplicationService:
             "requirement",
             "conditions",
             "is it halal",
+            "halal",
+            "haram",
+            "is my agreement",
+            "is my contract",
             "حكم",
             "يجوز",
             "حلال",
@@ -1522,45 +1734,6 @@ class ApplicationService:
         arabic_starters = arabic_starters + ("ما هي ", "ما هو ", "ما معنى ", "عرف ", "اشرح ")
         return lowered.startswith(english_starters) or lowered.startswith(arabic_starters)
 
-    def _best_definition_chunk(self, query: str, chunks: List[Any]) -> Optional[Any]:
-        expanded_terms = {
-            term.lower()
-            for term in QueryPreprocessor.expand_terms(query)
-            if len(term) >= 4
-        }
-        definition_indicators = (
-            " is sale",
-            " is a sale",
-            " - is ",
-            " – is ",
-            " refers to ",
-            " means ",
-            "defined as",
-            "definition",
-            "هي ",
-            "يقصد",
-            "تعني",
-            "تعريف",
-        )
-
-        best_chunk = None
-        best_score = -1.0
-        for chunk in chunks:
-            text = self._chunk_text(chunk)
-            lowered = text.lower()
-            term_hit = any(term in lowered for term in expanded_terms)
-            definition_hit = any(indicator in lowered for indicator in definition_indicators)
-            if not term_hit or not definition_hit:
-                continue
-            score = float(getattr(chunk, "score", 0.0) or 0.0)
-            if isinstance(chunk, dict):
-                score = float(chunk.get("similarity") or chunk.get("score") or 0.0)
-            score += 0.25
-            if score > best_score:
-                best_score = score
-                best_chunk = chunk
-        return best_chunk if best_score >= 0 else None
-
     @staticmethod
     def _chunk_text(chunk: Any) -> str:
         if isinstance(chunk, dict):
@@ -1575,19 +1748,18 @@ class ApplicationService:
 
     @staticmethod
     def _definition_answer_text(excerpt: str, marker: str, response_language: str) -> str:
-        excerpt = " ".join((excerpt or "").split())
-        if len(excerpt) > 420:
-            excerpt = f"{excerpt[:417].rstrip()}..."
         if response_language == "ar":
             return (
                 "INSUFFICIENT_DATA: هذا سؤال تعريفي وليس تقييما لحالة امتثال محددة.\n\n"
-                f"بناء على المقطع المسترجع من أيوفي: {excerpt} {marker}\n\n"
+                f"اقتباس حرفي باللغة الأصلية من المقطع المسترجع من أيوفي: {excerpt} {marker}\n\n"
+                "هذا المقطع لا يثبت انطباق التعريف على عقدك؛ نسخة المصدر أو تاريخها قد يكونان غير معلومين.\n\n"
                 "لإصدار تقييم امتثال، أحتاج تفاصيل المعاملة نفسها مثل الأصل، وتسلسل التملك، "
                 "والثمن، والربح، وشروط الدفع."
             )
         return (
             "INSUFFICIENT_DATA: This is a definition question, not a compliance assessment for a specific transaction.\n\n"
-            f"Based on the retrieved AAOIFI excerpt: {excerpt} {marker}\n\n"
+            f"Literal quotation in the source's original language: {excerpt} {marker}\n\n"
+            "This passage does not establish applicability to your contract; the source version or date may be unknown.\n\n"
             "For a compliance assessment, provide the transaction facts, including the asset, ownership sequence, "
             "price, profit, and payment terms."
         )
@@ -1745,7 +1917,8 @@ class ApplicationService:
                 ),
             )
             contract.internal_signals["router_signals"] = getattr(family_result, "signals", {})
-            if not self._clarification_service_injected:
+            from src.chatbot.clarification_engine import ClarificationEngine
+            if not self._clarification_service_injected or type(self.clarification_service) is ClarificationEngine:
                 contract.metadata["question_origin"] = "deterministic"
             self._audit(cleaned_query, contract, session_id, request_id)
             return contract

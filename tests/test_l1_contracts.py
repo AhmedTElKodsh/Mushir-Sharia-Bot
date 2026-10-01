@@ -101,10 +101,10 @@ def test_application_service_returns_canonical_answer_contract():
 
     result = service.answer("How should murabaha profit be recognized for accounting?", session_id="s-1")
 
-    assert result.status == ComplianceStatus.COMPLIANT
-    assert result.answer == "COMPLIANT: Supported by AAOIFI [FAS-01 §1]."
-    assert result.citations[0].standard_number == "FAS-01"
-    assert result.citations[0].section_number == "1"
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
+    assert result.answer != "COMPLIANT: Supported by AAOIFI [FAS-01 §1]."
+    assert result.citations == []
+    assert result.metadata["claim_support"] == "unverified_withheld"
     assert result.reasoning_summary
     assert result.limitations
     assert result.clarification_question is None
@@ -117,7 +117,7 @@ def test_application_service_returns_canonical_answer_contract():
 
 
 @pytest.mark.service
-def test_application_service_random_sample_appends_q2_scholar_queue(tmp_path):
+def test_application_service_unsupported_generated_claim_appends_q1_scholar_queue(tmp_path):
     from src.chatbot.application_service import ApplicationService
     from src.chatbot.citation_validator import CitationValidator
     from src.governance.scholar_review import ScholarReviewQueueStore
@@ -136,10 +136,10 @@ def test_application_service_random_sample_appends_q2_scholar_queue(tmp_path):
     result = service.answer("How should murabaha profit be recognized?", request_id="req-q2")
 
     items = queue_store.load()
-    assert result.status == ComplianceStatus.COMPLIANT
+    assert result.status == ComplianceStatus.INSUFFICIENT_DATA
     assert items[0].query_id == "req-q2"
-    assert items[0].queue.value == "Q2"
-    assert items[0].flag_reason == "random_post_launch_sample"
+    assert items[0].queue.value == "Q1"
+    assert items[0].flag_reason == "insufficient_evidence"
 
 
 @pytest.mark.service
@@ -764,7 +764,7 @@ def test_citation_validator_accepts_arabic_aaoifi_citation_format():
 
     citations = validator.validate(
         "التعريف مستند إلى [معيار أيوفي FAS-28، القسم 8، صفحة 8].",
-        [_chunk(standard_id="FAS-28", section=None)],
+        [_chunk(standard_id="FAS-28", section="8")],
     )
 
     assert len(citations) == 1

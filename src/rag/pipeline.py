@@ -15,6 +15,7 @@ from src.governance.source_catalog import is_answer_admissible_metadata
 from src.models.schema import SemanticChunk, AAOIFICitation
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.rag.embedding_service import EmbeddingService
+from src.rag.score_policy import finite_score, meets_threshold, validated_threshold
 
 load_dotenv()
 
@@ -390,7 +391,7 @@ class RAGPipeline:
         Returns:
             List of SemanticChunk objects with citations
         """
-        threshold = max(0.0, min(1.0, threshold))
+        threshold = validated_threshold(threshold)
         if k <= 0:
             return []
 
@@ -406,6 +407,7 @@ class RAGPipeline:
                 for chunk in chunks
                 if _metadata_matches_filters(_chunk_metadata(chunk), filters)
                 and _is_answer_admissible_metadata(_chunk_metadata(chunk))
+                and meets_threshold(chunk.get("similarity") if isinstance(chunk, dict) else getattr(chunk, "score", None), threshold)
             ]
             if chunks or not allow_low_confidence_fallback:
                 return chunks
@@ -414,6 +416,7 @@ class RAGPipeline:
                 for chunk in self._vector_store_search(query_embedding, k=k, threshold=0.0, filters=filters)
                 if _metadata_matches_filters(_chunk_metadata(chunk), filters)
                 and _is_answer_admissible_metadata(_chunk_metadata(chunk))
+                and meets_threshold(chunk.get("similarity") if isinstance(chunk, dict) else getattr(chunk, "score", None), 0.0)
             ][:k]
 
         # Precompute expanded terms once for reranking (performance optimization)
@@ -443,7 +446,10 @@ class RAGPipeline:
                     continue
                 if not _is_answer_admissible_metadata(metadata):
                     continue
-                distance = results['distances'][0][i]
+                distances = results.get('distances') or [[]]
+                distance = finite_score(distances[0][i] if i < len(distances[0]) else None)
+                if distance is None:
+                    continue
                 similarity = 1 - distance  # Convert distance to similarity
                 rerank_score = _domain_rerank_score(query, doc, metadata, similarity, expanded_terms)
                 lexical_score = _lexical_score(query, doc, metadata, expanded_terms)
@@ -487,6 +493,8 @@ class RAGPipeline:
             # Convert sparse docs to SemanticChunk
             sparse_chunks = []
             for sdoc in sparse_docs:
+                if not meets_threshold(sdoc.score, 0.0):
+                    continue
                 if not _metadata_matches_filters(sdoc.metadata, filters) or not _is_answer_admissible_metadata(sdoc.metadata):
                     continue
                 cit = AAOIFICitation(
@@ -527,7 +535,9 @@ class RAGPipeline:
                 c.metadata["score_components"]["lexical_score"] = c.metadata["score_components"].get("sparse_score", 0.0)
                 hybrid_chunks.append(c)
                 
-            candidates = hybrid_chunks
+            candidates = [c for c in hybrid_chunks if meets_threshold(c.score, threshold)]
+            if not candidates and allow_low_confidence_fallback:
+                candidates = hybrid_chunks
         else:
             candidates = chunks if chunks or not allow_low_confidence_fallback else fallback_chunks
 

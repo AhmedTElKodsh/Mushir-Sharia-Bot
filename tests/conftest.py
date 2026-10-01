@@ -15,11 +15,17 @@ _GENERIC_MECHANISM = (
     "Pending scholar adjudication: generic wording no longer supplies a contract family; "
     "see _bmad-output/implementation-artifacts/mechanism-label-review.json."
 )
+_MISROUTED_VERDICT = (
+    "Pending scholar restatement: no rule card is scholar-approved. These permissibility questions "
+    "route to FAS accounting (informational) standards; their earlier pass was a generated LLM verdict "
+    "that bypassed the approved-rule gate (tests/test_verdict_authority.py; deferred-work ledger item 8)."
+)
 PENDING_GOLD_EXPECTATIONS = {
     "test_ruling_correctness": {
-        case_id: _WITHHELD_VERDICT
-        for case_id in ("GC-003", "GC-005", "GC-007", "GC-008", "GC-009",
-                        "GC-010", "GC-012", "GC-016", "GC-017", "GC-019")
+        **{case_id: _WITHHELD_VERDICT
+           for case_id in ("GC-003", "GC-005", "GC-007", "GC-008", "GC-009",
+                           "GC-010", "GC-012", "GC-016", "GC-017", "GC-019")},
+        **{case_id: _MISROUTED_VERDICT for case_id in ("GC-004", "GC-011", "GC-018")},
     },
     "test_routing_accuracy_skeleton_uses_expected_candidate_standards": {
         "TC-F1": _GENERIC_MECHANISM,

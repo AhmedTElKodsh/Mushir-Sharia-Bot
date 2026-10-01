@@ -6,13 +6,14 @@ This ledger is canonical; entries below are append-only history. Still open:
 
 | # | Item | Waits for |
 | --- | --- | --- |
-| 1 | 12 stale test expectations (GC-003, 005, 007, 008, 009, 010, 012, 016, 017, 019; TC-F1, TC-G1) | A scholar decision per case ([review pack](../../outputs/client-review-pack/index.html)) |
+| 1 | 15 stale test expectations (GC-003, 004, 005, 007, 008, 009, 010, 011, 012, 016, 017, 018, 019; TC-F1, TC-G1) | A scholar decision per case ([review pack](../../outputs/client-review-pack/index.html)) |
 | 2 | Semantic mechanism evidence and claim-scoped verdict eligibility (claim-support gate, ticket T6) | Pilot dossiers and runtime adoption |
 | 3 | Private document locators for schedule intake | V1.7 |
 | 4 | DNS names resolving to private addresses pass the public-URL check | Fetch-time check in acquisition code |
 | 5 | Negation masks a contract name only within three preceding words | Clause-aware parsing |
 | 6 | SQLite writes and LLM calls are synchronous inside async routes | Performance work |
 | 7 | `AAOIFICitation.confidence_score` kept internally | Scholar-review code cleanup |
+| 8 | Permissibility questions (e.g. GC-004/011/018, Arabic "هل يحق…") route to FAS accounting informational routes with `requires_rule_evaluation: false` | Router change: question type PERMISSIBILITY must select a rule-evaluation route |
 
 Closed since the earlier entries: Playwright UI specs ran 30/30 on 2026-10-01 (Chromium installed); the broken `.venv` noted in the former implementation-artifacts ledger was rebuilt.
 
@@ -61,3 +62,7 @@ Closed since the earlier entries: Playwright UI specs ran 30/30 on 2026-10-01 (C
 - source_plan: none
   summary: Mary proposes five pilot financiers for next week's scholar meeting, from the FRA consumer-finance register and the 2026-09-24/27 crawl coverage.
   evidence: Split from the POC showcase slice on 2026-10-01; an analysis deliverable (resolves open question O3) rather than code, done after the reasoning panel and review records.
+
+- source_plan: `plan-showcase-decision-trace-panel.md` (Goal A continuation)
+  summary: Generated verdicts reached three critical gold cases through misrouted informational routes (2026-10-01).
+  evidence: At commit 07207d7, GC-004/011/018 passed only because the router sent permissibility questions to `mudaraba-accounting`, `wakala-investment-accounting` and `musharaka-accounting` (FAS, `requires_rule_evaluation: false`), so the mock LLM's NON_COMPLIANT/COMPLIANT text became the ruling. The extractive-only policy withheld them. A final guard (`ApplicationService._enforce_verdict_authority`) now downgrades any verdict lacking an evaluated approved rule on every delivery path, including cache; covered by `tests/test_verdict_authority.py`. The three cases joined the strict-xfail scholar-pending list with their own reason; gold labels unchanged. Router fix remains open (item 8).
