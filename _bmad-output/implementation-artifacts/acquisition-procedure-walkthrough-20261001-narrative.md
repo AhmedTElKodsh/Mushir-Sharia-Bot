@@ -2,7 +2,7 @@
 
 Target: the operating evidence-acquisition playbook and its provider request and five-pilot gap-board templates.
 
-Review state: in progress. Original Block 1 and revised Blocks 2–4 accepted by the user; the operational Intent and Block 5's Track 2 order were accepted on 2026-10-01; Block 6 is next. The overall review is not complete.
+Review state: complete. Original Block 1 and revised Blocks 2–4 accepted by the user; the operational Intent, Block 5's Track 2 order and Block 6 were accepted on 2026-10-01. All blocks are accepted. Open follow-ups: route vocabulary drift (Blocks 2/3, playbook §4.4) and the parallel letters file's Halan scope.
 
 ## Blocks
 
@@ -61,6 +61,7 @@ Review state: in progress. Original Block 1 and revised Blocks 2–4 accepted by
   | 7 | BENEFICIAL | Contact brand spread across six entities | Scholar: does the clarifying question ask for the right fact? | The bot's clarification next to the unresolved entities |
   | 8 | BENEFICIAL | Halan: insufficient evidence, request pending | Scholar: is the refusal shown at the right point? | Gap record and the withheld answer |
   | 9 | BENEFICIAL | Aman's EN/AR parent-name mismatch | Client: which observation is current? | Both footers verbatim |
+| 10 | BENEFICIAL | Halan Shop and Aman's own store side by side (accepted in Block 6) | Scholar: does a financier selling its own goods change which rule applies? | Both public shop pages and the open seller/financier facts |
 
   *Track 2 — unmarked request content, best evidence eventually (order accepted 2026-10-01):*
 
@@ -78,4 +79,12 @@ Review state: in progress. Original Block 1 and revised Blocks 2–4 accepted by
 
   **Close only the supported task.** Apply Block 4's provenance, readability, completeness, applicability, exact-support and review-status checks to each response, assigning follow-ups to unanswered fields. Output: verified task-level evidence or an explicit gap on the [board](../initiative-egypt-market-knowledge/acquisition-templates/pilot-gap-board.md). Halan is no longer held back as a control: its insufficient-evidence status stays factual until adequate evidence arrives, and then it changes.
 
-- [ ] **Block 6 — Periphery and historical artifacts — unvisited.** Review supporting and historical records that provide context for the current operating procedure.
+- [x] **Block 6 — Periphery and historical artifacts — accepted 2026-10-01; all four proposals applied.**
+
+  **Confirm the history is preserved and labelled.** The [reviewed baseline](../initiative-egypt-market-knowledge/evidence-acquisition-playbook-reviewed-baseline-2026-10-01.md) still hashes to the recorded SHA-256 `1222e97f…6084ddd`. The [rethink](../initiative-egypt-market-knowledge/evidence-acquisition-rethink-2026-10-01.md) and the [review](../initiative-egypt-market-knowledge/evidence-acquisition-review-2026-10-01.md) both point to the operative playbook as their successor. Output: the historical records stay unedited. One count disagrees: [foundation verification](../initiative-egypt-market-knowledge/public-acquisition-verification-2026-10-01.md) reports 13 URL-safety checks passed, while log entry 05 reports 12. The 185 total does reconcile (176 + 9 role-summary). Re-run on 2026-10-01 with `-k "fetch_time or public_hosts_pass or non_http or unresolvable or redirect"`: 13 passed, 73 deselected, so the verification document is right and entry 05's 12 is superseded.
+
+  **Mark where history now disagrees with accepted decisions.** Halan is still called a "control" in the [pilot-five proposal](../initiative-egypt-market-knowledge/pilot-five-proposal.md) (banner and row 5), the [entity worksheet](../initiative-egypt-market-knowledge/pilot-entity-resolution.md) (§5 and the sign-off list), rethink §8 and the review goals. Output: dated supersession notes added to the pilot-five proposal and the worksheet; the rethink and the review are unchanged.
+
+  **Align the seeds with the confirmed scope.** The Halan seed in [`pilot-urls.txt`](../initiative-egypt-market-knowledge/acquisition-templates/pilot-urls.txt) is `/personal-lending/`, but HALAN-01's scope is Halan Shop. Output: seeds replaced with `https://halan.com/shop/` and `https://halan.com/ar/shop-2/`. An empty-decision CLI run now records six gaps with zero requests. A seed grants nothing; capture still needs an ACCESS-01 decision.
+
+  **Re-check Halan against the selection rule.** `/shop/` is page evidence that Halan itself offers instalments (criterion 2), pending a hashed capture and a second review. No page names a legal entity (criterion 1 unmet), and the arrangement exists only in the app, so its agreement cannot come from public capture (criterion 3). Output: Halan stays outside evidence-qualified coverage. It now tests the same seller-and-financier pattern as Aman's own store. Accepted: Halan and Aman are shown side by side (Track 1, row 10).

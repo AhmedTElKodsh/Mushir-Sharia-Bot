@@ -72,6 +72,8 @@ Each cell gives the text exactly as written in that source.
 
 ### 5. Halan (insufficient-evidence control)
 
+> **Superseded in part, 2026-10-01 (later):** the "control" role was withdrawn when the user decided to send HALAN-01 now, scoped to Halan Shop. The identity findings below still stand: no page names a legal entity, so the evidence is still insufficient. Current state: [provider priorities](acquisition-templates/provider-request-priorities-2026-10-01.md).
+
 | Source | English name | Arabic name | Identifiers |
 |---|---|---|---|
 | FRA detail, تمويل استهلاكي #23 | Halan for consumer finance co. | حالا للتمويل الاستهلاكي | company no. 676006; licensed 2021-05-31; email info@halan.com |

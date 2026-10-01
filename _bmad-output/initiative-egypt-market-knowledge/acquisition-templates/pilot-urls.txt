@@ -3,4 +3,5 @@ valu-terms https://valugroup.com/terms-and-conditions
 contact-home https://contact.eg/en
 souhoola-terms https://souhoola.com/terms-conditions
 aman-home https://aman.eg/en
-halan-product https://halan.com/personal-lending/
+halan-shop https://halan.com/shop/
+halan-shop-ar https://halan.com/ar/shop-2/

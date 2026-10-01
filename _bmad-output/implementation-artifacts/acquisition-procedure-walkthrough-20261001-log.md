@@ -124,3 +124,20 @@ Session: party-mode review · Timestamp: 2026-10-01T21:41:51+03:00
 - Action: User confirmed the Halan Shop scope, asked for the 2B statement to be removed, and authorised a commit and push before opening Block 6.
 - Result: The Halan brief now fixes the scope (Halan Shop, in-app, appliances/electronics on a 6/12/36-month plan, October 2026). The letter is filled in for that scope, Smart Furniture is marked superseded, and the user's 2B/supplier statement is removed from the brief and the narrative. Entries 11–12 are left unchanged, as this log is append-only; this entry supersedes their 2B content. The recipient is still unverified and nothing has been sent.
 - Open: Block 6. The parallel letters file still uses Smart Furniture.
+
+## 14 — Block 6 opened
+
+Session: party-mode review · Timestamp: 2026-10-01T21:42:44+03:00
+
+- Action: Committed and pushed 0be0a2e (HEAD = origin). Surveyed the reviewed baseline, rethink, review, foundation verification, pilot-five proposal, review goals, seeds and fictional decision template. Recomputed the baseline's SHA-256.
+- Findings: the baseline hash matches; the historical documents carry successor pointers; the URL-safety count is 13 in the verification document but 12 in log entry 05; Halan "control" wording survives in two documents still cited as current; the Halan seed points to personal lending rather than Halan Shop; Halan still fails selection criteria 1 and 3.
+- Result: Block 6 presented for examination; nothing accepted, no historical document edited.
+- Open: user decisions on supersession notes, seed update and the 12/13 discrepancy.
+
+## 15 — Block 6 accepted; walkthrough complete
+
+Session: party-mode review · Timestamp: 2026-10-01T22:00:28+03:00
+
+- Action: User accepted all four Block 6 proposals and authorised a commit and push. Added dated supersession notes to the pilot-five proposal and the entity worksheet §5 (the rethink and the review are unchanged). Replaced the Halan seed with `/shop/` and `/ar/shop-2/`. Re-ran the URL-safety subset. Added Halan Shop and Aman's store side by side as Track 1, row 10.
+- Result: `uv run pytest tests/test_review_followups.py -k "fetch_time or public_hosts_pass or non_http or unresolvable or redirect"` gave 13 passed, 73 deselected. This matches the verification document and supersedes entry 05's 12. The working tree also held unrelated uncommitted changes, including `tests/conftest.py`. An empty-decision capture run against the new seeds, in a scratch output root, recorded six `access_decision_missing_or_expired` gaps and zero HTTP requests (exit 2, as designed). All six blocks are accepted.
+- Open: route vocabulary drift; the parallel letters file still scopes Halan to Smart Furniture; HALAN-01's recipient is unverified and the letter is unsent.

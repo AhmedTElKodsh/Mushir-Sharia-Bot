@@ -4,6 +4,8 @@ Proposed by Mary (analyst), 2026-10-01. Resolves open question O3 once the user 
 
 > **Update 2026-10-01:** licence numbers in the table below are ambiguous on their own; FRA numbers repeat across activity registers. See [pilot-entity-resolution.md](pilot-entity-resolution.md) for (activity, licence) keys, literal EN/AR names from FRA and each financier's site, and the draft access decisions. User confirmed the five with Halan as control; scholar meeting about 2026-10-15.
 
+> **Superseded in part, 2026-10-01 (later):** Halan is no longer held back as a control. The user decided to send HALAN-01 now, scoped to Halan Shop (in-app appliances/electronics on 6/12/36-month plans). Halan remains outside evidence-qualified coverage until a legal entity and the arrangement are evidenced. Halan and Aman, both financiers that run their own store, are to be shown side by side at the review. Current state: [provider priorities](acquisition-templates/provider-request-priorities-2026-10-01.md). The text below is kept as written.
+
 ## Selection rule
 
 A pilot financier must (1) appear in the FRA register under a matching legal name, (2) have verified page evidence that merchants or the financier itself offer instalments through it, and (3) be crawlable without login, CAPTCHA or a permission we don't hold (spec Constraints).
