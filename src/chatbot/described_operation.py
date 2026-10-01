@@ -75,6 +75,9 @@ class DescribedOperationService:
             return True  # Unanswered filler still consumes the clarification budget.
         if slot == "financing_party":
             return bool(cls._financier_reply(text) or cls._does_not_know(text))
+        if slot not in {"cash_price", "financed_or_final_price", "down_payment", "instalment_amount",
+                        "instalment_count", "payment_breakdown"}:
+            return True  # A rule-defined slot has no fixed grammar; length and the no-question check bound it.
         if slot == "payment_breakdown":
             return bool(re.search(r"\d|fees?|charges?|insurance|admin|interest|رسوم|مصاريف|تأمين|فوائد|ضريبة", text, re.I)
                         or cls._does_not_know(text))

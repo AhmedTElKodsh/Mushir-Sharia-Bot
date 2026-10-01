@@ -49,6 +49,7 @@ def clarify_structure(query, normalized, language, pending=None):
         return None, None
     current = dict(pending or {"slot": slot, "original_query": query, "asked_count": 0, "language": language,
                                     "created_at": datetime.now(UTC).isoformat()})
+    current["created_at"] = datetime.now(UTC).isoformat()  # Idle time since the last turn; legacy states gain a clock.
     arabic = current["language"] == "ar"
     reply = query if pending else None
     if pending:

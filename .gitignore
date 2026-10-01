@@ -86,6 +86,10 @@ chroma/
 *.db
 *.sqlite
 *.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
 
 # Generated review/evaluation scratch output
 _bmad/render/

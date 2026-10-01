@@ -45,3 +45,23 @@ test("Known capture date displays elapsed days", async ({ page }) => {
   await expect(page.locator(".evidence-summary").last()).toContainText("2026-01-01T00:00:00Z");
   await expect(page.locator(".evidence-summary").last()).toContainText(/age: \d+ days/);
 });
+
+test("Malformed evidence sources never render as undefined or throw", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", e => errors.push(String(e)));
+  await page.goto("/chat?lang=en");
+  await page.evaluate(() => {
+    (window as any).restoreMessages([
+      {role: "assistant", content: "Mixed sources.",
+       evidence: {status: "sources_available", sources: [null, {captured_at: "2999-01-01T00:00:00Z"}, {document_id: "D1", captured_at: "2020-01-01T00:00:00Z"}]}},
+      {role: "assistant", content: "Not an array.", evidence: {status: "sources_available", sources: "oops"}},
+    ]);
+  });
+  const labels = page.locator(".evidence-summary");
+  await expect(labels).toHaveCount(2);
+  await expect(labels.first()).toContainText("Unnamed source");
+  await expect(labels.first()).toContainText(/D1 .*age: \d+ days/);
+  await expect(page.locator("#messages")).not.toContainText("undefined");
+  await expect(labels.last()).toContainText("Evidence status");
+  expect(errors).toEqual([]);
+});

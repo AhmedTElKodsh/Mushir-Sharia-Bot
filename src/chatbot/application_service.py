@@ -151,7 +151,7 @@ class ApplicationService:
         try:
             # Anonymous requests share one id with their audit record but never leave session state behind.
             answer = self._answer(query, effective_session, effective_request, disclaimer_acknowledged,
-                                  conversation_history, keep_session=session_id is not None)
+                                  conversation_history, keep_session=bool(session_id))
             record = prepare_decision_record(query, answer, session_id=effective_session, request_id=effective_request)
             if self.decision_store.append(record) != record.review_id:
                 raise RuntimeError("decision review storage did not acknowledge the record")
@@ -161,7 +161,7 @@ class ApplicationService:
             except Exception:
                 pass  # The original storage failure is the error the caller must see.
             raise
-        if session_id is None:
+        if not session_id:
             self._restore_session(effective_session, None)  # No caller handle exists, so no state may outlive the call.
         return answer
 

@@ -83,7 +83,7 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
     def matches(pattern):
         for match in re.finditer(pattern, normalized, re.IGNORECASE):
             # Do not turn negated or alternative clauses into asserted facts.
-            prefix = re.split(r"[.!?؟;\n،]|(?<!\d),(?!\d)|\bbut\b", normalized[:match.start()])[-1]
+            prefix = re.split(r"[.!?؟;\n،]|(?<!\d),(?!\d)|\bbut\b", normalized[:match.start()], flags=re.I)[-1]
             suffix = normalized[match.end():]
             if re.match(r"\s+(?:\d|million\b|thousand\b|[km]\b|ألف|الف|مليون)", suffix, re.I):
                 continue
@@ -131,7 +131,8 @@ def extract_operation_facts(text: str, *, session_id: str, transaction_id: str,
         party = re.split(
             r"\s+(?:and|with|but|then|which)\s+(?=(?:I|we|my|our|paid|EGP|\d))|\s+paid\s+|\s+و(?=(?:دفعت|اشتريت|انا|أنا|المقدم|مقدم))",
             match[1].strip(), maxsplit=1)[0].strip()
-        if party and not re.search(r"\d", party) and not re.search(
+        party = re.split(r"\s+(?:EGP\s*)?\d{3,}", party, maxsplit=1)[0].strip()  # A quantity ends the name.
+        if party and re.search(r"[^\W\d_]", party) and not re.search(
                 r"\b(?:unknown|not|unsure|either|or)\b|معرفش|لا أعرف|مش عارف|(?<!\w)(?:او|أو)(?!\w)", party, re.I):
             add("financing_party", party)
 

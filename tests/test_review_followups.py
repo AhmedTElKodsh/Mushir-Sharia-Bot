@@ -332,3 +332,139 @@ def test_currency_binds_to_the_amount_it_touches():
     from tests.test_review_hardening import _extract
     assert _extract("I paid deposit EGP 5000 (about USD 100)")["down_payment"].status == "user_reported"
     assert _extract("I paid deposit EGP 5000 USD")["down_payment"].status == "unknown"
+
+
+# ---- final review pass ---------------------------------------------------------------------------------
+def test_yaml_alias_guard_is_exercised_on_otherwise_valid_yaml():
+    import yaml
+    from src.governance.rule_cards import _UniqueKeyLoader
+    with pytest.raises(ValueError, match="aliases are not supported"):
+        yaml.load("a: &x {k: 1}\nb: *x\n", Loader=_UniqueKeyLoader)
+
+
+def _registry(tmp_path, monkeypatch, names="alice\n"):
+    path = tmp_path / "reviewers.txt"
+    path.write_text(names, encoding="utf-8")
+    monkeypatch.setenv("REVIEWER_REGISTRY_PATH", str(path))
+
+
+def test_registry_gates_every_place_an_approval_is_recorded(tmp_path, monkeypatch):
+    from src.models.evidence import VerificationRecord
+    _registry(tmp_path, monkeypatch)
+    today = datetime.now(UTC).date().isoformat()
+    with pytest.raises(ValidationError):
+        card(scholar_signoff=dict(reviewer_id="bob", date=today, decision="approved"))
+    with pytest.raises(ValidationError):
+        VerificationRecord(reviewer_id="bob", recorded_at=NOW, decision="verified", notes="n")
+    assert VerificationRecord(reviewer_id="alice", recorded_at=NOW, decision="verified", notes="n")
+    # Pending and rejected records carry no approval, so any pipeline identity may write them.
+    assert VerificationRecord(reviewer_id="intake-pipeline", recorded_at=NOW, decision="pending", notes="n")
+
+
+def test_unreadable_registry_fails_closed_with_a_validation_error(tmp_path, monkeypatch):
+    from src.models.evidence import VerificationRecord
+    monkeypatch.setenv("REVIEWER_REGISTRY_PATH", str(tmp_path / "missing.txt"))
+    with pytest.raises(ValidationError, match="registry unreadable"):
+        VerificationRecord(reviewer_id="alice", recorded_at=NOW, decision="verified", notes="n")
+
+
+def test_scholar_review_gate_uses_the_shared_identity_rule():
+    from src.governance.scholar_review import (
+        ScholarReviewDecision, ScholarReviewEvidenceGate, ScholarReviewTargetType)
+    with pytest.raises(ValueError, match="cannot be promoted"):
+        ScholarReviewEvidenceGate(review_id="r", target_type=ScholarReviewTargetType.ANSWER, target_id="a",
+                                  reviewer_id="system", decision=ScholarReviewDecision.ACCEPTED_FOR_GOLD_SET,
+                                  source_ids=["s"], citation_ids=["c"], rationale="x")
+
+
+def test_wal_side_files_are_ignored_by_git():
+    ignore = open(".gitignore", encoding="utf-8").read().split()
+    assert {"*.sqlite3-wal", "*.sqlite3-shm"} <= set(ignore)
+
+
+def test_empty_string_session_id_is_anonymous(tmp_path):
+    app = _service(tmp_path)
+
+    def creating_answer(query, session_id, *args, **kwargs):
+        app.session_store.create_session(session_id)
+        return AnswerContract(answer="a", status=ComplianceStatus.INSUFFICIENT_DATA)
+
+    app._answer = creating_answer
+    app.answer("anything", session_id="")
+    assert app.session_store._sessions == {}
+
+
+def test_legacy_pending_structure_state_gains_a_clock_on_each_turn():
+    answer, nxt = clarify_structure("The broker", "the broker", "en", _pending())
+    assert datetime.fromisoformat(answer.metadata["structure_clarification"]["created_at"])
+
+
+@pytest.mark.parametrize("url", ["http://0x7f.0.0.1/a", "http://0177.0.0.1/a"])
+def test_hex_and_octal_ip_hosts_are_not_public(url):
+    with pytest.raises(ValidationError):
+        CaptureManifest(**{**CAPTURE, "url": url})
+
+
+@pytest.mark.parametrize("amount", ["1e1000000", "1e-1000000", "NaN", "Infinity"])
+def test_out_of_range_money_is_a_validation_error_not_a_crash(amount):
+    with pytest.raises(ValidationError):
+        Money(amount=amount, currency="EGP")
+
+
+def test_capitalised_contrast_word_still_ends_a_negated_clause():
+    from tests.test_review_hardening import _extract
+    assert _extract("I am not sure. But the deposit is EGP 5000")["down_payment"].status == "user_reported"
+    assert _extract("I am not sure But the deposit is EGP 5000")["down_payment"].status == "user_reported"
+
+
+def test_financier_names_with_digits_are_kept_and_quantities_end_them():
+    from tests.test_review_hardening import _extract
+    assert _extract("financed by Bank 21 and I paid EGP 5000 down")["financing_party"].value == "Bank 21"
+    assert _extract("financed by Example Finance EGP 5000")["financing_party"].value == "Example Finance"
+
+
+def test_rule_defined_slots_accept_short_direct_answers():
+    assert DescribedOperationService.accepts("Example Store", _pending_conversation("seller"))
+    assert not DescribedOperationService.accepts("Is it ok?", _pending_conversation("seller"))
+
+
+def test_bare_number_resolves_a_conflict_through_answer():
+    service = DescribedOperationService([])
+    _, conversation = service.answer(STORY + " The total payable is EGP 41000.", session_id="s1",
+                                     request_id="r1", previous=None, language="en")
+    _, conversation = service.answer("The total payable is EGP 45000.", session_id="s1", request_id="r2",
+                                     previous=conversation, language="en")
+    assert conversation.pending_slot == "financed_or_final_price"
+    _, resolved = service.answer("45000", session_id="s1", request_id="r3", previous=conversation, language="en")
+    total = next(f for f in resolved.snapshot.facts if f.slot == "financed_or_final_price")
+    assert total.status == "user_reported" and total.value == Money(amount=45000, currency="EGP")
+    _, still = service.answer("USD 45000", session_id="s1", request_id="r4", previous=conversation, language="en")
+    assert next(f for f in still.snapshot.facts if f.slot == "financed_or_final_price").status == "conflicting"
+
+
+def test_arabic_evaluated_answer_does_not_ask_for_the_rule_again():
+    _, conversation = DescribedOperationService([]).answer(
+        FIRST_TURN, session_id="s1", request_id="r1", previous=None, language="en")
+    party = next(f for f in conversation.snapshot.facts if f.slot == "financing_party")
+    approved = card(material_facts=["financing_party"],
+                    outcomes=[dict(when={"financing_party": party.value}, outcome="no_issue_under_this_rule")])
+    contract, _ = DescribedOperationService([approved]).answer(
+        "The deposit was EGP 5000", session_id="s1", request_id="r2",
+        previous=_documented_previous(conversation), language="ar")
+    needed = contract.metadata["decision_review"]["decision"]["needed_documents_or_reviews"]
+    assert "قاعدة معتمدة من مراجع شرعي" not in contract.answer
+    assert needed == ["scholar review of the rule-scoped result and the remaining overall-conclusion gates"]
+
+
+def test_startup_survives_a_failing_purge(tmp_path, monkeypatch):
+    from src.api.main import create_app
+    from src.storage.decision_review_store import SQLiteDecisionReviewStore
+    monkeypatch.setenv("DECISION_REVIEW_DB_PATH", str(tmp_path / "s.sqlite3"))
+    monkeypatch.setattr(SQLiteDecisionReviewStore, "purge_older_than", Mock(side_effect=OSError("locked")))
+    with TestClient(create_app()) as client:
+        assert client.get("/ready").status_code == 200
+
+
+def test_blank_non_interactive_query_makes_no_service_call(monkeypatch):
+    from tests.test_review_hardening import _run_cli
+    assert _run_cli(monkeypatch, ["--query", "   "], []).calls == []

@@ -6,6 +6,7 @@ the existing answer API. Native Pydantic JSON methods are the wire interface.
 from __future__ import annotations
 
 import os
+import re
 from datetime import UTC, datetime, timedelta
 from decimal import Context, Decimal
 from ipaddress import ip_address
@@ -40,13 +41,23 @@ Intent = Literal["named_offer", "described_operation", "definition", "out_of_sco
 NON_HUMAN_REVIEWERS = frozenset({"auto", "automatic", "model", "llm", "model-confidence", "claude", "gpt", "system", "bot"})
 
 
+_REGISTRY_CACHE: dict = {}
+
+
 def _reviewer_registry():
     """Optional operator file of allowed reviewer ids, one per line; unset means the denylist alone applies."""
     path = os.getenv("REVIEWER_REGISTRY_PATH")
     if not path:
         return None
-    with open(path, encoding="utf-8") as handle:
-        return {line.strip().lower() for line in handle if line.strip() and not line.startswith("#")}
+    try:
+        stamp = (path, os.stat(path).st_mtime_ns)
+        if _REGISTRY_CACHE.get("stamp") != stamp:
+            with open(path, encoding="utf-8") as handle:
+                names = {line.strip().lower() for line in handle if line.strip() and not line.startswith("#")}
+            _REGISTRY_CACHE.update(stamp=stamp, names=names)
+        return _REGISTRY_CACHE["names"]
+    except OSError as exc:  # Fail closed: an unreadable registry approves nobody.
+        raise ValueError(f"reviewer registry unreadable: {exc}") from exc
 
 
 def require_human_reviewer(value: str) -> str:
@@ -72,7 +83,7 @@ def _public_http_url(value):
     try:
         address = ip_address(host)
     except ValueError:
-        if host.replace(".", "").isdigit():  # Shortened or integer IP forms such as 127.1 or 2130706433.
+        if re.fullmatch(r"(?:0x[0-9a-f]+|\d+)(?:\.(?:0x[0-9a-f]+|\d+))*", host, re.I):  # 127.1, 0x7f.0.0.1, 2130706433
             raise ValueError("provenance URLs must be public")
         return value
     if not address.is_global:
@@ -179,11 +190,13 @@ class Money(EvidenceModel):
             raise ValueError("money requires an integer, Decimal, or exact decimal string")
         if type(value) is not int:
             try:
-                digits = len(Decimal(value).as_tuple().digits)
+                parsed = Decimal(value)
+                digits = len(parsed.as_tuple().digits)
+                exponent = parsed.adjusted() if parsed.is_finite() else None
             except ArithmeticError:
                 return value  # Let field validation report the malformed amount.
-            if digits > 40:
-                raise ValueError("money amount has too many digits")
+            if exponent is None or digits > 40 or abs(exponent) > 40:
+                raise ValueError("money amount out of range")
         return value
 
 
@@ -325,10 +338,16 @@ class BuyerJourneyStep(EvidenceModel):
 
 
 class VerificationRecord(EvidenceModel):
-    reviewer_id: Annotated[Text, AfterValidator(require_human_reviewer)]
+    reviewer_id: Text
     recorded_at: AwareDatetime
     decision: Literal["pending", "verified", "rejected", "approved"]
     notes: Text
+
+    @model_validator(mode="after")
+    def accountable_decision(self):
+        if self.decision in {"verified", "approved"}:
+            require_human_reviewer(self.reviewer_id)
+        return self
 
     @field_validator("recorded_at")
     @classmethod

@@ -58,8 +58,11 @@ class ScholarReviewEvidenceGate:
             raise ValueError("target_id is required")
         if not self.reviewer_id.strip():
             raise ValueError("reviewer_id is required")
-        if self.reviewer_id.lower() in {"model", "llm", "model-confidence", "auto"}:
-            raise ValueError("scholar review cannot be promoted by model confidence")
+        from src.models.evidence import require_human_reviewer
+        try:
+            require_human_reviewer(self.reviewer_id)  # Same denylist and optional registry as rule-card signoff.
+        except ValueError as exc:
+            raise ValueError(f"scholar review cannot be promoted by model confidence ({exc})") from exc
         if not self.source_ids or not self.citation_ids:
             raise ValueError("source_ids and citation_ids are required")
         if not self.rationale.strip():
