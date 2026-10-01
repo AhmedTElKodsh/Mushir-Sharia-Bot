@@ -68,3 +68,13 @@ Session: current walkthrough · Timestamp: 2026-10-01T20:39:32+03:00
 - Result: Blocks 1 and 2 accepted; Block 3 in progress. Provider priority and proposed operational Intent are not separately accepted by this transition. No provider outreach, live acquisition or runtime testing occurred.
 - Evidence: [Block 3](acquisition-procedure-walkthrough-20261001-narrative.md#blocks), [scope and obstacle procedures](../initiative-egypt-market-knowledge/evidence-acquisition-playbook.md), [gap board](../initiative-egypt-market-knowledge/acquisition-templates/pilot-gap-board.md).
 - Open: Examine task scope and routes with the user. Preserve the authorized clean-tree/GitHub workflow with a scoped narrative/log commit and verify the remote hash.
+
+## 08 — Scope/routes assessed, revised and accepted; capture/claims opened
+
+Session: current walkthrough · Timestamp: 2026-10-01T20:43:19+03:00
+
+- Action: User explicitly selected Thoughts, Revise, then acceptance/next block for scope and routes. Distinguished discovery from claim-acceptance scope, specified a closable task record and made route readiness/stop conditions explicit. Presented Block 4 before marking revised Block 3 accepted.
+- Findings: Requiring a known financier/version before discovery would create circular dependence; accepting a claim without matched scope would overstate evidence. Route selection should follow the needed artifact and current eligibility, not a universal transport order. Clarification-task closure must not imply contract/dossier closure.
+- Result: Blocks 1–3 accepted; Block 4 in progress. Readiness/field labels are manual procedure vocabulary, not new runtime enums. Provider ranking remains unaccepted. No outreach, live acquisition or runtime change occurred.
+- Evidence: [revised scope/routes and current capture/claims block](acquisition-procedure-walkthrough-20261001-narrative.md#blocks), [acceptance procedure](../initiative-egypt-market-knowledge/evidence-acquisition-playbook.md#6-capture-acceptance-and-provenance), [material-field matrix](../initiative-egypt-market-knowledge/acquisition-templates/pilot-gap-board.md#material-field-matrix).
+- Open: Examine capture and claim acceptance with the user. Preserve the authorized clean-tree/GitHub workflow with a scoped documentation commit and remote verification.
