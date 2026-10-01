@@ -12,7 +12,7 @@ The original implementation Intent establishes the public capture foundation. Fo
 
 **Problem:** The dated identity captures and partial terms do not yet establish complete, applicable financing arrangements for all five providers. Different dossiers have different missing evidence: contracts and schedules, the selected contracting entity, dated name/version reconciliation, or a merchant–financier relationship.
 
-**Approach:** Define each arrangement's product, merchant, financier, channel, period and cohort; request the exact missing instruments through an eligible public, source-supplied or permitted supervised route; preserve originals and claim-level provenance; verify completeness and applicability; and retain conflicts and unknowns until supported. Source-delivered documents and manual research are valid acquisition routes subject to their own scope and rights, even when automation cannot obtain the required artifact.
+**Approach:** Define each arrangement's product, merchant, financier, channel, period and cohort; request the exact missing instruments through an eligible route (public capture, source-supplied documents, permitted manual public-page review or permitted supervised source research); preserve originals and claim-level provenance; verify completeness and applicability; and retain conflicts and unknowns until supported. Source-supplied documents, manual public-page review and supervised source research are valid acquisition routes subject to their own scope and rights, even when automation cannot obtain the required artifact.
 
 **Outcome:** Each dossier has an applicable, traceable evidence pack or an explicit unresolved evidence record with an owner and next action. Analyst verification, acquisition rights, product reuse rights and scholar-approved interpretation remain separate decisions. Request dispatch or capture success alone does not close a dossier.
 
@@ -109,7 +109,7 @@ Use these alongside the common request package. Replace scope placeholders befor
 **Dispatch now (user decision 2026-10-01). Scope confirmed by the user on 2026-10-01: Halan Shop, in-app, appliances/electronics on a 6/12/36-month plan, October 2026.** `[HUMAN-REVIEW:NEEDED]` operator: verify the recipient, approve the wording and send. Nothing has been sent.
 
 - *Source identified by the user:* https://halan.com/.
-- *Manual public review of halan.com, 2026-10-01* (browser reading only: no hashed capture or access decision; `single-review`, `[HUMAN-REVIEW:NEEDED]` second analyst):
+- *Manual public-page review of halan.com, 2026-10-01* (browser reading only: no hashed capture or access decision; `single-review`, `[HUMAN-REVIEW:NEEDED]` second analyst):
   - `/shop/` (EN) describes **Halan Shop**, "an exclusive on-app experience" selling electronics, home appliances and mobile phones, plus **Halan Gomla** wholesale groceries. Payment is cash, card, or "flexible payment plans … over 6, 12, or 36 months", with a limit "of up to 500,000 L.E.".
   - `/ar/shop/` redirects to `/ar/shop-2/` and names حالا شوب and حالا جملة, with "قدم على رصيد تقسيط وقسّط براحتك حتى 36 شهر".
   - The home page also offers the Halan Card (instalments "over 36 months and more"), personal loans, and gold "in convenient installments over 12 months".

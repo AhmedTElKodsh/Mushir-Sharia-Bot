@@ -26,7 +26,7 @@ The [five-pilot task board](acquisition-templates/pilot-gap-board.md) and [provi
 
 ## Method status
 
-Existing dated records establish regulator/first-party identity captures and one partial Souhoola browser excerpt. They do not establish complete operative contracts. HTTP HTML/PDF capture is now fixture-tested. Official disclosures, registry extracts, complete manual browser capture, source-provided exports/APIs/allowlisting and supervised research are eligible research routes subject to their own scope and rights. Customer-document intake remains deferred to its separate private protocol. Archive title observations are dated samples; they do not establish continuous naming history.
+Existing dated records establish regulator/first-party identity captures and one partial Souhoola browser excerpt. They do not establish complete operative contracts. HTTP HTML/PDF capture is now fixture-tested. Official disclosures, registry extracts, manual public-page review (including complete manual browser capture), source-provided exports/APIs/allowlisting and supervised source research are eligible research routes subject to their own scope and rights. Customer-document intake remains deferred to its separate private protocol. Archive title observations are dated samples; they do not establish continuous naming history.
 
 ## 1. Acquire the missing fact, then choose the transport
 
@@ -69,7 +69,7 @@ These adopted project decisions distinguish failure classes. The implementation-
 | Timeout or transient 5xx on permitted content | Bounded retry; preserve earlier valid observations | Failure separate from absence; current observation and latest failed attempt |
 | Robots unreachable through server/network failure | Pause automated collection pending restored policy or source-authorized alternative | Unreachable-policy state; no automatic “missing robots” acknowledgement |
 | CAPTCHA/login/app gate | Public crawler records the first gate and stops; obtain source-delivered documents | Gate description, requested missing artifact and follow-up status |
-| Single-page terms restrict scraping | Request a copy/license or permitted manual research scope; assess viewing, capture and redistribution separately | Terms clause and date; rights decision for the chosen route |
+| Single-page terms restrict scraping | Request a copy/license or a permitted manual public-page review scope; assess viewing, capture and redistribution separately | Terms clause and date; rights decision for the chosen route |
 | PDF/image/table available but extraction fails | Download through the approved route, render locally, OCR or transcribe, and verify material fields | Original file, page images, derived text and human correction lineage |
 | Historic or archived copy exists | Use for the period it establishes; pursue a current version separately | Original URL, archive URL, snapshot date, retrieval date and completeness |
 | Official sources disagree | Keep both observations and seek dated resolution evidence | Conflicting claims, temporal scope, supporting records and unresolved fields |
@@ -111,6 +111,15 @@ Ask merchants for the financier's current standard agreement and all applicable 
 Use EGX/corporate disclosures and commercial-register records for legal identities, group structure and dated name changes. A group chart, app-store publisher, email domain, trademark or website title does not by itself identify the contracting financier. Official social announcements and app listings can locate a new product or document owner; their contractual authority remains limited.
 
 ### 4.4 Manual public-page and supervised source research
+
+**Route names (settled 2026-10-01).** Use exactly four acquisition route names:
+
+- **public capture**: the automated collector, under an exact-scope decision;
+- **source-supplied documents**: files or bundles that the provider, merchant or regulator delivers;
+- **manual public-page review**: an operator reading, saving or screenshotting permitted public pages;
+- **supervised source research**: demo environments, supervised document review, interviews or branch-supplied documents arranged with the source.
+
+Older records may say "manual research", "manual public review", "supervised research" or "supervised collection". Read each as the matching name above.
 
 Manual review is a primary research method. For permitted public material, an operator can record the page sequence, save a PDF/MHTML where suitable, capture screenshots of hidden-on-print panels and compare the saved copy with the live display. Record what was omitted and why. Printing alone may lose expanded clauses, tables or offer context.
 

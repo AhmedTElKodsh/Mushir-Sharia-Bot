@@ -11,6 +11,8 @@ State at 2026-10-01: the [entity worksheet](../pilot-entity-resolution.md) recor
 | HALAN-01 | Particular merchant–financier relationship and agreement | Selected arrangement and provider/merchant documents | Supporting relationship/obligation passages; insufficient evidence until supported; dispatch prioritised 2026-10-01 |
 | ACCESS-01 | Current decision for required URLs and robots | Eligible terms review/source clarification | Scope/reference/reviewer/expiry; no live approvals in current templates |
 
+Bilingual request letters with proposed scopes and recipient leads for all five tasks: [provider-request-letters-2026-10-01.md](provider-request-letters-2026-10-01.md). None has been sent.
+
 Keep route statuses, candidates, attempts, permission references, capture IDs, applicability, conflicting observations and next action for every task. Public capture provenance is implemented; automatic link graphs, observation-store integration, complete browser capture, OCR automation and private intake remain pending.
 
 Apply the [human-review marks](../evidence-acquisition-playbook.md#human-review-marks) to every task. Each outgoing request is `[HUMAN-REVIEW:NEEDED]` (operator) before dispatch. Material fields checked by one analyst are `single-review` and `[HUMAN-REVIEW:NEEDED]` (second analyst).

@@ -141,3 +141,11 @@ Session: party-mode review · Timestamp: 2026-10-01T22:00:28+03:00
 - Action: User accepted all four Block 6 proposals and authorised a commit and push. Added dated supersession notes to the pilot-five proposal and the entity worksheet §5 (the rethink and the review are unchanged). Replaced the Halan seed with `/shop/` and `/ar/shop-2/`. Re-ran the URL-safety subset. Added Halan Shop and Aman's store side by side as Track 1, row 10.
 - Result: `uv run pytest tests/test_review_followups.py -k "fetch_time or public_hosts_pass or non_http or unresolvable or redirect"` gave 13 passed, 73 deselected. This matches the verification document and supersedes entry 05's 12. The working tree also held unrelated uncommitted changes, including `tests/conftest.py`. An empty-decision capture run against the new seeds, in a scratch output root, recorded six `access_decision_missing_or_expired` gaps and zero HTTP requests (exit 2, as designed). All six blocks are accepted.
 - Open: route vocabulary drift; the parallel letters file still scopes Halan to Smart Furniture; HALAN-01's recipient is unverified and the letter is unsent.
+
+## 16 — Letters file aligned to Halan Shop; route names settled
+
+Session: party-mode review · Timestamp: 2026-10-01T22:05:08+03:00
+
+- Action: User asked for the Halan scope in the letters file to be fixed, the route wording settled, and a commit and push. Rewrote HALAN-01's row and its bilingual letter for Halan Shop. The letter asks which entity sells, which finances, and whether a third-party supplier is a party, and names FRA consumer-finance licence 23 as a register candidate. Names are quoted as observed: Halan Shop / حالا شوب. Playbook §4.4 now defines four route names (public capture, source-supplied documents, manual public-page review, supervised source research). The narrative's Blocks 2–3, playbook §§1/3 and the priority proposal use them. The rethink, the review and this log's earlier entries keep their original wording.
+- Commit scope: the letters file was created by parallel work and was untracked. It is committed now, together with the gap board's link to it, so the link resolves. .gitignore, rule cards, code, tests and the party memlog stay unstaged.
+- Open: HALAN-01's recipient is unverified, and none of the five letters has been sent.
