@@ -2,7 +2,8 @@
 
 Last refreshed: 2026-10-01
 Live app: V1.5 (`1.5.0`) · In build: V1.6 dual-lane prototype
-Decision document: [Scholar Review Pack](../../../outputs/client-review-pack/index.html), the 12 questions waiting for a scholar
+Decision document: [Scholar Review Pack](https://claude.ai/artifact/4CE8SuwyTbb4vCQK56asMQ) (source: `outputs/client-review-pack/index.html`), the 12 questions waiting for a scholar
+Shareable page of this guide: [Mushir Client Guide](https://claude.ai/artifact/N5sTGi4S15Kj3A1KdADGtP) (source: `outputs/client-guide/index.html`)
 
 This guide replaces three earlier client documents, which are kept for the record:
 [plain-language report](client-plain-language-logic-legacy.md),

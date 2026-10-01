@@ -37,8 +37,8 @@ flowchart LR
 
 ## For The Client
 
-- [Mushir Client Guide](client-guide.md): the single client-facing guide: status, how Mushir answers, Egyptian market findings, the scholar's role, release plan and decisions needed.
-- [Scholar Review Pack](../../../outputs/client-review-pack/index.html): the decision document for the 12 questions waiting for a scholar, with options, a reply template and anticipated questions.
+- [Mushir Client Guide](client-guide.md): the single client-facing guide: status, how Mushir answers, Egyptian market findings, the scholar's role, release plan and decisions needed. Shareable page: https://claude.ai/artifact/N5sTGi4S15Kj3A1KdADGtP (built from `outputs/client-guide/index.html`).
+- [Scholar Review Pack](https://claude.ai/artifact/4CE8SuwyTbb4vCQK56asMQ): the decision document for the 12 questions waiting for a scholar, with options, a reply template and anticipated questions.
 
 ## Start Here (Developers And Agents)
 
