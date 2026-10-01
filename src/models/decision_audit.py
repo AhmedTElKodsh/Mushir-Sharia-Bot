@@ -56,3 +56,25 @@ def prepare_decision_record(query, answer, *, session_id, request_id):
         recorded_at=recorded_at, query=query or "", fact_coverage="typed_snapshot" if typed else "not_extracted",
         typed_review=typed, gates=tuple(gates[name] for name in GATES), response=response,
         internal_signals=answer.internal_signals)
+
+
+CLASSIFICATION_FIELDS = ("lane", "status", "language", "deciding_gate", "reason_code", "mechanism")
+
+
+def classify(record: DecisionAuditRecord) -> dict[str, str | None]:
+    """Review filters derived once from typed state at write time; never from answer prose."""
+    response = record.response or {}
+    metadata = response.get("metadata") or {}
+    trace = metadata.get("decision_trace") if isinstance(metadata.get("decision_trace"), dict) else {}
+    understood = trace.get("understood_as") if isinstance(trace.get("understood_as"), dict) else {}
+    decided = trace.get("decided_by") if isinstance(trace.get("decided_by"), dict) else {}
+    language = understood.get("language") or metadata.get("response_language")
+    lane = understood.get("lane") or ("described_operation" if record.typed_review else None)
+    return {
+        "lane": lane if isinstance(lane, str) else None,
+        "status": response.get("status") if isinstance(response.get("status"), str) else None,
+        "language": language if language in {"en", "ar"} else None,
+        "deciding_gate": decided.get("gate") if isinstance(decided.get("gate"), str) else None,
+        "reason_code": decided.get("reason_code") if isinstance(decided.get("reason_code"), str) else None,
+        "mechanism": understood.get("mechanism") if isinstance(understood.get("mechanism"), str) else None,
+    }

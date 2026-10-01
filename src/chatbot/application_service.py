@@ -4,6 +4,7 @@ import os
 import random
 import re
 import threading
+from contextvars import ContextVar
 from dataclasses import dataclass
 from inspect import Parameter, signature
 from typing import Any, Dict, List, Optional
@@ -34,6 +35,9 @@ from src.rag.pipeline import RAGPipeline
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.rag.standard_resolver import resolve_bulk
 from src.storage.cache import CacheStore
+
+# Per-request retrieval diagnostics for the review record only; never sent to clients.
+_RETRIEVAL_SIGNALS: ContextVar[Optional[list]] = ContextVar("retrieval_signals", default=None)
 
 # ---------------------------------------------------------------------------
 # Arabic transliteration normalization map: common English misspellings
@@ -131,10 +135,18 @@ class ApplicationService:
         request_id: Optional[str] = None, disclaimer_acknowledged: bool = True,
         conversation_history: Optional[List[Dict[str, Any]]] = None,
     ) -> AnswerContract:
+        token = _RETRIEVAL_SIGNALS.set([])
+        try:
+            return self._answer_with_signals(query, session_id, request_id, disclaimer_acknowledged, conversation_history)
+        finally:
+            _RETRIEVAL_SIGNALS.reset(token)
+
+    def _answer_with_signals(self, query, session_id, request_id, disclaimer_acknowledged, conversation_history):
         if self.decision_store is None:
             result = self._answer(query, session_id, request_id, disclaimer_acknowledged, conversation_history)
             result = self._add_requested_definition(query, result)
             result = self._enforce_verdict_authority(result)
+            self._attach_internal_signals(result)
             return self._attach_decision_trace(result)
         from uuid import uuid4
         from src.models.decision_audit import prepare_decision_record
@@ -157,6 +169,7 @@ class ApplicationService:
                                   conversation_history, keep_session=bool(session_id))
             answer = self._add_requested_definition(query, answer)
             answer = self._enforce_verdict_authority(answer)
+            self._attach_internal_signals(answer)
             answer = self._attach_decision_trace(answer)
             record = prepare_decision_record(query, answer, session_id=effective_session, request_id=effective_request)
             if self.decision_store.append(record) != record.review_id:
@@ -170,6 +183,15 @@ class ApplicationService:
         if not session_id:
             self._restore_session(effective_session, None)  # No caller handle exists, so no state may outlive the call.
         return answer
+
+    def _attach_internal_signals(self, answer) -> None:
+        """Review-record diagnostics (retrieval cutoffs and per-chunk scores); scrubbed from client output."""
+        if not isinstance(answer, AnswerContract):
+            return
+        answer.internal_signals["retrieval"] = list(_RETRIEVAL_SIGNALS.get() or [])
+        answer.internal_signals["configured_threshold"] = self.threshold
+        model = getattr(self.llm_client, "model_name", None)
+        answer.internal_signals["model"] = model if isinstance(model, str) else None
 
     _VERDICT_STATUSES = frozenset({ComplianceStatus.COMPLIANT, ComplianceStatus.NON_COMPLIANT,
                                    ComplianceStatus.PARTIALLY_COMPLIANT})
@@ -778,8 +800,23 @@ class ApplicationService:
             if not self._legacy_retriever_signature_error(exc):
                 raise
             chunks = self.retriever.retrieve(query, k=k, threshold=threshold)
-        return [chunk for chunk in chunks if meets_threshold(
+        kept = [chunk for chunk in chunks if meets_threshold(
             chunk.get("similarity", chunk.get("score")) if isinstance(chunk, dict) else getattr(chunk, "score", None), threshold)]
+        self._note_retrieval(query, threshold, chunks, kept)
+        return kept
+
+    def _note_retrieval(self, query, threshold, candidates, kept) -> None:
+        signals = _RETRIEVAL_SIGNALS.get()
+        if signals is None:
+            return
+        from src.rag.score_policy import finite_score
+        kept_ids = {id(chunk) for chunk in kept}
+        def score(chunk):
+            raw = chunk.get("similarity", chunk.get("score")) if isinstance(chunk, dict) else getattr(chunk, "score", None)
+            return finite_score(raw)
+        signals.append({"threshold": threshold, "k_returned": len(candidates), "kept": len(kept),
+                        "chunks": [{"id": self._chunk_id(chunk), "score": score(chunk), "kept": id(chunk) in kept_ids}
+                                   for chunk in candidates][:50]})
 
     @staticmethod
     def _retrieval_filters(standards_route: Any = None) -> Optional[Dict[str, Any]]:

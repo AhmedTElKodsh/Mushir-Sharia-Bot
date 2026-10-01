@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Iterable
 
-from src.models.decision_audit import DecisionAuditRecord
+from src.models.decision_audit import CLASSIFICATION_FIELDS, DecisionAuditRecord, classify
 
 SCHEMA = (
     """CREATE TABLE IF NOT EXISTS decision_reviews (
@@ -20,9 +20,14 @@ SCHEMA = (
         payload JSONB NOT NULL)""",
     "CREATE INDEX IF NOT EXISTS decision_reviews_request ON decision_reviews(request_id)",
     "CREATE INDEX IF NOT EXISTS decision_reviews_recorded ON decision_reviews(recorded_at)",
+    # Additive classification columns; rows written before them keep nulls (payload stays authoritative).
+    *(f"ALTER TABLE decision_reviews ADD COLUMN IF NOT EXISTS {field} TEXT" for field in CLASSIFICATION_FIELDS),
+    *(f"CREATE INDEX IF NOT EXISTS decision_reviews_{field} ON decision_reviews({field})"
+      for field in ("lane", "status", "language", "deciding_gate")),
 )
-INSERT = ("INSERT INTO decision_reviews (review_id, request_id, session_id, recorded_at, payload) "
-          "VALUES (%s, %s, %s, %s, %s) ON CONFLICT (review_id) DO NOTHING")
+INSERT = ("INSERT INTO decision_reviews (review_id, request_id, session_id, recorded_at, payload, "
+          f"{', '.join(CLASSIFICATION_FIELDS)}) VALUES (%s, %s, %s, %s, %s{', %s' * len(CLASSIFICATION_FIELDS)}) "
+          "ON CONFLICT (review_id) DO NOTHING")
 
 
 class PostgresDecisionReviewStore:
@@ -48,7 +53,9 @@ class PostgresDecisionReviewStore:
     @staticmethod
     def _row(record: DecisionAuditRecord):
         record = DecisionAuditRecord.model_validate(record)
-        return (record.review_id, record.request_id, record.session_id, record.recorded_at, record.model_dump_json())
+        values = classify(record)
+        return (record.review_id, record.request_id, record.session_id, record.recorded_at, record.model_dump_json(),
+                *(values[field] for field in CLASSIFICATION_FIELDS))
 
     def append(self, record: DecisionAuditRecord) -> str:
         with self._connect() as conn:

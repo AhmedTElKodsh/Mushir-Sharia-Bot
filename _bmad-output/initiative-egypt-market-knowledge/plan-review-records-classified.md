@@ -3,7 +3,7 @@ title: 'Classified review records with internal signals for every answer'
 type: 'feature'
 ticket: ''
 created: '2026-10-01'
-status: 'ready-for-dev'
+status: 'in-progress'
 route: 'full'
 route_source: 'auto'
 review: ''
@@ -62,15 +62,15 @@ context: ['{project-root}/.planning/sharia-compliance-chatbot/docs/runtime-safet
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/models/decision_audit.py` -- add `internal_signals`, `decision_trace`, `classify()`; build from an internal side-channel instead of the scrubbed `to_dict()`.
+- [x] `src/models/decision_audit.py` -- add `internal_signals`, `decision_trace`, `classify()`; build from an internal side-channel instead of the scrubbed `to_dict()`.
 - [ ] Extend record provenance and append-only annotations per the behavior contract: turn/attempt links, input corrections, observable execution events, model/prompt/code/corpus/rule versions, delivery/errors and review status. Preserve source snapshots once with immutable references; no hidden chain-of-thought or credentials.
-- [ ] `src/chatbot/application_service.py` -- collect internal signals (threshold, min relevance, chunk id→score, router weights) per answer and pass them to the record; remove `router_signals` from client metadata.
-- [ ] `src/storage/decision_review_store.py`, `postgres_decision_review_store.py` -- classification columns + indexes, additive migration, `query(filters)`, `compact(max_bytes, archive_dir)`.
+- [x] `src/chatbot/application_service.py` -- collect internal signals (threshold, min relevance, chunk id→score, router weights) per answer and pass them to the record; remove `router_signals` from client metadata.
+- [~] `src/storage/decision_review_store.py`, `postgres_decision_review_store.py` -- classification columns + indexes, additive migration, `query(filters)` done; `compact(max_bytes, archive_dir)` not started (only meaningful after the hold is lifted).
 - [ ] `src/storage/decision_review_store.py`, `postgres_decision_review_store.py`, `src/api/main.py`, maintenance scripts -- enforce the default review hold at every deletion entry point, including startup, periodic jobs and direct maintenance. A configured numeric age/cap cannot override the hold.
 - [ ] `.env.example`, `docker-compose.yml` and deployment guidance -- declare the default hold and later opt-in 365-day retention/cap consistently; expose effective policy in operator status. Add recorded activation and dry-run eligibility before releasing existing history to retention.
 - [ ] `src/api/main.py` -- run later compaction only after explicit hold release and cap activation; verify archives before local eviction. Monitor capacity during hold and preserve the no-record/no-answer rule on storage failure.
-- [ ] `scripts/review_answers.py` -- filter by lane/status/language/gate/since, output table/JSONL/CSV, `--stats` (counts per class plus DB size).
-- [ ] `tests/test_review_records.py` -- I/O matrix; record has signals while client JSON (REST and SSE) has none; migration on a legacy DB; compaction never drops unsynced rows.
+- [x] `scripts/review_answers.py` -- filter by lane/status/language/gate/since, output table/JSONL/CSV, `--stats` (counts per class plus DB size).
+- [x] `tests/test_review_records.py` -- I/O matrix; record has signals while client JSON (REST and SSE) has none; migration on a legacy DB; compaction never drops unsynced rows.
 - [ ] Preservation tests -- records older than 365 days survive every maintenance route under the default hold, including configured age/cap values; explicit later activation respects protected rows; backup/restore preserves counts, payload hashes, annotations and source references; failed archive or full storage cannot silently discard history.
 - [ ] Evidence lifecycle -- shared/deduplicated evidence may be deleted only when no retained, archived, mirrored, held or unreviewed record references it. Verify mixed reviewed/unreviewed references before any source-object deletion.
 
@@ -85,6 +85,14 @@ context: ['{project-root}/.planning/sharia-compliance-chatbot/docs/runtime-safet
 **Current-state update (2026-10-01, after A milestone `07207d7`):** the frozen "Current state" paragraph above describes baseline `9497f47` and is now stale. A's prerequisites have local test evidence: SQLite/PostgreSQL purge entry points and direct SQLite delete preserve all rows under the hard-coded POC review hold; required-but-invalid strict mirror configuration fails closed; numeric router signals live in a private internal audit field and are scrubbed from public metadata. See [Goal A preservation prerequisites](goal-a-case-results-2026-10-01.md#preservation-prerequisites). No B task below is complete.
 
 See current-state gaps above. A owns the minimum immediate preservation and router capture prerequisites; B owns complete classification, annotations, lineage and later explicit retention activation. Do not infer runtime completion from this plan.
+
+### Slice 1 implemented (2026-10-01)
+
+- Retrieval signals are captured once per request at `ApplicationService._retrieve` in a context variable (concurrency-safe) and attached at the `answer()` choke point: per-retrieval threshold, candidate count, kept count, and up to 50 `{id, score, kept}` chunks (non-finite scores recorded as null), plus the configured threshold and model name. Router weights were already private from Goal A. Client JSON carries none of it (test scans every numeric leaf).
+- `classify()` reads typed state only (decision trace, typed review), never prose. SQLite and Postgres gain `lane, status, language, deciding_gate, reason_code, mechanism` columns with indexes; SQLite backfills readable legacy rows; unreadable rows keep nulls and are never rewritten or dropped. The mirrored store queries the full local archive.
+- `scripts/review_answers.py`: filters `--lane --status --language --gate --reason --mechanism --since --limit`, formats table/CSV/JSONL, `--stats` with size on disk; refuses a missing store instead of creating one.
+- Evidence: `tests/test_review_records.py` (10 tests); full Python 1,492 passed, 48 skipped, 15 strict xfailed, 0 failed. On a copy of the operator history (99 records): 30 classified, 69 pre-trace records honestly `unclassified`.
+- Still open: provenance/annotation lineage (turn/attempt links, prompt/code/corpus/rule versions, append-only annotations), evidence-reference lifecycle, compaction, and the recorded later-retention activation with dry run. The default hold stays in force.
 
 ## Plan Change Log
 

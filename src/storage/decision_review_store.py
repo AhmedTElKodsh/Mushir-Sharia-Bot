@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import sqlite3
 
-from src.models.decision_audit import DecisionAuditRecord
+from src.models.decision_audit import CLASSIFICATION_FIELDS, DecisionAuditRecord, classify
 
 logger = logging.getLogger("sharia_bot")
 
@@ -42,6 +42,24 @@ class SQLiteDecisionReviewStore:
             columns = {row[1] for row in conn.execute("PRAGMA table_info(decision_reviews)")}
             if "synced" not in columns:  # Older files: existing rows count as unsynced and are pushed on first sync.
                 conn.execute("ALTER TABLE decision_reviews ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
+            missing = [field for field in CLASSIFICATION_FIELDS if field not in columns]
+            for field in missing:  # Additive migration; legacy rows are backfilled below or stay null.
+                conn.execute(f"ALTER TABLE decision_reviews ADD COLUMN {field} TEXT")
+            for field in ("lane", "status", "language", "deciding_gate", "recorded_at"):
+                conn.execute(f"CREATE INDEX IF NOT EXISTS decision_reviews_{field} ON decision_reviews({field})")
+            if missing:
+                self._backfill_classification(conn)
+
+    @staticmethod
+    def _backfill_classification(conn) -> None:
+        rows = conn.execute("SELECT review_id, payload FROM decision_reviews").fetchall()
+        for review_id, payload in rows:
+            try:
+                values = classify(DecisionAuditRecord.model_validate_json(payload))
+            except ValueError:
+                continue  # An unreadable legacy row keeps null classification; it is never rewritten.
+            conn.execute(f"UPDATE decision_reviews SET {', '.join(f'{f}=?' for f in CLASSIFICATION_FIELDS)} "
+                         "WHERE review_id=?", (*(values[f] for f in CLASSIFICATION_FIELDS), review_id))
 
     @contextmanager
     def _connect(self):
@@ -56,13 +74,45 @@ class SQLiteDecisionReviewStore:
     def append(self, record: DecisionAuditRecord, *, synced: bool = False, ignore_duplicates: bool = False) -> str:
         record = DecisionAuditRecord.model_validate(record)
         verb = "INSERT OR IGNORE" if ignore_duplicates else "INSERT"
+        values = classify(record)
         with self._connect() as conn:
             conn.execute(
-                f"{verb} INTO decision_reviews (review_id, request_id, session_id, recorded_at, payload, synced) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                f"{verb} INTO decision_reviews (review_id, request_id, session_id, recorded_at, payload, synced, "
+                f"{', '.join(CLASSIFICATION_FIELDS)}) VALUES (?, ?, ?, ?, ?, ?{', ?' * len(CLASSIFICATION_FIELDS)})",
                 (record.review_id, record.request_id, record.session_id,
-                 record.recorded_at.astimezone(UTC).isoformat(), record.model_dump_json(), int(synced)))
+                 record.recorded_at.astimezone(UTC).isoformat(), record.model_dump_json(), int(synced),
+                 *(values[f] for f in CLASSIFICATION_FIELDS)))
         return record.review_id
+
+    def query(self, *, since: datetime | None = None, limit: int | None = None,
+              **filters: str | None) -> list[DecisionAuditRecord]:
+        """Filter by indexed classification columns (lane, status, language, deciding_gate, reason_code, mechanism)."""
+        unknown = set(filters) - set(CLASSIFICATION_FIELDS)
+        if unknown:
+            raise ValueError(f"unknown review filter: {', '.join(sorted(unknown))}")
+        clauses, params = [], []
+        for field, value in filters.items():
+            if value is not None:
+                clauses.append(f"{field}=?"); params.append(value)
+        if since is not None:
+            clauses.append("recorded_at>=?"); params.append(since.astimezone(UTC).isoformat())
+        sql = "SELECT payload FROM decision_reviews" + (f" WHERE {' AND '.join(clauses)}" if clauses else "")
+        sql += " ORDER BY recorded_at"
+        if limit is not None:
+            sql += " LIMIT ?"; params.append(int(limit))
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return [DecisionAuditRecord.model_validate_json(row[0]) for row in rows]
+
+    def stats(self) -> dict:
+        """Counts per classification value plus on-disk size, for review planning and capacity watch."""
+        with self._connect() as conn:
+            counts = {field: dict(conn.execute(
+                f"SELECT COALESCE({field}, 'unclassified'), COUNT(*) FROM decision_reviews GROUP BY 1 ORDER BY 2 DESC"
+            ).fetchall()) for field in CLASSIFICATION_FIELDS}
+            total = conn.execute("SELECT COUNT(*) FROM decision_reviews").fetchone()[0]
+        size = sum(p.stat().st_size for p in self.path.parent.glob(self.path.name + "*") if p.is_file())
+        return {"total": total, "bytes_on_disk": size, "review_hold": EARLY_POC_REVIEW_HOLD, "by": counts}
 
     def get(self, review_id: str) -> DecisionAuditRecord | None:
         with self._connect() as conn:
@@ -205,6 +255,16 @@ class MirroredDecisionReviewStore:
         if type(days) is not int or days < 1:
             raise ValueError("retention must be a positive number of days")
         return 0  # Hold covers local working data, archive and remote mirror.
+
+    def _history(self) -> SQLiteDecisionReviewStore:
+        return self.archive if self.archive is not None else self.local
+
+    def query(self, **kwargs) -> list[DecisionAuditRecord]:
+        """Review queries read the full local archive; the working file may hold only a short window."""
+        return self._history().query(**kwargs)
+
+    def stats(self) -> dict:
+        return {**self._history().stats(), "pending_sync": self.local.pending_count()}
 
     def status(self) -> dict:
         return {"mirror": type(self.remote).__name__, "pending_sync": self.local.pending_count(),
