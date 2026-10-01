@@ -15,6 +15,11 @@ from src.storage.decision_review_store import (
 from src.storage.postgres_decision_review_store import PostgresDecisionReviewStore
 
 
+@pytest.fixture(autouse=True)
+def isolated_archive(tmp_path, monkeypatch):
+    monkeypatch.setenv("DECISION_REVIEW_ARCHIVE_PATH", str(tmp_path / "archive.sqlite3"))
+
+
 def record(request_id="r", age_days=0):
     answer = AnswerContract(answer="a", status=ComplianceStatus.INSUFFICIENT_DATA)
     made = prepare_decision_record("q", answer, session_id="s", request_id=request_id)
@@ -46,6 +51,14 @@ class FakeRemote:
     def get(self, review_id):
         self._check()
         return self.rows.get(review_id)
+
+    def ping(self):
+        self._check()
+        self.pings = getattr(self, "pings", 0) + 1
+
+    def iter_records(self, batch=500):
+        self._check()
+        return iter(sorted(self.rows.values(), key=lambda rec: rec.recorded_at))
 
     def purge_older_than(self, days):
         self._check()
@@ -209,6 +222,9 @@ class FakeCursor:
     def fetchone(self):
         return self._row
 
+    def fetchall(self):
+        return list(self.pages.pop(0)) if getattr(self, "pages", None) else []
+
 
 class FakeConn:
     def __init__(self, log, row=None):
@@ -327,3 +343,136 @@ def test_real_postgres_round_trip_is_idempotent():
     assert store.append(rec) == rec.review_id                 # replay does not duplicate or fail
     assert store.get(rec.review_id).request_id == "integration"
     assert store.purge_older_than(365) >= 0
+
+
+# ---- full local archive, keep-alive and backup ----------------------------------------------------------------
+def archived(tmp_path, **kwargs):
+    archive = SQLiteDecisionReviewStore(tmp_path / "archive.sqlite3")
+    store, remote = mirrored(tmp_path, archive=archive, **kwargs)
+    return store, remote, archive
+
+
+def test_archive_keeps_everything_while_the_working_file_stays_small(tmp_path):
+    store, remote, archive = archived(tmp_path, local_retention_days=7)
+    old, fresh = record("old", age_days=30), record("fresh")
+    store.append(old)
+    store.append(fresh)
+    store.purge_older_than(365)
+    assert store.local.get(old.review_id) is None            # working file purged
+    assert archive.get(old.review_id) is not None and archive.count() == 2
+    remote.down = True
+    assert store.get(old.review_id).review_id == old.review_id   # readable with the remote down and local purged
+
+
+def test_archive_holds_records_even_while_the_remote_is_paused(tmp_path):
+    store, remote, archive = archived(tmp_path)
+    remote.down = True
+    rec = record()
+    store.append(rec)
+    assert archive.get(rec.review_id) is not None and store.local.pending_count() == 1
+
+
+def test_archive_failure_never_blocks_delivery(tmp_path):
+    store, remote, archive = archived(tmp_path)
+    archive.append = Mock(side_effect=OSError("disk full"))
+    rec = record()
+    assert store.append(rec) == rec.review_id and rec.review_id in remote.rows
+
+
+def test_archive_follows_the_full_retention_window(tmp_path):
+    store, remote, archive = archived(tmp_path)
+    ancient, recent = record("a", age_days=400), record("b", age_days=100)
+    store.append(ancient)
+    store.append(recent)
+    store.purge_older_than(365)
+    assert archive.get(ancient.review_id) is None and archive.get(recent.review_id) is not None
+
+
+def test_keepalive_pings_once_per_interval_and_records_failures(tmp_path):
+    now = [1_000_000.0]
+    store, remote, _ = archived(tmp_path, keepalive_hours=24, wall_clock=lambda: now[0])
+    assert store.keep_alive() is True and remote.pings == 1
+    assert store.keep_alive() is False and remote.pings == 1    # throttled
+    now[0] += 24 * 3600 + 1
+    remote.down = True
+    assert store.keep_alive() is False and store.last_keepalive_error == "ConnectionError"
+    remote.down = False
+    assert store.keep_alive() is True and store.last_keepalive_error is None and remote.pings == 2
+
+
+def test_each_sync_pass_keeps_the_database_active(tmp_path):
+    store, remote, _ = archived(tmp_path)
+    store.sync_pending()
+    assert remote.pings == 1
+    store.sync_pending()
+    assert remote.pings == 1                                  # still inside the keep-alive interval
+
+
+def test_status_reports_archive_and_keepalive_without_secrets(tmp_path):
+    store, remote, archive = archived(tmp_path)
+    store.append(record())
+    store.sync_pending()
+    status = store.status()
+    assert status["archive_rows"] == 1 and status["last_keepalive"]
+    assert "secret" not in str(status)
+
+
+@pytest.mark.parametrize("value", ["off", "NONE", "disabled"])
+def test_archive_can_be_switched_off(tmp_path, monkeypatch, value):
+    from src.storage.decision_review_store import configured_archive_store
+    monkeypatch.setenv("DECISION_REVIEW_ARCHIVE_PATH", value)
+    assert configured_archive_store() is None
+
+
+def test_default_archive_path_sits_beside_the_working_file(tmp_path, monkeypatch):
+    from src.storage.decision_review_store import DEFAULT_ARCHIVE_PATH, configured_archive_store
+    monkeypatch.delenv("DECISION_REVIEW_ARCHIVE_PATH", raising=False)
+    monkeypatch.chdir(tmp_path)
+    assert configured_archive_store().path == (tmp_path / DEFAULT_ARCHIVE_PATH).resolve()
+
+
+def test_backup_rebuilds_a_lost_archive_and_is_idempotent(tmp_path):
+    from scripts.backup_decision_reviews import backup
+    remote = FakeRemote()
+    for name in "abc":
+        remote.append(record(name))
+    archive = SQLiteDecisionReviewStore(tmp_path / "rebuilt.sqlite3")
+    assert backup(remote, archive) == (3, 3)
+    assert backup(remote, archive) == (3, 0)                  # a second run adds nothing
+    assert archive.pending_count() == 0                       # restored rows are not queued for re-upload
+
+
+def test_backup_script_refuses_without_a_postgres_url(monkeypatch, capsys):
+    from scripts import backup_decision_reviews as script
+    monkeypatch.delenv("DECISION_REVIEW_DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr(script, "load_dotenv", lambda: None)
+    assert script.main([]) == 2 and "No PostgreSQL URL" in capsys.readouterr().err
+
+
+def test_backup_script_ping_only_touches_the_database(monkeypatch, capsys):
+    from scripts import backup_decision_reviews as script
+    from src.storage import postgres_decision_review_store as pg
+    pinged = []
+    monkeypatch.setattr(script, "load_dotenv", lambda: None)
+    monkeypatch.setenv("DECISION_REVIEW_DATABASE_URL", "postgresql://u:p@h/db")
+    monkeypatch.setattr(pg.PostgresDecisionReviewStore, "__init__", lambda self, url, **k: None)
+    monkeypatch.setattr(pg.PostgresDecisionReviewStore, "ping", lambda self: pinged.append(1))
+    assert script.main(["--ping-only"]) == 0 and pinged == [1] and "reachable" in capsys.readouterr().out
+
+
+def test_postgres_ping_and_keyset_paging_with_the_fake_driver():
+    fake = FakePsycopg()
+    store = PostgresDecisionReviewStore("postgresql://u:p@h/db", psycopg_module=fake)
+    store.ping()
+    assert fake.log[-1][0] == "SELECT 1"
+    recs = [record(name) for name in "abc"]
+    rows = [(r.recorded_at, r.review_id, r.model_dump(mode="json")) for r in recs]
+    FakeCursor.pages = [rows[:2], rows[2:]]                   # page size 2: a full page, then a short one
+    try:
+        got = list(store.iter_records(batch=2))
+    finally:
+        FakeCursor.pages = []
+    assert [r.review_id for r in got] == [r.review_id for r in recs]
+    sql, params = fake.log[-1]
+    assert "(recorded_at, review_id) > (%s, %s)" in sql and params[1] == recs[1].review_id and params[2] == 2

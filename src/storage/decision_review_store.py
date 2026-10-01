@@ -23,6 +23,8 @@ DEFAULT_DB_PATH = "data/runtime/decision_reviews.sqlite3"
 DEFAULT_RETENTION_DAYS = 365
 DEFAULT_LOCAL_RETENTION_DAYS = 7
 MIRROR_RETRY_SECONDS = 30
+DEFAULT_KEEPALIVE_HOURS = 24
+DEFAULT_ARCHIVE_PATH = "data/runtime/decision_reviews_archive.sqlite3"
 
 
 class SQLiteDecisionReviewStore:
@@ -49,11 +51,12 @@ class SQLiteDecisionReviewStore:
         finally:
             conn.close()
 
-    def append(self, record: DecisionAuditRecord, *, synced: bool = False) -> str:
+    def append(self, record: DecisionAuditRecord, *, synced: bool = False, ignore_duplicates: bool = False) -> str:
         record = DecisionAuditRecord.model_validate(record)
+        verb = "INSERT OR IGNORE" if ignore_duplicates else "INSERT"
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO decision_reviews (review_id, request_id, session_id, recorded_at, payload, synced) "
+                f"{verb} INTO decision_reviews (review_id, request_id, session_id, recorded_at, payload, synced) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 (record.review_id, record.request_id, record.session_id,
                  record.recorded_at.astimezone(UTC).isoformat(), record.model_dump_json(), int(synced)))
@@ -73,6 +76,10 @@ class SQLiteDecisionReviewStore:
             rows = conn.execute("SELECT payload FROM decision_reviews WHERE synced=0 ORDER BY recorded_at LIMIT ?",
                                 (limit,)).fetchall()
         return [DecisionAuditRecord.model_validate_json(row[0]) for row in rows]
+
+    def count(self) -> int:
+        with self._connect() as conn:
+            return conn.execute("SELECT COUNT(*) FROM decision_reviews").fetchone()[0]
 
     def pending_count(self) -> int:
         with self._connect() as conn:
@@ -96,8 +103,16 @@ class MirroredDecisionReviewStore:
     """Local SQLite commit point plus a durable remote copy fed through the local outbox."""
 
     def __init__(self, local: SQLiteDecisionReviewStore, remote, *, require_mirror: bool = False,
-                 local_retention_days: int = DEFAULT_LOCAL_RETENTION_DAYS, clock=time.monotonic):
+                 local_retention_days: int = DEFAULT_LOCAL_RETENTION_DAYS, clock=time.monotonic,
+                 archive: SQLiteDecisionReviewStore | None = None, keepalive_hours: float = DEFAULT_KEEPALIVE_HOURS,
+                 wall_clock=time.time):
         self.local = local
+        self.archive = archive  # Full local history, kept separate so the working file stays small.
+        self.keepalive_seconds = keepalive_hours * 3600
+        self._wall_clock = wall_clock
+        self._last_ping = 0.0
+        self.last_keepalive: str | None = None
+        self.last_keepalive_error: str | None = None
         self.remote = remote
         self.require_mirror = require_mirror
         self.local_retention_days = local_retention_days
@@ -112,6 +127,7 @@ class MirroredDecisionReviewStore:
 
     def append(self, record: DecisionAuditRecord) -> str:
         review_id = self.local.append(record)  # A local failure fails the answer: nothing was recorded.
+        self._archive(record)
         if self._clock() < self._retry_after and not self.require_mirror:
             return review_id  # Remote recently failed: the row waits in the outbox for the sync task.
         try:
@@ -128,8 +144,35 @@ class MirroredDecisionReviewStore:
             logger.warning("decision review mirror unavailable (%s); record queued locally", self.last_sync_error)
         return review_id
 
+    def _archive(self, record: DecisionAuditRecord) -> None:
+        """Best-effort full copy: it protects against a paused or lost remote, never gates delivery."""
+        if self.archive is None:
+            return
+        try:
+            self.archive.append(record, synced=True, ignore_duplicates=True)
+        except Exception as exc:
+            logger.warning("decision review archive write failed (%s)", type(exc).__name__)
+
+    def keep_alive(self) -> bool:
+        """Touch the remote at most once per interval so a free project is not paused for inactivity."""
+        ping = getattr(self.remote, "ping", None)
+        now = self._wall_clock()
+        if ping is None or now - self._last_ping < self.keepalive_seconds:
+            return False
+        try:
+            ping()
+        except Exception as exc:
+            self.last_keepalive_error = type(exc).__name__
+            return False
+        self._last_ping = now
+        self.last_keepalive = datetime.fromtimestamp(now, UTC).isoformat()
+        self.last_keepalive_error = None
+        return True
+
     def get(self, review_id: str) -> DecisionAuditRecord | None:
         found = self.local.get(review_id)
+        if found is None and self.archive is not None:
+            found = self.archive.get(review_id)
         if found is not None:
             return found
         try:
@@ -144,6 +187,7 @@ class MirroredDecisionReviewStore:
             records = self.local.pending(batch)
             if not records:
                 self.last_sync_error = None
+                self.keep_alive()
                 return confirmed
             try:
                 self.remote.append_many(records)
@@ -154,6 +198,7 @@ class MirroredDecisionReviewStore:
             confirmed += len(records)
             if len(records) < batch:
                 self.last_sync_error = None
+                self.keep_alive()
                 return confirmed
 
     def purge_older_than(self, days: int) -> int:
@@ -162,13 +207,17 @@ class MirroredDecisionReviewStore:
             removed += self.remote.purge_older_than(days)
         except Exception as exc:
             self.last_sync_error = type(exc).__name__
-        # Keep the local file small, but only ever drop rows the remote has confirmed.
+        # Keep the working file small, but only ever drop rows the remote has confirmed.
         removed += self.local.purge_older_than(min(days, self.local_retention_days), only_synced=True)
+        if self.archive is not None:
+            removed += self.archive.purge_older_than(days)  # The archive follows the full retention window.
         return removed
 
     def status(self) -> dict:
         return {"mirror": type(self.remote).__name__, "pending_sync": self.local.pending_count(),
-                "last_sync_error": self.last_sync_error, "require_mirror": self.require_mirror}
+                "last_sync_error": self.last_sync_error, "require_mirror": self.require_mirror,
+                "archive_rows": self.archive.count() if self.archive is not None else None,
+                "last_keepalive": self.last_keepalive, "last_keepalive_error": self.last_keepalive_error}
 
 
 class _DeferredPostgres:
@@ -197,6 +246,12 @@ class _DeferredPostgres:
 
     def purge_older_than(self, days):
         return self._real().purge_older_than(days)
+
+    def ping(self):
+        return self._real().ping()
+
+    def iter_records(self, batch=500):
+        return self._real().iter_records(batch)
 
 
 def _postgres_url():
@@ -228,7 +283,17 @@ def configured_decision_store():
     return MirroredDecisionReviewStore(
         local, remote,
         require_mirror=(os.getenv("DECISION_REVIEW_REQUIRE_MIRROR", "false").lower() == "true"),
-        local_retention_days=_int_env("DECISION_REVIEW_LOCAL_RETENTION_DAYS", DEFAULT_LOCAL_RETENTION_DAYS))
+        local_retention_days=_int_env("DECISION_REVIEW_LOCAL_RETENTION_DAYS", DEFAULT_LOCAL_RETENTION_DAYS),
+        archive=configured_archive_store(),
+        keepalive_hours=_int_env("DECISION_REVIEW_KEEPALIVE_HOURS", DEFAULT_KEEPALIVE_HOURS))
+
+
+def configured_archive_store():
+    """The full local copy beside the remote; DECISION_REVIEW_ARCHIVE_PATH=off disables it."""
+    path = os.getenv("DECISION_REVIEW_ARCHIVE_PATH") or DEFAULT_ARCHIVE_PATH
+    if path.strip().lower() in {"off", "none", "disabled"}:
+        return None
+    return SQLiteDecisionReviewStore(path)
 
 
 def configured_retention_days() -> int:

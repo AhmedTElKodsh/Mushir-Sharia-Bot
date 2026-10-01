@@ -6,6 +6,7 @@ the local outbox safe. The connection URL carries credentials and is never logge
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Iterable
 
 from src.models.decision_audit import DecisionAuditRecord
@@ -71,6 +72,27 @@ class PostgresDecisionReviewStore:
         payload = row[0]
         return (DecisionAuditRecord.model_validate(payload) if isinstance(payload, dict)
                 else DecisionAuditRecord.model_validate_json(payload))
+
+    def ping(self) -> None:
+        """Cheapest possible round trip; counts as database activity for free-tier inactivity pausing."""
+        with self._connect() as conn:
+            conn.execute("SELECT 1")
+
+    def iter_records(self, batch: int = 500):
+        """Every stored record in (recorded_at, review_id) order, paged by keyset so memory stays flat."""
+        cursor_at, cursor_id = datetime(1970, 1, 1, tzinfo=timezone.utc), ""
+        while True:
+            with self._connect() as conn:
+                rows = conn.execute(
+                    "SELECT recorded_at, review_id, payload FROM decision_reviews "
+                    "WHERE (recorded_at, review_id) > (%s, %s) ORDER BY recorded_at, review_id LIMIT %s",
+                    (cursor_at, cursor_id, batch)).fetchall()
+            for recorded_at, review_id, payload in rows:
+                yield (DecisionAuditRecord.model_validate(payload) if isinstance(payload, dict)
+                       else DecisionAuditRecord.model_validate_json(payload))
+            if len(rows) < batch:
+                return
+            cursor_at, cursor_id = rows[-1][0], rows[-1][1]
 
     def purge_older_than(self, days: int) -> int:
         if type(days) is not int or days < 1:
