@@ -63,7 +63,7 @@ context: ['{project-root}/.planning/sharia-compliance-chatbot/docs/runtime-safet
 
 **Execution:**
 - [x] `src/models/decision_audit.py` -- add `internal_signals`, `decision_trace`, `classify()`; build from an internal side-channel instead of the scrubbed `to_dict()`.
-- [ ] Extend record provenance and append-only annotations per the behavior contract: turn/attempt links, input corrections, observable execution events, model/prompt/code/corpus/rule versions, delivery/errors and review status. Preserve source snapshots once with immutable references; no hidden chain-of-thought or credentials.
+- [~] Extend record provenance and append-only annotations per the behavior contract: turn/attempt links, input corrections, observable execution events, model/prompt/code/corpus/rule versions, delivery/errors and review status. Preserve source snapshots once with immutable references; no hidden chain-of-thought or credentials.
 - [x] `src/chatbot/application_service.py` -- collect internal signals (threshold, min relevance, chunk id→score, router weights) per answer and pass them to the record; remove `router_signals` from client metadata.
 - [~] `src/storage/decision_review_store.py`, `postgres_decision_review_store.py` -- classification columns + indexes, additive migration, `query(filters)` done; `compact(max_bytes, archive_dir)` not started (only meaningful after the hold is lifted).
 - [ ] `src/storage/decision_review_store.py`, `postgres_decision_review_store.py`, `src/api/main.py`, maintenance scripts -- enforce the default review hold at every deletion entry point, including startup, periodic jobs and direct maintenance. A configured numeric age/cap cannot override the hold.
@@ -93,6 +93,15 @@ See current-state gaps above. A owns the minimum immediate preservation and rout
 - `scripts/review_answers.py`: filters `--lane --status --language --gate --reason --mechanism --since --limit`, formats table/CSV/JSONL, `--stats` with size on disk; refuses a missing store instead of creating one.
 - Evidence: `tests/test_review_records.py` (10 tests); full Python 1,492 passed, 48 skipped, 15 strict xfailed, 0 failed. On a copy of the operator history (99 records): 30 classified, 69 pre-trace records honestly `unclassified`.
 - Still open: provenance/annotation lineage (turn/attempt links, prompt/code/corpus/rule versions, append-only annotations), evidence-reference lifecycle, compaction, and the recorded later-retention activation with dry run. The default hold stays in force.
+
+### Slice 2 implemented (2026-10-01): lineage, versions, failures, annotations
+
+- Every committed record gains `provenance`: attempt number and `parent_review_id` (earlier records with the same request_id, so a client retry is linked), `turn_id` from the typed review, `run_id` (EVAL_RUN_ID), start time and duration, and versions: model, prompt, public answer policy, code revision (CODE_REVISION/GIT_COMMIT/SOURCE_COMMIT, else the checkout HEAD), corpus and index (env), approved rule set (`rule_id@version`, an honest empty list today), commercial rule version, retrieval mode and embedding model. Values that are not plain strings or are unset are null and named in `unavailable`. Legacy records load with empty provenance.
+- Failed attempts are recorded where storage still works: status `FAILED`, `delivery: not_delivered`, stage (generation or commit) and error **category only** (never the message, which may hold a URL). The original exception is still raised; when storage itself fails nothing is claimed.
+- Append-only `review_annotations` table (kind in scholar_review/failure_type/behavior_case/note, label, rationale, reviewer, timestamp; all required). The record and its derived labels are never edited; stats count annotations and scholar-reviewed records. CLI: `--show ID`, `--annotate ID --reviewer --kind --label --rationale`.
+- Evidence: `tests/test_review_records.py` 18 tests; full Python 1,500 passed, 48 skipped, 15 strict xfailed, 0 failed.
+- Annotations are mirrored to PostgreSQL: local commit first, then an idempotent push; a failed push stays in an annotation outbox replayed by the sync task; strict mode tells the reviewer the note is queued (never lost); the backup script copies mirrored annotations into the archive. Full Python 1,505 passed, 48 skipped, 15 strict xfailed, 0 failed.
+- Still open: behavior case ID and scenario classification from the evaluation harness; immutable source snapshots/hashes referenced by records; evidence-reference lifecycle, compaction and the later retention activation.
 
 ## Plan Change Log
 

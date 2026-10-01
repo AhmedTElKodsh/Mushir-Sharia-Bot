@@ -22,6 +22,8 @@ class DecisionAuditRecord(EvidenceModel):
     gates: tuple[GateDecision, ...]
     response: dict[str, Any]
     internal_signals: dict[str, Any] = Field(default_factory=dict)
+    # Lineage and versions; empty on records written before it existed (honestly unknown, never backfilled).
+    provenance: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def consistent_record(self):
@@ -36,7 +38,7 @@ class DecisionAuditRecord(EvidenceModel):
         return self
 
 
-def prepare_decision_record(query, answer, *, session_id, request_id):
+def prepare_decision_record(query, answer, *, session_id, request_id, provenance=None):
     typed_data = answer.metadata.get("decision_review")
     typed = DecisionReviewRow.model_validate(typed_data) if typed_data else None
     gates = {g.gate: g for g in typed.decision.gates} if typed else {}
@@ -55,7 +57,18 @@ def prepare_decision_record(query, answer, *, session_id, request_id):
     return DecisionAuditRecord(review_id=review_id, request_id=request_id, session_id=session_id,
         recorded_at=recorded_at, query=query or "", fact_coverage="typed_snapshot" if typed else "not_extracted",
         typed_review=typed, gates=tuple(gates[name] for name in GATES), response=response,
-        internal_signals=answer.internal_signals)
+        internal_signals=answer.internal_signals, provenance=dict(provenance or {}))
+
+
+def prepare_failure_record(query, *, session_id, request_id, stage, error, provenance=None):
+    """A failed attempt, recorded where storage still works. It holds the error category only, never its message."""
+    gates = {name: GateDecision(gate=name, status="blocked", reason="gate_not_evaluated_in_this_path") for name in GATES}
+    gates["review_and_feedback"] = GateDecision(gate="review_and_feedback", status="blocked", reason="answer_not_delivered")
+    return DecisionAuditRecord(review_id=str(uuid4()), request_id=request_id, session_id=session_id,
+        recorded_at=datetime.now(UTC), query=query or "", fact_coverage="not_extracted", typed_review=None,
+        gates=tuple(gates[name] for name in GATES),
+        response={"status": "FAILED", "delivery": "not_delivered", "failure": {"stage": stage, "error_category": type(error).__name__}},
+        provenance=dict(provenance or {}))
 
 
 CLASSIFICATION_FIELDS = ("lane", "status", "language", "deciding_gate", "reason_code", "mechanism")
@@ -72,7 +85,7 @@ def classify(record: DecisionAuditRecord) -> dict[str, str | None]:
     lane = understood.get("lane") or ("described_operation" if record.typed_review else None)
     return {
         "lane": lane if isinstance(lane, str) else None,
-        "status": response.get("status") if isinstance(response.get("status"), str) else None,
+        "status": response.get("status") if isinstance(response.get("status"), str) else None,  # FAILED for failed attempts
         "language": language if language in {"en", "ar"} else None,
         "deciding_gate": decided.get("gate") if isinstance(decided.get("gate"), str) else None,
         "reason_code": decided.get("reason_code") if isinstance(decided.get("reason_code"), str) else None,

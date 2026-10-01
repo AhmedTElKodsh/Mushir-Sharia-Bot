@@ -6,6 +6,7 @@ import re
 import threading
 from contextvars import ContextVar
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from inspect import Parameter, signature
 from typing import Any, Dict, List, Optional
 
@@ -35,6 +36,33 @@ from src.rag.pipeline import RAGPipeline
 from src.rag.query_preprocessor import QueryPreprocessor
 from src.rag.standard_resolver import resolve_bulk
 from src.storage.cache import CacheStore
+
+_CODE_REVISION: Optional[str] = None
+
+
+def _code_revision() -> Optional[str]:
+    """Deployed commit from the environment, else the local checkout's HEAD; None when neither is known."""
+    global _CODE_REVISION
+    if _CODE_REVISION is None:
+        value = os.getenv("CODE_REVISION") or os.getenv("GIT_COMMIT") or os.getenv("SOURCE_COMMIT")
+        if not value:
+            from pathlib import Path
+            git = Path(__file__).resolve().parents[2] / ".git"
+            try:
+                head = (git / "HEAD").read_text().strip()
+                if head.startswith("ref: "):
+                    ref = head[5:]
+                    loose = git / ref
+                    value = loose.read_text().strip() if loose.exists() else next(
+                        (line.split()[0] for line in (git / "packed-refs").read_text().splitlines()
+                         if line.endswith(" " + ref)), "")
+                else:
+                    value = head
+            except OSError:
+                value = ""
+        _CODE_REVISION = value
+    return _CODE_REVISION or None
+
 
 # Per-request retrieval diagnostics for the review record only; never sent to clients.
 _RETRIEVAL_SIGNALS: ContextVar[Optional[list]] = ContextVar("retrieval_signals", default=None)
@@ -161,8 +189,11 @@ class ApplicationService:
 
     def _answer_and_commit(self, query, session_id, effective_session, effective_request,
                            disclaimer_acknowledged, conversation_history) -> AnswerContract:
-        from src.models.decision_audit import prepare_decision_record
+        from src.models.decision_audit import prepare_decision_record, prepare_failure_record
+        import time
         snapshot = self._snapshot_session(effective_session)
+        started, started_at = time.monotonic(), datetime.now(UTC)
+        stage = "generation"
         try:
             # Anonymous requests share one id with their audit record but never leave session state behind.
             answer = self._answer(query, effective_session, effective_request, disclaimer_acknowledged,
@@ -171,18 +202,62 @@ class ApplicationService:
             answer = self._enforce_verdict_authority(answer)
             self._attach_internal_signals(answer)
             answer = self._attach_decision_trace(answer)
-            record = prepare_decision_record(query, answer, session_id=effective_session, request_id=effective_request)
+            stage = "commit"
+            record = prepare_decision_record(query, answer, session_id=effective_session, request_id=effective_request,
+                                             provenance=self._provenance(answer, effective_request, started, started_at))
             if self.decision_store.append(record) != record.review_id:
                 raise RuntimeError("decision review storage did not acknowledge the record")
-        except Exception:
+        except Exception as exc:
             try:
                 self._restore_session(effective_session, snapshot)
             except Exception:
                 pass  # The original storage failure is the error the caller must see.
+            try:  # Record the failed attempt where storage still works; never claim it when it does not.
+                self.decision_store.append(prepare_failure_record(
+                    query, session_id=effective_session, request_id=effective_request, stage=stage, error=exc,
+                    provenance=self._provenance(None, effective_request, started, started_at)))
+            except Exception:
+                pass
             raise
         if not session_id:
             self._restore_session(effective_session, None)  # No caller handle exists, so no state may outlive the call.
         return answer
+
+    def _provenance(self, answer, request_id, started, started_at) -> dict:
+        """Lineage and versions for the review record. Unknown values are listed, never invented."""
+        import time
+        previous = []
+        try:
+            previous = self.decision_store.by_request(request_id) if hasattr(self.decision_store, "by_request") else []
+        except Exception:
+            previous = []
+        typed = (answer.metadata.get("decision_review") or {}) if isinstance(answer, AnswerContract) else {}
+        cards = sorted(f"{card.rule_id}@{card.version}" for card in getattr(getattr(self.described_operations, "evaluator", None), "cards", ()) or ())
+        versions = {
+            "model": (answer.internal_signals.get("model") if isinstance(answer, AnswerContract) else None),
+            "prompt_version": getattr(self.prompt_builder, "prompt_version", None),
+            "public_answer_policy": "literal-support-v2",
+            "code_revision": _code_revision(),
+            "corpus_version": os.getenv("AAOIFI_CORPUS_VERSION") or None,
+            "index_version": os.getenv("AAOIFI_INDEX_VERSION") or None,
+            "rule_set": cards,
+            "commercial_rule_version": getattr(self.rule_evaluator, "RULE_VERSION", None),
+            "retrieval_mode": os.getenv("RETRIEVAL_MODE", "dense"),
+            "embedding_model": os.getenv("EMBED_MODEL") or None,
+        }
+        # Only plain strings (or lists of them) are provenance; anything else is unknown, not stringified.
+        versions = {k: v if isinstance(v, str) or (isinstance(v, list) and all(isinstance(i, str) for i in v)) else None
+                    for k, v in versions.items()}
+        return {
+            "attempt": len(previous) + 1,
+            "parent_review_id": previous[-1].review_id if previous else None,  # Same request_id retried.
+            "turn_id": typed.get("turn_id"),
+            "run_id": os.getenv("EVAL_RUN_ID") or None,
+            "started_at": started_at.isoformat(),
+            "duration_ms": round((time.monotonic() - started) * 1000, 1),
+            "versions": versions,
+            "unavailable": sorted(k for k, v in versions.items() if v in (None, "")),
+        }
 
     def _attach_internal_signals(self, answer) -> None:
         """Review-record diagnostics (retrieval cutoffs and per-chunk scores); scrubbed from client output."""

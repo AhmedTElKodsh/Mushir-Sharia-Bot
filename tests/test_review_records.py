@@ -180,3 +180,183 @@ def test_cli_refuses_missing_store_and_bad_since(tmp_path):
     assert not (tmp_path / "absent.sqlite3").exists()  # Never creates an empty store by accident.
     with pytest.raises(SystemExit):
         review_answers.main(["--db", str(tmp_path / "x"), "--since", "last week"])
+
+
+# ---- lineage, versions, failures and annotations (slice 2) --------------------------------------------------
+def _service(tmp_path, store=None):
+    store = store or SQLiteDecisionReviewStore(tmp_path / "r.sqlite3")
+    app = ApplicationService(retriever=FakeRetriever([_chunk()]), llm_client=FakeLLM("x"),
+                             session_store=SessionManager(), decision_store=store)
+    app._handle_clarification_stage = Mock(return_value=None)
+    return app, store
+
+
+def test_record_carries_versions_and_lists_unknown_provenance(tmp_path, monkeypatch):
+    monkeypatch.setenv("AAOIFI_CORPUS_VERSION", "corpus-2026-09-30")
+    monkeypatch.delenv("AAOIFI_INDEX_VERSION", raising=False)
+    monkeypatch.setenv("EVAL_RUN_ID", "run-7")
+    app, store = _service(tmp_path)
+    answer = app.answer("How is accounting profit recognized?", session_id="s", request_id="req-1")
+    prov = store.get(answer.metadata["review_receipt"]["review_id"]).provenance
+    v = prov["versions"]
+    assert v["corpus_version"] == "corpus-2026-09-30" and v["model"] == "fake-gemini"
+    assert v["prompt_version"] and v["public_answer_policy"] == "literal-support-v2"
+    assert v["code_revision"]  # From the environment or the checkout's HEAD.
+    assert v["rule_set"] == []  # No approved cards: an honest empty set, not a fabricated version.
+    assert "index_version" in prov["unavailable"] and "corpus_version" not in prov["unavailable"]
+    assert prov["run_id"] == "run-7" and prov["attempt"] == 1 and prov["parent_review_id"] is None
+    assert prov["duration_ms"] >= 0 and prov["started_at"]
+    assert "provenance" not in json.dumps(answer.to_dict())
+
+
+def test_retry_of_same_request_links_to_previous_attempt(tmp_path):
+    app, store = _service(tmp_path)
+    first = app.answer("How is accounting profit recognized?", session_id="s", request_id="same")
+    second = app.answer("How is accounting profit recognized?", session_id="s", request_id="same")
+    prov = store.get(second.metadata["review_receipt"]["review_id"]).provenance
+    assert prov["attempt"] == 2 and prov["parent_review_id"] == first.metadata["review_receipt"]["review_id"]
+
+
+def test_described_turn_id_is_linked(tmp_path):
+    store = SQLiteDecisionReviewStore(tmp_path / "r.sqlite3")
+    app = ApplicationService(retriever=Mock(), llm_client=Mock(), session_store=SessionManager(), decision_store=store)
+    answer = app.answer(STORY, session_id="s1")
+    record = store.get(answer.metadata["review_receipt"]["review_id"])
+    assert record.provenance["turn_id"] == record.typed_review.turn_id
+
+
+def test_generation_failure_is_recorded_without_its_message_and_still_raised(tmp_path):
+    app, store = _service(tmp_path)
+    app._answer = Mock(side_effect=RuntimeError("postgresql://user:secret@host failed"))
+    with pytest.raises(RuntimeError):
+        app.answer("anything", session_id="s", request_id="boom")
+    [failed] = store.query(status="FAILED")
+    assert failed.response["failure"] == {"stage": "generation", "error_category": "RuntimeError"}
+    assert failed.response["delivery"] == "not_delivered"
+    assert "secret" not in failed.model_dump_json()
+    assert any(g.gate == "review_and_feedback" and g.status == "blocked" for g in failed.gates)
+
+
+def test_failed_commit_is_not_claimed_as_preserved(tmp_path):
+    class Broken:
+        def append(self, record):
+            raise OSError("disk full")
+    app, _ = _service(tmp_path, store=Broken())
+    with pytest.raises(OSError):
+        app.answer("How is accounting profit recognized?", session_id="s")  # No record, no answer, no false claim.
+
+
+def test_annotations_are_append_only_and_leave_the_record_untouched(tmp_path):
+    store = SQLiteDecisionReviewStore(tmp_path / "r.sqlite3")
+    record = _record()
+    store.append(record)
+    before = store.get(record.review_id).model_dump_json()
+    store.annotate(record.review_id, reviewer="Dr. A", kind="scholar_review", label="agree_withheld", reason="ok")
+    store.annotate(record.review_id, reviewer="Dr. B", kind="scholar_review", label="disagree", reason="see SS-8")
+    assert [a["reviewer"] for a in store.annotations(record.review_id)] == ["Dr. A", "Dr. B"]
+    assert store.get(record.review_id).model_dump_json() == before
+    assert store.stats()["by"]["reviewed_records"] == 1
+    with pytest.raises(ValueError):
+        store.annotate(record.review_id, reviewer=" ", kind="scholar_review", label="x", reason="y")
+    with pytest.raises(ValueError):
+        store.annotate(record.review_id, reviewer="A", kind="verdict", label="x", reason="y")
+    with pytest.raises(KeyError):
+        store.annotate("missing", reviewer="A", kind="note", label="x", reason="y")
+
+
+def test_cli_show_and_annotate(tmp_path, capsys):
+    db = tmp_path / "r.sqlite3"
+    store = SQLiteDecisionReviewStore(db)
+    record = _record()
+    store.append(record)
+    assert review_answers.main(["--db", str(db), "--annotate", record.review_id, "--reviewer", "Dr. A",
+                                "--label", "agree_withheld", "--rationale", "correct abstention"]) == 0
+    capsys.readouterr()
+    assert review_answers.main(["--db", str(db), "--show", record.review_id]) == 0
+    shown = json.loads(capsys.readouterr().out)
+    assert shown["record"]["review_id"] == record.review_id and shown["annotations"][0]["label"] == "agree_withheld"
+    assert review_answers.main(["--db", str(db), "--annotate", record.review_id, "--reviewer", "Dr. A"]) == 2
+
+
+def test_legacy_record_without_provenance_still_loads(tmp_path):
+    payload = json.loads(_record().model_dump_json())
+    payload.pop("provenance")
+    from src.models.decision_audit import DecisionAuditRecord
+    assert DecisionAuditRecord.model_validate(payload).provenance == {}
+
+
+# ---- annotation mirroring ------------------------------------------------------------------------------------
+class _AnnotationRemote:
+    def __init__(self):
+        self.rows, self.down = {}, False
+
+    def append_annotations(self, rows):
+        if self.down:
+            raise ConnectionError("postgresql://user:secret@host refused")
+        for row in rows:
+            self.rows.setdefault(row["annotation_id"], dict(row))  # Idempotent like ON CONFLICT DO NOTHING.
+        return [row["annotation_id"] for row in rows]
+
+    def append_many(self, records):
+        return [r.review_id for r in records]
+
+    def iter_annotations(self):
+        return iter(self.rows.values())
+
+
+def _mirrored(tmp_path, **kwargs):
+    local = SQLiteDecisionReviewStore(tmp_path / "local.sqlite3")
+    archive = SQLiteDecisionReviewStore(tmp_path / "archive.sqlite3")
+    record = _record()
+    archive.append(record, synced=True)
+    remote = _AnnotationRemote()
+    return MirroredDecisionReviewStore(local, remote, archive=archive, **kwargs), remote, archive, record
+
+
+def test_annotation_is_committed_locally_then_mirrored(tmp_path):
+    store, remote, archive, record = _mirrored(tmp_path)
+    row = store.annotate(record.review_id, reviewer="Dr. A", kind="scholar_review", label="agree", reason="ok")
+    assert remote.rows[row["annotation_id"]]["label"] == "agree"
+    assert archive.pending_annotations() == []
+
+
+def test_unreachable_mirror_queues_annotation_and_sync_replays_it_once(tmp_path):
+    store, remote, archive, record = _mirrored(tmp_path)
+    remote.down = True
+    row = store.annotate(record.review_id, reviewer="Dr. A", kind="note", label="x", reason="y")
+    assert [a["annotation_id"] for a in archive.pending_annotations()] == [row["annotation_id"]]
+    assert store.status()["pending_annotation_sync"] == 1 and store.last_sync_error == "ConnectionError"
+    remote.down = False
+    store.sync_pending()
+    store.sync_pending()  # A second replay must not duplicate.
+    assert list(remote.rows) == [row["annotation_id"]] and archive.pending_annotations() == []
+
+
+def test_required_mirror_reports_queued_annotation_without_losing_it(tmp_path):
+    store, remote, archive, record = _mirrored(tmp_path, require_mirror=True)
+    remote.down = True
+    with pytest.raises(RuntimeError, match="queued") as raised:
+        store.annotate(record.review_id, reviewer="Dr. A", kind="note", label="x", reason="y")
+    assert "secret" not in str(raised.value)
+    assert len(archive.annotations(record.review_id)) == 1 and len(archive.pending_annotations()) == 1
+
+
+def test_backup_copies_mirrored_annotations_into_the_archive(tmp_path):
+    from scripts.backup_decision_reviews import backup
+    remote = _AnnotationRemote()
+    record = _record()
+    remote.iter_records = lambda batch=500: iter([record])
+    remote.rows["a1"] = {"annotation_id": "a1", "review_id": record.review_id, "kind": "scholar_review",
+                         "label": "agree", "reason": "ok", "reviewer": "Dr. A", "created_at": "2026-10-01T10:00:00+00:00"}
+    archive = SQLiteDecisionReviewStore(tmp_path / "rebuilt.sqlite3")
+    backup(remote, archive)
+    backup(remote, archive)
+    assert [a["annotation_id"] for a in archive.annotations(record.review_id)] == ["a1"]
+    assert archive.pending_annotations() == []  # Copied from the mirror, so nothing to push back.
+
+
+def test_postgres_annotation_sql_is_idempotent():
+    from src.storage.postgres_decision_review_store import ANNOTATION_FIELDS, INSERT_ANNOTATION, SCHEMA
+    assert "ON CONFLICT (annotation_id) DO NOTHING" in INSERT_ANNOTATION
+    assert INSERT_ANNOTATION.count("%s") == len(ANNOTATION_FIELDS)
+    assert any("CREATE TABLE IF NOT EXISTS review_annotations" in s for s in SCHEMA)

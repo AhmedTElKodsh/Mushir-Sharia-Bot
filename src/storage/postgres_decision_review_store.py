@@ -24,7 +24,20 @@ SCHEMA = (
     *(f"ALTER TABLE decision_reviews ADD COLUMN IF NOT EXISTS {field} TEXT" for field in CLASSIFICATION_FIELDS),
     *(f"CREATE INDEX IF NOT EXISTS decision_reviews_{field} ON decision_reviews({field})"
       for field in ("lane", "status", "language", "deciding_gate")),
+    # Append-only human annotations, mirrored from the local commit point; never updated in place.
+    """CREATE TABLE IF NOT EXISTS review_annotations (
+        annotation_id TEXT PRIMARY KEY,
+        review_id TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        label TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        reviewer TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL)""",
+    "CREATE INDEX IF NOT EXISTS review_annotations_review ON review_annotations(review_id)",
 )
+ANNOTATION_FIELDS = ("annotation_id", "review_id", "kind", "label", "reason", "reviewer", "created_at")
+INSERT_ANNOTATION = (f"INSERT INTO review_annotations ({', '.join(ANNOTATION_FIELDS)}) "
+                     f"VALUES ({', '.join(['%s'] * len(ANNOTATION_FIELDS))}) ON CONFLICT (annotation_id) DO NOTHING")
 INSERT = ("INSERT INTO decision_reviews (review_id, request_id, session_id, recorded_at, payload, "
           f"{', '.join(CLASSIFICATION_FIELDS)}) VALUES (%s, %s, %s, %s, %s{', %s' * len(CLASSIFICATION_FIELDS)}) "
           "ON CONFLICT (review_id) DO NOTHING")
@@ -79,6 +92,26 @@ class PostgresDecisionReviewStore:
         payload = row[0]
         return (DecisionAuditRecord.model_validate(payload) if isinstance(payload, dict)
                 else DecisionAuditRecord.model_validate_json(payload))
+
+    def append_annotations(self, rows) -> list[str]:
+        """Idempotent on annotation_id, so replaying the local outbox is safe."""
+        rows = [tuple(row[field] for field in ANNOTATION_FIELDS) for row in rows]
+        if not rows:
+            return []
+        with self._connect() as conn:
+            for row in rows:
+                conn.execute(INSERT_ANNOTATION, row)
+        return [row[0] for row in rows]
+
+    def iter_annotations(self):
+        with self._connect() as conn:
+            rows = conn.execute(f"SELECT {', '.join(ANNOTATION_FIELDS)} FROM review_annotations "
+                                "ORDER BY created_at, annotation_id").fetchall()
+        for row in rows:
+            item = dict(zip(ANNOTATION_FIELDS, row))
+            if isinstance(item["created_at"], datetime):
+                item["created_at"] = item["created_at"].isoformat()
+            yield item
 
     def ping(self) -> None:
         """Cheapest possible round trip; counts as database activity for free-tier inactivity pausing."""

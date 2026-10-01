@@ -3,6 +3,11 @@
   python scripts/review_answers.py --stats
   python scripts/review_answers.py --lane described_operation --status INSUFFICIENT_DATA --since 7d
   python scripts/review_answers.py --gate approved_rule --language ar --format csv --out withheld-ar.csv
+  python scripts/review_answers.py --show REVIEW_ID
+  python scripts/review_answers.py --annotate REVIEW_ID --reviewer "Dr. X" --kind scholar_review
+      --label agree_withheld --rationale "Withholding is correct until the agreement is seen."
+
+Annotations are appended beside the record; the original record and its labels are never edited.
 
 Reads the full local archive when it exists, otherwise the working store (override with --db).
 Opening an older file adds the classification columns (an additive migration); nothing is deleted.
@@ -81,6 +86,12 @@ def main(argv=None) -> int:
     parser.add_argument("--format", choices=("table", "jsonl", "csv"), default="table")
     parser.add_argument("--out", type=Path, help="write to this file instead of stdout")
     parser.add_argument("--stats", action="store_true", help="counts per class plus size on disk")
+    parser.add_argument("--show", metavar="REVIEW_ID", help="print one record with its annotations")
+    parser.add_argument("--annotate", metavar="REVIEW_ID", help="append a human annotation to a record")
+    parser.add_argument("--reviewer")
+    parser.add_argument("--kind", default="scholar_review", help="scholar_review, failure_type, behavior_case or note")
+    parser.add_argument("--label")
+    parser.add_argument("--rationale", help="why the reviewer chose this label")
     args = parser.parse_args(argv)
 
     from src.storage.decision_review_store import SQLiteDecisionReviewStore
@@ -89,6 +100,29 @@ def main(argv=None) -> int:
         print(f"No review store at {db}.", file=sys.stderr)
         return 2
     store = SQLiteDecisionReviewStore(db)
+    if args.annotate:
+        from src.storage.decision_review_store import _postgres_url, configured_decision_store
+        if args.db is None and _postgres_url():
+            store = configured_decision_store()  # Local commit, then the PostgreSQL mirror (queued if down).
+        try:
+            row = store.annotate(args.annotate, reviewer=args.reviewer, kind=args.kind, label=args.label,
+                                 reason=args.rationale)
+        except RuntimeError as exc:  # Saved locally and queued; the mirror is required but unreachable.
+            print(f"Annotation queued: {exc}", file=sys.stderr)
+            return 3
+        except (KeyError, ValueError) as exc:
+            print(f"Annotation refused: {exc}", file=sys.stderr)
+            return 2
+        print(json.dumps(row, ensure_ascii=False, indent=2))
+        return 0
+    if args.show:
+        record = store.get(args.show)
+        if record is None:
+            print(f"No review record {args.show}.", file=sys.stderr)
+            return 2
+        print(json.dumps({"record": json.loads(record.model_dump_json()), "annotations": store.annotations(args.show)},
+                         ensure_ascii=False, indent=2))
+        return 0
     if args.stats:
         print(json.dumps({"db": str(db), **store.stats()}, ensure_ascii=False, indent=2))
         return 0

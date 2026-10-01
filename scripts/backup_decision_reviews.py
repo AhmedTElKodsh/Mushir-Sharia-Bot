@@ -14,12 +14,14 @@ from dotenv import load_dotenv
 
 
 def backup(remote, archive, batch: int = 500) -> tuple[int, int]:
-    """Return (records seen on the remote, records newly added to the archive)."""
+    """Return (records seen on the remote, records newly added to the archive). Annotations are copied too."""
     before = archive.count()
     seen = 0
     for record in remote.iter_records(batch):
         archive.append(record, synced=True, ignore_duplicates=True)
         seen += 1
+    for annotation in getattr(remote, "iter_annotations", lambda: ())():
+        archive.insert_annotation(annotation, synced=True)
     return seen, archive.count() - before
 
 

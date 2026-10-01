@@ -49,6 +49,13 @@ class SQLiteDecisionReviewStore:
                 conn.execute(f"CREATE INDEX IF NOT EXISTS decision_reviews_{field} ON decision_reviews({field})")
             if missing:
                 self._backfill_classification(conn)
+            # Human review is appended beside the record; the original record and labels are never edited.
+            conn.execute("CREATE TABLE IF NOT EXISTS review_annotations (annotation_id TEXT PRIMARY KEY, "
+                         "review_id TEXT NOT NULL, kind TEXT NOT NULL, label TEXT NOT NULL, reason TEXT NOT NULL, "
+                         "reviewer TEXT NOT NULL, created_at TEXT NOT NULL)")
+            conn.execute("CREATE INDEX IF NOT EXISTS review_annotations_review ON review_annotations(review_id)")
+            if "synced" not in {row[1] for row in conn.execute("PRAGMA table_info(review_annotations)")}:
+                conn.execute("ALTER TABLE review_annotations ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
 
     @staticmethod
     def _backfill_classification(conn) -> None:
@@ -104,6 +111,58 @@ class SQLiteDecisionReviewStore:
             rows = conn.execute(sql, params).fetchall()
         return [DecisionAuditRecord.model_validate_json(row[0]) for row in rows]
 
+    def by_request(self, request_id: str) -> list[DecisionAuditRecord]:
+        """Earlier attempts for the same request, oldest first (retry lineage)."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT payload FROM decision_reviews WHERE request_id=? ORDER BY recorded_at",
+                                (request_id,)).fetchall()
+        return [DecisionAuditRecord.model_validate_json(row[0]) for row in rows]
+
+    ANNOTATION_KINDS = ("scholar_review", "failure_type", "behavior_case", "note")
+
+    def annotate(self, review_id: str, *, reviewer: str, kind: str, label: str, reason: str) -> dict:
+        """Append a human annotation. Every field is required; the reviewed record must exist here."""
+        from uuid import uuid4
+        values = {"reviewer": reviewer, "label": label, "reason": reason}
+        if kind not in self.ANNOTATION_KINDS:
+            raise ValueError(f"annotation kind must be one of {', '.join(self.ANNOTATION_KINDS)}")
+        if any(not isinstance(v, str) or not v.strip() or len(v) > 2000 for v in values.values()):
+            raise ValueError("reviewer, label and reason are required (at most 2000 characters each)")
+        if self.get(review_id) is None:
+            raise KeyError(f"no review record {review_id}")
+        row = {"annotation_id": str(uuid4()), "review_id": review_id, "kind": kind,
+               **{k: v.strip() for k, v in values.items()}, "created_at": datetime.now(UTC).isoformat()}
+        self.insert_annotation(row)
+        return row
+
+    def insert_annotation(self, row: dict, *, synced: bool = False) -> None:
+        """Store an annotation as given (also used to copy mirrored ones back); duplicates are ignored."""
+        with self._connect() as conn:
+            conn.execute("INSERT OR IGNORE INTO review_annotations (annotation_id, review_id, kind, label, reason, "
+                         "reviewer, created_at, synced) VALUES (:annotation_id, :review_id, :kind, :label, :reason, "
+                         ":reviewer, :created_at, :synced)", {**row, "synced": int(synced)})
+
+    _ANNOTATION_COLUMNS = "annotation_id, review_id, kind, label, reason, reviewer, created_at"
+
+    def annotations(self, review_id: str) -> list[dict]:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(f"SELECT {self._ANNOTATION_COLUMNS} FROM review_annotations WHERE review_id=? "
+                                "ORDER BY created_at", (review_id,)).fetchall()
+        return [dict(row) for row in rows]
+
+    def pending_annotations(self, limit: int = 200) -> list[dict]:
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(f"SELECT {self._ANNOTATION_COLUMNS} FROM review_annotations WHERE synced=0 "
+                                "ORDER BY created_at LIMIT ?", (limit,)).fetchall()
+        return [dict(row) for row in rows]
+
+    def mark_annotations_synced(self, annotation_ids) -> None:
+        with self._connect() as conn:
+            conn.executemany("UPDATE review_annotations SET synced=1 WHERE annotation_id=?",
+                             [(i,) for i in annotation_ids])
+
     def stats(self) -> dict:
         """Counts per classification value plus on-disk size, for review planning and capacity watch."""
         with self._connect() as conn:
@@ -111,6 +170,10 @@ class SQLiteDecisionReviewStore:
                 f"SELECT COALESCE({field}, 'unclassified'), COUNT(*) FROM decision_reviews GROUP BY 1 ORDER BY 2 DESC"
             ).fetchall()) for field in CLASSIFICATION_FIELDS}
             total = conn.execute("SELECT COUNT(*) FROM decision_reviews").fetchone()[0]
+            counts["annotation_kind"] = dict(conn.execute(
+                "SELECT kind, COUNT(*) FROM review_annotations GROUP BY kind ORDER BY 2 DESC").fetchall())
+            counts["reviewed_records"] = conn.execute(
+                "SELECT COUNT(DISTINCT review_id) FROM review_annotations WHERE kind='scholar_review'").fetchone()[0]
         size = sum(p.stat().st_size for p in self.path.parent.glob(self.path.name + "*") if p.is_file())
         return {"total": total, "bytes_on_disk": size, "review_hold": EARLY_POC_REVIEW_HOLD, "by": counts}
 
@@ -237,6 +300,7 @@ class MirroredDecisionReviewStore:
             records = self.local.pending(batch)
             if not records:
                 self.last_sync_error = None
+                self.sync_annotations()
                 self.keep_alive()
                 return confirmed
             try:
@@ -248,6 +312,7 @@ class MirroredDecisionReviewStore:
             confirmed += len(records)
             if len(records) < batch:
                 self.last_sync_error = None
+                self.sync_annotations()
                 self.keep_alive()
                 return confirmed
 
@@ -266,11 +331,46 @@ class MirroredDecisionReviewStore:
     def stats(self) -> dict:
         return {**self._history().stats(), "pending_sync": self.local.pending_count()}
 
+    def by_request(self, request_id: str) -> list[DecisionAuditRecord]:
+        return self.local.by_request(request_id)  # Retries arrive within seconds; the working store has them.
+
+    def annotate(self, review_id: str, **kwargs) -> dict:
+        """Local commit first, then the remote copy; a failed push stays in the annotation outbox."""
+        history = self._history()
+        row = history.annotate(review_id, **kwargs)
+        try:
+            self.remote.append_annotations([row])
+            history.mark_annotations_synced([row["annotation_id"]])
+        except Exception as exc:
+            self.last_sync_error = type(exc).__name__  # Never the message: it may contain the URL.
+            if self.require_mirror:
+                raise RuntimeError("annotation saved locally but the required mirror is unavailable; "
+                                   "it is queued and the sync task will replay it") from None
+        return row
+
+    def sync_annotations(self, batch: int = 200) -> int:
+        history, confirmed = self._history(), 0
+        while rows := history.pending_annotations(batch):
+            try:
+                self.remote.append_annotations(rows)
+            except Exception as exc:
+                self.last_sync_error = type(exc).__name__
+                break
+            history.mark_annotations_synced([row["annotation_id"] for row in rows])
+            confirmed += len(rows)
+            if len(rows) < batch:
+                break
+        return confirmed
+
+    def annotations(self, review_id: str) -> list[dict]:
+        return self._history().annotations(review_id)
+
     def status(self) -> dict:
         return {"mirror": type(self.remote).__name__, "pending_sync": self.local.pending_count(),
                 "last_sync_error": self.last_sync_error, "require_mirror": self.require_mirror,
                 "archive_rows": self.archive.count() if self.archive is not None else None,
                 "review_hold": EARLY_POC_REVIEW_HOLD,
+                "pending_annotation_sync": len(self._history().pending_annotations(1000)),
                 "last_keepalive": self.last_keepalive, "last_keepalive_error": self.last_keepalive_error}
 
 
@@ -306,6 +406,12 @@ class _DeferredPostgres:
 
     def iter_records(self, batch=500):
         return self._real().iter_records(batch)
+
+    def append_annotations(self, rows):
+        return self._real().append_annotations(rows)
+
+    def iter_annotations(self):
+        return self._real().iter_annotations()
 
 
 def _postgres_url():
