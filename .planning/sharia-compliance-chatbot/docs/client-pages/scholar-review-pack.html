@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mushir Scholar Review Pack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<style>
+/* Layout: a single reading column (~68ch) with full-width tables and case cards; a quiet "review ledger" look in ink-green and ochre. */
+:root {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --surface-2: #eef1ee;
+  --fg: #1b2420;
+  --muted: #56625c;
+  --line: #d6ddd8;
+  --accent: #0e6655;
+  --accent-soft: #dcefe9;
+  --ochre: #9a6512;
+  --ochre-soft: #f6ead3;
+  --ok: #2f7a3e;
+  --ok-soft: #e1f1e3;
+  --hold: #8a5a00;
+  --hold-soft: #fbf0d9;
+  --code-bg: #eef1ee;
+  --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-ar: "IBM Plex Sans Arabic", "Segoe UI", "Tahoma", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --measure: 68ch;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121816; --surface: #19211e; --surface-2: #1f2925; --fg: #e3ebe7; --muted: #9db0a7;
+    --line: #2e3a35; --accent: #5cc6ad; --accent-soft: #173a32; --ochre: #e0ad5c; --ochre-soft: #3a2c14;
+    --ok: #7fcf8d; --ok-soft: #1b3321; --hold: #e8b65a; --hold-soft: #3a2d12; --code-bg: #1f2925;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121816; --surface: #19211e; --surface-2: #1f2925; --fg: #e3ebe7; --muted: #9db0a7;
+  --line: #2e3a35; --accent: #5cc6ad; --accent-soft: #173a32; --ochre: #e0ad5c; --ochre-soft: #3a2c14;
+  --ok: #7fcf8d; --ok-soft: #1b3321; --hold: #e8b65a; --hold-soft: #3a2d12; --code-bg: #1f2925;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16.5px; line-height: 1.6;
+  padding-inline: 20px; padding-block: 0 72px;
+}
+.wrap { max-width: 1040px; margin-inline: auto; }
+.prose { max-width: var(--measure); }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-size: clamp(2rem, 4.5vw, 2.9rem); letter-spacing: -0.01em; }
+h2 { font-size: 1.65rem; }
+h3 { font-size: 1.2rem; }
+p { margin: 0; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-size: 0.9em; }
+.ar { font-family: var(--font-ar); direction: rtl; unicode-bidi: isolate; }
+.muted { color: var(--muted); }
+.stack { display: grid; gap: 14px; }
+section { display: grid; gap: 22px; padding-block: 52px 8px; border-top: 1px solid var(--line); }
+section:first-of-type { border-top: 0; }
+
+/* header */
+header.doc { display: grid; gap: 18px; padding-block: 56px 36px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; color: var(--muted); font-size: 0.92rem; }
+.meta b { color: var(--fg); font-weight: 500; }
+.lede { font-size: 1.15rem; max-width: var(--measure); }
+.toc { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 4px 0 0; list-style: none; }
+.toc a { display: inline-block; padding: 5px 11px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; color: var(--fg); font-size: 0.88rem; background: var(--surface); }
+.toc a:hover { border-color: var(--accent); color: var(--accent); }
+
+/* summary */
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+.summary > div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.summary h3 { font-size: 1.05rem; font-family: var(--font-body); font-weight: 600; }
+.summary ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
+.callout { border-left: 3px solid var(--ochre); background: var(--ochre-soft); padding: 14px 18px; border-radius: 0 6px 6px 0; max-width: var(--measure); }
+.callout.green { border-left-color: var(--accent); background: var(--accent-soft); }
+
+/* progress meters */
+.meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.meter { display: grid; gap: 8px; min-width: 0; }
+.meter .label { display: flex; justify-content: space-between; gap: 10px; font-size: 0.92rem; }
+.meter .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.bar { height: 10px; border-radius: 6px; background: var(--surface-2); overflow: hidden; display: flex; }
+.bar span { display: block; height: 100%; }
+.bar .done { background: var(--ok); }
+.bar .open { background: var(--hold); }
+.legend { display: flex; gap: 16px; font-size: 0.85rem; color: var(--muted); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+/* built list */
+.built { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
+.built div { padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); display: grid; gap: 6px; min-width: 0; }
+.built b { font-weight: 600; }
+
+/* diagrams */
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; overflow-x: auto; }
+.diagram svg { display: block; max-width: 100%; height: auto; margin-inline: auto; }
+.diagram svg text { font-family: var(--font-body); fill: var(--fg); }
+.diagram figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 10px; }
+
+/* comparison */
+.compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.compare > div { border-radius: 8px; padding: 16px 18px; display: grid; gap: 8px; min-width: 0; border: 1px solid var(--line); background: var(--surface); }
+.compare .tag { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.compare .before .tag { color: var(--muted); }
+.compare .after { border-color: var(--accent); }
+.compare .after .tag { color: var(--accent); }
+.bubble { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; font-size: 0.95rem; }
+
+/* tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+th, td { text-align: left; vertical-align: top; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; background: var(--surface-2); font-size: 0.85rem; }
+tr:last-child td { border-bottom: 0; }
+td.n { font-family: var(--font-mono); white-space: nowrap; }
+
+/* option cards */
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.opt { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; background: var(--surface); display: grid; gap: 6px; align-content: start; min-width: 0; }
+.opt .letter { font-family: var(--font-mono); font-weight: 500; color: var(--accent); }
+
+/* case cards */
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.filters button { font: inherit; font-size: 0.88rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.filters button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cases { display: grid; gap: 14px; }
+.case { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 18px 20px; display: grid; gap: 12px; min-width: 0; }
+.case-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; }
+.case-head .id { font-family: var(--font-mono); font-weight: 500; }
+.case-head h3 { font-family: var(--font-body); font-weight: 600; font-size: 1.05rem; flex: 1 1 320px; min-width: 0; }
+.pill { font-size: 0.76rem; font-family: var(--font-mono); letter-spacing: 0.04em; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.prio { background: var(--ochre-soft); color: var(--ochre); }
+.pill.cond { background: var(--accent-soft); color: var(--accent); }
+.pill.route { background: var(--surface-2); color: var(--muted); }
+.q-ar { font-size: 1.02rem; color: var(--muted); }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 18px; }
+.kv { display: grid; gap: 2px; min-width: 0; }
+.kv .k { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.kv .v { font-size: 0.95rem; }
+.verdict { font-family: var(--font-mono); font-size: 0.86rem; padding: 1px 7px; border-radius: 4px; background: var(--surface-2); }
+.confirm { border-top: 1px dashed var(--line); padding-top: 10px; display: grid; gap: 6px; }
+.confirm b { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ochre); }
+.rec { font-size: 0.93rem; }
+
+/* FAQ */
+details { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+details + details { margin-top: 10px; }
+summary { cursor: pointer; padding: 14px 18px; font-weight: 600; list-style: none; display: flex; gap: 12px; justify-content: space-between; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font-family: var(--font-mono); color: var(--accent); }
+details[open] summary::after { content: "–"; }
+details .body { padding: 0 18px 16px; display: grid; gap: 10px; max-width: var(--measure); }
+details .body ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
+
+/* reply template */
+pre.reply { font-family: var(--font-mono); font-size: 0.88rem; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; white-space: pre; margin: 0; }
+.copyrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.copyrow button { font: inherit; font-size: 0.88rem; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); cursor: pointer; }
+.copyrow button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.copyrow span { font-size: 0.88rem; color: var(--muted); }
+
+ol.steps { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; max-width: var(--measure); }
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 0.86rem; color: var(--muted); display: grid; gap: 6px; }
+
+@media (max-width: 560px) {
+  body { font-size: 15.5px; padding-inline: 16px; }
+  section { padding-block: 40px 4px; }
+  .case { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* ---- client guide components ---- */
+.state { font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.04em; padding: 2px 9px; border-radius: 999px; white-space: nowrap; margin-right: 6px; display: inline-block; }
+.state.ok { background: var(--ok-soft); color: var(--ok); }
+.state.hold { background: var(--hold-soft); color: var(--hold); }
+.state.wait { background: var(--surface-2); color: var(--muted); }
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+.figures > div { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 14px 16px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.figures .big { font-family: var(--font-display); font-size: 2rem; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.chat { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 16px 18px; display: grid; gap: 10px; max-width: 760px; }
+.chat .who { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.msg { padding: 10px 12px; border-radius: 8px; display: grid; gap: 2px; max-width: 92%; }
+.msg b { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.msg.user { background: var(--surface-2); justify-self: end; }
+.msg.bot { background: var(--accent-soft); justify-self: start; }
+.chat .note { font-size: 0.88rem; }
+ul.findings, ul.checklist { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; }
+.compare ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
+h3 { font-size: 1.15rem; }
+figure.viz { margin: 0; display: grid; gap: 12px; }
+
+/* timeline */
+ol.tl { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); border-top: 2px solid var(--line); }
+ol.tl li { position: relative; padding: 18px 16px 4px 0; display: grid; gap: 4px; align-content: start; min-width: 0; }
+ol.tl li::before { content: ""; position: absolute; top: -7px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--muted); }
+ol.tl li.now::before { background: var(--accent); border-color: var(--accent); }
+ol.tl .when { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+ol.tl li.now b { color: var(--accent); }
+ol.tl li span:last-child { font-size: 0.92rem; color: var(--muted); }
+
+/* decision gates */
+ol.gates { list-style: none; margin: 0; padding: 0; display: grid; }
+ol.gates li { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+ol.gates .g, .result .g { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 500; background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+ol.gates li.last .g { background: var(--ochre-soft); color: var(--ochre); border-color: var(--ochre); }
+ol.gates .q { display: grid; gap: 2px; }
+ol.gates .q span { font-size: 0.88rem; color: var(--muted); }
+ol.gates .no, ol.gates .yes { font-size: 0.92rem; padding: 8px 12px; border-radius: 6px; background: var(--surface-2); }
+ol.gates .yes { background: var(--accent-soft); }
+ol.gates li.last .no { background: var(--hold-soft); }
+ol.gates i { display: block; font-style: normal; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.result { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent-soft); }
+.result .g.ok { background: var(--accent); color: var(--surface); }
+@media (max-width: 640px) { ol.gates li { grid-template-columns: 36px minmax(0, 1fr); } ol.gates .no, ol.gates .yes { grid-column: 2; } }
+
+/* three parts */
+.parts { display: grid; grid-template-columns: minmax(0, 0.8fr) auto minmax(0, 1.2fr) auto minmax(0, 1.2fr) auto minmax(0, 1.1fr); align-items: center; gap: 10px; }
+@media (max-width: 760px) { .parts { grid-template-columns: 1fr; } .parts .arrow { transform: rotate(90deg); justify-self: center; } }
+.parts .node, .fan .node { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 10px 14px; display: grid; gap: 2px; min-width: 0; }
+.parts .node span, .fan .node span { font-size: 0.84rem; color: var(--muted); }
+.parts .node.strong, .fan .node.strong { border-color: var(--accent); }
+.parts .node.out { background: var(--accent-soft); border-color: var(--accent); }
+.parts .pair { display: grid; gap: 8px; }
+.parts .arrow { color: var(--muted); font-size: 1.3rem; }
+
+/* bar chart */
+.chart { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 16px 18px; display: grid; gap: 10px; }
+.chart .ct { font-weight: 600; font-size: 0.95rem; }
+.hbar { display: grid; grid-template-columns: 130px minmax(0, 1fr) 56px; gap: 10px; align-items: center; font-size: 0.9rem; }
+.hbar .track { height: 14px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.hbar .fill { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.hbar .val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.chart .axis { display: flex; justify-content: space-between; margin-left: 140px; margin-right: 66px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
+@media (max-width: 520px) { .hbar { grid-template-columns: 96px minmax(0, 1fr) 48px; } .chart .axis { margin-left: 106px; margin-right: 58px; } }
+
+/* financing tiers */
+.fin { display: grid; gap: 8px; justify-items: center; text-align: center; }
+.fin .tier { display: grid; gap: 6px; justify-items: center; width: 100%; }
+.fin .tl2 { font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.chips span { border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; background: var(--surface); font-size: 0.92rem; }
+.chips.strong span { border-color: var(--accent); }
+.chips.out span { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+.fin .down { color: var(--muted); font-size: 0.85rem; }
+
+/* template vs schedule */
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.split .half { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.split .tag { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.split .where { font-size: 0.9rem; color: var(--muted); }
+.split .does { font-size: 0.92rem; padding: 8px 10px; border-radius: 6px; background: var(--accent-soft); }
+
+/* scholar fan-out */
+.fan { display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); gap: 16px; align-items: center; }
+.fan .center { background: var(--ochre-soft); border-color: var(--ochre); }
+.fanrows { display: grid; gap: 8px; border-left: 2px solid var(--line); padding-left: 16px; }
+.fanrows div { display: grid; gap: 2px; }
+.fanrows span { font-size: 0.9rem; color: var(--muted); }
+@media (max-width: 600px) { .fan { grid-template-columns: 1fr; } }
+
+/* release ladder */
+ol.ladder { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+ol.ladder li { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px 14px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+ol.ladder li b { font-family: var(--font-mono); color: var(--muted); }
+ol.ladder li .name { font-weight: 600; }
+ol.ladder li span:last-child { font-size: 0.88rem; color: var(--muted); }
+ol.ladder li.now { border-color: var(--accent); background: var(--accent-soft); }
+ol.ladder li.now b { color: var(--accent); }
+
+/* path steps */
+ol.path { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; counter-reset: step; }
+ol.path li { counter-increment: step; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 0.92rem; }
+ol.path li::before { content: counter(step); font-family: var(--font-mono); font-size: 0.78rem; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); }
+ol.path li.ext { border-color: var(--ochre); background: var(--ochre-soft); }
+ol.path li.goal { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.legend2 { font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+.sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
+.sw.ext { background: var(--ochre-soft); border: 1px solid var(--ochre); }
+
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <span class="eyebrow">Mushir · V1.6 prototype · Scholar review pack</span>
+  <h1>12 questions where Mushir now waits for the scholar</h1>
+  <p class="lede">Mushir is now stricter. It gives a Sharia conclusion only when a rule approved by your scholar covers the question. Twelve of our test questions were written before that change, and they still expect a direct verdict. This pack lists them, explains why they changed, and prepares each one for the reviewing scholar to decide. No scholar has been engaged yet, so appointing one is the first step.</p>
+  <div class="meta">
+    <span>Prepared for <b>the client and the reviewing scholar</b></span>
+    <span>Date <b>1 October 2026</b></span>
+    <span>Status <b>Scholar to be appointed · decisions prepared</b></span>
+    <span>Companion <b><a href="client-guide.html">Mushir Client Guide</a></b></span>
+  </div>
+  <ul class="toc" aria-label="Contents">
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#progress">Progress</a></li>
+    <li><a href="#method">How Mushir decides</a></li>
+    <li><a href="#why">Why 12 tests changed</a></li>
+    <li><a href="#cases">The 12 cases</a></li>
+    <li><a href="#options">Decision options</a></li>
+    <li><a href="#defaults">Settings to confirm</a></li>
+    <li><a href="#reply">How to reply</a></li>
+    <li><a href="#faq">Questions</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ul>
+</header>
+
+<section id="summary" aria-labelledby="h-summary">
+  <h2 id="h-summary">Summary</h2>
+  <div class="summary">
+    <div>
+      <h3>What happened</h3>
+      <p>We added a safety rule: Mushir does not state that something is permissible or prohibited unless a scholar-approved rule covers it.</p>
+      <p>Twelve older test questions expect a direct verdict, so they now show as open.</p>
+    </div>
+    <div>
+      <h3>What it does not mean</h3>
+      <ul>
+        <li>Mushir gave <b>no wrong verdict</b>. In all 12 cases it declined and asked for scholar review.</li>
+        <li>Nothing is broken. The other 1,234 automated checks pass.</li>
+        <li>We changed no expected answers ourselves.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What we need</h3>
+      <ul>
+        <li><b>Appoint a reviewing scholar.</b> Nothing in Mushir has been scholar-reviewed so far.</li>
+        <li>The scholar chooses an option (A–D) for each of the 12 cases.</li>
+        <li>You confirm four default settings.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="callout"><b>Fastest path once a scholar is appointed:</b> start with the two cases that matter most for Egyptian instalment plans, <b>GC-005</b> (late-payment charges) and <b>GC-017</b> (rescheduling with a new profit margin). Approving those two as rule cards lets the V1.6 prototype handle the most common instalment questions.</p>
+</section>
+
+<section id="progress" aria-labelledby="h-progress">
+  <h2 id="h-progress">Progress since the last update</h2>
+  <div class="meters">
+    <div class="meter">
+      <div class="label"><span>Automated checks</span><span class="num">1,234 / 1,246</span></div>
+      <div class="bar" role="img" aria-label="1,234 of 1,246 automated checks pass; 12 are open"><span class="done" style="width:99.04%"></span><span class="open" style="width:0.96%"></span></div>
+    </div>
+    <div class="meter">
+      <div class="label"><span>Browser and API checks</span><span class="num">30 / 30</span></div>
+      <div class="bar" role="img" aria-label="30 of 30 browser and API checks pass"><span class="done" style="width:100%"></span></div>
+    </div>
+    <div class="meter">
+      <div class="label"><span>Critical ruling questions</span><span class="num">9 / 19</span></div>
+      <div class="bar" role="img" aria-label="9 of 19 critical ruling questions pass; 10 wait for scholar decisions"><span class="done" style="width:47.4%"></span><span class="open" style="width:52.6%"></span></div>
+    </div>
+  </div>
+  <div class="legend"><span><i style="background:var(--ok)"></i>Passing</span><span><i style="background:var(--hold)"></i>Waiting for a scholar decision (this pack)</span></div>
+
+  <div class="built">
+    <div><b>Questions about your own deal</b><span class="muted">Mushir reads amounts, down payment, months and lender from the user's own words and records only what the user actually said.</span></div>
+    <div><b>One question at a time</b><span class="muted">When something important is missing, Mushir asks one clear question, at most twice, then says which document it needs.</span></div>
+    <div><b>Rule cards before verdicts</b><span class="muted">A Sharia conclusion requires a scholar-approved rule card. Without one, Mushir explains what review is needed.</span></div>
+    <div><b>Evidence status, not a fake score</b><span class="muted">The old "confidence %" is gone. Each answer now shows its sources and how old each source is.</span></div>
+    <div><b>Every answer is recorded first</b><span class="muted">An answer is saved for review before the user sees it. If saving fails, the answer is not shown.</span></div>
+    <div><b>Three independent review rounds</b><span class="muted">Each round found issues, which were fixed and covered by new checks. The last round found only small edge cases.</span></div>
+  </div>
+</section>
+
+<section id="method" aria-labelledby="h-method">
+  <h2 id="h-method">How Mushir decides</h2>
+  <p class="prose">Every question passes the same checks in order. Mushir moves to the next check only when the current one is satisfied. Where a check fails, Mushir stops and asks a question or names the missing document.</p>
+  <figure class="diagram" style="margin:0">
+    <svg viewBox="0 0 960 300" role="img" aria-labelledby="flow-t flow-d">
+      <title id="flow-t">Mushir decision path</title>
+      <desc id="flow-d">A question passes four checks: is it in scope, are the key facts known, is the contract type established, and is there a scholar-approved rule. Failing any check leads to one follow-up question or a request for a document. Passing all four leads to an answer that cites the rule and its sources.</desc>
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker>
+      </defs>
+      <g font-size="14">
+        <rect x="10" y="40" width="130" height="64" rx="8" style="fill:var(--surface-2);stroke:var(--line)"/>
+        <text x="75" y="68" text-anchor="middle" font-weight="600">User question</text>
+        <text x="75" y="88" text-anchor="middle" style="fill:var(--muted)" font-size="12">Arabic or English</text>
+
+        <rect x="175" y="40" width="150" height="64" rx="8" style="fill:var(--surface);stroke:var(--accent)"/>
+        <text x="250" y="68" text-anchor="middle" font-weight="600">1. In scope?</text>
+        <text x="250" y="88" text-anchor="middle" style="fill:var(--muted)" font-size="12">not a fatwa request</text>
+
+        <rect x="355" y="40" width="150" height="64" rx="8" style="fill:var(--surface);stroke:var(--accent)"/>
+        <text x="430" y="68" text-anchor="middle" font-weight="600">2. Facts known?</text>
+        <text x="430" y="88" text-anchor="middle" style="fill:var(--muted)" font-size="12">amounts, lender, terms</text>
+
+        <rect x="535" y="40" width="150" height="64" rx="8" style="fill:var(--surface);stroke:var(--accent)"/>
+        <text x="610" y="68" text-anchor="middle" font-weight="600">3. Contract type?</text>
+        <text x="610" y="88" text-anchor="middle" style="fill:var(--muted)" font-size="12">shown by a document</text>
+
+        <rect x="715" y="40" width="160" height="64" rx="8" style="fill:var(--ochre-soft);stroke:var(--ochre)"/>
+        <text x="795" y="68" text-anchor="middle" font-weight="600">4. Approved rule?</text>
+        <text x="795" y="88" text-anchor="middle" style="fill:var(--muted)" font-size="12">signed by the scholar</text>
+
+        <line x1="140" y1="72" x2="172" y2="72" style="stroke:var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="325" y1="72" x2="352" y2="72" style="stroke:var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="505" y1="72" x2="532" y2="72" style="stroke:var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="685" y1="72" x2="712" y2="72" style="stroke:var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <line x1="250" y1="104" x2="250" y2="196" style="stroke:var(--line)" stroke-width="1.5"/>
+        <line x1="430" y1="104" x2="430" y2="196" style="stroke:var(--line)" stroke-width="1.5"/>
+        <line x1="610" y1="104" x2="610" y2="196" style="stroke:var(--line)" stroke-width="1.5"/>
+        <line x1="795" y1="104" x2="795" y2="150" style="stroke:var(--line)" stroke-width="1.5"/>
+        <line x1="250" y1="196" x2="610" y2="196" style="stroke:var(--line)" stroke-width="1.5"/>
+        <line x1="430" y1="196" x2="430" y2="214" style="stroke:var(--muted)" stroke-width="1.5" marker-end="url(#arr)"/>
+        <text x="300" y="188" style="fill:var(--muted)" font-size="12">if not</text>
+
+        <rect x="300" y="216" width="260" height="62" rx="8" style="fill:var(--surface-2);stroke:var(--line)"/>
+        <text x="430" y="242" text-anchor="middle" font-weight="600">Ask one question</text>
+        <text x="430" y="262" text-anchor="middle" style="fill:var(--muted)" font-size="12">or name the document needed</text>
+
+        <rect x="690" y="152" width="210" height="62" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+        <text x="795" y="178" text-anchor="middle" font-weight="600">Answer with the rule</text>
+        <text x="795" y="198" text-anchor="middle" style="fill:var(--muted)" font-size="12">and its dated sources</text>
+
+        <text x="700" y="240" style="fill:var(--ochre)" font-size="12">No approved rule yet:</text>
+        <text x="700" y="257" style="fill:var(--ochre)" font-size="12">"scholar review needed"</text>
+        <text x="700" y="274" style="fill:var(--muted)" font-size="12">This is where the 12 cases stop.</text>
+      </g>
+    </svg>
+    <figcaption>Check 4 is the new safety rule. The 12 cases in this pack pass checks 1–3 but stop at check 4, because no approved rule card exists for them yet.</figcaption>
+  </figure>
+  <div class="prose stack">
+    <p><b>Why a rule card instead of the AI's own knowledge?</b> The AI can recite well-known rulings, but it cannot show who approved them, under which school or standard, and with which conditions. A rule card records all three, is approved once by the scholar, and then applies to every question it covers. If the scholar later changes a rule, every future answer changes with it.</p>
+  </div>
+</section>
+
+<section id="why" aria-labelledby="h-why">
+  <h2 id="h-why">Why 12 tests changed</h2>
+  <p class="prose">The test questions were written earlier in development, when Mushir was expected to answer from AAOIFI standards directly. Here is the same question before and after the safety rule.</p>
+  <div class="compare">
+    <div class="before">
+      <span class="tag">Before · test expectation</span>
+      <p><b>GC-017</b>: Is Murabaha rollover with a new profit margin on the outstanding balance permissible?</p>
+      <div class="bubble">Expected: <span class="verdict">PROHIBITED</span>, citing AAOIFI SS-08.</div>
+      <p class="muted">A verdict drawn from retrieved text, with no record of scholar approval.</p>
+    </div>
+    <div class="after">
+      <span class="tag">Now · what Mushir says</span>
+      <p><b>GC-017</b>: the same question.</p>
+      <div class="bubble">"This scenario requires explicit rule evidence and human review before Mushir can provide a safe non-binding assessment."</div>
+      <p class="ar bubble" lang="ar">"تتطلب هذه المعاملة مراجعة قواعد شرعية وأدلة مصدرية إضافية قبل تقديم تقييم آمن؛ يرجى إحالتها إلى مراجع شرعي مؤهل."</p>
+      <p class="muted">The case is also placed in the scholar review queue automatically.</p>
+    </div>
+  </div>
+  <p class="callout green prose">Once the scholar approves a rule card for a case, Mushir answers it again, this time citing the approved rule and its sources, and the test passes. The test checks the same thing as before; only the source of authority changes.</p>
+</section>
+
+<section id="cases" aria-labelledby="h-cases">
+  <h2 id="h-cases">The 12 cases</h2>
+  <div class="prose stack">
+    <p>Ten cases are <b>ruling questions</b>: the expected answer is a verdict. Two are <b>routing questions</b>: the expected answer is a contract type that the question's wording does not establish.</p>
+    <p>For each case we show the draft expected answer as written in the test file, what Mushir says now, and what the scholar should confirm. The draft answers are <b>not a ruling</b>. They were written by the development team in May 2026 from AAOIFI standards, with <b>no scholar review</b>. The label "Sharia Scholar" in the test files names the authority each answer needs, not someone who reviewed it. See question 5 below.</p>
+  </div>
+
+  <div class="filters" role="group" aria-label="Filter cases">
+    <span class="muted" style="font-size:0.88rem">Show:</span>
+    <button type="button" data-filter="all" aria-pressed="true">All 12</button>
+    <button type="button" data-filter="prio" aria-pressed="false">Instalment priority (2)</button>
+    <button type="button" data-filter="cond" aria-pressed="false">Has a condition (6)</button>
+    <button type="button" data-filter="route" aria-pressed="false">Routing (2)</button>
+  </div>
+
+  <div class="cases" id="case-list">
+
+    <article class="case" data-tags="prio">
+      <div class="case-head"><span class="id">GC-005</span><h3>Late-payment penalty on Murabaha instalments taken as the bank's income</h3><span class="pill prio">Instalment priority</span></div>
+      <p class="ar q-ar" lang="ar">هل يجوز للبنك أخذ غرامة تأخير على أقساط المرابحة كإيراد؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Draft expected answer</span><span class="v"><span class="verdict">PROHIBITED</span></span></div>
+        <div class="kv"><span class="k">Standards in the test</span><span class="v mono">SS-28, SS-19</span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Defers to scholar review</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>The draft note says the penalty may not be income and must go to charity. As a rule card, the deciding fact is <i>who receives the late-payment charge</i>. Is that the only deciding fact, or does the type of charge (a fixed penalty versus actual-cost compensation) also matter?</p></div>
+      <p class="rec"><b>Our suggestion:</b> option B. Every Egyptian consumer-finance contract has a late-payment clause, so this rule will be used constantly.</p>
+    </article>
+
+    <article class="case" data-tags="prio">
+      <div class="case-head"><span class="id">GC-017</span><h3>Rescheduling a Murabaha with a new profit margin on the remaining balance</h3><span class="pill prio">Instalment priority</span></div>
+      <p class="ar q-ar" lang="ar">هل يجوز إعادة جدولة المرابحة بإضافة هامش ربح جديد على الرصيد المتبقي؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Draft expected answer</span><span class="v"><span class="verdict">PROHIBITED</span></span></div>
+        <div class="kv"><span class="k">Standards in the test</span><span class="v mono">SS-08</span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Defers to scholar review</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>The draft treats any added margin on an existing debt as riba. Should the rule distinguish rescheduling with no added amount, or a new, separate sale, from adding a margin to the same debt?</p></div>
+      <p class="rec"><b>Our suggestion:</b> option A or B. Rescheduling requests are common in instalment plans.</p>
+    </article>
+
+    <article class="case" data-tags="cond">
+      <div class="case-head"><span class="id">GC-003</span><h3>A Sukuk issuer guaranteeing investors' capital</h3><span class="pill cond">Has a condition</span></div>
+      <p class="ar q-ar" lang="ar">هل يجوز لمصدر الصكوك ضمان رأس المال للمستثمرين؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Draft expected answer</span><span class="v"><span class="verdict">PROHIBITED</span></span></div>
+        <div class="kv"><span class="k">Standards in the test</span><span class="v mono">SS-17</span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Defers to scholar review</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>The draft note adds that a guarantee from an independent third party is permissible. If so, the rule needs one fact: <i>who gives the guarantee</i>. Mushir would ask that before answering.</p></div>
+      <p class="rec"><b>Our suggestion:</b> option B, with "who is the guarantor?" as the follow-up question.</p>
+    </article>
+
+    <article class="case" data-tags="cond">
+      <div class="case-head"><span class="id">GC-007</span><h3>Increasing the rent in a diminishing Musharaka</h3><span class="pill cond">Has a condition</span></div>
+      <p class="ar q-ar" lang="ar">هل يجوز زيادة الإيجار في المشاركة المتناقصة؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Draft expected answer</span><span class="v"><span class="verdict">PERMISSIBLE</span></span></div>
+        <div class="kv"><span class="k">Standards in the test</span><span class="v mono">SS-12, SS-09</span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Defers to scholar review</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>The draft says "permissible", but its own note adds a condition: the increase is tied to a known benchmark and applied when a rent period is renewed. That makes it a conditional answer, not a plain yes. Which conditions should the rule card check?</p></div>
+      <p class="rec"><b>Our suggestion:</b> option D, changing the expected answer to "conditional" and listing the conditions.</p>
+    </article>
+
+    <article class="case" data-tags="">
+      <div class="case-head"><span class="id">GC-008</span><h3>An interest-free loan (Qard Hassan) on condition of opening an investment account</h3></div>
+      <p class="ar q-ar" lang="ar">هل يجوز تقديم قرض حسن بشرط فتح حساب استثماري؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Draft expected answer</span><span class="v"><span class="verdict">PROHIBITED</span></span></div>
+        <div class="kv"><span class="k">Standards in the test</span><span class="v mono">SS-19</span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Defers to scholar review</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>The draft states a general principle: any condition on a loan that benefits the lender is riba. Should the rule card be written at that general level, so it covers similar conditions, or only for this specific condition?</p></div>
+      <p class="rec"><b>Our suggestion:</b> option A, written at the general level the scholar chooses.</p>
+    </article>
+
+    <article class="case" data-tags="cond">
+      <div class="case-head"><span class="id">GC-009</span><h3>Forward currency exchange contracts</h3><span class="pill cond">Has a condition</span></div>
+      <p class="ar q-ar" lang="ar">ما حكم عقود الصرف الآجل في العملات؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Draft expected answer</span><span class="v"><span class="verdict">PROHIBITED</span></span></div>
+        <div class="kv"><span class="k">Standards in the test</span><span class="v mono">SS-01</span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Defers to scholar review</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>The draft says forward exchange is "generally" prohibited and spot settlement is required. Does "generally" mean there are arrangements the rule must name as different? If so, the card needs those listed. Otherwise "generally" can be removed.</p></div>
+      <p class="rec"><b>Our suggestion:</b> option A if there are no named exceptions, otherwise option B.</p>
+    </article>
+
+    <article class="case" data-tags="cond">
+      <div class="case-head"><span class="id">GC-010</span><h3>Parallel Istisna where the institution subcontracts without telling the client</h3><span class="pill cond">Has a condition</span></div>
+      <p class="ar q-ar" lang="ar">هل يجوز إبرام عقد استصناع موازٍ حيث تقوم المؤسسة بالتعاقد مع مقاول فرعي دون إعلام العميل؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Draft expected answer</span><span class="v"><span class="verdict">PERMISSIBLE</span></span></div>
+        <div class="kv"><span class="k">Standards in the test</span><span class="v mono">SS-11</span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Defers to scholar review</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>The draft says "permissible, provided both contracts are independent". That proviso is a condition. Should Mushir ask whether the two contracts are independent, and answer differently if they are linked?</p></div>
+      <p class="rec"><b>Our suggestion:</b> option D, changing the expected answer to "conditional" with the independence condition.</p>
+    </article>
+
+    <article class="case" data-tags="">
+      <div class="case-head"><span class="id">GC-012</span><h3>A guaranteed minimum return in a Musharaka</h3></div>
+      <p class="ar q-ar" lang="ar">هل يجوز اشتراط حد أدنى مضمون للعائد في عقد المشاركة؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Draft expected answer</span><span class="v"><span class="verdict">PROHIBITED</span></span></div>
+        <div class="kv"><span class="k">Standards in the test</span><span class="v mono">SS-12</span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Defers to scholar review</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>The draft is a plain prohibition. Please confirm the wording, and say whether a guarantee from a third party should be treated differently, as in GC-003.</p></div>
+      <p class="rec"><b>Our suggestion:</b> option A.</p>
+    </article>
+
+    <article class="case" data-tags="cond">
+      <div class="case-head"><span class="id">GC-016</span><h3>Ijara with a guarantee of the asset's residual value at the end</h3><span class="pill cond">Has a condition</span></div>
+      <p class="ar q-ar" lang="ar">إذا تضمّنت الإجارة ضماناً بالقيمة المتبقية للأصل عند نهاية العقد، فهل تبقى إجارة شرعية؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Draft expected answer</span><span class="v"><span class="verdict">PROHIBITED</span></span></div>
+        <div class="kv"><span class="k">Standards in the test</span><span class="v mono">SS-09</span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Defers to scholar review</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>The draft's reason is that the guarantee moves ownership risk back to the lessee. Does the answer change if someone other than the lessee gives the guarantee? If yes, Mushir needs to ask who gives it.</p></div>
+      <p class="rec"><b>Our suggestion:</b> option B if the guarantor matters, otherwise option A.</p>
+    </article>
+
+    <article class="case" data-tags="cond">
+      <div class="case-head"><span class="id">GC-019</span><h3>A guarantor (Kafil) charging a fee for the guarantee</h3><span class="pill cond">Has a condition</span></div>
+      <p class="ar q-ar" lang="ar">هل يجوز للكفيل (الضامن) تقاضي أجر أو عمولة مقابل الكفالة؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Draft expected answer</span><span class="v"><span class="verdict">PROHIBITED</span></span></div>
+        <div class="kv"><span class="k">Standards in the test</span><span class="v mono">SS-05</span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Defers to scholar review</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>The draft says "prohibited per the majority view". Mushir must follow one stated position, not a majority it cannot name. Which position should the rule card adopt? Should recovering actual administrative costs be treated differently from a fee for the guarantee itself?</p></div>
+      <p class="rec"><b>Our suggestion:</b> option B, with the adopted position stated on the card.</p>
+    </article>
+
+    <article class="case" data-tags="route">
+      <div class="case-head"><span class="id">TC-F1</span><h3>Delaying delivery of the sold item in a "deferred sale"</h3><span class="pill route">Routing</span></div>
+      <p class="ar q-ar" lang="ar">هل يجوز تأخير تسليم المبيع في البيع المؤجل؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Test assumes</span><span class="v">Contract type <span class="verdict">Murabaha</span>, answer <span class="verdict">PROHIBITED</span></span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Contract type unknown, so it asks</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>"Deferred sale" describes when payment is made, not which contract is used. It could be a Murabaha, a store's own credit sale or another arrangement. Is it safe to treat it as Murabaha, or should Mushir first ask which contract the seller uses?</p></div>
+      <p class="rec"><b>Our suggestion:</b> option D, changing the expected behaviour to "ask which contract is used".</p>
+    </article>
+
+    <article class="case" data-tags="route">
+      <div class="case-head"><span class="id">TC-G1</span><h3>A bank taking a profit margin on real-estate financing</h3><span class="pill route">Routing</span></div>
+      <p class="ar q-ar" lang="ar">هل يجوز للبنك أن يأخذ هامش ربح على التمويل العقاري؟</p>
+      <div class="grid3">
+        <div class="kv"><span class="k">Test assumes</span><span class="v">Contract type <span class="verdict">Ijarah</span>, answer <span class="verdict">CONDITIONAL</span></span></div>
+        <div class="kv"><span class="k">Mushir now</span><span class="v">Contract type unknown, so it asks</span></div>
+      </div>
+      <div class="confirm"><b>Scholar to confirm</b><p>Real-estate financing in Egypt may be structured as Ijarah, Murabaha, diminishing Musharaka or a conventional loan. "Profit margin" alone does not decide which. Should Mushir ask for the contract type first?</p></div>
+      <p class="rec"><b>Our suggestion:</b> option D, changing the expected behaviour to "ask which contract is used".</p>
+    </article>
+
+  </div>
+</section>
+
+<section id="options" aria-labelledby="h-options">
+  <h2 id="h-options">Decision options</h2>
+  <p class="prose">For each case, the scholar picks one option. A short note is welcome but not required.</p>
+  <div class="options">
+    <div class="opt"><span class="letter">A · Approve as written</span><p>The draft answer is correct as stated. We turn it into a rule card for the scholar's signature, and Mushir answers it citing that card.</p></div>
+    <div class="opt"><span class="letter">B · Approve with conditions</span><p>The answer depends on a fact, for example who gives a guarantee. Mushir asks that one question, then answers according to the card.</p></div>
+    <div class="opt"><span class="letter">C · Keep deferring</span><p>Not ready to decide. Mushir keeps saying "scholar review needed", and the test is changed to expect that, so it stops showing as a failure.</p></div>
+    <div class="opt"><span class="letter">D · Change the expected answer</span><p>The draft is wrong or incomplete. The scholar states the correct answer or behaviour, and we update the test and the card.</p></div>
+  </div>
+  <figure class="diagram" style="margin:0">
+    <svg viewBox="0 0 900 150" role="img" aria-labelledby="life-t life-d">
+      <title id="life-t">Path of one case from decision to release</title>
+      <desc id="life-d">The scholar picks an option. We draft the rule card. The scholar signs the card. We update the test and run all checks. The case ships in the next prototype release.</desc>
+      <g font-size="13.5">
+        <rect x="8" y="40" width="150" height="58" rx="8" style="fill:var(--ochre-soft);stroke:var(--ochre)"/>
+        <text x="83" y="65" text-anchor="middle" font-weight="600">Scholar picks</text>
+        <text x="83" y="84" text-anchor="middle" style="fill:var(--muted)" font-size="12">A, B, C or D</text>
+        <rect x="190" y="40" width="150" height="58" rx="8" style="fill:var(--surface);stroke:var(--line)"/>
+        <text x="265" y="65" text-anchor="middle" font-weight="600">We draft the card</text>
+        <text x="265" y="84" text-anchor="middle" style="fill:var(--muted)" font-size="12">facts, outcomes, question</text>
+        <rect x="372" y="40" width="150" height="58" rx="8" style="fill:var(--ochre-soft);stroke:var(--ochre)"/>
+        <text x="447" y="65" text-anchor="middle" font-weight="600">Scholar signs</text>
+        <text x="447" y="84" text-anchor="middle" style="fill:var(--muted)" font-size="12">name and date recorded</text>
+        <rect x="554" y="40" width="150" height="58" rx="8" style="fill:var(--surface);stroke:var(--line)"/>
+        <text x="629" y="65" text-anchor="middle" font-weight="600">We update tests</text>
+        <text x="629" y="84" text-anchor="middle" style="fill:var(--muted)" font-size="12">and rerun every check</text>
+        <rect x="736" y="40" width="150" height="58" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+        <text x="811" y="65" text-anchor="middle" font-weight="600">Next release</text>
+        <text x="811" y="84" text-anchor="middle" style="fill:var(--muted)" font-size="12">answered with the rule</text>
+        <line x1="158" y1="69" x2="186" y2="69" style="stroke:var(--muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+        <line x1="340" y1="69" x2="368" y2="69" style="stroke:var(--muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+        <line x1="522" y1="69" x2="550" y2="69" style="stroke:var(--muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+        <line x1="704" y1="69" x2="732" y2="69" style="stroke:var(--muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+        <text x="8" y="130" style="fill:var(--muted)" font-size="12">Shaded steps need the scholar. The two white steps are ours.</text>
+      </g>
+      <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>
+    </svg>
+  </figure>
+</section>
+
+<section id="defaults" aria-labelledby="h-defaults">
+  <h2 id="h-defaults">Settings we chose for you to confirm</h2>
+  <p class="prose">While fixing the review findings, we had to pick four settings. Each is a cautious default and easy to change.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Setting</th><th>What we chose</th><th>Why</th><th>Your decision</th></tr></thead>
+      <tbody>
+        <tr><td>How long answer records are kept</td><td><b>365 days</b>, then deleted automatically</td><td>Records hold users' own descriptions of their deals, so they should not be kept forever.</td><td>Keep 365 days, or name another period</td></tr>
+        <tr><td>Who may approve rules</td><td>Automatic identities such as "model" or "system" can never approve. An optional list of named scholars can be switched on.</td><td>Approval must always trace to a person.</td><td>Send the scholar names to put on the approved list</td></tr>
+        <tr><td>Confidence percentage</td><td><b>Removed</b> from answers. Each answer shows source dates and ages instead.</td><td>The old number was never checked against scholar decisions, so it could mislead users.</td><td>Confirm removal</td></tr>
+        <tr><td>Where answer records are stored</td><td>A folder on the server that survives restarts and updates</td><td>Records must not disappear when a new version is deployed.</td><td>No action unless your hosting needs a specific location</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="reply" aria-labelledby="h-reply">
+  <h2 id="h-reply">How to reply</h2>
+  <ol class="steps">
+    <li>For each case, choose <b>A, B, C or D</b>. Where the card asks "Scholar to confirm", a one-line answer is enough.</li>
+    <li>Answer the confirmation questions in the next box.</li>
+    <li>Send it back in any format: email, a voice note transcribed, or marked-up copy of this page.</li>
+  </ol>
+  <pre class="reply" id="reply-template">CASE DECISIONS (A approve · B approve with conditions · C keep deferring · D change)
+GC-005  ___   note:
+GC-017  ___   note:
+GC-003  ___   note:
+GC-007  ___   note:
+GC-008  ___   note:
+GC-009  ___   note:
+GC-010  ___   note:
+GC-012  ___   note:
+GC-016  ___   note:
+GC-019  ___   note:
+TC-F1   ___   note:
+TC-G1   ___   note:
+
+CONFIRMATIONS
+1. Reviewing scholar (name, and how to reach them):  ___
+2. Records kept for:  365 days / other: ___
+3. Scholars allowed to approve rules:  ___
+4. Remove the confidence percentage:  yes / no
+5. Which source wins when your rules and AAOIFI differ:  ___</pre>
+  <div class="copyrow"><button type="button" id="copy-btn">Copy reply template</button><span id="copy-status" role="status" aria-live="polite"></span></div>
+</section>
+
+<section id="faq" aria-labelledby="h-faq">
+  <h2 id="h-faq">Questions you may have</h2>
+  <div>
+    <details>
+      <summary>1. Does "12 failing tests" mean the system is broken?</summary>
+      <div class="body"><p>No. These 12 tests check for a verdict that Mushir is now deliberately not allowed to give without an approved rule. The other 1,234 automated checks and all 30 browser and API checks pass. The 12 will pass once the scholar decides them.</p></div>
+    </details>
+    <details>
+      <summary>2. Did Mushir give any wrong Sharia answer?</summary>
+      <div class="body"><p>No. In every one of the 12 cases Mushir declined and referred the question for scholar review. It never answered "permissible" where the draft says "prohibited", or the reverse.</p></div>
+    </details>
+    <details>
+      <summary>3. Why not just change the tests so they pass?</summary>
+      <div class="body"><p>Because that would hide the real question. The tests record what Mushir should eventually say. Changing them without the scholar would mean a developer deciding a Sharia matter. We changed nothing and are bringing the decision to the person who should make it.</p></div>
+    </details>
+    <details>
+      <summary>4. These are well-known rulings. Why can't Mushir just answer them?</summary>
+      <div class="body">
+        <p>Mushir could repeat them, but that is the risk we want to avoid. A ruling that is "well known" may still carry conditions (see GC-003, GC-007 and GC-010), follow one school over another (GC-019), or differ from your own rule files. A rule card makes those choices visible and approved.</p>
+        <p>The cost is small: each approval is one decision that then covers every future question on that topic.</p>
+      </div>
+    </details>
+    <details>
+      <summary>5. Who wrote the expected answers in the first place?</summary>
+      <div class="body"><p>The development team wrote them in May 2026, working from AAOIFI standards, so that Mushir could be tested from the start. No scholar has reviewed them. Each one is labelled "Sharia Scholar" to mark the authority it needs, not one it already has. This pack is therefore the first scholar review of these answers, which is exactly why Mushir must not present them as rulings yet.</p></div>
+    </details>
+    <details>
+      <summary>6. We don't have a scholar yet. What happens until we do?</summary>
+      <div class="body">
+        <p>Mushir stays safe without one. It answers definitions and explains what AAOIFI standards say, with sources. For any question that asks whether something is permissible, it says scholar review is needed and queues the question.</p>
+        <p>What waits for the scholar: every rule card, these 12 decisions, and the review of about 100 cases that the V1.6 release depends on. The sooner a scholar is appointed, the sooner Mushir can give its first approved conclusions.</p>
+        <p>When choosing a scholar, it helps if they can review Arabic and English, know AAOIFI Shari'ah Standards, and are familiar with Egyptian consumer finance.</p>
+      </div>
+    </details>
+    <details>
+      <summary>7. How much of the scholar's time will this take?</summary>
+      <div class="body"><p>We expect one working session. Each case is a choice of A–D plus, for some, a one-line answer. We prepare every rule card in advance, so the scholar only reads and signs. Six cases have a condition question and may need a little more thought.</p></div>
+    </details>
+    <details>
+      <summary>8. What happens if the scholar disagrees with AAOIFI or with our own rule files?</summary>
+      <div class="body"><p>Mushir follows the approved rule card, never a blend. This is the open decision from our last update: which source wins when your rules and AAOIFI differ, or whether every difference goes to the scholar. We recommend sending every difference to the scholar until a pattern is clear.</p></div>
+    </details>
+    <details>
+      <summary>9. What does a user see today if they ask one of these questions?</summary>
+      <div class="body"><p>A short message saying the question needs rule evidence and scholar review before Mushir can give a safe, non-binding assessment, in the user's language. The question is placed in the scholar review queue automatically, so real user demand shows which rules to approve next.</p></div>
+    </details>
+    <details>
+      <summary>10. After approval, will Mushir say "this is haram"?</summary>
+      <div class="body"><p>No. It will say what the approved rule finds, cite the rule and the scholar's approval, and remind the user it is not a fatwa. For example: <i>"Under rule [name], approved by our reviewing scholar on [date], adding a new profit margin to the remaining Murabaha balance raises a riba issue."</i></p></div>
+    </details>
+    <details>
+      <summary>11. Why are GC-005 and GC-017 the priority?</summary>
+      <div class="body"><p>V1.6 focuses on Egyptian instalment plans. Late-payment charges and rescheduling appear in almost every consumer-finance contract, including Contact's published terms. The other eight cases cover Sukuk, Musharaka, Istisna, currency exchange and guarantees. They matter for completeness but come up less often in instalment questions.</p></div>
+    </details>
+    <details>
+      <summary>12. Why did you remove the confidence percentage?</summary>
+      <div class="body"><p>A percentage looks precise, but ours had never been checked against scholar decisions, so a "92%" could not be trusted. Each answer now shows which sources it used and how old each source is. We will show a certainty measure only after it has been tested against scholar-reviewed answers, as agreed in the strategy.</p></div>
+    </details>
+    <details>
+      <summary>13. What is stored about users, and for how long?</summary>
+      <div class="body"><p>Each answer is saved with the question, the facts the user stated and the decision checks, so the scholar can review it. Each record carries a random session code, not an account or name, though a user may still type personal details into a question. Records are deleted automatically after 365 days unless you choose another period. Your input here is the retention period in the settings table.</p></div>
+    </details>
+    <details>
+      <summary>14. What if the scholar chooses option C for everything?</summary>
+      <div class="body"><p>That is a safe outcome. Mushir keeps deferring these questions, the tests are updated to expect that, and the 12 stop showing as failures. The prototype is less useful for those topics until rules are approved, but it never guesses.</p></div>
+    </details>
+    <details>
+      <summary>15. When will the V1.6 prototype be ready to review?</summary>
+      <div class="body"><p>The deal-question lane and its safety checks are built. The remaining inputs from your side are a reviewing scholar, the scholar's decisions in this pack (at least GC-005 and GC-017), confirmation of the five pilot companies, and the first approved rule cards. With those, we publish V1.6 on Hugging Face for review. As agreed in the strategy, V1.6 is ready to move on once the scholar has reviewed about 100 cases with no wrong conclusions.</p></div>
+    </details>
+  </div>
+</section>
+
+<section id="glossary" aria-labelledby="h-glossary">
+  <h2 id="h-glossary">Glossary</h2>
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><td><b>Rule card</b></td><td>One Sharia rule written as a checklist: the facts that matter, what each combination means, the follow-up question to ask, and the scholar's signed approval.</td></tr>
+        <tr><td><b>Test question</b></td><td>A fixed question with an expected result, run automatically on every change to make sure nothing gets worse.</td></tr>
+        <tr><td><b>Critical ruling questions</b></td><td>The 19 test questions where a wrong answer would be serious, such as calling a prohibited arrangement permissible.</td></tr>
+        <tr><td><b>Routing</b></td><td>Deciding which kind of contract a question is about before looking for rules.</td></tr>
+        <tr><td><b>Defers / scholar review needed</b></td><td>Mushir declines to give a verdict and places the question in the scholar's review queue.</td></tr>
+        <tr><td><b>Conditional</b></td><td>An answer that depends on a fact, which Mushir asks about before answering.</td></tr>
+        <tr><td><b>SS-08, SS-12 …</b></td><td>AAOIFI Shari'ah Standard numbers, cited by the test files.</td></tr>
+        <tr><td><b>Evidence status</b></td><td>The note under each answer showing its sources and how old each source is.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <span>For the full picture of the project, its status, the Egyptian market work and the release plan, see the <a href="client-guide.html">Mushir Client Guide</a>.</span>
+  <span>Mushir helps users understand financing terms against scholar-approved rules. It is not a final Sharia authority and does not issue fatwas.</span>
+  <span>Figures are from the full test run of 1 October 2026: 1,234 automated checks passing, 12 open, 47 skipped; 30 of 30 browser and API checks passing.</span>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var buttons = document.querySelectorAll(".filters button");
+  var cards = document.querySelectorAll("#case-list .case");
+  buttons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var filter = btn.getAttribute("data-filter");
+      buttons.forEach(function (b) { b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
+      cards.forEach(function (card) {
+        var tags = (card.getAttribute("data-tags") || "").split(" ");
+        card.hidden = !(filter === "all" || tags.indexOf(filter) !== -1);
+      });
+    });
+  });
+
+  var copyBtn = document.getElementById("copy-btn");
+  var status = document.getElementById("copy-status");
+  var template = document.getElementById("reply-template");
+  copyBtn.addEventListener("click", function () {
+    var text = template.textContent;
+    function selectFallback() {
+      var range = document.createRange();
+      range.selectNodeContents(template);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      status.textContent = "Text selected. Press Ctrl+C or Cmd+C to copy.";
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        status.textContent = "Copied.";
+      }, selectFallback);
+    } catch (e) { selectFallback(); }
+  });
+})();
+</script>
+
+</body>
+</html>
