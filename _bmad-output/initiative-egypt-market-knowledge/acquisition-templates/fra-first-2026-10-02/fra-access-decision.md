@@ -19,6 +19,16 @@ FRA's security layer answers the robots file itself while serving the public reg
 - **Data:** official licensee identity facts only (names, company/licence numbers, licence dates, registered addresses, activity). No personal or customer data.
 - **FRA publications** (consumer-finance guide, customer-protection guide, legislation): retrieved individually by the manual route. Each is logged with URL, UTC time, status and SHA-256 in `fra-documents-manifest.json`.
 
+## Extension (same day): contract templates and Sharia material
+
+The user then asked for FRA's contract templates and its Sharia contracts and guides as well. `fetch_fra_documents.py` now covers named FRA publication pages in three seed sets:
+
+- `consumer`: consumer-finance guides and legislation
+- `templates`: the factoring and mortgage rules guides, plus the legislation listings for consumer finance, factoring, leasing, real-estate finance and SME/micro
+- `sharia`: Islamic finance for non-bank activities, Central Sharia Supervisory Committee decisions, Sukuk, Islamic investment funds
+
+From each seed it follows only that page's own pagination and same-host PDF links, up to a cap. It sends no other requests and does not crawl further. Pacing, identity and the stop rule are unchanged. Every request is logged in `fra-documents-manifest.jsonl`.
+
 ## Runs under this decision
 
 `data/runtime/artifacts/l6_scrape/fra_registry/2026-10-02/<type>/` holds one immutable run per register type, each with its manifest and raw captures. The 2026-09-23 captures were re-parsed offline (`all-licences-rebuilt-20261002/`; zero network requests) and left unmodified.

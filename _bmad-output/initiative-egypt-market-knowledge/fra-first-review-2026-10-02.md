@@ -33,6 +33,42 @@ The same guide, p.91: licensed companies **must comply with the provisions of th
 
 These are the strongest public source yet for the scholar's third question. They give the minimum skeleton of every licensed customer contract, without touching any provider's website. Text layers are saved under `data/runtime/artifacts/l6_scrape/fra_documents/2026-10-02/derived/`. Verify the Arabic against page images before quoting. Also captured: FRA's customer-protection guide (120 pp.) and the Law 18/2020 PDF, whose text layer did not yield key terms and needs page-image or OCR reading.
 
+## FRA contract templates and Sharia material (added on request, same day)
+
+A bounded crawl of named FRA publication pages (see the extended [access decision](acquisition-templates/fra-first-2026-10-02/fra-access-decision.md)) captured **111 documents**. They are indexed in `data/source_registry/fra_documents_catalogue.csv`, with link text, source page, page count, text-layer quality, and the pages where contract and Sharia terms occur. Raw files stay in `data/runtime/artifacts/l6_scrape/fra_documents/2026-10-02/` (not committed).
+
+**Sharia model contracts** (FRA page *Islamic Products and Contracts*; Arabic, readable text):
+
+| Template | Pages |
+|---|---|
+| Model Murabaha and service-Murabaha agreement for consumer finance (Law 18/2020) | 6 |
+| Ijarah Muntahia Bittamleek (lease-to-own) | 7 |
+| Micro-Murabaha purchase-order contract | 4 |
+| Diminishing Musharaka (micro) | 6 |
+| Wakala bil-Istithmar (investment agency, micro) | 3 |
+
+The English page links the Wakala template to the Ijarah file; the Arabic page links the correct file.
+
+**What the scholar should see in the Murabaha consumer-finance template.** These are flagged, not ruled on:
+- The party fields are blank, but the preamble (p.1) and the definition of Murabaha (p.2) name **Aman**: Murabaha is Aman buying goods from suppliers and reselling them to consumers. This looks like a model derived from Aman's Islamic product. It is a lead for AMAN-01's Islamic pack, not proof of Aman's current operative contract.
+- p.3: the company authorizes the supplier/merchant to deliver the goods to the customer **and issue the invoice directly in the customer's name**. That sits in tension with the template's own buy-then-resell definition. Ownership and possession before resale is a test the scholar applies under AAOIFI's Murabaha standard.
+- p.4: late payment is handled under a *غرامة الضرر* (damages penalty) clause. Its beneficiary and use are a further point for the scholar.
+
+**Conventional contract models:** consumer-finance Models (1) and (2) (guide pp. 91–101), the factoring guide (contract-model references p.78), and the real-estate finance guide (Murabaha clauses pp. 47–49, a Sharia committee reference p.40).
+
+**Sharia governance:**
+- The Central Sharia Supervisory Committee's decrees, and four of its published rulings on sukuk: direct issuance by the beneficiary, distressed companies, early redemption, and redemption at market value.
+- Board Decree 310/2025, which reconstitutes the committee for sukuk *and non-bank financial products*.
+- The Takaful controls (Decree 23/2019) and the Islamic-finance overview page (Arabic and English). Its stated principles include the prohibitions on combining loan and sale and on selling what one does not own.
+
+**Sub-Sharia committee rule.** Any non-bank financial company offering products described as Sharia-compliant must have its contracts reviewed by a sub-Sharia committee of 3–5 registered members. FRA's register lists **48 individual members (17 not renewed)**. It does not say which company each serves. Member emails were removed from derived text, in line with the no-personal-data scope.
+
+**Gaps:**
+- **51 documents have no usable text layer** (scanned, mostly older decrees and circulars) and need OCR.
+- 14 sukuk/fund prospectuses exceeded the 10 MB cap.
+- One sukuk study PDF drew FRA's "Request Rejected" page, apparently a URL-length rule; it was not retried.
+- One old PDF timed out.
+
 ## Company table and brand resolution
 
 `data/source_registry/fra_consumer_finance_entities.csv`: 52 rows (39 + 13).
