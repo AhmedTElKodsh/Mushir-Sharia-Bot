@@ -508,7 +508,12 @@ def test_http_403_detail_stops_all_later_detail_requests(tmp_path):
     assert manifest["detail_skipped_after_blocker"] == 1
 
 
-def test_duplicate_company_number_reconciles_manifest_counters(tmp_path):
+def test_second_licence_of_same_company_is_kept_as_its_own_row(tmp_path):
+    """A shared company number links licences; it must never drop one.
+
+    Regression: the 2026-09-23 "all" export read 388 licence pages and wrote
+    328 rows, silently losing e.g. Drive Finance's consumer-finance licence.
+    """
     fra = _fra_registry()
     listing = _fixture("listing-page-1.html").replace(
         '<a class="next page-numbers" rel="next" href="/registry/page/2/?filtered_type=consumer-finance">التالي</a>',
@@ -540,7 +545,122 @@ def test_duplicate_company_number_reconciles_manifest_counters(tmp_path):
     assert manifest["detail_fetch_succeeded"] == 2
     assert manifest["detail_fetch_failed"] == 0
     assert manifest["duplicate_company_number_count"] == 1
+    assert manifest["duplicate_licence_record_count"] == 0
+    assert manifest["multi_licence_company_count"] == 1
+    assert manifest["csv_row_count"] == 2
+    with result.csv_path.open(newline="", encoding="utf-8-sig") as handle:
+        rows = list(csv.DictReader(handle))
+    assert [row["company_number"] for row in rows] == ["CF-101", "CF-101"]
+    assert len({row["licence_key"] for row in rows}) == 2
+
+
+def test_identical_licence_record_at_two_urls_is_a_duplicate(tmp_path):
+    fra = _fra_registry()
+    listing = _fixture("listing-page-1.html").replace(
+        '<a class="next page-numbers" rel="next" href="/registry/page/2/?filtered_type=consumer-finance">التالي</a>',
+        "",
+    )
+    alpha = _fixture("detail-alpha.html")
+
+    def fetch(url: str, timeout_seconds: float) -> bytes:
+        if url == START_URL:
+            return listing.encode("utf-8")
+        return alpha.encode("utf-8")
+
+    listing = listing.replace("شركة باء للتمويل الاستهلاكي", "شركة ألف للتمويل الاستهلاكي")
+    result = fra.scrape_registry(
+        start_url=START_URL,
+        fra_type_code="consumer-finance",
+        fra_type_ar="تمويل استهلاكي",
+        run_date="2026-08-31",
+        output_dir=tmp_path,
+        delay_seconds=0,
+        fetcher=fetch,
+        access_checker=lambda url, timeout: _allowed(fra),
+    )
+
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["duplicate_licence_record_count"] == 1
     assert manifest["csv_row_count"] == 1
+
+
+def test_licence_key_names_register_type_and_number():
+    fra = _fra_registry()
+    consumer = (fra.Activity("تمويل استهلاكي"),)
+    provider = (fra.Activity("مقدمي التمويل الاستهلاكي"),)
+    leasing = (fra.Activity("تـــأجيـــر تمويلـي"),)
+
+    assert fra.licence_key(consumer, "48") == "fra:consumer_finance:48"
+    assert fra.licence_key(provider, "7") == "fra:consumer_finance_providers:7"
+    assert fra.licence_key(leasing, "295") == "fra:leasing:295"
+    assert fra.licence_key((), None) == "fra:unmapped:no_licence_number"
+    assert fra.licence_key(consumer, "No data exists", "67654") == "fra:consumer_finance:company-67654"
+    assert fra.licence_key(consumer, None, "67650") != fra.licence_key(consumer, None, "67654")
+
+
+def test_type_titles_match_despite_tatweel_and_include_providers_register():
+    fra = _fra_registry()
+
+    assert fra.fra_type_title_matches("factoring", "تخصيــــــــــم")
+    assert fra.fra_type_title_matches("consumer-finance-providers", "مقدمي التمويل الاستهلاكي")
+    assert not fra.fra_type_title_matches("consumer-finance", "مقدمي التمويل الاستهلاكي")
+    assert fra.FRA_REGISTER_ROLES["consumer-finance-providers"].startswith("registered_seller")
+
+
+@pytest.mark.parametrize(
+    ("observed", "current", "former"),
+    [
+        (
+            "يو للتمويل الاستهلاكي ( فاليو للتمويل الاستهلاكي(سايقا)) VALU CONSUMER FINANCE",
+            "يو للتمويل الاستهلاكي VALU CONSUMER FINANCE",
+            ("فاليو للتمويل الاستهلاكي",),
+        ),
+        (
+            "بلتون للتمويل الاستهلاكي (سفن) بل كاش سابقا (بلتون لخدمات البيع بالتقسيط سابقا",
+            "بلتون للتمويل الاستهلاكي (سفن)",
+            ("بل كاش", "بلتون لخدمات البيع بالتقسيط"),
+        ),
+        (
+            "تمويل فاينانس حاليا (تمويل للتاجير التمويلي سابقا)",
+            "تمويل فاينانس",
+            ("تمويل للتاجير التمويلي",),
+        ),
+        ("حالا للتمويل الاستهلاكي", "حالا للتمويل الاستهلاكي", ()),
+    ],
+)
+def test_split_fra_name_keeps_former_names_verbatim(observed, current, former):
+    fra = _fra_registry()
+
+    assert fra.split_fra_name(observed) == (current, former)
+
+
+def test_robots_security_page_is_its_own_state_and_needs_its_own_acknowledgement(
+    monkeypatch, tmp_path
+):
+    fra = _fra_registry()
+    rejected = (
+        b"<html><head><title>Request Rejected</title></head>"
+        b"<body>You are not authorized to access this Page.</body></html>"
+    )
+    monkeypatch.setattr(fra, "fetch_url", lambda url, timeout, **kwargs: rejected)
+
+    policy = fra.load_robots_policy(START_URL, 1)
+    assert policy.state == "security_response"
+    assert policy.decision_for(START_URL).allowed is False
+
+    blocked = fra.scrape_registry(
+        start_url=START_URL,
+        fra_type_code="consumer-finance",
+        fra_type_ar="تمويل استهلاكي",
+        run_date="2026-10-02",
+        output_dir=tmp_path / "unacknowledged",
+        delay_seconds=0,
+        acknowledge_unavailable_robots=True,
+    )
+    manifest = json.loads(blocked.manifest_path.read_text(encoding="utf-8"))
+    assert blocked.exit_code == 2
+    assert manifest["blocker"] == "blocked_by_security"
+    assert manifest["robots_security_response_acknowledged"] is False
 
 
 def test_license_date_is_not_attached_to_an_undated_activity():

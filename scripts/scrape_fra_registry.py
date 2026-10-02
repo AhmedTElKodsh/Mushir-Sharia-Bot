@@ -19,8 +19,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.acquisition.egypt_financial.fra_registry import (
-    KNOWN_FRA_TYPE_TITLES,
     USER_AGENT,
+    fra_type_title_matches,
     RegistryRunResult,
     scrape_registry,
 )
@@ -49,7 +49,7 @@ def main(
     scrape: Callable[..., RegistryRunResult] = scrape_registry,
 ) -> int:
     parser = argparse.ArgumentParser(
-        description="Export an FRA financing-company type to one-row-per-company CSV."
+        description="Export an FRA financing-company type to one-row-per-licence CSV."
     )
     parser.add_argument("--fra-type", default="consumer-finance")
     parser.add_argument("--fra-type-ar", default="تمويل استهلاكي")
@@ -78,6 +78,14 @@ def main(
             "An explicit robots disallow and all security controls still stop the run."
         ),
     )
+    parser.add_argument(
+        "--acknowledge-robots-security-response",
+        action="store_true",
+        help=(
+            "Record an operator decision to continue when only robots.txt is answered "
+            "by a security page. Security responses on register pages still stop the run."
+        ),
+    )
     args = parser.parse_args(argv)
     try:
         date.fromisoformat(args.today)
@@ -87,8 +95,7 @@ def main(
         parser.error("--fra-type must be a nonempty lowercase hyphenated code")
     if not args.fra_type_ar.strip():
         parser.error("--fra-type-ar must not be blank")
-    expected_title = KNOWN_FRA_TYPE_TITLES.get(args.fra_type)
-    if expected_title and args.fra_type_ar.strip() != expected_title:
+    if not fra_type_title_matches(args.fra_type, args.fra_type_ar):
         parser.error("--fra-type-ar does not match the selected known FRA type")
     if not math.isfinite(args.timeout_seconds) or args.timeout_seconds <= 0:
         parser.error("--timeout-seconds must be a positive finite number")
@@ -132,6 +139,7 @@ def main(
         delay_seconds=args.delay_seconds,
         max_pages=args.max_pages,
         acknowledge_unavailable_robots=args.acknowledge_unavailable_robots,
+        acknowledge_robots_security_response=args.acknowledge_robots_security_response,
         user_agent=args.user_agent,
         site_terms_review_state=args.site_terms_review_state,
     )

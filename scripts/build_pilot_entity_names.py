@@ -105,6 +105,44 @@ add("Halan", "brand:halan", "Halan", "brand_name", "https://halan.com/", "'© 20
 add("Halan", "brand:halan", "Halan Consumer Finance", "brand_product_name", "https://halan.com/personal-lending/", "'Why Choose Halan Consumer Finance?'")
 add("Halan", "brand:halan", "حالا", "brand_name", "https://halan.com/ar/about-us-2/", "'شركة حالا في عام 2017'; also an everyday word ('right away')")
 
+# B.TECH/Mylo and Drive/Forsa (pilot widened 2026-10-02), from that day's FRA typed-register captures.
+base2 = "data/runtime/artifacts/l6_scrape/fra_registry/2026-10-02"
+for typ, slug in (("consumer-finance", "consumer_finance"), ("consumer-finance-providers", "consumer_finance_providers")):
+    m2 = json.load(open(f"{base2}/{typ}/manifest.json", encoding="utf-8"))
+    for c in m2["raw_captures"]:
+        sha.setdefault(c["url"], c["sha256"].split(":", 1)[1]); when.setdefault(c["url"], m2["run_date"])
+    for r in csv.DictReader(open(f"{base2}/{typ}/fra_{slug}_companies.csv", encoding="utf-8-sig")):
+        fin = {"67648": "B.TECH/Mylo", "552038": "B.TECH/Mylo", "7721179": "Drive/Forsa"}.get(r["company_number"])
+        if not fin or (typ, r["company_number"]) == ("consumer-finance-providers", "7721179"):
+            continue
+        key, u = f"fra:{slug}:{r['license_number']}", r["company_detail_url"]
+        ident = f"FRA {r['fra_type_ar']} #{r['license_number']}; company no. {r['company_number']}"
+        add(fin, key, r["company_name_ar"], "fra_register_name_ar", u, "verbatim FRA Arabic name field", ident)
+        if r["company_name_en"] in ("No data exists", "."):
+            add(fin, key, r["company_name_en"], "fra_register_name_en_absent", u, "FRA English field holds no name", ident)
+        else:
+            add(fin, key, r["company_name_en"], "fra_register_name_en", u, "verbatim FRA English name field", ident)
+        if r["company_number"] == "7721179":
+            add(fin, key, "درايف للتخصيم DRIVE FINANCE", "former_name_in_fra_text", u,
+                "literal substring of the FRA Arabic name field marked سابقا", ident)
+M = "https://sites.google.com/btech.com/mylo-terms-and-conditions-en"
+add("B.TECH/Mylo", "fra:consumer_finance:48", "mylo", "brand_name", M,
+    "search-index text of Mylo terms: B.TECH Finance operating as مايلو; page behind Google sign-in on 2026-10-02, not read")
+add("B.TECH/Mylo", "fra:consumer_finance:48", "مايلو", "brand_name", M, "Arabic brand name (search-index text of gated terms)")
+add("B.TECH/Mylo", "fra:consumer_finance:48", "B.TECH Finance", "legal_name_stated_by_site", M,
+    "search-index text only (page gated); FRA English field says SAE")
+add("B.TECH/Mylo", "fra:consumer_finance:48", "mylo", "brand_name", "https://btech.com/en/mylo-explore",
+    "B.TECH page (manual review): 'powered by B.TECH'; marketed as Sharia-compliant (marketing, not a finding)")
+add("Drive/Forsa", "fra:consumer_finance:26", "Forsa", "brand_name",
+    "https://gb-corporation.com/forsa-application-is-a-consumer-financing-systems-and-flexible-installment-methods-in-a-several-major-malls-and-hypermarkets/",
+    "parent GB Corp: Forsa powered by Drive Finance (web research; page not captured)")
+add("Drive/Forsa", "fra:consumer_finance:26", "درايف للتمويل والخدمات المالية غير المصرفية ش.م.م.", "legal_name_stated_by_site",
+    "https://www.forsaegypt.com/ar/privacy",
+    "privacy policy (browser-rendered, manual review 2026-10-02): CR 164123; FRA factoring licence 3 and consumer-finance licence 26",
+    "CR 164123")
+add("Drive/Forsa", "fra:consumer_finance:26", "Drive Finance and Non-Banking Services Co. S.A.E.", "legal_name_stated_by_site",
+    "https://www.forsaegypt.com/ar/privacy", "English legal name quoted inside the Arabic privacy policy", "CR 164123")
+
 out = "data/source_registry/pilot_entity_names.csv"
 with open(out, "w", newline="", encoding="utf-8-sig") as h:
     w = csv.DictWriter(h, fieldnames=list(rows[0])); w.writeheader(); w.writerows(rows)

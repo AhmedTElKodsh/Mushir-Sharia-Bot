@@ -6,6 +6,15 @@ Proposed by Mary (analyst), 2026-10-01. Resolves open question O3 once the user 
 
 > **Superseded in part, 2026-10-01 (later):** Halan is no longer held back as a control. The user decided to send HALAN-01 now, scoped to Halan Shop (in-app appliances/electronics on 6/12/36-month plans). Halan remains outside evidence-qualified coverage until a legal entity and the arrangement are evidenced. Halan and Aman, both financiers that run their own store, are to be shown side by side at the review. Current state: [provider priorities](acquisition-templates/provider-request-priorities-2026-10-01.md). The text below is kept as written.
 
+> **Superseded in part, 2026-10-02 (FRA-first review):** the pilot is now **seven financiers**. The user added B.TECH/Mylo and Drive/Forsa, and asked that valU stay an established financier. The "no FRA match" notes for Mylo and Forsa below were wrong. They came from searching brand names in a register of legal names, and from an export that dropped 60 of 388 licences (fixed). Current links, each with its evidence and status, are in `data/source_registry/fra_brand_links.csv` and `fra_consumer_finance_entities.csv`:
+>
+> - **Mylo → B.TECH Finance, FRA consumer-finance #48** (`verified`): B.TECH's own page says Mylo is "powered by B.TECH", and FRA #48 is بي تك للتمويل BTECH FINANCE SAE. Search-index text of Mylo's terms names B.TECH Finance operating as مايلو, but that page needed a Google sign-in on 2026-10-02 and was not read. It becomes `established` once a readable copy is in hand. B.TECH Trading & Distribution is separately on FRA's **consumer-finance providers** register (#7), the register for sellers financing their own goods.
+> - **Forsa → Drive Finance, FRA consumer-finance #26** (`established`): Forsa's own privacy page names درايف للتمويل والخدمات المالية غير المصرفية ش.م.م. (CR 164123), holding FRA factoring licence 3 and consumer-finance licence 26. Drive's #26 was one of the 60 licences the old export dropped. Parent GB Corp also states Forsa is powered by Drive Finance.
+> - **Contrast pairs for the scholar:** B.TECH #7 (provider) vs #48 (consumer-finance company), and Aman #2 (provider, name match only) vs #43.
+> - Correction to row 2: "Contact co. (17)" is on the **providers** register (عز العرب كونتكت فايننشال). Contact's consumer-finance companies are #1, #33 (named in the terms appendix) and #49.
+>
+> Sympl remains unresolved (`not_found_by_name`, no evidenced link). B.TECH's and valU's site terms restrict automated collection, so their documents come by manual public-page review or source-supplied documents only. The table below is kept as written.
+
 ## Selection rule
 
 A pilot financier must (1) appear in the FRA register under a matching legal name, (2) have verified page evidence that merchants or the financier itself offer instalments through it, and (3) be crawlable without login, CAPTCHA or a permission we don't hold (spec Constraints).

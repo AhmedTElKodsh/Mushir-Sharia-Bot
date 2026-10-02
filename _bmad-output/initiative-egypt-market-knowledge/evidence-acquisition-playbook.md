@@ -1,5 +1,26 @@
 # Evidence acquisition playbook
 
+## FRA-first amendment — 2026-10-02 (later)
+
+**The FRA register is now the spine of company discovery.** Market brands, websites and merchant pages hang off FRA licences through evidenced links. They are no longer the starting point. The earlier merchant-first database named 8 non-bank financiers; FRA lists 39 consumer-finance licensees and 13 registered providers.
+
+- **Regulator taxonomy.** FRA keeps two consumer registers. *تمويل استهلاكي* lists licensed consumer-finance companies. *مقدمي التمويل الاستهلاكي* (`consumer-finance-providers`) lists sellers and service providers that finance their own sales, such as B.TECH Trading, Raya Electronics, Orange Egypt and Aman Financial Services. Each entity row carries `fra_register_role`. A register type is a **lead** about the holder, never proof of how a particular arrangement works; the arrangement classification table in the double review still governs. Factoring licences held by the same group (Contact #8, Drive #3, Halan #50) are kept as sibling licences, because receivable sale or assignment is a contract question.
+- **Licence identity.** One FRA detail page is one licence. Its key is `fra:<register_type>:<licence_no>`; recent licensees with no published number use `company-<company_no>`. A shared company number links licences and never drops one. The old export lost 60 of 388 licences this way, including Drive Finance #26 (Forsa).
+- **Brand resolution.** `resolve_brand` returns `evidence_link`, `register_name`, `former_name`, `bank_outside_fra_register` or `not_found_by_name`. "No FRA match" is not an outcome: a brand is not a legal name. The next step for an unresolved brand is the parent or operator name in first-party terms, the app developer name, or EGX disclosures, recorded as a row in `fra_brand_links.csv`.
+- **Link status.** `established` means a first-party document names the licensee. `verified` means an FRA register name or a first-party parent statement. `lead` means a third-party report or web search with the page not captured.
+- **FRA robots security response.** fra.gov.eg answers `/robots.txt` with a "Request Rejected" page while serving the register normally. That state is now `security_response`, with its own acknowledgement. See the [access decision](acquisition-templates/fra-first-2026-10-02/fra-access-decision.md). This is the user's project decision for a public government register, not an FRA permission. Register-page security responses still stop the run.
+- **Order of work:** pilot seven first (valU, Contact, Souhoola, Aman, Halan, B.TECH/Mylo, Drive/Forsa), then the remaining licensees. Next for each lead: capture the first-party page that names the legal entity and upgrade the link status.
+
+Tools: `scripts/scrape_fra_registry.py` (licence-level), `scripts/rebuild_fra_licence_register.py` (offline re-parse of earlier raw captures), `scripts/build_fra_entity_table.py`.
+
+## Current operating amendment — 2026-10-02
+
+The [finalized execution plan](acquisition-execution-plan-2026-10-02.md) governs the current five-provider batch and incorporates the [double review](acquisition-double-review-2026-10-02.md). Scope is nonpersonal public company/product information and standard blank contracts for later human-scholar AAOIFI review. The unit is a particular financing arrangement: same legal seller/creditor, separate vendor/financier, mixed, or unresolved. A brand operating a shop does not establish that the same legal company owns the goods and provides finance.
+
+PublicCollector v0.3 is the sole automated route for this batch. Known HTTP refusals and rate-limit cooldowns survive encoding failures. Navigation/footer/header and explicit navigation/banner/complementary/contentinfo landmarks do not make an otherwise empty document shell complete. The weaker legacy FRA/market/CrawlerEngine collectors and name-based relationship summarizer are excluded pending separate correction. Current source decisions name their real reviewer and evidence; no invented owner permission or human sign-off is permitted. Missing or restricted policy remains a gap.
+
+Track readable artifact coverage, contract completeness, applicability, analyst review and scholar acceptance separately. Corporate contacts may be recorded; personal/customer data and security investigation are outside this batch. Older references below to requests being sent or private acquisition describe proposed/historic work, not dispatch authorization in this run. No messages are sent by this acquisition cycle.
+
 Adopted 2026-10-01 after the [review](evidence-acquisition-review-2026-10-01.md) and [research rethink](evidence-acquisition-rethink-2026-10-01.md). The [reviewed baseline](evidence-acquisition-playbook-reviewed-baseline-2026-10-01.md) preserves the original. This is the operating research procedure; the implementation-status section governs which capabilities are executable. Proposed future channels remain explicitly deferred.
 
 ## Implemented public capture foundation

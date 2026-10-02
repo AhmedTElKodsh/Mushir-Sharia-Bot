@@ -31,7 +31,30 @@ REGULATOR = "FRA"
 REGISTRY_NAME_AR = "سجلات لشركات التمويل"
 USER_AGENT = "MushirResearchBot/0.1 (+public-source compliance research; contact: local)"
 MAX_RESPONSE_BYTES = 10 * 1024 * 1024
-KNOWN_FRA_TYPE_TITLES = {"consumer-finance": "تمويل استهلاكي"}
+# Filter codes and titles exactly as offered by the FRA financing register's
+# type selector (observed in the 2026-09-23 listing capture).
+KNOWN_FRA_TYPE_TITLES = {
+    "all": "جميع نتائج السجل",
+    "consumer-finance": "تمويل استهلاكي",
+    "consumer-finance-providers": "مقدمي التمويل الاستهلاكي",
+    "microfinance": "متناهي الصغر",
+    "mortgage": "التمويل العقاري",
+    "leasing": "تأجير تمويلي",
+    "factoring": "تخصيم",
+    "sme-finance": "تمويل المشروعات المتوسطة و الصغيرة",
+}
+
+# What each register type says about the licence holder.  A register type is a
+# lead about the holder, never proof of how a particular arrangement works.
+FRA_REGISTER_ROLES = {
+    "consumer-finance": "licensed_consumer_finance_company",
+    "consumer-finance-providers": "registered_seller_or_service_provider_financing_own_sales",
+    "microfinance": "microfinance_licensee",
+    "mortgage": "mortgage_finance_licensee",
+    "leasing": "financial_leasing_licensee",
+    "factoring": "factoring_licensee_receivable_purchase",
+    "sme-finance": "sme_finance_licensee",
+}
 
 CSV_FIELDS = [
     "regulator",
@@ -50,6 +73,7 @@ CSV_FIELDS = [
     "scraped_at",
     "scrape_status",
     "scrape_error",
+    "licence_key",
 ]
 
 
@@ -354,16 +378,21 @@ def scrape_registry(
     access_checker: Optional[Callable[[str, float], AccessDecision]] = None,
     sleeper: Callable[[float], None] = time.sleep,
     acknowledge_unavailable_robots: bool = False,
+    acknowledge_robots_security_response: bool = False,
     user_agent: str = USER_AGENT,
     site_terms_review_state: str = "not_recorded",
 ) -> RegistryRunResult:
-    """Scrape one typed FRA register into one row per company."""
+    """Scrape one typed FRA register into one row per licence.
+
+    ``acknowledge_robots_security_response`` records an operator decision to
+    proceed when only the robots file is answered by a security page.  Any
+    security, login or rate response on a register page still stops the run.
+    """
     if timeout_seconds <= 0 or delay_seconds < 0 or max_pages <= 0:
         raise ValueError("timeout, delay, and pagination bounds must be positive")
     if not fra_type_code.strip() or not fra_type_ar.strip():
         raise ValueError("FRA type code and Arabic title are required")
-    expected_title = KNOWN_FRA_TYPE_TITLES.get(fra_type_code)
-    if expected_title and fra_type_ar.strip() != expected_title:
+    if not fra_type_title_matches(fra_type_code, fra_type_ar):
         raise ValueError("FRA type code and Arabic title do not match")
     start_query = dict(
         urllib.parse.parse_qsl(urllib.parse.urlparse(start_url).query, keep_blank_values=True)
@@ -421,8 +450,13 @@ def scrape_registry(
         return decision
 
     def is_authorized(decision: AccessDecision) -> bool:
-        return decision.allowed or (
-            decision.state == "unavailable" and acknowledge_unavailable_robots
+        return (
+            decision.allowed
+            or (decision.state == "unavailable" and acknowledge_unavailable_robots)
+            or (
+                decision.state == "security_response"
+                and acknowledge_robots_security_response
+            )
         )
 
     base_manifest = _manifest_base(
@@ -436,12 +470,15 @@ def scrape_registry(
         site_terms_review_state=site_terms_review_state,
     )
     base_manifest["run_id"] = run_id
+    base_manifest["robots_security_response_acknowledged"] = (
+        acknowledge_robots_security_response
+    )
     if not is_authorized(access):
         _write_csv(csv_path, [])
         base_manifest["output_csv_sha256"] = _sha256_file(csv_path)
         base_manifest.update(
             status="blocked",
-            blocker=("robots_disallowed" if access.state == "disallowed" else "robots_unavailable"),
+            blocker=_robots_blocker(access.state),
             raw_capture_count=len(raw_captures),
             raw_captures=raw_captures,
         )
@@ -477,9 +514,7 @@ def scrape_registry(
             break
         decision = access_for(current_url)
         if not is_authorized(decision):
-            blocker = (
-                "robots_disallowed" if decision.state == "disallowed" else "robots_unavailable"
-            )
+            blocker = _robots_blocker(decision.state)
             pagination_stop_reason = blocker
             break
         visited.add(current_url)
@@ -541,7 +576,12 @@ def scrape_registry(
         unique_entries.append(entry)
 
     rows: list[dict[str, str]] = []
+    # One FRA detail page is one licence.  A company number links the licences
+    # of one company (e.g. consumer finance plus factoring); it must never be
+    # used to drop a licence.  Only an identical licence record is a duplicate.
     seen_company_numbers: set[str] = set()
+    seen_licence_records: set[tuple[str, str, str]] = set()
+    duplicate_licence_record_count = 0
     detail_attempted = 0
     detail_succeeded = 0
     detail_failed = 0
@@ -580,9 +620,7 @@ def scrape_registry(
             continue
         decision = access_for(entry.detail_url)
         if not is_authorized(decision):
-            blocker = (
-                "robots_disallowed" if decision.state == "disallowed" else "robots_unavailable"
-            )
+            blocker = _robots_blocker(decision.state)
             stop_details = True
             detail_skipped += 1
             rows.append(
@@ -625,9 +663,17 @@ def scrape_registry(
             )
             continue
         detail_succeeded += 1
+        record_key = (
+            detail.company_number or "",
+            detail.license_number or "",
+            "|".join(_normalize_label(a.activity_ar) for a in detail.activities),
+        )
+        if detail.company_number and record_key in seen_licence_records:
+            duplicate_licence_record_count += 1
+            continue
+        seen_licence_records.add(record_key)
         if detail.company_number and detail.company_number in seen_company_numbers:
             duplicate_company_number_count += 1
-            continue
         if detail.company_number:
             seen_company_numbers.add(detail.company_number)
         rows.append(
@@ -657,6 +703,8 @@ def scrape_registry(
         "unique_company_count": len(rows),
         "duplicate_listing_count": duplicate_listing_count,
         "duplicate_company_number_count": duplicate_company_number_count,
+        "duplicate_licence_record_count": duplicate_licence_record_count,
+        "multi_licence_company_count": _multi_licence_company_count(rows),
         "detail_fetch_attempted": detail_attempted,
         "detail_fetch_succeeded": detail_succeeded,
         "detail_fetch_failed": detail_failed,
@@ -677,6 +725,69 @@ def scrape_registry(
     _write_manifest(manifest_path, manifest)
     exit_code = 0 if status == "complete" else (2 if status == "blocked" else 1)
     return RegistryRunResult(csv_path, manifest_path, exit_code)
+
+
+def rebuild_rows_from_capture(manifest: dict) -> tuple[list[dict[str, str]], dict[str, int]]:
+    """Rebuild licence-level CSV rows from an earlier run's raw captures.
+
+    Makes no network request: it re-parses the listing and detail HTML recorded
+    in ``manifest["raw_captures"]`` with the current parser and licence identity.
+    """
+    captures = manifest.get("raw_captures") or []
+    pages = {
+        _canonical_url(item["url"]): Path(item["path"])
+        for item in captures
+        if item.get("kind") == "detail"
+    }
+    entries: list[ListingEntry] = []
+    for item in captures:
+        if item.get("kind") == "listing":
+            text = _decode_html(Path(item["path"]).read_bytes())
+            entries.extend(parse_listing_page(text, item["url"]).entries)
+    start_url = str(manifest.get("registry_listing_url", ""))
+    fra_type_code = str(manifest.get("fra_type_code", ""))
+    fra_type_ar = str(manifest.get("fra_type_ar", ""))
+    run_date = str(manifest.get("run_date", ""))
+    rows: list[dict[str, str]] = []
+    seen_urls: set[str] = set()
+    seen_records: set[tuple[str, str, str]] = set()
+    stats = {"listing_entries": len(entries), "missing_detail_capture": 0,
+             "identity_mismatch": 0, "duplicate_licence_record": 0}
+    for entry in entries:
+        key = _canonical_url(entry.detail_url)
+        if key in seen_urls:
+            continue
+        seen_urls.add(key)
+        path = pages.get(key)
+        if path is None or not path.exists():
+            stats["missing_detail_capture"] += 1
+            rows.append(_technical_row(entry, start_url, fra_type_code, fra_type_ar,
+                                       run_date, "Detail capture missing from raw store"))
+            continue
+        detail = parse_detail_page(_decode_html(path.read_bytes()))
+        if not _same_identity(entry.company_name_ar, detail.company_name_ar):
+            stats["identity_mismatch"] += 1
+            rows.append(_technical_row(entry, start_url, fra_type_code, fra_type_ar,
+                                       run_date, "detail identity did not match listing identity"))
+            continue
+        record = (
+            detail.company_number or "",
+            detail.license_number or "",
+            "|".join(_normalize_label(a.activity_ar) for a in detail.activities),
+        )
+        if detail.company_number and record in seen_records:
+            stats["duplicate_licence_record"] += 1
+            continue
+        seen_records.add(record)
+        rows.append(_complete_row(entry, detail, start_url, fra_type_code, fra_type_ar, run_date))
+    stats["rows"] = len(rows)
+    stats["multi_licence_companies"] = _multi_licence_company_count(rows)
+    return rows, stats
+
+
+def write_registry_csv(path: Path, rows: Iterable[dict[str, str]]) -> None:
+    """Public wrapper over the atomic, formula-safe CSV writer."""
+    _write_csv(path, rows)
 
 
 class _SameOriginRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -715,11 +826,26 @@ def load_robots_policy(
     try:
         payload = fetch_url(robots_url, timeout_seconds, user_agent=user_agent)
     except urllib.error.HTTPError as exc:
+        if exc.code in {401, 403, 429}:
+            return RobotsPolicy(
+                "security_response", f"robots.txt HTTP {exc.code}", robots_url
+            )
         return RobotsPolicy("unavailable", f"robots.txt HTTP {exc.code}", robots_url)
     except Exception as exc:
-        return RobotsPolicy("unavailable", _sanitize_exception(exc), robots_url)
+        return RobotsPolicy("unreachable", _sanitize_exception(exc), robots_url)
     text = _decode_html(payload)
-    if _security_block_reason(text) or not re.search(
+    security_reason = _security_block_reason(text)
+    if security_reason:
+        # e.g. fra.gov.eg answers /robots.txt with a 200 "Request Rejected" page
+        # while serving the public register pages normally.  That is a security
+        # response about the policy file, not a missing file and not permission.
+        return RobotsPolicy(
+            "security_response",
+            f"robots.txt answered by a security page ({security_reason})",
+            robots_url,
+            payload=payload,
+        )
+    if not re.search(
         r"(?im)^\s*(?:user-agent|allow|disallow|crawl-delay)\s*:", text
     ):
         return RobotsPolicy(
@@ -783,6 +909,9 @@ def _complete_row(
         "scraped_at": run_date,
         "scrape_status": "complete",
         "scrape_error": "",
+        "licence_key": licence_key(
+            detail.activities, detail.license_number, detail.company_number
+        ),
     }
 
 
@@ -811,6 +940,7 @@ def _technical_row(
         "scraped_at": run_date,
         "scrape_status": "technical_error",
         "scrape_error": error,
+        "licence_key": TECHNICAL_ERROR,
     }
 
 
@@ -900,7 +1030,7 @@ def _manifest_base(
         "robots_checked_url_count": 0,
         "manual_review_required": False,
         "access_status_taxonomy": (
-            "allowed|robots_unavailable|robots_disallowed|blocked_by_security|"
+            "allowed|robots_unavailable|robots_unreachable|robots_disallowed|blocked_by_security|"
             "requires_login|document_not_public|rate_limited"
         ),
         "output_csv": str(csv_path).replace("\\", "/"),
@@ -1070,6 +1200,110 @@ def _same_identity(listing_name: str, detail_name: Optional[str]) -> bool:
 
 def _identity_key(value: str) -> str:
     return re.sub(r"[^\w\u0600-\u06ff]+", "", _clean_text(value).casefold())
+
+
+def fra_type_title_matches(fra_type_code: str, fra_type_ar: str) -> bool:
+    """Compare a requested type title with FRA's, ignoring tatweel and spacing."""
+    expected = KNOWN_FRA_TYPE_TITLES.get(fra_type_code)
+    return not expected or _normalize_label(fra_type_ar) == _normalize_label(expected)
+
+
+def fra_type_code_for_activity(activity_ar: str) -> Optional[str]:
+    """Map a detail-page activity title back to the register type that lists it."""
+    normalized = _normalize_label(activity_ar)
+    for code, title in KNOWN_FRA_TYPE_TITLES.items():
+        if code != "all" and _normalize_label(title) == normalized:
+            return code
+    return None
+
+
+def licence_key(
+    activities: Iterable[Activity],
+    license_number: Optional[str],
+    company_number: Optional[str] = None,
+) -> str:
+    """Stable licence identity: ``fra:<register_type>:<licence_number>``.
+
+    FRA licence numbers restart in each register, so the number alone is not an
+    identity, and the company number is shared by all of a company's licences.
+    """
+    codes = sorted(
+        {fra_type_code_for_activity(a.activity_ar) or "unmapped" for a in activities}
+    ) or ["unmapped"]
+    number = (license_number or "").strip()
+    if not number or number == NO_DATA:
+        # Recent licensees can lack a published number; never let them collide.
+        company = (company_number or "").strip()
+        number = f"company-{company}" if company and company != NO_DATA else "no_licence_number"
+    return f"fra:{'+'.join(code.replace('-', '_') for code in codes)}:{number}"
+
+
+_FORMER_NAME_MARKERS = ("سابقا", "سابقاً", "سايقا")
+
+
+def split_fra_name(name_ar: str) -> tuple[str, tuple[str, ...]]:
+    """Split FRA's Arabic name field into (current name, former names) as observed.
+
+    FRA marks each earlier name with a trailing ``سابقا`` (once misspelt
+    ``سايقا``), usually inside parentheses but sometimes bare or with an
+    unclosed parenthesis.  A former name runs back from its marker to the
+    nearest parenthesis.  Text is kept verbatim, never translated.
+    """
+    value = _clean_text(name_ar)
+    former: list[str] = []
+    spans: list[tuple[int, int]] = []
+    for marker in re.finditer(r"(?:سابقا|سابقاً|سايقا)", value):
+        prefix = value[: marker.start()].rstrip()
+        trimmed = prefix.rstrip("(").rstrip()
+        boundary = max(trimmed.rfind("("), trimmed.rfind(")"))
+        segment = trimmed[boundary + 1 :].strip()
+        if not segment and boundary >= 0 and trimmed[boundary] == ")":
+            opening = trimmed.rfind("(", 0, boundary)
+            segment = trimmed[opening + 1 : boundary].strip()
+            boundary = opening
+        if segment:
+            former.append(segment)
+            spans.append((boundary + 1, marker.end()))
+    current = value
+    for begin, finish in reversed(spans):
+        current = current[:begin] + " " + current[finish:]
+    current = _balance_parentheses(current)
+    current = re.sub(r"\(\s*\)", " ", current)
+    current = re.sub(r"\s*(?:حاليا|حالياً)\s*$", "", _clean_text(current))
+    return current, tuple(former)
+
+
+def _balance_parentheses(value: str) -> str:
+    kept: list[str] = []
+    open_positions: list[int] = []
+    for character in value:
+        if character == ")":
+            if not open_positions:
+                continue
+            open_positions.pop()
+        elif character == "(":
+            open_positions.append(len(kept))
+        kept.append(character)
+    for position in reversed(open_positions):
+        kept[position] = " "
+    return "".join(kept)
+
+
+def _robots_blocker(state: str) -> str:
+    return {
+        "disallowed": "robots_disallowed",
+        "security_response": "blocked_by_security",
+        "unreachable": "robots_unreachable",
+    }.get(state, "robots_unavailable")
+
+
+def _multi_licence_company_count(rows: list[dict[str, str]]) -> int:
+    numbers = [
+        row["company_number"]
+        for row in rows
+        if row["scrape_status"] == "complete" and row["company_number"] != NO_DATA
+    ]
+    return sum(1 for number in set(numbers) if numbers.count(number) > 1)
 
 
 def _excel_safe_cell(value: str) -> str:

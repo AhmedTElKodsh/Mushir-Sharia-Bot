@@ -1,0 +1,21 @@
+﻿market_label,outcome,licence_keys,link_statuses,note
+Mylo,evidence_link,fra:consumer_finance:48,verified,first_party_parent_statement_plus_register_name
+Contact,evidence_link,fra:consumer_finance:33 | fra:consumer_finance:1 | fra:consumer_finance:49 | fra:consumer_finance_providers:17 | fra:consumer_finance_providers:19 | fra:consumer_finance_providers:24 | fra:factoring:8,established | verified | lead | lead | lead | lead | lead,first_party_terms_appendix; fra_register_name
+Aman,evidence_link,fra:consumer_finance:43 | fra:consumer_finance_providers:2,verified | lead,fra_register_name
+CIB,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
+Banque Misr,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
+EG Bank,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
+National Bank of Egypt,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
+HSBC,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
+Emirates NBD,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
+valU,evidence_link,fra:consumer_finance:13,established,first_party_terms_legal_name
+Souhoola,evidence_link,fra:consumer_finance:10,verified,fra_register_name
+ALEXBANK,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
+FAB Misr,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
+QNB,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
+Ahli United Bank,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
+Sympl,not_found_by_name,,,"brand is not an FRA legal name; search parent/operator names from first-party terms, app developer, EGX disclosures, and add an evidenced brand link"
+ValU,evidence_link,fra:consumer_finance:13,established,first_party_terms_legal_name
+Halan,evidence_link,fra:consumer_finance:23 | fra:factoring:50,verified | lead,fra_register_name
+Forsa,evidence_link,fra:consumer_finance:26 | fra:factoring:3,established | established,first_party_privacy_policy_legal_name
+Valu,evidence_link,fra:consumer_finance:13,established,first_party_terms_legal_name

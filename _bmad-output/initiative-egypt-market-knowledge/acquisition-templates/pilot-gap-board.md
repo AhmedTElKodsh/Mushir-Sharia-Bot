@@ -9,6 +9,8 @@ State at 2026-10-01: the [entity worksheet](../pilot-entity-resolution.md) recor
 | SOUHOOLA-01 | Complete terms and dated CI/BM/“Contact Investment” resolution | Permitted complete render, official pack and register clarification | Preserve all names; authoritative dated relationship evidence; earlier excerpt is partial |
 | AMAN-01 | Consumer-finance obligations/party separate from holding/microfinance | Applicable agreement and schedules | Exact role/product/version; holding-company text insufficient |
 | HALAN-01 | Particular merchant–financier relationship and agreement | Selected arrangement and provider/merchant documents | Supporting relationship/obligation passages; insufficient evidence until supported; dispatch prioritised 2026-10-01 |
+| BTECH-01 | Mylo standard agreement and schedules naming B.TECH Finance (#48); separately, B.TECH Trading's (#7) own-goods instalment agreement | Source-supplied documents: the Mylo terms page needed a Google sign-in on 2026-10-02, and B.TECH's terms restrict scraping | Seller and creditor named per arrangement; contrast #7 vs #48 for the scholar. Added 2026-10-02 |
+| DRIVE-01 | Forsa customer agreement naming Drive Finance (#26) and merchant/channel roles | First-party Forsa terms (policy review first); source-supplied documents | Legal-name clause in Forsa terms; Drive factoring #3 relevance to receivable assignment. Added 2026-10-02 |
 | ACCESS-01 | Current decision for required URLs and robots | Eligible terms review/source clarification | Scope/reference/reviewer/expiry; no live approvals in current templates |
 
 Bilingual request letters with proposed scopes and recipient leads for all five tasks: [provider-request-letters-2026-10-01.md](provider-request-letters-2026-10-01.md). None has been sent.
