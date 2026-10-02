@@ -63,8 +63,15 @@ The English page links the Wakala template to the Ijarah file; the Arabic page l
 
 **Sub-Sharia committee rule.** Any non-bank financial company offering products described as Sharia-compliant must have its contracts reviewed by a sub-Sharia committee of 3–5 registered members. FRA's register lists **48 individual members (17 not renewed)**. It does not say which company each serves. Member emails were removed from derived text, in line with the no-personal-data scope.
 
+**OCR (2026-10-03).** All 51 scanned documents (812 pages) were OCR'd offline with the Windows built-in engine (ar-SA). Arabic-dominant lines were word-reversed to restore reading order, and no page came out empty. Output is in `.../fra_documents/2026-10-02/derived/ocr/<sha>.json|.txt`, and the catalogue's `text_layer` now reads `ocr (...)`, with `ocr_path`. EasyOCR was tried first: on this machine (about 2 GB free RAM) its detector crashed at full page size and ran about 80 s/page at a reduced size, so it was removed. OCR text is a reading aid with typical slips (الشيئة for الهيئة, dropped digits); check the page image before quoting. What the OCR made readable:
+
+- **Chairman's Decree 457/2020** (8 Apr 2020): the consumer-finance contract model. Its Article 1 binds **both consumer-finance companies and licensed consumer-finance providers** (seller-financiers) to a minimum list of contract contents. The same baseline therefore applies to B.TECH's minicash or Raya's Takseety as to valU or Contact.
+- **Chairman's Decree 869/2021** (1 Jun 2021, Official Gazette no. 135): "on consumer-finance contract models", 11 pages, issuing the models. It cites Board Decree 56/2020 on licensing companies and providers.
+- **Central Sharia Supervisory Committee rulings 1–4 on sukuk (2019).** Ruling 4 holds that the legal requirement to redeem sukuk at *nominal* value conflicts with Sharia; redemption must be at *market* value, on the principle of sharing in gain and loss (الغنم والغرم). This is the regulator's own Sharia body reasoning that a guaranteed principal breaks risk-sharing, a precedent the scholar may want next to consumer-finance guarantees.
+- Board Decree 23/2019 (Takaful controls), Decrees 42/2019, 176–177/2022 and 310/2025 (Sharia committee mandates), the model sukuk prospectus, and the fund and sukuk information memoranda.
+
 **Gaps:**
-- **51 documents have no usable text layer** (scanned, mostly older decrees and circulars) and need OCR.
+- ~~51 documents need OCR~~ Done (above).
 - 14 sukuk/fund prospectuses exceeded the 10 MB cap.
 - One sukuk study PDF drew FRA's "Request Rejected" page, apparently a URL-length rule; it was not retried.
 - One old PDF timed out.

@@ -34,7 +34,7 @@ TERMS = {
     "aaoifi": ("AAOIFI", "أيوفي", "المحاسبة والمراجعة للمؤسسات المالية الإسلامية"),
 }
 FIELDS = ["sha256", "kind_hint", "fra_link_text", "url", "found_on", "pages", "text_chars",
-          "text_layer", "terms_by_page", "raw_path"]
+          "text_layer", "terms_by_page", "raw_path", "ocr_path"]
 HTML_PAGE = re.compile(r"islamic|sharia|sukuk|takaful")
 
 
@@ -76,6 +76,7 @@ def main() -> int:
         if not text and "|" in r["label"]:
             text = r["label"].split("|", 1)[1]
         text_layer = ""
+        ocr_path = ""
         try:
             reader = pypdf.PdfReader(str(ROOT / r["raw"]))
             page_texts = [(page.extract_text() or "") for page in reader.pages]
@@ -83,7 +84,14 @@ def main() -> int:
             page_texts, text_layer = [], f"unreadable: {type(exc).__name__}"
         chars = sum(len(t) for t in page_texts)
         arabic = sum(len(re.findall(r"[؀-ۿ]", t)) for t in page_texts)
-        if page_texts:
+        ocr_file = OUT / "derived" / "ocr" / f"{r['sha256']}.json"
+        if page_texts and chars < 50 * len(page_texts) and ocr_file.exists():
+            ocr = json.loads(ocr_file.read_text(encoding="utf-8"))
+            page_texts = [p["text"] for p in ocr["pages"]]
+            chars = sum(len(t) for t in page_texts)
+            text_layer = f"ocr ({ocr['engine']}; verify against page image)"
+            ocr_path = ocr_file.with_suffix(".txt").relative_to(ROOT).as_posix()
+        if page_texts and not text_layer:
             if chars < 50 * len(page_texts):
                 text_layer = "none_or_thin (scanned? OCR needed)"
             elif arabic > chars * 0.3:
@@ -99,7 +107,7 @@ def main() -> int:
         rows.append({"sha256": r["sha256"], "kind_hint": kind_hint(text, r["url"]), "fra_link_text": text,
                      "url": urllib.parse.unquote(r["url"]), "found_on": urllib.parse.unquote(found_on),
                      "pages": len(page_texts), "text_chars": chars, "text_layer": text_layer,
-                     "terms_by_page": "; ".join(hits), "raw_path": r["raw"]})
+                     "terms_by_page": "; ".join(hits), "raw_path": r["raw"], "ocr_path": ocr_path})
 
     derived = OUT / "derived"
     derived.mkdir(exist_ok=True)
