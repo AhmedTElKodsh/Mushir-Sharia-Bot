@@ -74,6 +74,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                         default=PROJECT_ROOT / "data/source_registry/fra_brand_links.csv")
     parser.add_argument("--market", type=Path,
                         default=PROJECT_ROOT / "data/source_registry/egypt_installment_market.csv")
+    parser.add_argument("--islamic", type=Path,
+                        default=PROJECT_ROOT / "data/source_registry/fra_islamic_product_licences.csv",
+                        help="FRA register of Islamic-product licences (optional)")
     parser.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "data/source_registry")
     args = parser.parse_args(argv)
 
@@ -111,6 +114,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     entities = build_entity_rows(
         licence_rows, links, market_labels=labels_by_key, pilot_keys=PILOT_KEYS
     )
+    if args.islamic.exists():
+        islamic = {row["licence_key"]: row for row in load_csv(args.islamic)}
+        for entity in entities:
+            listed = islamic.get(entity["licence_key"])
+            if listed:
+                note = f" ({listed['fra_note']})" if listed.get("fra_note") else ""
+                entity["fra_islamic_products"] = (
+                    f"{listed['products_en']} since {listed['islamic_product_date']}{note}"
+                )
     write_csv(args.output_dir / "fra_consumer_finance_entities.csv", ENTITY_FIELDS, entities)
     write_csv(args.output_dir / "fra_market_label_resolution.csv", RESOLUTION_FIELDS, resolutions)
 

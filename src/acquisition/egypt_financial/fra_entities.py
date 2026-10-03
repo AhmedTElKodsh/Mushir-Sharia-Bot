@@ -34,6 +34,7 @@ ENTITY_FIELDS = [
     "licence_key",
     "fra_register_type",
     "fra_register_role",
+    "fra_islamic_products",
     "licence_number",
     "company_number",
     "name_ar_observed",
