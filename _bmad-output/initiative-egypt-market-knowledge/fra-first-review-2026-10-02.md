@@ -70,6 +70,10 @@ The English page links the Wakala template to the Ijarah file; the Arabic page l
 - **Central Sharia Supervisory Committee rulings 1–4 on sukuk (2019).** Ruling 4 holds that the legal requirement to redeem sukuk at *nominal* value conflicts with Sharia; redemption must be at *market* value, on the principle of sharing in gain and loss (الغنم والغرم). This is the regulator's own Sharia body reasoning that a guaranteed principal breaks risk-sharing, a precedent the scholar may want next to consumer-finance guarantees.
 - Board Decree 23/2019 (Takaful controls), Decrees 42/2019, 176–177/2022 and 310/2025 (Sharia committee mandates), the model sukuk prospectus, and the fund and sukuk information memoranda.
 
+**Done 2026-10-03:** see [fra-model-contract-comparison-2021-2026.md](fra-model-contract-comparison-2021-2026.md). The models are unchanged in substance; the one wording change is "commercial papers" → "guarantees". Decree 457/2020 is no longer listed in the 2026 rulebook. Late payment, title/delivery and insurance are absent from the models. The plan as originally written:
+
+**Model-contract side-by-side.** Compare the model clauses issued by Chairman's Decree 869/2021 (OCR text; 11 pages) with Model (1) in the 2026 rulebook (pp. 91–96, text layer). Do it clause by clause: parties, financed price and return, instalment schedule, late-payment terms, early settlement, ownership and security interest, insurance, receivable sale or assignment. Also check the Decree 457/2020 minimum list against both. The aim is to show the scholar which minimum terms were added, dropped or reworded between 2021 and 2026. Verify OCR passages against page images before quoting. The client guide carries the same note.
+
 **Gaps:**
 - ~~51 documents need OCR~~ Done (above).
 - 14 sukuk/fund prospectuses exceeded the 10 MB cap.
