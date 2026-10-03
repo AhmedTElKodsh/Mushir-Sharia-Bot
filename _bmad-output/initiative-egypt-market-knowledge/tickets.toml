@@ -51,7 +51,7 @@ after = [{ epic = 2, needs = "the slot model for schedule facts" }]
 [[epic]]
 id = 8
 slug = "epic-financier-coverage"
-title = "All 38 FRA consumer-finance licensees are covered"
+title = "All 52 FRA consumer-finance entities are covered"
 covers = ["CAP-12"]
 after = [{ epic = 3, needs = "the dossier pipeline and store" }, { epic = 4, needs = "the named-offer lane that answers for the wider licensee set" }]
 

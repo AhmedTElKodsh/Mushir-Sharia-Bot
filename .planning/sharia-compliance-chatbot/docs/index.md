@@ -63,6 +63,9 @@ These remain accurate for retrieval, ingestion, API surfaces and infrastructure.
 ## Egyptian Market Workstream
 
 - [L6 Egypt Institution Scrape Workstream](l6-egypt-institution-scrape/README.md): registries, bank and FRA scrapes, outputs.
+- [FRA-first review, 2026-10-02](../../../_bmad-output/initiative-egypt-market-knowledge/fra-first-review-2026-10-02.md): FRA registers (licence-level), the providers register, the company table, pilot seven, FRA publications, OCR.
+- [FRA model contracts, 2021 vs 2026](../../../_bmad-output/initiative-egypt-market-knowledge/fra-model-contract-comparison-2021-2026.md) and [FRA Sharia Murabaha model vs Model (1)](../../../_bmad-output/initiative-egypt-market-knowledge/fra-murabaha-vs-model1-comparison.md): clause-level comparisons with questions for the scholar.
+- Data: `data/source_registry/` holds the FRA entity table, brand links, Islamic-product licences and the FRA documents catalogue (see its README).
 - [Instalment Market Expansion](l6-egypt-institution-scrape/installment-market-expansion.md): the instalment market map (checked 2026-09-27).
 - [Progressive Buyer-Journey Crawl Plan](l6-egypt-institution-scrape/progressive-buyer-journey-crawl-plan.md) and [Dual-Query POC Answer Gates](l6-egypt-institution-scrape/dual-query-poc-answer-gates.md): adopted spec companions.
 - [L6 Market Knowledge Strategy](../next-level-plans/L6-MARKET-KNOWLEDGE-AND-POC-RELEASE-STRATEGY.md): decision rationale behind the spec (rationale only; the spec is canonical).

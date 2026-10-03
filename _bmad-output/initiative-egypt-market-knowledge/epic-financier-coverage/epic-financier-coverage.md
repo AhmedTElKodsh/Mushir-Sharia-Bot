@@ -1,6 +1,6 @@
 ---
 type: epic
-title: "All 38 FRA consumer-finance licensees are covered"
+title: "All 52 FRA consumer-finance entities are covered"
 parent: initiative-egypt-market-knowledge
 covers: [CAP-12]
 after: []
@@ -8,11 +8,11 @@ assignee: ""
 risk: medium
 ---
 
-# All 38 FRA consumer-finance licensees are covered
+# All 52 FRA consumer-finance entities are covered
 
 ## Description
 
-All 38 FRA consumer-finance licensees are covered at template level, merchants link to financiers, and Arabic, PDF and rendered pages are captured with per-field freshness. The spec's CAP-12 defines the target (V1.8).
+All 52 FRA consumer-finance entities (39 licensed companies + 13 registered providers that finance their own goods; scope widened from 38 by the user on 2026-10-03) are covered at template level, merchants link to financiers, and Arabic, PDF and rendered pages are captured with per-field freshness. The spec's CAP-12 defines the target (V1.8).
 
 ## Outcome
 
@@ -22,11 +22,11 @@ The named-offer lane can answer at template level for every FRA consumer-finance
 
 The spec's capability ids are this epic's requirement source (covers cites them directly); children cite them.
 
-- CAP-12: All 38 FRA consumer-finance licensees covered at template level; merchants link to financiers; Arabic, PDF, rendered pages with per-field freshness. Success: 38 dossiers; conflict/staleness markers tested; access gaps explicit.
+- CAP-12: All 52 FRA consumer-finance entities covered at template level; merchants link to financiers; Arabic, PDF, rendered pages with per-field freshness. Success: 52 dossiers; conflict/staleness markers tested; access gaps explicit.
 
 ## Done when
 
-1. 38 licensee dossiers exist; access gaps stay explicit.
+1. 52 entity dossiers exist; access gaps stay explicit.
 2. Conflict and staleness markers pass tests.
 3. Deployed to the Hugging Face Space per the release-ladder deploy rules: `/ready` healthy and a real-query smoke for what this epic delivers.
 

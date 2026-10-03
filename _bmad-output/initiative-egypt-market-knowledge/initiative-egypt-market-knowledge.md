@@ -23,7 +23,7 @@ The spec's success signal: on the live Space a pilot-company question returns da
 1. V1.6 passes its release-ladder exit gate on the live Space: ~100 scholar-reviewed frozen cases, zero wrong verdicts, live smoke green.
 2. No answer surface shows a numeric confidence, and no permissibility result is ever produced from an unknown or contradicted condition or an unapproved rule.
 3. Every runtime rule card is scholar-approved, and synthetic material is provably absent from named-company retrieval.
-4. All 38 FRA consumer-finance licensees are covered at template level with explicit access gaps.
+4. All 52 FRA consumer-finance entities (39 licensed companies + 13 registered providers, register of 2026-10-02) are covered at template level with explicit access gaps.
 5. V2.0 meets the scholar-set risk threshold on held-out reviewed cases, with release checklist and scholar sign-off complete.
 
 ## Boundaries
@@ -48,4 +48,6 @@ Capability boundary per the spec; see its Non-goals (no merchant census, no auto
 - Decision: scholar pilot decisions promote rule cards to `approved` inside V1.6 (user, 2026-09-30).
 - Decision: legal review gates public named-company answers in epic-named-offer-lane (2026-09-30).
 - Decision: primary V1.6 user is a retail buyer (O4, user, 2026-09-30).
+- Decision: pilot entities are seven: valU (established financier), Contact, Souhoola, Aman, Halan, B.TECH/Mylo, Drive/Forsa (user, 2026-10-02); client confirmation is requested in the client guide and the review pack.
+- Decision: V1.8 coverage scope is all 52 FRA consumer-finance entities: 39 licensed companies plus 13 registered providers (sellers financing their own goods), per the register of 2026-10-02 (user, 2026-10-03).
 - Open question: O1 precedence, O2 staff agreements, O3 pilot entities, O5 wrong-verdict rate, O6 donated-document hosting; each is recorded on the epic it blocks.

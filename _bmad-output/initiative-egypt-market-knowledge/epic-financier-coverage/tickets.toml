@@ -3,9 +3,9 @@
 [[entry]]
 id = 1
 type = "story"
-title = "Licensee list and access decisions for all 38"
-description = "Records the 38 FRA consumer-finance licensees with an access decision and reason for each, reusing the pilot access process."
-verify = "A list of 38 licensees has an access decision and reason each."
+title = "Entity list and access decisions for all 52"
+description = "Records the 52 FRA consumer-finance entities (39 licensees + 13 providers, data/source_registry/fra_consumer_finance_entities.csv) with an access decision and reason for each, reusing the pilot access process."
+verify = "A list of 52 entities has an access decision and reason each."
 covers = ["CAP-12"]
 after = ["3.1", "3.2"]
 hitl = true

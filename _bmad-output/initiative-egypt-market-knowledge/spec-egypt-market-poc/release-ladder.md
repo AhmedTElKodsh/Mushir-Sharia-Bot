@@ -12,7 +12,7 @@ Preserve all in-scope POC review records and supporting evidence until the schol
 | --- | --- | --- |
 | V1.6 Dual-lane POC | CAP-1..CAP-8 | ~100 scholar-reviewed frozen pilot cases, zero wrong verdicts; V1.6 blockers in `brownfield.md` closed; live smoke passes |
 | V1.7 Rules and schedules | CAP-9, CAP-10, CAP-11 | Every runtime card approved; schedule extraction accuracy reported; synthetic isolation test green |
-| V1.8 Financier coverage | CAP-12 | 38 FRA consumer-finance licensees at template level; conflict/staleness markers tested |
+| V1.8 Financier coverage | CAP-12 | 52 FRA consumer-finance entities (39 licensees + 13 providers) at template level; conflict/staleness markers tested |
 | V1.9 Learned behavior | CAP-13, CAP-14 | Prior calibrated on held-out entities; prior-never-changes-verdict test green; fine-tune beats baseline or is dropped |
 | V2.0 Launch candidate | CAP-15 | Scholar-set risk met on held-out reviewed cases; release checklist and scholar sign-off |
 

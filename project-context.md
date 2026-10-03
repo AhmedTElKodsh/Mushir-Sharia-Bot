@@ -42,6 +42,15 @@ The spec-level `.planning/sharia-compliance-chatbot/docs/research/l6-rules-first
 
 As of V1.5 on 2026-06-01, the Egypt financial institutions workstream has moved from plan-only to a guarded evidence-corpus build. The registry completion run loaded 2,154 baseline institutions: 36 banks, 797 capital-market entities, 996 insurance entities, and 325 non-bank finance entities. Live official-registry revalidation recorded CBE upstream security blocking and FRA CAPTCHA blocking, so those regulator pages remain gap-recorded rather than bypassed. A bounded bank evidence scrape discovered 32 bank website candidates, scraped 14, failed/blocked 18, fetched 73 pages, extracted 69 operation records, and exported 69 machine-proposed AAOIFI mapping rows for scholar review. Non-bank sectors still require official website discovery before product crawling. Machine-proposed labels remain non-authoritative and are not runtime-eligible without scholar review.
 
+### FRA-first company database (2026-10-02)
+
+- The FRA register is the spine: one row per **licence**, keyed `fra:<register>:<number>` (`company-<number>` when FRA shows none). Never dedupe by company number; it links a company's licences.
+- A brand is not a legal name. Report a failed lookup as `not_found_by_name` and add an evidenced row to `data/source_registry/fra_brand_links.csv`. Never write "no FRA match".
+- The FRA providers register (مقدمي التمويل الاستهلاكي) lists sellers financing their own goods. It is a lead about the holder; the contract decides each arrangement.
+- fra.gov.eg answers `/robots.txt` with a security page; collection runs under the recorded user decision (`acquisition-templates/fra-first-2026-10-02/fra-access-decision.md`) and stops on any register-page security response.
+- OCR text of FRA documents is a reading aid: verify against the page image before quoting. A diff on OCR text alone produced three false differences on 2026-10-03.
+- FRA documents and comparisons describe documents only; they never supply a Sharia verdict.
+
 ## Current Architecture
 
 The main runtime flow is:

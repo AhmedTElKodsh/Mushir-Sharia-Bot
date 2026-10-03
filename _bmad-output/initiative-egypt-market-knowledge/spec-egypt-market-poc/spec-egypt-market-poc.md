@@ -65,8 +65,8 @@ Later versions (see `release-ladder.md`):
   - **intent:** The scholar reviews one-clause counterfactual contract pairs generated from real templates.
   - **success:** Synthetic material is never retrievable in the named-company lane (test); pair decisions land as rule evidence.
 - **CAP-12** (V1.8)
-  - **intent:** All 38 FRA consumer-finance licensees are covered at template level, merchants link to financiers, and Arabic, PDF and rendered pages are captured with per-field freshness.
-  - **success:** 38 licensee dossiers exist; conflict and staleness markers pass tests; access gaps stay explicit.
+  - **intent:** All 52 FRA consumer-finance entities (39 licensed companies + 13 registered providers; widened from 38 on 2026-10-03) are covered at template level, merchants link to financiers, and Arabic, PDF and rendered pages are captured with per-field freshness.
+  - **success:** 52 entity dossiers exist; conflict and staleness markers pass tests; access gaps stay explicit.
 - **CAP-13** (V1.9)
   - **intent:** A supervised archetype prior orders clarification questions and chooses documents to request.
   - **success:** Calibration on entity-grouped held-out data is reported; a test proves the prior never changes a decision or fills a slot.

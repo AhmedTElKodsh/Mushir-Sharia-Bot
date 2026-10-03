@@ -77,7 +77,7 @@ timeline
 | --- | --- | --- |
 | Evidence-safe answers | Mostly built | No verdict without an approved rule; source dates on every answer; every answer saved for review before it is shown |
 | Questions about your own deal | Mostly built | Reads amounts, down payment, months and lender from the user's words; never assumes the contract type from words like "instalment" |
-| Company dossiers for five pilot companies | Not started | Waits for your confirmation of the pilot list |
+| Company dossiers for seven pilot companies | Started | valU, Contact, Souhoola, Aman, Halan, B.TECH (Mylo) and Drive Finance (Forsa): legal names from FRA's registers and their own pages, recorded in English and Arabic; B.TECH and Drive added on 2 October 2026, each confirmed against FRA's register and the company's own pages; dated public pages captured; request letters drafted for the first five, waiting for your approval |
 | Company lookups ("what does X offer?") | Not started | Waits for the dossiers and a legal review |
 | Scholar-verified V1.6 release | Not started | Waits for a scholar |
 
@@ -174,18 +174,29 @@ flowchart LR
 | Area | Result | Date |
 | --- | --- | --- |
 | Official registers | 2,154 Egyptian financial institutions: 36 banks, 797 capital-market, 996 insurance and 325 non-bank finance entities | June 2026 |
-| Consumer-finance lenders | 38 companies on the FRA consumer-finance register | 31 Aug 2026 |
+| Consumer-finance lenders | 39 licensed consumer-finance companies, plus 13 sellers registered to finance their own goods | 2 Oct 2026 |
 | Bank products | 32 bank sites found, 14 collected, 73 public pages, 69 product records for review | June 2026 |
 | Instalment market map | 85 checks across stores, marketplaces, lenders and property; 52 confirmed on a page; 86 named companies | 27 Sep 2026 |
 | Sharia sources | Most AAOIFI Shari'ah Standards extracted; a few still missing | Ongoing |
 
-Some sources were blocked by security checks (for example CBE and parts of the FRA website). Mushir records these as gaps and never works around them.
+Some sources were blocked by security checks (for example CBE, and one long-named FRA file). Mushir records these as gaps and never works around them. FRA's public registers and publications were collected with your authorization, at a slow rate and under an identified research name.
 
 Three findings shape the plan:
 
 - **Contact's published agreement** puts each customer's price, number of instalments, period and return rate in a *separate statement*. The public document is the template; the numbers are personal.
 - **Egypt's regulator (FRA)** requires a standard consumer-finance contract under Law 18 of 2020. Its rulebook of 6 September 2026 requires **life and disability insurance** for customers up to age 65, so every consumer-finance deal includes an insurance element that needs its own Sharia question.
 - **Marketplaces** such as noon state that interest and fees depend on the bank, so the store is rarely the party that matters.
+
+### What The Regulator Itself Publishes (October 2026)
+
+FRA's own documents answer part of the scholar's questions before any company is contacted:
+
+- **Two registers, two kinds of company.** FRA licenses *consumer-finance companies*, and separately registers *consumer-finance providers*, defined as "producers or distributors of goods who practise consumer finance" (sellers that finance their own goods). Examples: B.TECH runs its in-house plan "minicash" under provider licence 7/2020, and separately runs Mylo through its finance company. The register shows which kind a company is; the customer contract still decides who sells and who lends in a given deal.
+- **A legal minimum for every contract.** FRA's model contracts (Decree 869/2021, republished in the 6 September 2026 rulebook) are the minimum every licensed company's contract must follow. An earlier decree (457/2020) also applied a minimum list to sellers that finance their own goods; the 2026 rulebook no longer lists it, so whether it still applies is being checked. This gives the scholar the baseline of what every customer signs.
+- **Sharia model contracts.** FRA publishes guiding Islamic contracts: Murabaha for consumer finance, lease-to-own (Ijarah), diminishing partnership (Musharaka), investment agency (Wakala) and micro-Murabaha. The Murabaha template contains points the scholar should look at, such as the supplier invoicing the customer directly. Mushir flags these points; the scholar decides. FRA lists only three consumer-finance companies as licensed for an Islamic (Murabaha) product: B.TECH (Mylo), Aman, and Abu Dhabi Islamic, whose contract is still under FRA Sharia committee review.
+- **Sharia oversight.** Any company that sells products as Sharia-compliant must have its contracts reviewed by a Sharia committee whose members are registered with FRA. FRA's central Sharia committee has published rulings, for example that sukuk must be redeemed at market value rather than a guaranteed face value.
+
+**2021 vs 2026 model contracts (compared 3 October 2026).** The models did not change in substance: same 15 clauses, same obligations. The one change is wording: the promissory notes and cheques a lender may ask for are now called "guarantees" instead of "commercial papers". What matters more for the scholar is what the models leave out: late payment and default, who sells and delivers the goods, and insurance, which has its own 2026 model. Those terms appear only in each company's own contract, which is why the pilot companies' contracts are still needed. Many older FRA documents are scanned images; their text was recovered by OCR and checked against the page before anything was quoted.
 
 ### The Unit We Analyse: How The Deal Is Financed
 
@@ -284,7 +295,7 @@ timeline
                              : ~100 cases reviewed by the scholar
     V1.7 Rules and schedules : Your rules as approved checklists
                              : Reading payment-schedule screenshots
-    V1.8 Lender coverage : All 38 licensed consumer-finance companies
+    V1.8 Lender coverage : All 52 FRA consumer-finance companies and seller-financiers
                          : Shops linked to their lenders
     V1.9 Learned behaviour : Smarter first questions
                            : Model tuned on approved examples
@@ -296,7 +307,7 @@ timeline
 | --- | --- |
 | V1.6 | The scholar reviews about 100 cases with no wrong conclusions, and the live checks pass |
 | V1.7 | Every rule in use is approved; schedule reading accuracy is reported |
-| V1.8 | All 38 licensed consumer-finance lenders are covered at template level; old or conflicting information is flagged |
+| V1.8 | All 52 FRA consumer-finance entities (39 licensed companies + 13 sellers registered to finance their own goods) are covered at template level; old or conflicting information is flagged |
 | V1.9 | Tests prove that estimates never change a conclusion |
 | V2.0 | The scholar-set error level is met on reviewed cases, with scholar sign-off |
 
@@ -304,7 +315,7 @@ timeline
 flowchart LR
     A["Appoint scholar"] --> B["Decide the 12 open cases"]
     B --> C["Approve first rule cards<br/>(late payment, rescheduling)"]
-    C --> D["Confirm 5 pilot companies"]
+    C --> D["Confirm 7 pilot companies"]
     D --> E["Build company dossiers"]
     E --> F["Scholar reviews ~100 cases"]
     F --> G["Release V1.6"]
@@ -319,6 +330,7 @@ flowchart LR
 | The first user is a retail buyer | 30 Sep 2026 |
 | Scholar decisions during V1.6 can approve rule cards directly | 30 Sep 2026 |
 | Public answers about named companies need a legal review first | 30 Sep 2026 |
+| Lender coverage (V1.8) is all 52 FRA consumer-finance entities: 39 licensed companies and 13 sellers registered to finance their own goods | 3 Oct 2026 |
 
 ### Needed From You
 
