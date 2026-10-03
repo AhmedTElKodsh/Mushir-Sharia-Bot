@@ -1,0 +1,55 @@
+[
+  {
+    "provider": "Souhoola",
+    "route": "manual_public_page",
+    "url": "https://souhoola.com/terms-conditions",
+    "review_date": "2026-10-02",
+    "method": "ordinary anonymous Codex in-app browser rendering; no login or forms",
+    "source_version_observed": "Last Updated: February 2026",
+    "source_sections": ["1. Introduction", "4. Services Description", "6. Payment Obligations", "7. Late Payments and Default", "8. Fees and Charges", "9. Merchant Transactions", "11. Intellectual Property", "17. Contact Us"],
+    "observations": {
+      "arrangement_description": "The displayed terms describe financing purchases from partner merchants; section 9 describes a financing facilitator with goods/service disputes directed to the merchant.",
+      "literal_role_excerpt": "Souhoola acts as a financing facilitator and is not responsible for the quality of goods or services provided by merchants",
+      "provider_name_observation": "Section 1 names Contact Investment for Consumer Finance; page title says CI Consumer Finance. The equivalence and effective legal identity are unresolved.",
+      "product_leads": ["merchant instalment purchases", "START vehicle financing", "U-LEARN education", "U-SAFE car insurance instalments", "U-TURN invoice-based advances"],
+      "charges": "Sections 6-8 refer to transaction/instalment-agreement disclosures for fees, interest and late penalties; exact applicable amounts are not provided by this general page.",
+      "corporate_email": "help@souhoola.com",
+      "corporate_hotline": "15227"
+    },
+    "raw_source_artifact": null,
+    "coverage": "selected factual observations; full page not stored because of reviewed reproduction restriction",
+    "review_status": "automated analyst observation; human second review pending",
+    "contractual_role_acceptance": "unresolved; published description is not the complete signed agreement",
+    "scholar_status": "pending"
+  },
+  {
+    "provider": "ValU",
+    "route": "manual_public_page",
+    "url": "https://valugroup.com/terms-and-conditions",
+    "review_date": "2026-10-02",
+    "method": "public web-reader factual review; no automated collector request",
+    "source_sections": ["licence and use restrictions", "consumer finance agreement cover"],
+    "observations": {
+      "party_lead": "The published agreement cover distinguishes U Consumer Finance from the payment/technology operator; Arabic party/name/licence observations require original human verification and applicable agreement cover/schedules.",
+      "collection_restriction": "Published licence/use conditions restrict automated data extraction, robots and similar collection. The collector decision remains restricted."
+    },
+    "raw_source_artifact": null,
+    "coverage": "brief source-linked observations only; no complete copied contract artifact",
+    "review_status": "automated analyst observation; human second review pending",
+    "contractual_role_acceptance": "unresolved for a selected merchant/product/version",
+    "scholar_status": "pending"
+  },
+  {
+    "provider": "Halan",
+    "route": "manual_public_page",
+    "url": "https://halan.com/contact-us-2/",
+    "review_date": "2026-10-02",
+    "method": "ordinary anonymous browser rendering of the scoped captured contact page",
+    "source_sections": ["We are Here to Help", "Help And Support", "Customer Service Hotline"],
+    "observations": {"corporate_email": "Info@halan.com", "mailto_target": "mailto:info@halan.com", "corporate_hotline": "16303"},
+    "raw_source_artifact": null,
+    "coverage": "selected browser observations; static raw capture preserves the obfuscated email placeholder",
+    "review_status": "automated analyst observation; human second review pending",
+    "scholar_status": "not applicable to corporate contact"
+  }
+]

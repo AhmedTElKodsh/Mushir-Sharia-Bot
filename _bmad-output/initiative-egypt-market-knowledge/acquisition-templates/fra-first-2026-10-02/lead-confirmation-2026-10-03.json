@@ -1,0 +1,382 @@
+{
+ "method": "Manual public-page review, 2026-10-03: one company-published page per entity, read in an ordinary browser or fetched; looked for a sentence naming the legal entity (ideally with its FRA licence number). established = the company's own page names the FRA licensee; verified = the company's own page ties the brand to the FRA-registered group/name without naming the exact licensee; lead = no such page found (reason recorded). No sign-in, no form submission, no file downloads.",
+ "results": [
+  {
+   "licence_key": "fra:consumer_finance:36",
+   "brand": "TRU (formerly Shahry)",
+   "status": "established",
+   "url": "https://trufinance.app/",
+   "observed": "footer: 'Consumer Finance License Number 36, year 2022'; '© 2026 Shahry For Consumer Finance'",
+   "note": "shahry.app redirects to trufinance.app: rebranded to TRU",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:15",
+   "brand": "Premium Card",
+   "status": "established",
+   "url": "https://premiumcard.net/",
+   "observed": "'Premium Card is the brand name of Premium International for Financial Services ... licensed to provide consumer finance services under license number 15, dated November 15, 2020.'",
+   "note": "",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:29",
+   "brand": "MLF Finance",
+   "status": "established",
+   "url": "https://mlf-finance.com/about-us/",
+   "observed": "'The First Egyptian entity to operate under the unified license system (Mortgage, Leasing, Factoring, and Consumer Finance)'; 'Copyright 2022, MLF FINANCE'",
+   "note": "matches FRA's four licences under one company number",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:8",
+   "brand": "Sky Finance",
+   "status": "established",
+   "url": "https://sf.sky.eg/",
+   "observed": "'SKY Finance Company \"SKY\" (Originator and Service) (\"the Company\") was established in 2017'",
+   "contact": "finance@sky.eg",
+   "note": "FRA EN name: sky Finance S.A.E",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:28",
+   "brand": "Ollin",
+   "status": "verified",
+   "url": "https://ollin.com.eg/about",
+   "observed": "'Ollin is a subsidiary of GlobalCorp for Financial Services.'",
+   "note": "FRA name جلوبال كورب للتمويل الاستهلاكي والعقاري(اولين) contains the brand; page names the parent, not the exact licensee",
+   "basis": "first_party_parent_statement"
+  },
+  {
+   "licence_key": "fra:consumer_finance:company-67654",
+   "brand": "Telda",
+   "status": "lead",
+   "url": "https://telda.app/legal/terms",
+   "observed": "terms: service 'offered by Telda, Inc'; card issued by Banque du Caire",
+   "note": "consumer-finance licensee تيلدا للتمويل الاستهلاكي not named on the site",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:37",
+   "brand": "Khazna",
+   "status": "lead",
+   "url": "https://khazna.app/terms-conditions.html",
+   "observed": "khazna.app/terms-conditions.html: terms cover payroll, card and pension services; consumer-finance licensee خزنه للتمويل الاستهلاكي not named",
+   "note": "khazna.app no longer serves the site",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:53",
+   "brand": "Klivvr",
+   "status": "lead",
+   "url": "https://klivvr.com/",
+   "observed": "homepage names no legal entity; /legal/terms is served as a file download (not retried)",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:16",
+   "brand": "ALJ Finance",
+   "status": "lead",
+   "url": "https://www.aljfinance.com.eg/",
+   "observed": "domain does not resolve (DNS) on 2026-10-03",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:32",
+   "brand": "MOGO",
+   "status": "lead",
+   "url": "https://midtakseet.com/about-us/",
+   "observed": "TLS error; browser navigation refused",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:6",
+   "brand": "seven",
+   "status": "established",
+   "url": "https://seven.eg/privacy-policy/",
+   "observed": "policy names 'Beltone Consumer Finance Company' as the financing party throughout (e.g. 'Beltone Consumer Finance Company is entitled to accept or reject the financing request')",
+   "contact": "Sevencomplaints@seven.eg",
+   "note": "FRA EN name: Beltone Consumer Finance- Seven",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:27",
+   "brand": "Takka",
+   "status": "verified",
+   "url": "https://www.adib.eg/Subsidiaries/adiconsumerfinance",
+   "observed": "'Established in April 2021 as a subsidiary of ADIB ... ADI Consumer Finance is the first sharia compliant financing company that is owned by an Islamic bank in Egypt'; 'Takka ADI-CF's first digital financing solution'",
+   "note": "parent bank's own page; downgraded from established for consistency with the parent-statement rule",
+   "basis": "first_party_parent_statement"
+  },
+  {
+   "licence_key": "fra:consumer_finance:46",
+   "brand": "O2 Finance",
+   "status": "established",
+   "url": "https://o2-finance.com/about-us/",
+   "observed": "'O2 Finance is a consumer Financing company established in 2023'",
+   "contact": "info@o2-finance.com",
+   "note": "FRA EN name: O2 FINANCE",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:45",
+   "brand": "Just Finance",
+   "status": "verified",
+   "url": "https://justfinance-eg.com/",
+   "observed": "'Copyright © 2023 Just Finance - All Rights Reserved.' (site otherwise empty)",
+   "note": "name matches FRA EN 'Just Finance (S.A.E)'; no licensee statement",
+   "basis": "fra_register_name_plus_first_party_site"
+  },
+  {
+   "licence_key": "fra:consumer_finance:30",
+   "brand": "myfawry taqseet",
+   "status": "established",
+   "url": "https://www.fawry.com/bnplbuy-now-pay-later/",
+   "observed": "'Fawry Consumer Finance is operating under FRA'; 'Fawry Consumer Finance Company number: 30'; 'Company operating license date 20/12/2021'",
+   "note": "fetch tool got 403; page read in an ordinary browser",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:34",
+   "brand": "One Finance",
+   "status": "lead",
+   "url": "https://onefinance.com.eg/",
+   "observed": "homepage gives only info@onefinance.com.eg; product page redirects to home. Search snippet claims 'license number 34, dated 28/04/2022' but no readable page showed it",
+   "contact": "info@onefinance.com.eg",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:31",
+   "brand": "Bedayti",
+   "status": "lead",
+   "url": "https://bedayti.com/en",
+   "observed": "site is Bedayti MicroFinance; no consumer-finance company named",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:39",
+   "brand": "Alkan Finance",
+   "status": "lead",
+   "url": "https://alkanholding.com/about/",
+   "observed": "holding-company page; no consumer-finance subsidiary named",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:14",
+   "brand": "Rawaj",
+   "status": "lead",
+   "url": "https://rawaj-egypt.com/about-us/",
+   "observed": "page not found (only info@rawaj-egypt.com in footer)",
+   "contact": "info@rawaj-egypt.com",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:22",
+   "brand": "Blnk",
+   "status": "established",
+   "url": "https://www.blnk.ai/index.php/privacy",
+   "observed": "'Welcome to blnk Consumer Finance S.A.E. (the \"Company\") privacy policy and general terms and conditions.'; mentions 'financial institutions to whom our entitlements or rights will be assigned'",
+   "note": "receivables may be assigned (scholar point)",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:51",
+   "brand": "Lime",
+   "status": "established",
+   "url": "https://www.lime.com.eg/en/terms",
+   "observed": "'Lime Consumer Finance S.A.E. is a licensed consumer finance company that provides financing and installment payment services. Lime does not sell physical goods or merchandise.'",
+   "contact": "contactus@lime.com.eg",
+   "note": "self-described financier, not seller",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:54",
+   "brand": "algo",
+   "status": "established",
+   "url": "https://algofinance.com/",
+   "observed": "'Consumer Finance License Number 54, year 2026'; 'Under the supervion and regulation of the FRA'",
+   "contact": "info@algofinance.com",
+   "note": "licence number matches FRA #54",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:40",
+   "brand": "Waseela (AUR Consumer Finance)",
+   "status": "established",
+   "url": "https://www.waseela-cf.com/en/terms-conditions",
+   "observed": "'We are AUR Consumer Finance Company J.S.C - Waseela ... holding a license to practice consumer financing activity ... under No. 40 of 2020, registered under Commercial Registry No. 90420'",
+   "contact": "info@waseela-cf.com",
+   "note": "brand is Waseela",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance:company-67650",
+   "brand": "ADVA",
+   "status": "lead",
+   "url": "https://www.advaeg.com/",
+   "observed": "TLS handshake failure; browser navigation refused",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:50",
+   "brand": "Buy and Go",
+   "status": "lead",
+   "url": "",
+   "observed": "no company website found by search",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:55",
+   "brand": "Malaz",
+   "status": "lead",
+   "url": "",
+   "observed": "search finds only Malaz Capital (venture capital); no consumer-finance site",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:49",
+   "brand": "Global Contact (Contact group)",
+   "status": "verified",
+   "url": "https://investorrelations.contact.eg/ar/share-and-corporate-information",
+   "observed": "subsidiary list: 'جلوبال – كونتكت للتمويل الإستهلاكي ش.م.م'",
+   "note": "Contact Financial Holding investor-relations page lists it as a group company",
+   "basis": "first_party_parent_statement"
+  },
+  {
+   "licence_key": "fra:consumer_finance:52",
+   "brand": "Bravo (Contact group)",
+   "status": "verified",
+   "url": "https://investorrelations.contact.eg/ar/share-and-corporate-information",
+   "observed": "subsidiary list: 'برافو للتمويل الإستهلاكي ش.م.م'",
+   "note": "Contact Financial Holding investor-relations page lists it as a group company; Bravo is the former Wasla app (third-party reports). gobravo.io is an unrelated company.",
+   "basis": "first_party_parent_statement"
+  },
+  {
+   "licence_key": "fra:consumer_finance_providers:17",
+   "brand": "Contact (Ezz Elarab Contact)",
+   "status": "verified",
+   "url": "https://investorrelations.contact.eg/ar/share-and-corporate-information",
+   "observed": "subsidiary list: 'عز العرب كونتكت فاينانشيال ش.ذ.م.م.'",
+   "note": "Contact Financial Holding investor-relations page lists it as a group company",
+   "basis": "first_party_parent_statement"
+  },
+  {
+   "licence_key": "fra:consumer_finance_providers:19",
+   "brand": "Contact (car instalments)",
+   "status": "verified",
+   "url": "https://investorrelations.contact.eg/ar/share-and-corporate-information",
+   "observed": "subsidiary list: 'كونتكت لتقسيط السيارات ش.م.م. (كونتكت المصرية العالمية لتقسيط السيارات سابقاً)'",
+   "note": "Contact Financial Holding investor-relations page lists it as a group company",
+   "basis": "first_party_parent_statement"
+  },
+  {
+   "licence_key": "fra:consumer_finance_providers:24",
+   "brand": "Contact (Bavarian Contact)",
+   "status": "verified",
+   "url": "https://investorrelations.contact.eg/ar/share-and-corporate-information",
+   "observed": "subsidiary list: 'بافاريان-كونتكت لتجارة السيارات ش.م.م.'",
+   "note": "Contact Financial Holding investor-relations page lists it as a group company",
+   "basis": "first_party_parent_statement"
+  },
+  {
+   "licence_key": "fra:consumer_finance_providers:18",
+   "brand": "SMG (Contact group)",
+   "status": "verified",
+   "url": "https://investorrelations.contact.eg/ar/share-and-corporate-information",
+   "observed": "subsidiary list: 'إس إم جي لخدمات التقسيط ش.ذ.م.م.'",
+   "note": "Contact Financial Holding investor-relations page lists it as a group company",
+   "basis": "first_party_parent_statement"
+  },
+  {
+   "licence_key": "fra:consumer_finance_providers:25",
+   "brand": "Star (Contact group)",
+   "status": "verified",
+   "url": "https://investorrelations.contact.eg/ar/share-and-corporate-information",
+   "observed": "subsidiary list: 'ستار لتقسيط السيارات ش.ذ.م.م.'",
+   "note": "Contact Financial Holding investor-relations page lists it as a group company; replaces the third-party Thara Capital report.",
+   "basis": "first_party_parent_statement"
+  },
+  {
+   "licence_key": "fra:consumer_finance_providers:2",
+   "brand": "Aman",
+   "status": "verified",
+   "url": "https://aman.eg/ar/",
+   "observed": "homepage lists أمان للخدمات المالية among the services of شركة أمان القابضة",
+   "note": "parent statement; the instalment page (own store, merchant network, branches) does not say whether #2 or #43 extends the credit",
+   "basis": "first_party_parent_statement"
+  },
+  {
+   "licence_key": "fra:consumer_finance_providers:11",
+   "brand": "RIZ / Rizkalla",
+   "status": "established",
+   "url": "https://riz.shop/pages/terms-conditions-1",
+   "observed": "terms name 'ار اي زد جروب للتجارة', 102 ب شارع الميرغني - مصر الجديدة",
+   "note": "contact support@riz.shop / online.support@rizkalla-co.com; terms do not describe the instalment contract",
+   "basis": "first_party_page_legal_name"
+  },
+  {
+   "licence_key": "fra:consumer_finance_providers:41",
+   "brand": "Orange Egypt",
+   "status": "verified",
+   "url": "https://www.orange.eg/en/about/media-center/press-kit/orange-egypt-signs-a-cooperation-agreement-with-contact-274-event",
+   "observed": "Orange press release: instalments 'provided by Contact Creditech' through the MyOrange app; FRA provider name اورنج مصر للاتصالات",
+   "note": "register-name match; Orange's own-sales financing under provider #41 is not described on its pages",
+   "basis": "fra_register_name_plus_first_party_site"
+  },
+  {
+   "licence_key": "fra:consumer_finance_providers:21",
+   "brand": "Mashroey",
+   "status": "verified",
+   "url": "https://mashroey.com",
+   "observed": "homepage: instalments on tricycles and motorcycles under the مشروعي brand; no legal name shown",
+   "note": "register-name match (مشروعي للتجاره); /contact-us returned 404",
+   "basis": "fra_register_name_plus_first_party_site"
+  },
+  {
+   "licence_key": "fra:consumer_finance:56",
+   "brand": "Corplease",
+   "status": "verified",
+   "url": "https://corplease.com.eg/about-us.html",
+   "observed": "about page: corporate leasing only, no consumer-finance activity mentioned",
+   "note": "register-name match (كوربليس) and same company number as Corplease leasing; CF licence dated 2026-08-24 is too new to appear on the site",
+   "basis": "fra_register_name_plus_first_party_site"
+  },
+  {
+   "licence_key": "fra:consumer_finance_providers:35",
+   "brand": "Abu Ghaly",
+   "status": "lead",
+   "url": "https://www.aboughalymotors.com/AGMServices/Finance",
+   "observed": "aboughalymotors.com returned HTTP 503 (two pages); geelyeg.com finance page has no entity text",
+   "note": "search shows Abou Ghaly Finance as a Contact joint venture; not read on a first-party page",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:47",
+   "brand": "معاك",
+   "status": "lead",
+   "url": "",
+   "observed": "only the FRA record and a Maak Microfinance social page found; FRA had suspended activity pending capital adjustment (2025, third-party report)",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  },
+  {
+   "licence_key": "fra:consumer_finance:company-67653",
+   "brand": "Manzel",
+   "status": "lead",
+   "url": "",
+   "observed": "news only (amwalalghad.com 2026-09-07: final licence for consumer and mortgage finance via fintech); no company site found",
+   "note": "",
+   "basis": "third_party_report_or_search"
+  }
+ ]
+}

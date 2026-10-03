@@ -79,8 +79,12 @@ def test_evaluated_approved_rule_verdict_passes_unchanged():
 
 
 @pytest.mark.parametrize("case_id", ["GC-004", "GC-011", "GC-018"])
-def test_misrouted_permissibility_question_with_literal_quote_verdict_is_withheld(case_id):
-    """Worst case: the writer quotes the retrieved passage exactly and prefixes a verdict."""
+def test_arabic_permissibility_question_with_literal_quote_verdict_is_withheld(case_id):
+    """Worst case: the writer quotes the retrieved passage exactly and prefixes a verdict.
+
+    These questions once routed to FAS accounting (deferred-work item 8). They now route to
+    rule evaluation, and the verdict is still withheld without an approved rule card.
+    """
     from tests.evaluation.fixtures.pipeline import build_pipeline_under_test
 
     case = yaml.safe_load((GOLD / f"{case_id}.yaml").read_text(encoding="utf-8"))
@@ -97,5 +101,6 @@ def test_misrouted_permissibility_question_with_literal_quote_verdict_is_withhel
     finally:
         pipeline.teardown()
 
-    assert result["metadata"]["standards_route"]["requires_rule_evaluation"] is False
+    assert result["metadata"]["standards_route"]["requires_rule_evaluation"] is True
     assert result["ruling"] == "INSUFFICIENT_DATA"
+    assert result["metadata"]["decision_trace"]["decided_by"]["gate"] == "approved_rule"

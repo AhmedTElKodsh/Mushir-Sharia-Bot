@@ -8,8 +8,9 @@ Last refreshed: 2026-10-01 · Live app V1.5 (`1.5.0`) · V1.6 dual-lane prototyp
 | --- | --- |
 | Active work | V1.6 dual-lane prototype for Egyptian instalment finance: [initiative](../../../_bmad-output/initiative-egypt-market-knowledge/initiative-egypt-market-knowledge.md) and [spec](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/spec-egypt-market-poc.md) |
 | Runtime rule | No Sharia verdict without a scholar-approved rule card; see [Runtime Safety Model](runtime-safety-model.md) |
-| Tests | 1,234 passed, 12 waiting for a scholar decision, 47 skipped; Playwright 30/30 |
-| Main blocker | **No scholar appointed.** Rule cards, the 12 open cases and the V1.6 exit gate all depend on one |
+| Tests | 1,661 passed, 2 strict xfail waiting for a scholar decision (TC-F1, TC-G1), 48 skipped; Playwright 42/42 (last browser run, 1 Oct) |
+| Gold set | Tests features, including correct abstention; developer-written rulings are scholar-pending targets ([release ladder](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/release-ladder.md)) |
+| Main blocker | **No scholar appointed** (first meeting expected ~15 Oct). Five draft rule cards, 15 review cases and the V1.6 exit gate depend on one |
 
 ```mermaid
 flowchart LR
@@ -38,7 +39,7 @@ flowchart LR
 ## For The Client
 
 - [Mushir Client Guide](client-guide.md): the single client-facing guide: status, how Mushir answers, Egyptian market findings, the scholar's role, release plan and decisions needed. Page version: [client-pages/client-guide.html](client-pages/client-guide.html), shared at https://claude.ai/artifact/N5sTGi4S15Kj3A1KdADGtP.
-- [Scholar Review Pack](client-pages/scholar-review-pack.html) (shared at https://claude.ai/artifact/4CE8SuwyTbb4vCQK56asMQ): the decision document for the 12 questions waiting for a scholar, with options, a reply template and anticipated questions.
+- [Scholar Review Pack](client-pages/scholar-review-pack.html) (shared at https://claude.ai/artifact/4CE8SuwyTbb4vCQK56asMQ): the decision document for the 15 review cases, five draft rule cards and all open client/scholar questions, waiting for a scholar, with options, a reply template and anticipated questions.
 
 ## Start Here (Developers And Agents)
 
@@ -99,7 +100,7 @@ Kept for history; do not use them for current behaviour or figures.
 | Task | Best doc |
 | --- | --- |
 | Explain Mushir to the client | [Client Guide](client-guide.md) |
-| Get scholar decisions on the 12 open cases | [Scholar Review Pack](../../../outputs/client-review-pack/index.html) |
+| Get scholar decisions on the 15 review cases and draft rule cards | [Scholar Review Pack](client-pages/scholar-review-pack.html) |
 | Understand why Mushir deferred an answer | [Runtime Safety Model](runtime-safety-model.md) |
 | Know what V1.6 must deliver | [Spec](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/spec-egypt-market-poc.md) and [release ladder](../../../_bmad-output/initiative-egypt-market-knowledge/spec-egypt-market-poc/release-ladder.md) |
 | See epic progress | [Roadmap And Planning Index](../next-level-plans/README.md) |

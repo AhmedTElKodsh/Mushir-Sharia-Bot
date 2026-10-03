@@ -1,7 +1,7 @@
 ﻿market_label,outcome,licence_keys,link_statuses,note
 Mylo,evidence_link,fra:consumer_finance:48,verified,first_party_parent_statement_plus_register_name
-Contact,evidence_link,fra:consumer_finance:33 | fra:consumer_finance:1 | fra:consumer_finance:49 | fra:consumer_finance_providers:17 | fra:consumer_finance_providers:19 | fra:consumer_finance_providers:24 | fra:factoring:8,established | verified | lead | lead | lead | lead | lead,first_party_terms_appendix; fra_register_name
-Aman,evidence_link,fra:consumer_finance:43 | fra:consumer_finance_providers:2,verified | lead,fra_register_name
+Contact,evidence_link,fra:consumer_finance:33 | fra:consumer_finance:1 | fra:consumer_finance:49 | fra:consumer_finance_providers:17 | fra:consumer_finance_providers:19 | fra:consumer_finance_providers:24 | fra:factoring:8,established | verified | verified | verified | verified | verified | lead,first_party_terms_appendix; fra_register_name; first_party_parent_statement
+Aman,evidence_link,fra:consumer_finance:43 | fra:consumer_finance_providers:2,verified | verified,fra_register_name; first_party_parent_statement
 CIB,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
 Banque Misr,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"
 EG Bank,bank_outside_fra_register,,,"bank instalment programme; CBE-supervised, not in the FRA financing register"

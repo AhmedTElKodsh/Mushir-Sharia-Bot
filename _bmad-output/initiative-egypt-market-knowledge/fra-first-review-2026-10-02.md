@@ -88,12 +88,28 @@ The English page links the Wakala template to the Ijarah file; the Arabic page l
 
 | Link status | Rows | Meaning |
 |---|---|---|
-| established | 4 | first-party document names the licensee: valU #13, Contact Credit Tech #33, Drive Finance #26, B.TECH #7 |
-| verified | 6 | FRA register name or first-party parent statement |
-| lead | 41 | web search or press, or a first-party page that does not name the entity |
+| established | 16 | first-party document names the licensee (4 at first pass; 12 more on 2026-10-03, below) |
+| verified | 20 | FRA register name plus the company's own site, or a first-party parent statement |
+| lead | 15 | checked one page each on 2026-10-03; reason recorded per row |
 | unlinked | 1 | Fine Stone (providers register) |
 
 Market financier labels now resolve as follows (`fra_market_label_resolution.csv`): valU (all spellings), Contact, Souhoola, Aman, Halan, Mylo and Forsa resolve to FRA licences; the 10 bank labels read `bank_outside_fra_register`. Only **Sympl** remains `not_found_by_name`.
+
+## Lead confirmation, one company page each (2026-10-03)
+
+All 41 entities that held only `lead` links were checked against one company-published page each (read or fetched; no sign-in, no forms, no downloads). Evidence record: `acquisition-templates/fra-first-2026-10-02/lead-confirmation-2026-10-03.json`, applied by `build_brand_links.py`.
+
+| Result | Count | Entities |
+|---|---|---|
+| established | 12 | TRU/Shahry #36 (footer: licence 36), Premium Card #15 (licence 15), MLF #29, Sky #8, seven/Beltone #6, O2 #46, Fawry #30 (licence 30), Blnk #22, Lime #51, algo #54 (licence 54), Waseela/AUR #40 (licence 40), RIZ #11 |
+| verified | 14 | Ollin #28 and Takka #27 (parent statement), Just Finance #45, Corplease #56, Orange #41, Mashroey #21 (register name + own site), Aman #2 (parent homepage), Contact group #49, #52 (Bravo), providers #17, #18, #19, #24, #25 (Contact investor-relations subsidiary list) |
+| lead | 15 | Telda, Khazna, Klivvr, ALJ, MOGO, One Finance, Bedayti, Alkan, Rawaj, ADVA, Buy and Go, Malaz, معاك, Manzel, Abou Ghaly |
+
+Notes.
+- Takka was first recorded as established from ADIB's subsidiary page; it is `verified` because a parent's statement is the verified tier by definition. The Contact group rows follow the same rule.
+- **Contact's group is larger than its brand suggests.** Its investor-relations page lists seven FRA-registered companies beyond Contact Credit Tech (#33) and #1: Global Contact #49, Bravo #52, Ezz Elarab Contact #17, Contact car instalments #19, Bavarian Contact #24, SMG #18 and Star #25. Dealer-branded car plans therefore sit inside one financing group.
+- Scholar points seen in passing: Lime states it "does not sell physical goods" (pure financier); Blnk's policy contemplates assigning its entitlements to financial institutions (receivable sale).
+- Lead reasons: no first-party page names the licensee (Telda: Telda, Inc.; Khazna: payroll terms only; Bedayti: microfinance site; Alkan: holding page); site unreachable (ALJ DNS, MOGO and ADVA TLS, Abou Ghaly HTTP 503, Rawaj 404); Klivvr's terms are a file download (not retried); no site found (Buy and Go, Malaz, معاك, Manzel).
 
 ## Pilot: seven financiers, two contrast pairs
 
@@ -115,12 +131,12 @@ The user chose to work these first: they are the regulator's own answer to "does
 |---|---|---|
 | B.TECH #7 | **established** | Terms: "خدمات الميني كاش تقدم تحت ترخيص الهيئة العامة للرقابة المالية رقم 7/2020". B.TECH's credit department approves instalments and computes the interest. Mylo runs separately through B.TECH Finance (#48). |
 | Raya #3 | verified | Takseety is "برنامج تمويل مباشر حصري مملوك لشركة راية" (an exclusive direct financing programme owned by Raya). **But** the shop's terms contract party is شركة راية للتجارة (Raya Trade), while FRA registers رايه للالكترونيات (Raya Electronics). Which entity extends the credit is open. |
-| Rizkalla (RIZ Group) #11 | lead | riz.shop: "RizPay direct installment program"; legal entity not named on the page |
-| Aman Financial Services #2 | lead | Press (2020-04-28) reports the provider licence. Aman's pages sell through its store, merchants and branches under one brand; none names #2. |
-| Orange Egypt #41 | lead | e-shop offers "cash or instalment"; also distributes Contact Creditech financing. Both routes, terms not located. |
+| Rizkalla (RIZ Group) #11 | **established** (2026-10-03) | riz.shop: "RizPay direct installment program"; riz.shop terms name ار اي زد جروب للتجارة |
+| Aman Financial Services #2 | verified (2026-10-03) | Press (2020-04-28) reports the provider licence. Aman's pages sell through its store, merchants and branches under one brand; none names #2. |
+| Orange Egypt #41 | verified (2026-10-03) | e-shop offers "cash or instalment"; also distributes Contact Creditech financing. Both routes, terms not located. |
 | Abou Ghaly #35 | lead | Search: "Abou Ghaly Finance" is a partnership with **Contact** Finance |
-| Contact family #17, #19, #24; SMG #18 | lead | Contact-linked car dealers (SMG launched with Contact) |
-| Mashroey #21, Star #25 | lead | instalment sellers of motorbikes/tuk-tuks and cars; third-party sources only |
+| Contact family #17, #19, #24; SMG #18 | verified (2026-10-03) | Contact's investor-relations page lists all four as group companies |
+| Mashroey #21, Star #25 | verified (2026-10-03) | Mashroey: register name + own site; Star: listed as a Contact group company (not Thara Capital, as a directory claimed) |
 | Fine Stone #38 | unlinked | no web presence found |
 
 **Two findings for the scholar.**

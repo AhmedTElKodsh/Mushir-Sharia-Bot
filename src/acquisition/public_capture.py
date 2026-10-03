@@ -26,7 +26,7 @@ from urllib.parse import unquote, urljoin, urlsplit
 from src.acquisition.url_safety import ensure_public_url
 
 USER_AGENT = "MushirResearchBot/0.2 (+public-source evidence research)"
-TOOL_VERSION = "public_capture/0.2"
+TOOL_VERSION = "public_capture/0.3"
 _DNS_SLOTS = threading.BoundedSemaphore(8)
 
 
@@ -400,18 +400,20 @@ def html_text(body: bytes, content_type: str) -> tuple[str, str]:
 
 
 class VisibleText(HTMLParser):
-    def __init__(self, excluded_regions=()):
+    def __init__(self, excluded_regions=(), excluded_roles=()):
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
         self.hidden = 0
         self.stack = []
         self.excluded = {"head", "title", "script", "style", "noscript", *excluded_regions}
+        self.excluded_roles = set(excluded_roles)
         self.forms = []
         self.password_form = False
 
     def handle_starttag(self, tag, attrs):
         values = {key: value or "" for key, value in attrs}
-        hidden = (tag in self.excluded or "hidden" in values or values.get("aria-hidden", "").lower() == "true"
+        hidden = (tag in self.excluded or bool(self.excluded_roles.intersection(values.get("role", "").lower().split()))
+                  or "hidden" in values or values.get("aria-hidden", "").lower() == "true"
                   or bool(re.search(r"(?i)(?:display\s*:\s*none|visibility\s*:\s*hidden|content-visibility\s*:\s*hidden)", values.get("style", ""))))
         if tag == "form":
             self.forms.append(not self.hidden and not hidden)
@@ -563,6 +565,9 @@ class PublicCollector:
             try:
                 response = self.transport(url, self.max_bytes, self.timeout)
             except CaptureStop as exc:
+                status = exc.diagnostics.get("http_status")
+                if status in {401, 403, 451, 429}:
+                    self.paused[host] = "login_gated" if status == 401 else ("rate_limited" if status == 429 else "blocked_by_security")
                 state = "robots_unreachable" if purpose == "robots" and exc.state == "request_timeout" else exc.state
                 self.event({**audit, "state": state, **exc.diagnostics})
                 if exc.state == "request_timeout" and purpose != "robots" and attempt < self.retries:
@@ -578,31 +583,9 @@ class PublicCollector:
             response = Response(response.status, {k.lower(): v for k, v in response.headers.items()}, response.body, response.connected_address, request_id)
             audit.update(connected_address=response.connected_address, http_status=response.status, content_type=response.headers.get("content-type", ""),
                          headers={k: v for k, v in response.headers.items() if k in safe_headers})
-            if len(response.body) > self.max_bytes:
-                self.event({**audit, "state": "response_too_large", "bytes_received": len(response.body)})
-                raise CaptureStop("response_too_large")
-            # Storage errors propagate; they must never cause another network request.
-            try:
-                raw = self.artifact(response.body, ".bin")
-            except OSError as exc:
-                self.event({**audit, "state": "output_failed", "error_type": type(exc).__name__})
-                raise
-            audit.update(raw=raw, **raw)
-            try:
-                body = decoded_body(response, self.max_bytes)
-            except CaptureStop as exc:
-                self.event({**audit, "state": exc.state})
-                raise
-            try:
-                audit["decoded"] = self.artifact(body, ".bin", "derived")
-            except OSError as exc:
-                self.event({**audit, "state": "output_failed", "error_type": type(exc).__name__})
-                raise
-            self.event(audit)
-            security_gate = gate(response, body)
-            if security_gate and security_gate != "rate_limited":
-                self.paused[host] = security_gate
-                return response, body
+            status_gate = gate(response, b"")
+            if status_gate and status_gate != "rate_limited":
+                self.paused[host] = status_gate
             if response.status == 429 or response.status >= 500:
                 retry_after = response.headers.get("retry-after", "")
                 try:
@@ -617,6 +600,35 @@ class PublicCollector:
                 next_at = (self.now() + timedelta(seconds=wait)).isoformat() if wait < 10 ** 9 else None
                 self.cooldowns[host] = (self.monotonic() + wait, next_at)
                 self.event({"record_type": "host_cooldown", "host": host, "next_permitted_at": next_at})
+            if len(response.body) > self.max_bytes:
+                self.event({**audit, "state": "response_too_large", "bytes_received": len(response.body)})
+                raise CaptureStop("response_too_large")
+            # Storage errors propagate; they must never cause another network request.
+            try:
+                raw = self.artifact(response.body, ".bin")
+            except OSError as exc:
+                self.event({**audit, "state": "output_failed", "error_type": type(exc).__name__})
+                raise
+            audit.update(raw=raw, **raw)
+            try:
+                body = decoded_body(response, self.max_bytes)
+            except CaptureStop as exc:
+                if status_gate:
+                    self.event({**audit, "state": status_gate, "encoding_state": exc.state})
+                    raise CaptureStop(status_gate, encoding_state=exc.state) from None
+                self.event({**audit, "state": exc.state})
+                raise
+            try:
+                audit["decoded"] = self.artifact(body, ".bin", "derived")
+            except OSError as exc:
+                self.event({**audit, "state": "output_failed", "error_type": type(exc).__name__})
+                raise
+            self.event(audit)
+            security_gate = gate(response, body)
+            if security_gate and security_gate != "rate_limited":
+                self.paused[host] = security_gate
+                return response, body
+            if response.status == 429 or response.status >= 500:
                 if purpose == "robots":
                     return response, body
                 if wait > self.max_retry_wait:
@@ -745,7 +757,13 @@ class PublicCollector:
                     parser = VisibleText()
                     parser.feed(html)
                     text = parser.text() if content_type != "text/plain" else html
-                    if len(text.strip()) < 20:
+                    substantive = text
+                    if content_type != "text/plain":
+                        content = VisibleText(excluded_regions=("nav", "footer", "aside", "header"),
+                                              excluded_roles=("navigation", "banner", "complementary", "contentinfo"))
+                        content.feed(html)
+                        substantive = content.text()
+                    if len(substantive.strip()) < 20:
                         raise CaptureStop("render_needed")
                     extracted = {"text": text, "literal_identity": extractor(html) if extractor else {}}
                     result["extraction_status"] = "visible_text"

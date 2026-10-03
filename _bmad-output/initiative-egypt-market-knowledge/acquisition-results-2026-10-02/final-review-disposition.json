@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-02",
+  "review_type": "two independent bounded final plan/result consistency reviews, plus independent collector correction review",
+  "reviews": [
+    {
+      "reviewer": "pilot_refresh_review automated agent",
+      "collector_finding": "ARIA navigation/header-only shell still passed completion",
+      "collector_resolution": "Fixed completion projection; independent reviewer exercised nav, role-navigation, header and role-banner variants and confirmed render_needed/incomplete with original text projection preserved.",
+      "plan_result_finding": "Follow-up scope records copied initial reviewed_at",
+      "plan_result_resolution": "Dated audit correction records actual execution/file bounds and leaves exact later review instant unknown; originals preserved. Reviewer verified bounds and reported no remaining findings in its bounded review."
+    },
+    {
+      "reviewer": "acquisition_edges automated agent",
+      "plan_result_finding": "OBS-006, OBS-009 and OBS-024 selected passages did not cover all asserted subfacts",
+      "resolution": "Widened those passages and 15 similar multi-fact entries. Reviewer independently verified the three reported passages against stored extraction and closed the specific finding."
+    }
+  ],
+  "verification": {
+    "focused_tests_passed": 196,
+    "collector_requests": 17,
+    "captured_artifacts": 11,
+    "distinct_manifest_artifact_hashes_verified": 45,
+    "source_linked_observations": 32,
+    "expanded_multi_fact_passages": 18
+  },
+  "limits": "Bounded automated reviews do not establish complete source permissions, complete agreements, contractual applicability, accepted legal roles, human second review or scholar verdicts. Earlier legacy-route findings remain separate."
+}

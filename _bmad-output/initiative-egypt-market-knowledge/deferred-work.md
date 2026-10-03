@@ -6,22 +6,26 @@ This ledger is canonical; entries below are append-only history. Still open:
 
 | # | Item | Waits for |
 | --- | --- | --- |
-| 1 | 15 stale test expectations (GC-003, 004, 005, 007, 008, 009, 010, 011, 012, 016, 017, 018, 019; TC-F1, TC-G1) | A scholar decision per case ([review pack](../../outputs/client-review-pack/index.html)) |
+| 1 | 2 routing expectations (TC-F1, TC-G1) await scholar adjudication. The 10 correctly routed GC cases now pass as feature checks (correct abstention, 2026-10-01); their developer-written rulings stay as scholar-pending targets | A scholar decision per case ([review pack](../../.planning/sharia-compliance-chatbot/docs/client-pages/scholar-review-pack.html)) |
 | 2 | Semantic mechanism evidence and claim-scoped verdict eligibility (claim-support gate, ticket T6) | Pilot dossiers and runtime adoption |
 | 3 | Private document locators for schedule intake | V1.7 |
 | 4 | DNS names resolving to private addresses pass the public-URL check | Fetch-time check in acquisition code |
 | 5 | Negation masks a contract name only within three preceding words | Clause-aware parsing |
 | 6 | SQLite writes and LLM calls are synchronous inside async routes | Performance work |
 | 7 | `AAOIFICitation.confidence_score` kept internally | Scholar-review code cleanup |
-| 8 | Permissibility questions (e.g. GC-004/011/018, Arabic "هل يحق…") route to FAS accounting informational routes with `requires_rule_evaluation: false` | Router change: question type PERMISSIBILITY must select a rule-evaluation route |
-| 10 | FRA-first table, opened 2026-10-02: 41 of 52 entity rows have only `lead` brand links and 1 provider is unlinked (Fine Stone); the seller-financier pass (2026-10-02) left Raya Trade vs Raya Electronics and Contact-backed dealer plans as open creditor questions. Sympl stays `not_found_by_name`. Press reports 48 licensed consumer-finance companies at end-2025, but the FRA register shows 39; the difference is unexplained (revocations? FRA Decision 43/2026 suspended new applications) | First-party captures naming each legal entity; an FRA licence-decisions source |
+| 10 | FRA-first table, opened 2026-10-02: after the 2026-10-03 one-page-per-company check, 15 of 52 entity rows still have only `lead` brand links (reasons recorded in `lead-confirmation-2026-10-03.json`) and 1 provider is unlinked (Fine Stone); the seller-financier pass (2026-10-02) left Raya Trade vs Raya Electronics and Contact-backed dealer plans as open creditor questions. Sympl stays `not_found_by_name`. Press reports 48 licensed consumer-finance companies at end-2025, but the FRA register shows 39; the difference is unexplained (revocations? FRA Decision 43/2026 suspended new applications) | First-party captures naming each legal entity; an FRA licence-decisions source |
 | 12 | FRA publications (2026-10-02): the 51 scanned documents were OCR'd on 2026-10-03 (Windows OCR; reading aid, so verify quotes against page images); 14 sukuk/fund prospectuses exceeded the 10 MB cap; the FRA Murabaha consumer-finance template's Aman references and direct-invoice clause need the scholar's reading | Scholar review; human check of quoted OCR passages |
 | 13 | FRA model contracts: 2021 vs 2026 compared (unchanged in substance) and Sharia Murabaha vs Model (1) compared (2026-10-03). Still open: legal check on whether Decree 457/2020 still applies (the 2026 rulebook omits it); request the current certified Murabaha agreements of Aman #43 and B.TECH #48 (FRA Islamic-Murabaha licensees) and compare them with FRA's template | Legal review; provider documents |
 | 11 | Open findings from the 2026-10-02 double review, not fixed by the FRA-first work: the role summarizer still keeps a negated financier ("We do not offer financing through valU") as established (`scripts/summarize_egypt_installment_market.py:77`); the FRA collector checks only origin, not path policy, on redirects; CrawlerEngine is a weaker parallel route | Separate correction slice |
+| 9 | `ApprovedCardEvaluator` selects cards by archetype alone and returns `multiple_applicable_rules` when two approved cards share an archetype. All five pilot drafts cover ARC-CF, so approving a second one would block every ARC-CF answer (safe, but useless) | Per-question card selection (by question topic or material fact) before the second card is approved |
 
-Closed since the earlier entries: Playwright UI specs ran 30/30 on 2026-10-01 (Chromium installed); the broken `.venv` noted in the former implementation-artifacts ledger was rebuilt.
+Closed since the earlier entries: item 8 (2026-10-01): `AR_JUDGMENT_ASKS` in `src/chatbot/commercial_assessment.py` makes هل يحق / هل يصح / هل تتحول / هل يتحول / من يتحمل permissibility questions, so GC-004/011/018 reach the approved-rule gate and the scholar queue (`tests/test_commercial_assessment_arabic_judgment_asks.py`). Also: Playwright UI specs ran 30/30 on 2026-10-01 (Chromium installed); the broken `.venv` noted in the former implementation-artifacts ledger was rebuilt.
 
 ## History
+
+- source_plan: none
+  summary: Gold set reframed as feature evaluation; pilot rule cards drafted (2026-10-01).
+  evidence: User decision; release-ladder.md section "Purpose of the golden evaluation set". 10 GC cases moved from strict xfail to passing abstention checks that require the approved-rule gate, sources, an Arabic answer and the scholar queue. Five draft cards in data/rule_cards/pilot-draft-cards.yaml exposed item 9.
 
 - source_plan: none
   summary: Fix the remaining bmad-review findings (robustness, validation, Arabic word boundaries, session-state hardening, CLI, UI, API contract, retention and missing verification-gap tests).

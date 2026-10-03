@@ -1,0 +1,30 @@
+{
+  "correction_id": "scope-extension-timestamp-audit-20261002",
+  "correction_recorded_at": "2026-10-02T11:44:39.689084+00:00",
+  "reviewed_by": "Codex automated operator",
+  "issue": "Expanded access records retained initial reviewed_at instead of distinguishing the later scope-extension review. This is inaccurate audit chronology, not evidence of source permission.",
+  "original_reviewed_at": "2026-10-02T11:29:40.014010+00:00",
+  "scope_extension_review": {
+    "exact_timestamp": null,
+    "status": "exact instant unknown; bounded by actual prior capture and follow-up input creation/second capture",
+    "after_first_batch_recorded_at": "2026-10-02T11:29:58.035385+00:00",
+    "followup_input_file_last_write_utc": "2026-10-02T11:32:43.966694+00:00",
+    "before_second_batch_captured_at": "2026-10-02T11:32:44.328513+00:00",
+    "evidence": "The public-page review and follow-up source-policy amendment occurred between these executions in the task tool history. File modification time is corroborative metadata, not an exact review timestamp."
+  },
+  "scope_extension_paths": {
+    "https://contact.eg": [
+      "/wp-content/uploads/2020/11/Digital-Terms-and-Conditions-Form-03.pdf"
+    ],
+    "https://halan.com": [
+      "/personal-lending/"
+    ],
+    "https://aman.eg": [
+      "/en/service/get-aman-installment-limit/",
+      "/en/service/shop-online/",
+      "/en/contact-us/"
+    ]
+  },
+  "preservation": "Original input records and immutable manifests remain unchanged. Read this correction alongside them; do not infer retrospective owner permission or a human review.",
+  "future_record_rule": "A scope change requires a fresh record and its actual review time; never copy reviewed_at from a prior narrower decision."
+}

@@ -1,0 +1,99 @@
+[
+  {
+    "lens": "edge-case-hunter",
+    "location": "src/acquisition/public_capture.py:591-604",
+    "trigger_condition": "HTTP 401/403 response has unsupported or malformed Content-Encoding.",
+    "guard_snippet": "Classify refusal status and pause the host before decoding; retain encoding failure separately.",
+    "potential_consequence": "Decoding failure hides the refusal; subsequent captures still request the same hostname."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "src/acquisition/public_capture.py:591-618",
+    "trigger_condition": "HTTP 429 includes Retry-After but its body cannot be decoded.",
+    "guard_snippet": "Record status-based host cooldown before decoding.",
+    "potential_consequence": "Subsequent captures can request the hostname before its required cooldown expires."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "src/acquisition/egypt_financial/fra_registry.py:717-728; src/acquisition/egypt_financial/fra_registry.py:423-426",
+    "trigger_condition": "Robots returns 403, a challenge, or server failure with unavailable acknowledgement enabled.",
+    "guard_snippet": "Distinguish missing, security refusal and unreachable policy; limit acknowledgement to normal missing/empty policy.",
+    "potential_consequence": "The operator flag authorizes content requests after an unresolved refusal or unreachable policy."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "src/acquisition/egypt_financial/fra_registry.py:682-687",
+    "trigger_condition": "An allowed FRA URL redirects to a robots-disallowed path on the same origin.",
+    "guard_snippet": "Check the redirect destination's access and robots decisions before following.",
+    "potential_consequence": "The destination is requested before its robots restrictions are checked."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "scripts/scrape_egypt_installment_market.py:254-272",
+    "trigger_condition": "Robots permits a seeded page without a reviewed terms/access scope decision.",
+    "guard_snippet": "Require a current exact-scope terms/access decision before content retrieval.",
+    "potential_consequence": "Collection proceeds using robots allowance as its only recorded access gate."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "scripts/scrape_egypt_installment_market.py:281-291",
+    "trigger_condition": "A page returns 401/403 before another seeded URL on the same hostname.",
+    "guard_snippet": "Pause the affected host and skip its remaining batch URLs.",
+    "potential_consequence": "Collection continues on the hostname after a security or authentication refusal."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "scripts/scrape_egypt_installment_market.py:281-291",
+    "trigger_condition": "A page returns 429 with Retry-After before another same-host URL.",
+    "guard_snippet": "Honor Retry-After and defer remaining host work when the wait exceeds budget.",
+    "potential_consequence": "The next request uses ordinary pacing and ignores the rate-limit deadline."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "src/acquisition/egypt_financial/crawler.py:25-34; src/acquisition/egypt_financial/crawler.py:68-73",
+    "trigger_condition": "A verified institution has a website without a scoped acquisition decision.",
+    "guard_snippet": "Route collection through the governed collector with current scoped decisions.",
+    "potential_consequence": "This executable collector requests pages without robots, terms or scoped access checks."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "src/acquisition/egypt_financial/crawler.py:37-40; src/acquisition/egypt_financial/crawler.py:56-60",
+    "trigger_condition": "A repeated institution crawl changes content at the same local artifact path.",
+    "guard_snippet": "Store raw content immutably by hash or unique run identifier.",
+    "potential_consequence": "Earlier database hashes refer to raw paths whose bytes have been overwritten."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "src/acquisition/egypt_financial/crawler.py:49-60",
+    "trigger_condition": "HTTP 200 contains a challenge, login shell or non-HTML document.",
+    "guard_snippet": "Preserve response metadata and classify access/content before registering evidence.",
+    "potential_consequence": "Gated or diagnostic responses are registered as public HTML product-page evidence."
+  },
+  {
+    "lens": "edge-case-hunter",
+    "location": "scripts/scrape_egypt_installment_market.py:151-188; scripts/scrape_egypt_installment_market.py:296-309",
+    "trigger_condition": "Required words occur in a passage denying the seeded financing claim.",
+    "guard_snippet": "Keep candidate passages pending analyst confirmation of the claim and entity roles.",
+    "potential_consequence": "A denial becomes verified_page_evidence with unsupported seller and financier labels attached."
+  },
+  {
+    "lens": "verification-gap",
+    "location": "src/acquisition/public_capture.py:592",
+    "trigger_condition": "A 401/403 access refusal has unsupported or corrupt Content-Encoding, so decoding fails before the hostname is paused.",
+    "guard_snippet": "Exercise HTTP 401/403 with unsupported br and corrupt gzip; assert login_gated/blocked_by_security and zero additional transport calls for the next same-host capture.",
+    "potential_consequence": "Known refusal is lost and the CLI continues the host batch. Fixture 403/br and 401/br each left paused empty; the next URL was requested.",
+    "gap_shape": "regression-gap",
+    "consumer": "scripts/capture_entity_identity_pages.py:84 sequential PublicCollector.capture batch",
+    "evidence": "Repository-wide symbol/import searches; tests/test_public_capture.py:130-146 status-only fixtures, :313-324 encoding failures on 200, :616-626 decodable host gates. None combines refusal status with decoding failure. Local fake transport/DNS/clock/sleep reproduction; no provider requests."
+  },
+  {
+    "lens": "verification-gap",
+    "location": "src/acquisition/public_capture.py:745",
+    "trigger_condition": "A JavaScript document shell has more than 20 characters of navigation/footer text and no document content.",
+    "guard_snippet": "Exercise an empty application root with a rendering script and navigation/footer; require render-needed or partial status rather than acquisition_complete=true.",
+    "potential_consequence": "The CLI returns successful capture for site chrome, bypassing the missing-document rendering follow-up. Applicability remains unreviewed but does not identify the extraction gap.",
+    "gap_shape": "regression-gap",
+    "consumer": "scripts/capture_entity_identity_pages.py:87 success exit; operative playbook:19 shell acquisition-gap guarantee",
+    "evidence": "Repository-wide symbol/import searches; tests/test_public_capture.py:130-146 empty shell, :789-793 hidden-only shell, :256-270 substantive CLI success. Local fixture with renderTerms() produced captured/acquisition_complete=true and only navigation/copyright text."
+  }
+]

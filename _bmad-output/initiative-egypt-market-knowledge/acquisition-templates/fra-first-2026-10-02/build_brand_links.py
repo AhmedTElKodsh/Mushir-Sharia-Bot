@@ -249,6 +249,36 @@ for brand, key, site, evidence, observed, note in WIDE:
     add(brand, script, key, relation, "third_party_report_or_search", "lead", site, "", evidence,
         observed, (note + " " if note else "") + SEARCH)
 
+
+def apply_lead_confirmation(links, path=Path(__file__).with_name("lead-confirmation-2026-10-03.json")):
+    """Overlay the 2026-10-03 one-page-per-company review onto rows still marked lead.
+
+    The JSON is the evidence record; a row keeps its search history in `note` and
+    takes the reviewed page as its evidence. Rows that stay lead get the reason.
+    """
+    import json
+    results = {r["licence_key"]: r for r in json.loads(path.read_text(encoding="utf-8"))["results"]}
+    for link in links:
+        r = results.get(link["licence_key"])
+        if r is None or link["status"] not in ("lead", "established") or link["checked_on"] == "2026-10-03":
+            continue
+        if link["status"] == "established" and r["status"] == "established":
+            continue
+        reviewed = f"one-page review 2026-10-03: {r['observed']}" + (f" ({r['note']})" if r["note"] else "")
+        if r["status"] == "lead":
+            link["note"] = f"{link['note']} | still lead after {reviewed}".strip(" |")
+        else:
+            link.update(status=r["status"], link_basis=r["basis"], evidence_url=r["url"],
+                        observed_text=r["observed"], note=(r["note"] + " | earlier: " + link["note"]).strip(" |"))
+            if r["url"] and not link["website_url"]:
+                link["website_url"] = r["url"].split("/", 3)[0] + "//" + r["url"].split("/", 3)[2]
+            if r.get("contact") and not link["corporate_contact"]:
+                link["corporate_contact"] = r["contact"]
+        link["checked_on"] = "2026-10-03"
+
+
+apply_lead_confirmation(LINKS)
+
 if __name__ == "__main__":
     write_csv(ROOT / "data/source_registry/fra_brand_links.csv", BRAND_LINK_FIELDS, LINKS)
     print(f"{len(LINKS)} links written")

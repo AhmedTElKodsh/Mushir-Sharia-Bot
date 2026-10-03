@@ -1,0 +1,208 @@
+{
+  "verified_at": "2026-10-02T11:43:46.462172+00:00",
+  "independent_artifact_hash_checks": 45,
+  "artifact_bytes_total": 3706699,
+  "span_checks": 32,
+  "raw_and_derived_artifacts": {
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\raw\\185edfb7c8bb25b9fe191d5f439df7a286ca45de3a9eb5757b06da10f6cf8212.bin": {
+      "sha256": "185edfb7c8bb25b9fe191d5f439df7a286ca45de3a9eb5757b06da10f6cf8212",
+      "bytes": 113
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\185edfb7c8bb25b9fe191d5f439df7a286ca45de3a9eb5757b06da10f6cf8212.bin": {
+      "sha256": "185edfb7c8bb25b9fe191d5f439df7a286ca45de3a9eb5757b06da10f6cf8212",
+      "bytes": 113
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\raw\\7c8a60d9f12bd7fee423bd76d22dfb99084e6205e5c6e99be8d8584dfc9a974f.bin": {
+      "sha256": "7c8a60d9f12bd7fee423bd76d22dfb99084e6205e5c6e99be8d8584dfc9a974f",
+      "bytes": 268241
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\7c8a60d9f12bd7fee423bd76d22dfb99084e6205e5c6e99be8d8584dfc9a974f.bin": {
+      "sha256": "7c8a60d9f12bd7fee423bd76d22dfb99084e6205e5c6e99be8d8584dfc9a974f",
+      "bytes": 268241
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\47b3f01ea2cfb78f35bae7b3fa473745bb958a76a30a0ddb10fd0cccb2a4675d.json": {
+      "sha256": "47b3f01ea2cfb78f35bae7b3fa473745bb958a76a30a0ddb10fd0cccb2a4675d",
+      "bytes": 23771
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\raw\\651026d9e9b27ef650c67eb29bc3a46d7562b2defebd9552dc7f682b569bae2a.bin": {
+      "sha256": "651026d9e9b27ef650c67eb29bc3a46d7562b2defebd9552dc7f682b569bae2a",
+      "bytes": 255931
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\651026d9e9b27ef650c67eb29bc3a46d7562b2defebd9552dc7f682b569bae2a.bin": {
+      "sha256": "651026d9e9b27ef650c67eb29bc3a46d7562b2defebd9552dc7f682b569bae2a",
+      "bytes": 255931
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\209e55d9efaecc4cb7e7234f216740ef03dd4ab439118af1f4dc5cc19a214f14.json": {
+      "sha256": "209e55d9efaecc4cb7e7234f216740ef03dd4ab439118af1f4dc5cc19a214f14",
+      "bytes": 6604
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\raw\\e2c4c45019a9923f064a4e6715cce7aa62cf5ced84eb0c5ae6558827f0582484.bin": {
+      "sha256": "e2c4c45019a9923f064a4e6715cce7aa62cf5ced84eb0c5ae6558827f0582484",
+      "bytes": 65808
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\e2c4c45019a9923f064a4e6715cce7aa62cf5ced84eb0c5ae6558827f0582484.bin": {
+      "sha256": "e2c4c45019a9923f064a4e6715cce7aa62cf5ced84eb0c5ae6558827f0582484",
+      "bytes": 65808
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\83f7d407c492bdd2c51cbdfc1e26848a75ed6b5aec991f2814efec95ec0810de.json": {
+      "sha256": "83f7d407c492bdd2c51cbdfc1e26848a75ed6b5aec991f2814efec95ec0810de",
+      "bytes": 1817
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\raw\\cb53d6ef6f2a7e17f945e09d182e53a8ac0b3e0a50bee77636b25f76e5ac819f.bin": {
+      "sha256": "cb53d6ef6f2a7e17f945e09d182e53a8ac0b3e0a50bee77636b25f76e5ac819f",
+      "bytes": 79
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\cb53d6ef6f2a7e17f945e09d182e53a8ac0b3e0a50bee77636b25f76e5ac819f.bin": {
+      "sha256": "cb53d6ef6f2a7e17f945e09d182e53a8ac0b3e0a50bee77636b25f76e5ac819f",
+      "bytes": 79
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\raw\\98094898609c99a22a45ef1a979890548d92dc81af8f5673eb70e75c2fc38a41.bin": {
+      "sha256": "98094898609c99a22a45ef1a979890548d92dc81af8f5673eb70e75c2fc38a41",
+      "bytes": 124170
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\98094898609c99a22a45ef1a979890548d92dc81af8f5673eb70e75c2fc38a41.bin": {
+      "sha256": "98094898609c99a22a45ef1a979890548d92dc81af8f5673eb70e75c2fc38a41",
+      "bytes": 124170
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\eba1152ca3ecef0571dd710277e17dc8cd1f146c07b4176ebfd50a3239dc07ad.json": {
+      "sha256": "eba1152ca3ecef0571dd710277e17dc8cd1f146c07b4176ebfd50a3239dc07ad",
+      "bytes": 11762
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\raw\\0bda7d6a667fd5bd403acf30ab5642f83d532a2fd7f56e20757006f59bb3e8bc.bin": {
+      "sha256": "0bda7d6a667fd5bd403acf30ab5642f83d532a2fd7f56e20757006f59bb3e8bc",
+      "bytes": 88607
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\0bda7d6a667fd5bd403acf30ab5642f83d532a2fd7f56e20757006f59bb3e8bc.bin": {
+      "sha256": "0bda7d6a667fd5bd403acf30ab5642f83d532a2fd7f56e20757006f59bb3e8bc",
+      "bytes": 88607
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\1eb95ea6ee375e27245f488653ab7d409646ba0a1fd076ee187bc99ab0f1fba0.json": {
+      "sha256": "1eb95ea6ee375e27245f488653ab7d409646ba0a1fd076ee187bc99ab0f1fba0",
+      "bytes": 4183
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\raw\\203467d0eee507a3f1f301a7bb03b01162037dcbed42d64eb7a381804d48d549.bin": {
+      "sha256": "203467d0eee507a3f1f301a7bb03b01162037dcbed42d64eb7a381804d48d549",
+      "bytes": 109
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\203467d0eee507a3f1f301a7bb03b01162037dcbed42d64eb7a381804d48d549.bin": {
+      "sha256": "203467d0eee507a3f1f301a7bb03b01162037dcbed42d64eb7a381804d48d549",
+      "bytes": 109
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\raw\\781cb5ee35abdcc5117baeb27693ce6eab1461a20c449a948b3407754cdd7a8d.bin": {
+      "sha256": "781cb5ee35abdcc5117baeb27693ce6eab1461a20c449a948b3407754cdd7a8d",
+      "bytes": 69617
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\781cb5ee35abdcc5117baeb27693ce6eab1461a20c449a948b3407754cdd7a8d.bin": {
+      "sha256": "781cb5ee35abdcc5117baeb27693ce6eab1461a20c449a948b3407754cdd7a8d",
+      "bytes": 69617
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-01\\derived\\4c2887df2b93219e542897efc84462c2fc180536258a0b978abdcd9136819075.json": {
+      "sha256": "4c2887df2b93219e542897efc84462c2fc180536258a0b978abdcd9136819075",
+      "bytes": 16907
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\raw\\185edfb7c8bb25b9fe191d5f439df7a286ca45de3a9eb5757b06da10f6cf8212.bin": {
+      "sha256": "185edfb7c8bb25b9fe191d5f439df7a286ca45de3a9eb5757b06da10f6cf8212",
+      "bytes": 113
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\185edfb7c8bb25b9fe191d5f439df7a286ca45de3a9eb5757b06da10f6cf8212.bin": {
+      "sha256": "185edfb7c8bb25b9fe191d5f439df7a286ca45de3a9eb5757b06da10f6cf8212",
+      "bytes": 113
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\raw\\b175a88d556560244dec19120b1d12996e524c000ed201564933f3b2e5fad3bb.bin": {
+      "sha256": "b175a88d556560244dec19120b1d12996e524c000ed201564933f3b2e5fad3bb",
+      "bytes": 610023
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\b175a88d556560244dec19120b1d12996e524c000ed201564933f3b2e5fad3bb.bin": {
+      "sha256": "b175a88d556560244dec19120b1d12996e524c000ed201564933f3b2e5fad3bb",
+      "bytes": 610023
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\4f62def8a9366bde6ff8b8a53db6d14f435a0381b916820f844d8046e3327509.json": {
+      "sha256": "4f62def8a9366bde6ff8b8a53db6d14f435a0381b916820f844d8046e3327509",
+      "bytes": 205
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\raw\\cb53d6ef6f2a7e17f945e09d182e53a8ac0b3e0a50bee77636b25f76e5ac819f.bin": {
+      "sha256": "cb53d6ef6f2a7e17f945e09d182e53a8ac0b3e0a50bee77636b25f76e5ac819f",
+      "bytes": 79
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\cb53d6ef6f2a7e17f945e09d182e53a8ac0b3e0a50bee77636b25f76e5ac819f.bin": {
+      "sha256": "cb53d6ef6f2a7e17f945e09d182e53a8ac0b3e0a50bee77636b25f76e5ac819f",
+      "bytes": 79
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\raw\\a263dbdd97ea2b8221dac54131099b8656a5390871d1483a2a661239195b92b0.bin": {
+      "sha256": "a263dbdd97ea2b8221dac54131099b8656a5390871d1483a2a661239195b92b0",
+      "bytes": 123267
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\a263dbdd97ea2b8221dac54131099b8656a5390871d1483a2a661239195b92b0.bin": {
+      "sha256": "a263dbdd97ea2b8221dac54131099b8656a5390871d1483a2a661239195b92b0",
+      "bytes": 123267
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\31cd1e5b88da1899533260cd45fb9048e634a1360d016ac66027c0e4e3f26653.json": {
+      "sha256": "31cd1e5b88da1899533260cd45fb9048e634a1360d016ac66027c0e4e3f26653",
+      "bytes": 13620
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\raw\\203467d0eee507a3f1f301a7bb03b01162037dcbed42d64eb7a381804d48d549.bin": {
+      "sha256": "203467d0eee507a3f1f301a7bb03b01162037dcbed42d64eb7a381804d48d549",
+      "bytes": 109
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\203467d0eee507a3f1f301a7bb03b01162037dcbed42d64eb7a381804d48d549.bin": {
+      "sha256": "203467d0eee507a3f1f301a7bb03b01162037dcbed42d64eb7a381804d48d549",
+      "bytes": 109
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\raw\\69f5edd7a60cf25fde59428a423fed9a2ddc58ab94c8c3bbd791555ae9e00df8.bin": {
+      "sha256": "69f5edd7a60cf25fde59428a423fed9a2ddc58ab94c8c3bbd791555ae9e00df8",
+      "bytes": 78921
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\69f5edd7a60cf25fde59428a423fed9a2ddc58ab94c8c3bbd791555ae9e00df8.bin": {
+      "sha256": "69f5edd7a60cf25fde59428a423fed9a2ddc58ab94c8c3bbd791555ae9e00df8",
+      "bytes": 78921
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\67d9dd5620e0a48b23888d203b863967cb47284ab3aca242906589224de06247.json": {
+      "sha256": "67d9dd5620e0a48b23888d203b863967cb47284ab3aca242906589224de06247",
+      "bytes": 19062
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\raw\\4488f2c52786133766263075bdae392d436030821d1678b82b6d5a04d4125318.bin": {
+      "sha256": "4488f2c52786133766263075bdae392d436030821d1678b82b6d5a04d4125318",
+      "bytes": 58486
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\4488f2c52786133766263075bdae392d436030821d1678b82b6d5a04d4125318.bin": {
+      "sha256": "4488f2c52786133766263075bdae392d436030821d1678b82b6d5a04d4125318",
+      "bytes": 58486
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\ac24fccce9c2e4a872c8ccaeea230ae2a9053bf517276b7035b78f66454899ef.json": {
+      "sha256": "ac24fccce9c2e4a872c8ccaeea230ae2a9053bf517276b7035b78f66454899ef",
+      "bytes": 11929
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\raw\\dcf13ed3cd764405dd149640c8c3723a3458da783b06e8eb0963ec13aa4e15b7.bin": {
+      "sha256": "dcf13ed3cd764405dd149640c8c3723a3458da783b06e8eb0963ec13aa4e15b7",
+      "bytes": 51325
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\dcf13ed3cd764405dd149640c8c3723a3458da783b06e8eb0963ec13aa4e15b7.bin": {
+      "sha256": "dcf13ed3cd764405dd149640c8c3723a3458da783b06e8eb0963ec13aa4e15b7",
+      "bytes": 51325
+    },
+    "D:\\AI Projects\\Freelance\\Mushir-Sharia-Bot\\data\\runtime\\artifacts\\l6_scrape\\public_capture\\pilot-20261002-reviewed-02\\derived\\e3b10c8c015286d6fe1abf60dd8ade54f7e9ecd46f476fdb607e0f7cea9940bb.json": {
+      "sha256": "e3b10c8c015286d6fe1abf60dd8ade54f7e9ecd46f476fdb607e0f7cea9940bb",
+      "bytes": 6843
+    }
+  },
+  "byte_identical_document_copies": [
+    {
+      "path": "_bmad-output\\initiative-egypt-market-knowledge\\acquisition-results-2026-10-02\\documents\\Contact-English-terms-appendix.pdf",
+      "sha256": "7c8a60d9f12bd7fee423bd76d22dfb99084e6205e5c6e99be8d8584dfc9a974f",
+      "source_capture_id": "2522a2a4-9ed8-4719-af82-df913e35839c",
+      "byte_identical_to_raw": true
+    },
+    {
+      "path": "_bmad-output\\initiative-egypt-market-knowledge\\acquisition-results-2026-10-02\\documents\\Contact-Arabic-terms-appendix.pdf",
+      "sha256": "b175a88d556560244dec19120b1d12996e524c000ed201564933f3b2e5fad3bb",
+      "source_capture_id": "e08b707b-d678-488d-8ad2-9b5d76ce1128",
+      "byte_identical_to_raw": true
+    }
+  ],
+  "all_hash_and_byte_checks_passed": true,
+  "all_span_checks_passed": true,
+  "expanded_multi_fact_passages": 18,
+  "passage_coverage_method": "Selected contextual passages and required subfact terms; automated analyst review, not human semantic acceptance.",
+  "readable_contracts": "one English appendix; Arabic text rejected independently",
+  "limitation": "Hashes/spans establish stored provenance, not current applicability or scholar acceptance."
+}

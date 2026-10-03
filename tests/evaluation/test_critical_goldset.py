@@ -14,6 +14,8 @@ Run: pytest tests/evaluation/test_critical_goldset.py -m critical_goldset -x
 """
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from fixtures.citation_detector import ForbiddenCitationDetector
@@ -36,8 +38,8 @@ class TestCriticalGoldSet:
         confidence_calibration_bucket,
     ):
         """
-        Pipeline must return the exact expected_ruling.
-        No partial credit. No "close enough".
+        With a scholar-approved rule card: the exact expected_ruling, no partial credit.
+        Without one: correct abstention at the approved-rule gate (a V1.6 feature).
         """
         case = critical_case
         # Clarification-required cases are verified in test_clarification_trigger.
@@ -52,7 +54,19 @@ class TestCriticalGoldSet:
         )
 
         result = pipeline_under_test.run(query=case["query_ar"], language="ar")
-        print(f"\n\nDEBUG RULING: {result.get('ruling')} STATUS: {result.get('status')}\n\n")
+
+        # The gold set tests features (user decision, 2026-10-01). Until a scholar-approved
+        # rule card covers the case, the feature under test is correct abstention; the
+        # developer-written expected_ruling stays in the YAML as the scholar-pending target.
+        if not _approved_card_covers(case, pipeline_under_test):
+            _assert_abstains_for_the_right_reason(case, result)
+            forbidden_citation_detector.assert_no_violations(
+                forbidden=case["forbidden_citations"],
+                cited_standards=result.get("cited_standards", []),
+                answer_text=result.get("answer_text", ""),
+                case_id=case["case_id"],
+            )
+            return
 
         # 1. Ruling must match exactly
         actual_ruling = result.get("ruling")
@@ -119,6 +133,37 @@ class TestCriticalGoldSet:
         )
         scholar_review_queue.assert_enqueued(case["case_id"])
         scholar_review_queue.consume()  # consume so teardown passes
+
+
+_ARABIC = re.compile(r"[؀-ۿ]")
+
+
+def _approved_card_covers(case: dict, pipeline_under_test) -> bool:
+    """A case is verdict-eligible only when it names a rule card the runtime holds as approved."""
+    rule_card = case.get("rule_card")
+    if not rule_card:
+        return False
+    cards = pipeline_under_test.pipeline.described_operations.evaluator.cards
+    return any(card.rule_id == rule_card for card in cards)
+
+
+def _assert_abstains_for_the_right_reason(case: dict, result: dict) -> None:
+    """Abstention is a feature only when it is the approved-rule gate that stopped the answer:
+    the question was understood as a judgment, its sources are shown, it answers in the
+    user's language, and it is queued for the scholar."""
+    case_id = case["case_id"]
+    assert result.get("ruling") == "INSUFFICIENT_DATA", (
+        f"[CRITICAL FAIL] {case_id}: no approved rule card covers this case, "
+        f"yet the runtime returned '{result.get('ruling')}'. This is an unearned verdict."
+    )
+    metadata = result.get("metadata") or {}
+    decided_by = (metadata.get("decision_trace") or {}).get("decided_by") or {}
+    assert decided_by == {"gate": "approved_rule", "reason_code": "approved_rule_missing"}, (
+        f"{case_id}: abstained at {decided_by}, not at the approved-rule gate"
+    )
+    assert metadata.get("requires_scholar_review") is True, f"{case_id}: not queued for scholar review"
+    assert result.get("cited_standards"), f"{case_id}: abstention shows no supporting sources"
+    assert _ARABIC.search(result.get("answer_text", "")), f"{case_id}: Arabic question not answered in Arabic"
 
 
 def _scripted_response_for(case: dict) -> dict:

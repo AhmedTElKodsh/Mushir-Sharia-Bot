@@ -124,7 +124,7 @@ On Hugging Face Spaces the disk is not persistent unless persistent storage is e
 
 ## Test Status
 
-Full suite on 2026-10-01: **1,234 passed, 12 failed, 47 skipped**; Playwright: **30/30**.
+Full suite on 2026-10-01 (evening): **1,661 passed, 2 strict xfail (TC-F1, TC-G1), 48 skipped**; Playwright: **42/42** (last browser run). Critical gold cases without an approved card pass only by abstaining at the approved-rule gate with sources, in the user's language, queued for the scholar.
 
 The 12 failures are expected under the gate and must not be "fixed" by editing expected answers:
 

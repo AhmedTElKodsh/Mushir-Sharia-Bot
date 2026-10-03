@@ -46,6 +46,18 @@ AR_LATE_COMPENSATION = "\u062a\u0639\u0648\u064a\u0636"
 AR_LATE_INTEREST = "\u0641\u0648\u0627\u0626\u062f \u062a\u0623\u062e\u064a\u0631"
 AR_RIBA = "\u0631\u0628\u0627"
 AR_RIBAWI = "\u0631\u0628\u0648\u064a"
+# Arabic phrasings that ask for a judgment without a halal/haram/\u064a\u062c\u0648\u0632 keyword; deferred-work item 8.
+# A match makes the question PERMISSIBILITY, which routes to Sharia standards and the approved-rule gate.
+# Each marker is anchored ("\u0647\u0644 ..." / "\u0645\u0646 ...") so a bare verb inside an unrelated sentence does not match.
+# "\u0645\u0646 \u064a\u062a\u062d\u0645\u0644" (who bears a loss, fee or risk) is included on purpose: risk allocation is a validity
+# condition in Islamic contracts, so these questions go to the scholar rather than accounting routes.
+AR_JUDGMENT_ASKS: tuple[str, ...] = (
+    "\u0647\u0644 \u064a\u062d\u0642",          # \u0647\u0644 \u064a\u062d\u0642: does X have the right to
+    "\u0647\u0644 \u064a\u0635\u062d",          # \u0647\u0644 \u064a\u0635\u062d: is it valid
+    "\u0647\u0644 \u062a\u062a\u062d\u0648\u0644",  # \u0647\u0644 \u062a\u062a\u062d\u0648\u0644: does it turn into (feminine)
+    "\u0647\u0644 \u064a\u062a\u062d\u0648\u0644",  # \u0647\u0644 \u064a\u062a\u062d\u0648\u0644: does it turn into (masculine)
+    "\u0645\u0646 \u064a\u062a\u062d\u0645\u0644",  # \u0645\u0646 \u064a\u062a\u062d\u0645\u0644: who bears
+)
 AR_CUSTOMER = "\u0639\u0645\u064a\u0644"
 AR_INSTALLMENT_PAYMENT = "\u0642\u0633\u0637"
 AR_CASH = "\u0646\u0642\u062f"
@@ -143,6 +155,7 @@ class ScenarioExtractor:
             "is this ok", "is this okay", "acceptable", "islamically",
             AR_HALAL, AR_HARAM, AR_ALLOWED, AR_VALID, AR_OK,
             AR_SHARIA_ADJECTIVE, AR_MATCHING, AR_RIBA, AR_RIBAWI, "\u0631\u0628\u0648\u064a\u0629",
+            *AR_JUDGMENT_ASKS,
         )
         # "can " must start a word: "American ", "scan " and "pecan " are not permission asks.
         if re.search(r"(?<![a-z])can ", lowered) or any(term in lowered for term in hard_permissibility_terms):

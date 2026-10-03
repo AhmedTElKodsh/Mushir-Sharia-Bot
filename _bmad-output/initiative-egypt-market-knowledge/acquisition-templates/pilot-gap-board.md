@@ -1,5 +1,11 @@
 # Five-pilot acquisition tasks
 
+## Execution update — 2026-10-02
+
+The [finalized plan](../acquisition-execution-plan-2026-10-02.md) and [results](../acquisition-results-2026-10-02/pilot-results.md) supersede the access-pending starting state below for this bounded cycle. PublicCollector v0.3 made 17 requests and captured 11 artifacts across two immutable runs. Contact's readable English appendix and visually readable Arabic appendix were acquired; Arabic text extraction is rejected. Halan and Aman have source-linked own-store/merchant-channel descriptions but no accepted seller/creditor legal relationship. Souhoola general terms rendered in an ordinary browser, with legal-name conflict and complete contract gaps preserved; no full copied page. ValU automated collection stays restricted by reviewed terms. Corporate contacts are recorded only when supported by inspected sources.
+
+All five standard main-agreement/schedule closure tasks remain open. No provider request was sent. 32 automated analyst observations have artifact/span references; material observations await second-human review and scholar rule selection. Public-source access decisions expire and must be renewed for later acquisition.
+
 State at 2026-10-01: the [entity worksheet](../pilot-entity-resolution.md) records dated identities and unresolved relationships. These templates provide no current reviewed terms decisions or source permissions. Live paths remain pending that review. Owner: research operator, with analyst verification and separate scholar rule review.
 
 | Task | Missing artifact / fact | Next route | Closure and current gap |

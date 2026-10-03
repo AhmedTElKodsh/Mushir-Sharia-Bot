@@ -1,0 +1,126 @@
+# V1.6 pilot rule cards — DRAFTS FOR SCHOLAR REVIEW (epic-evidence-safe-runtime, story 2).
+#
+# Nothing here is a ruling. Every card is status: draft with decision: pending, so
+# src/governance/rule_cards.approved_rule_cards() returns none of them and the runtime
+# never evaluates them. Outcomes are structural placeholders written by the development
+# team from AAOIFI standard titles; the scholar confirms, changes or rejects each row.
+#
+# Source anchors name the standard only. The AAOIFI corpus is not checked out locally
+# (it lives in the Space's Chroma index), so paragraph numbers must be confirmed against
+# the indexed text before a card is signed.
+#
+# Precedence against client rule files and IIFA is open question O1; no card may be
+# approved until its precedence_note states the scholar's answer.
+
+- rule_id: instalment-plan-financier-v1
+  version: 1
+  source_authority: aaoifi_ss
+  source_anchor: "AAOIFI SS-08 Murabahah; SS-19 Loan (Qard) — paragraphs to confirm against the indexed corpus"
+  applies_to_archetypes: [ARC-CF, ARC-SELLER, ARC-BANK-ISL, ARC-BANK-LOAN, ARC-BNPL]
+  material_facts: [financing_party, ownership_risk_sequence]
+  outcomes:
+    - when: {financing_party: seller}
+      outcome: conditional
+    - when: {financing_party: consumer_finance_company, ownership_risk_sequence: financier_owns_before_resale}
+      outcome: conditional
+    - when: {financing_party: consumer_finance_company, ownership_risk_sequence: financier_pays_merchant_only}
+      outcome: impermissible_under_this_rule
+    - when: {financing_party: bank, ownership_risk_sequence: financier_owns_before_resale}
+      outcome: conditional
+    - when: {financing_party: bank, ownership_risk_sequence: financier_pays_merchant_only}
+      outcome: impermissible_under_this_rule
+  unknown_fact_question: "Who provides the instalment plan: the store itself, a consumer-finance company, or a bank?"
+  unknown_fact_questions:
+    financing_party: "Who provides the instalment plan: the store itself, a consumer-finance company, or a bank?"
+    ownership_risk_sequence: "Does the contract say the finance company buys the item first and then sells it to you?"
+  precedence_note: null
+  scholar_signoff: {reviewer_id: null, date: null, decision: pending}
+  status: draft
+
+- rule_id: late-payment-charge-beneficiary-v1
+  version: 1
+  source_authority: aaoifi_ss
+  source_anchor: "AAOIFI SS-03 Procrastinating Debtor; SS-08 Murabahah — paragraphs to confirm against the indexed corpus"
+  applies_to_archetypes: [ARC-CF, ARC-SELLER, ARC-BANK-ISL, ARC-DEV, ARC-BNPL]
+  material_facts: [late_payment_clause, late_fee_beneficiary]
+  outcomes:
+    - when: {late_payment_clause: false}
+      outcome: no_issue_under_this_rule
+    - when: {late_payment_clause: true, late_fee_beneficiary: financier}
+      outcome: impermissible_under_this_rule
+    - when: {late_payment_clause: true, late_fee_beneficiary: charity}
+      outcome: conditional
+    - when: {late_payment_clause: true, late_fee_beneficiary: actual_cost_only}
+      outcome: conditional
+  unknown_fact_question: "Does your contract say who keeps the late-payment charge: the company, or a charity?"
+  unknown_fact_questions:
+    late_payment_clause: "Does your contract or schedule mention any charge for paying an instalment late?"
+    late_fee_beneficiary: "Does your contract say who keeps the late-payment charge: the company, or a charity?"
+  precedence_note: null
+  scholar_signoff: {reviewer_id: null, date: null, decision: pending}
+  status: draft
+
+- rule_id: rescheduling-added-margin-v1
+  version: 1
+  source_authority: aaoifi_ss
+  source_anchor: "AAOIFI SS-08 Murabahah; SS-03 Procrastinating Debtor — paragraphs to confirm against the indexed corpus"
+  applies_to_archetypes: [ARC-CF, ARC-SELLER, ARC-BANK-ISL]
+  material_facts: [reschedule_adds_amount, reschedule_is_new_sale]
+  outcomes:
+    - when: {reschedule_adds_amount: false}
+      outcome: no_issue_under_this_rule
+    - when: {reschedule_adds_amount: true, reschedule_is_new_sale: false}
+      outcome: impermissible_under_this_rule
+    - when: {reschedule_adds_amount: true, reschedule_is_new_sale: true}
+      outcome: conditional
+  unknown_fact_question: "If you reschedule, does the company add any amount to what you still owe?"
+  unknown_fact_questions:
+    reschedule_adds_amount: "If you reschedule, does the company add any amount to what you still owe?"
+    reschedule_is_new_sale: "Is the rescheduling written as a new, separate purchase of a different item?"
+  precedence_note: null
+  scholar_signoff: {reviewer_id: null, date: null, decision: pending}
+  status: draft
+
+- rule_id: insurance-leg-v1
+  version: 1
+  source_authority: aaoifi_ss
+  source_anchor: "AAOIFI SS-26 Islamic Insurance — paragraphs to confirm against the indexed corpus"
+  applies_to_archetypes: [ARC-CF, ARC-BANK-ISL, ARC-BANK-LOAN, ARC-DEV]
+  material_facts: [insurance_leg, insurance_mandatory]
+  outcomes:
+    - when: {insurance_leg: none}
+      outcome: no_issue_under_this_rule
+    - when: {insurance_leg: takaful}
+      outcome: no_issue_under_this_rule
+    - when: {insurance_leg: conventional, insurance_mandatory: true}
+      outcome: conditional
+    - when: {insurance_leg: conventional, insurance_mandatory: false}
+      outcome: conditional
+  unknown_fact_question: "Does the plan include insurance, and is it takaful or conventional insurance?"
+  unknown_fact_questions:
+    insurance_leg: "Does the plan include insurance, and is it takaful or conventional insurance?"
+    insurance_mandatory: "Is the insurance required to get the plan, or optional?"
+  precedence_note: null
+  scholar_signoff: {reviewer_id: null, date: null, decision: pending}
+  status: draft
+
+- rule_id: early-settlement-rebate-v1
+  version: 1
+  source_authority: aaoifi_ss
+  source_anchor: "AAOIFI SS-08 Murabahah — paragraphs to confirm against the indexed corpus"
+  applies_to_archetypes: [ARC-CF, ARC-SELLER, ARC-BANK-ISL]
+  material_facts: [early_settlement, rebate_stipulated_in_contract]
+  outcomes:
+    - when: {early_settlement: false}
+      outcome: no_issue_under_this_rule
+    - when: {early_settlement: true, rebate_stipulated_in_contract: false}
+      outcome: no_issue_under_this_rule
+    - when: {early_settlement: true, rebate_stipulated_in_contract: true}
+      outcome: conditional
+  unknown_fact_question: "Does the contract promise a fixed discount if you pay everything early?"
+  unknown_fact_questions:
+    early_settlement: "Does the contract allow you to pay off the remaining balance early?"
+    rebate_stipulated_in_contract: "Does the contract promise a fixed discount if you pay everything early?"
+  precedence_note: null
+  scholar_signoff: {reviewer_id: null, date: null, decision: pending}
+  status: draft

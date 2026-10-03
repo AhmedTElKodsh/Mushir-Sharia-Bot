@@ -10,6 +10,8 @@ Pre-scholar developer/client demonstrations show language understanding, clarifi
 
 Adding documents to the retrieval corpus is ingestion, not model training. Preserve a corpus snapshot/version for every evaluation batch. Separate mocked contract tests from live model/retrieval tests and UI tests. A passing mock test does not establish deployed capability.
 
+The golden evaluation set follows the same purpose (user decision, 2026-10-01; [release ladder](spec-egypt-market-poc/release-ladder.md#purpose-of-the-golden-evaluation-set-user-decision-2026-10-01)). Its critical judgment cases score correct abstention at the approved-rule gate until a scholar-approved card covers them. These POC-01..16 behaviours are the rest of its feature scope.
+
 ## Required behavior cases
 
 **Ownership key:** A owns observable conversation/evidence/UI behavior in each row, including the current response's safe trace. For joint A+B rows, B owns expanded persistent lineage, classification, annotations and reproducibility versions; A still must preserve current records and private router signals. D owns actual named-financier acquisition, so unsupported named offers in A must be explicitly withheld. No behavior is removed by this ownership split.

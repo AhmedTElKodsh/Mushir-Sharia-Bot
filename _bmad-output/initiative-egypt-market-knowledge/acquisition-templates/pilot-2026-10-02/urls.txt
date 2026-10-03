@@ -1,0 +1,8 @@
+contact-terms https://contact.eg/terms-and-conditions-en.pdf
+contact-home https://contact.eg/en
+contact-contact https://contact.eg/en/contact-us
+halan-shop https://halan.com/shop/
+halan-contact https://halan.com/contact-us-2/
+aman-home https://aman.eg/en/
+valu-terms https://valugroup.com/terms-and-conditions
+souhoola-terms https://souhoola.com/terms-conditions

@@ -2,7 +2,7 @@
 
 Last refreshed: 2026-10-01
 Live app: V1.5 (`1.5.0`) · In build: V1.6 dual-lane prototype
-Decision document: [Scholar Review Pack](https://claude.ai/artifact/4CE8SuwyTbb4vCQK56asMQ) (also in the repo: [client-pages/scholar-review-pack.html](client-pages/scholar-review-pack.html)), the 12 questions waiting for a scholar
+Decision document: [Scholar Review Pack](https://claude.ai/artifact/4CE8SuwyTbb4vCQK56asMQ) (also in the repo: [client-pages/scholar-review-pack.html](client-pages/scholar-review-pack.html)): 15 cases, five draft rule cards and every open question for you and the scholar
 Shareable page of this guide: [Mushir Client Guide](https://claude.ai/artifact/N5sTGi4S15Kj3A1KdADGtP) (also in the repo: [client-pages/client-guide.html](client-pages/client-guide.html))
 
 This guide replaces three earlier client documents, which are kept for the record:
@@ -37,19 +37,19 @@ The first user is a **retail buyer** (decided 30 September 2026).
 | --- | --- |
 | Chat, API and Arabic/English search | Working in V1.5 |
 | Questions about your own deal | Built: reads the user's own figures, asks up to two follow-up questions |
-| Sharia conclusions | Only through scholar-approved rule cards. **None exist yet**, so Mushir defers every permissibility question to review |
-| Company lookups for pilot companies | Planned; waits for the pilot list and legal review |
-| Scholar | **Not yet appointed.** This is the main blocker |
-| Automated checks | 1,234 passing; 12 waiting for a scholar decision |
+| Sharia conclusions | Only through scholar-approved rule cards. Five are drafted and **none is approved yet**, so Mushir defers every permissibility question to the scholar, which is the designed V1.6 behaviour |
+| Company lookups for pilot companies | Planned; seven companies identified, waits for their contracts and a legal review |
+| Scholar | **Not yet appointed.** First meeting expected around 15 October |
+| Automated checks | 1,661 passing; 2 waiting for a scholar decision; browser and API 42/42 |
 
 ```mermaid
 pie showData
     title Automated checks, 1 October 2026
-    "Passing" : 1234
-    "Waiting for a scholar decision" : 12
+    "Passing" : 1661
+    "Waiting for a scholar decision" : 2
 ```
 
-The 12 open checks are not faults. They are questions where the old test expects a verdict, and Mushir now correctly withholds it until a scholar approves a rule. They are listed one by one in the [Scholar Review Pack](../../../outputs/client-review-pack/index.html).
+**What the tests measure.** Our test set checks Mushir's general features: Arabic and English understanding, a short reasoning summary with each answer, sources, one clear question when a fact is missing, and saying "I don't know" for the right reason when no approved rule covers a question. Declining is a feature at this stage, and it is always reported next to how many questions Mushir does answer. Each scholar decision, and later your training material, widens what it can answer. The 2 open checks are routing questions waiting for the scholar; see the [Scholar Review Pack](client-pages/scholar-review-pack.html).
 
 ## Where The Project Stands
 
@@ -194,6 +194,7 @@ FRA's own documents answer part of the scholar's questions before any company is
 - **Two registers, two kinds of company.** FRA licenses *consumer-finance companies*, and separately registers *consumer-finance providers*, defined as "producers or distributors of goods who practise consumer finance" (sellers that finance their own goods). Examples: B.TECH runs its in-house plan "minicash" under provider licence 7/2020, and separately runs Mylo through its finance company. The register shows which kind a company is; the customer contract still decides who sells and who lends in a given deal.
 - **A legal minimum for every contract.** FRA's model contracts (Decree 869/2021, republished in the 6 September 2026 rulebook) are the minimum every licensed company's contract must follow. An earlier decree (457/2020) also applied a minimum list to sellers that finance their own goods; the 2026 rulebook no longer lists it, so whether it still applies is being checked. This gives the scholar the baseline of what every customer signs.
 - **Sharia model contracts.** FRA publishes guiding Islamic contracts: Murabaha for consumer finance, lease-to-own (Ijarah), diminishing partnership (Musharaka), investment agency (Wakala) and micro-Murabaha. The Murabaha template contains points the scholar should look at, such as the supplier invoicing the customer directly. Mushir flags these points; the scholar decides. FRA lists only three consumer-finance companies as licensed for an Islamic (Murabaha) product: B.TECH (Mylo), Aman, and Abu Dhabi Islamic, whose contract is still under FRA Sharia committee review.
+- **Who is behind each brand (checked 3 October 2026).** Each company on FRA's lists was matched to its market brand using one page the company itself publishes. 36 of 52 are now confirmed (16 where the company's own page names the licensed company, 20 through the register name or the parent group's own page); 15 are still unconfirmed, mostly because their sites are unreachable or never name the licensed company. One finding matters for the scholar: Contact's group includes seven more registered companies, among them the Bravo app and several car dealers' instalment companies, so a dealer-branded car plan can sit inside the same financing group.
 - **Sharia oversight.** Any company that sells products as Sharia-compliant must have its contracts reviewed by a Sharia committee whose members are registered with FRA. FRA's central Sharia committee has published rulings, for example that sukuk must be redeemed at market value rather than a guaranteed face value.
 
 **2021 vs 2026 model contracts (compared 3 October 2026).** The models did not change in substance: same 15 clauses, same obligations. The one change is wording: the promissory notes and cheques a lender may ask for are now called "guarantees" instead of "commercial papers". What matters more for the scholar is what the models leave out: late payment and default, who sells and delivers the goods, and insurance, which has its own 2026 model. Those terms appear only in each company's own contract, which is why the pilot companies' contracts are still needed. Many older FRA documents are scanned images; their text was recovered by OCR and checked against the page before anything was quoted.
@@ -261,11 +262,11 @@ The scholar is the only source of Sharia authority in Mushir. **No scholar has b
 ```mermaid
 flowchart LR
     Sch["Reviewing scholar<br/>(to be appointed)"] --> RC["Approves rule cards"]
-    Sch --> P12["Decides the 12 open cases"]
+    Sch --> P12["Decides 15 cases and 5 draft cards"]
     Sch --> FS["Reviews ~100 V1.6 cases"]
     Sch --> ER["Sets the acceptable error level"]
     RC --> Out1["Mushir gives its first<br/>approved conclusions"]
-    P12 --> Out2["All automated checks pass"]
+    P12 --> Out2["Mushir answers more questions"]
     FS --> Out3["V1.6 can be released"]
     ER --> Out4["Defines 'ready to launch'"]
 ```
@@ -292,7 +293,7 @@ timeline
     title Release ladder
     V1.6 Dual-lane prototype : Questions about your own deal
                              : Five fully documented pilot companies
-                             : ~100 cases reviewed by the scholar
+                             : ~100 feature-tested cases reviewed by the scholar
     V1.7 Rules and schedules : Your rules as approved checklists
                              : Reading payment-schedule screenshots
     V1.8 Lender coverage : All 52 FRA consumer-finance companies and seller-financiers
@@ -305,7 +306,7 @@ timeline
 
 | Version | Ready to move on when |
 | --- | --- |
-| V1.6 | The scholar reviews about 100 cases with no wrong conclusions, and the live checks pass |
+| V1.6 | About 100 fixed cases pass the feature checks, the scholar's review of them finds no wrong conclusions, and the live checks pass |
 | V1.7 | Every rule in use is approved; schedule reading accuracy is reported |
 | V1.8 | All 52 FRA consumer-finance entities (39 licensed companies + 13 sellers registered to finance their own goods) are covered at template level; old or conflicting information is flagged |
 | V1.9 | Tests prove that estimates never change a conclusion |
@@ -313,7 +314,7 @@ timeline
 
 ```mermaid
 flowchart LR
-    A["Appoint scholar"] --> B["Decide the 12 open cases"]
+    A["Appoint scholar"] --> B["Decide the 15 review cases"]
     B --> C["Approve first rule cards<br/>(late payment, rescheduling)"]
     C --> D["Confirm 7 pilot companies"]
     D --> E["Build company dossiers"]
@@ -336,13 +337,16 @@ flowchart LR
 
 | # | Decision or input | Why it matters |
 | --- | --- | --- |
-| 1 | **Appoint a reviewing scholar** | Every conclusion, the 12 open cases and the V1.6 release depend on it |
+| 1 | **Appoint a reviewing scholar** | Every conclusion, the 15 review cases and the V1.6 release depend on it |
 | 2 | **Your Sharia rule files** (riba and other financing rules) | They become the rule book |
 | 3 | **Which source wins** when your rules and AAOIFI differ, or whether every difference goes to the scholar | Mushir must never blend two positions |
-| 4 | **The five pilot companies** (proposed: Contact, Souhoola, RUSHBRUSH, IKEA Egypt or Smart Furniture, plus one bank Islamic product or one retailer with a named financier) | Defines the first company lookups |
+| 4 | **Confirm the seven pilot companies** (valU, Contact, Souhoola, Aman, Halan, B.TECH (Mylo) and Drive Finance (Forsa)) and **approve sending the request letters** for their contracts (drafted for the first five) | Defines the first company lookups; their contracts are not public |
 | 5 | **The scholar's view on staff donating their own agreements** | Decides whether real, complete contracts can be studied early |
 | 6 | **The acceptable error level** (from the scholar) | Defines "ready" |
-| 7 | **Four default settings**: record retention (365 days), approved-reviewer list, removal of the confidence %, storage location | Listed in the [Scholar Review Pack](../../../outputs/client-review-pack/index.html) |
+| 7 | **Four default settings**: record retention (kept until scholar review ends, then 365 days), approved-reviewer list, removal of the confidence %, storage location | Listed in the [Scholar Review Pack](client-pages/scholar-review-pack.html#defaults) |
+| 8 | **Your training material** beyond the rule files, and when to expect it | The next step in improving Mushir after the scholar's first decisions |
+
+The full list of open questions for you and for the scholar, with a reply template, is in the [Scholar Review Pack](client-pages/scholar-review-pack.html#asks).
 
 ## What Mushir Will And Will Not Say
 
@@ -377,9 +381,11 @@ Avoid this:
 
 **Why was the confidence percentage removed?** It had never been checked against scholar decisions, so it could mislead. A certainty measure returns only after it is tested against scholar-reviewed answers.
 
-**What is stored about users?** Each answer is saved with the question, the facts the user stated and the checks applied, under a random session code. Records are deleted after 365 days unless you choose another period.
+**What is stored about users?** Each answer is saved with the question, the facts the user stated and the checks applied, under a random session code. Records are kept until the scholar finishes reviewing; after that, records older than 365 days are deleted once you switch that policy on.
 
-More questions about the 12 open cases are answered in the [Scholar Review Pack](../../../outputs/client-review-pack/index.html).
+**Mushir says "I don't know" a lot. Is that a problem?** Not at this stage. Declining with sources when no approved rule applies, and queuing the question for the scholar, is the correct behaviour, and the tests check it happens for the right reason. Each approved rule turns a group of these questions into answered ones.
+
+More questions about the 15 review cases are answered in the [Scholar Review Pack](client-pages/scholar-review-pack.html).
 
 ## Glossary
 

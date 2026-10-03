@@ -70,6 +70,48 @@ def test_complete_capture_preserves_artifacts_and_decision_lineage(tmp_path):
     assert client.finish([captured])["states"] == {"captured": 1}
 
 
+@pytest.mark.parametrize("status,state", [(401, "login_gated"), (403, "blocked_by_security"), (451, "blocked_by_security")])
+@pytest.mark.parametrize("encoding,body", [("br", b"encoded"), ("gzip", b"corrupt gzip")])
+def test_encoded_refusal_stops_later_same_host_capture(tmp_path, status, state, encoding, body):
+    client, calls, _ = collector(tmp_path, {
+        SITE + "/robots.txt": response(ROBOTS, content_type="text/plain"),
+        SITE + "/terms": response(body, status, **{"content-encoding": encoding}),
+        SITE + "/other": response(),
+    })
+    first = client.capture("first", SITE + "/terms")
+    assert first["state"] == state
+    assert first["encoding_state"] in {"unsupported_content_encoding", "invalid_content_encoding"}
+    second = client.capture("second", SITE + "/other")
+    assert second["state"] == state
+    assert SITE + "/other" not in calls
+
+
+def test_encoded_rate_limit_preserves_host_retry_after(tmp_path):
+    client, calls, _ = collector(tmp_path, {
+        SITE + "/robots.txt": response(ROBOTS, content_type="text/plain"),
+        SITE + "/terms": response(b"encoded", 429, **{"content-encoding": "br", "retry-after": "120"}),
+        SITE + "/other": response(),
+    })
+    assert client.capture("first", SITE + "/terms")["state"] == "rate_limited"
+    assert client.capture("second", SITE + "/other")["state"] == "retry_deferred"
+    assert SITE + "/other" not in calls
+
+
+@pytest.mark.parametrize("navigation", [b"<nav>Home Products About Contact Help</nav>",
+    b"<div role='navigation'>Home Products About Contact Help</div>",
+    b"<header>Home Products About Contact Help</header>",
+    b"<div role='banner'>Home Products About Contact Help</div>"])
+def test_navigation_footer_only_document_requires_render(tmp_path, navigation):
+    shell = navigation + b"<main id='root'></main><script>renderTerms()</script><footer>Copyright Company All Rights Reserved</footer>"
+    client, _, _ = collector(tmp_path, {
+        SITE + "/robots.txt": response(ROBOTS, content_type="text/plain"),
+        SITE + "/terms": response(shell),
+    })
+    result = client.capture("terms", SITE + "/terms")
+    assert result["state"] == "render_needed"
+    assert not result["acquisition_complete"]
+
+
 @pytest.mark.parametrize("change", [{"terms_state": "unknown"}, {"terms_state": "restricted"},
                                     {"revoked": True}, {"expires_at": NOW.isoformat()},
                                     {"allowed_paths": ("/other",)}, {"origin": "https://different.example"}])

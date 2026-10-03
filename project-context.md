@@ -14,7 +14,8 @@ These override older statements further down. Full detail: `.planning/sharia-com
 - Personal deals go through the described-operation lane (`src/chatbot/described_operation*.py`): explicit user assertions only, at most 2 clarification questions, then `INSUFFICIENT_DATA` naming the documents needed.
 - No numeric confidence on any answer surface; answers carry `metadata.evidence` (sources, capture date, age). The API `Citation` exposes `captured_at`, not `confidence_score`.
 - Every answer is committed to the decision-review store before delivery (`src/storage/decision_review_store.py`); a failed write restores the session and raises.
-- **No scholar has been engaged.** Never describe any label, gold-set answer or rule card as scholar-approved. The 12 failing tests (GC-003..019, TC-F1, TC-G1) await scholar decisions; do not edit their expected answers.
+- **No scholar has been engaged.** Never describe any label, gold-set answer or rule card as scholar-approved. Do not edit the developer-written `expected_ruling` values; they are scholar-pending targets.
+- **The gold set tests features, not verdict accuracy** (user decision 2026-10-01; see `release-ladder.md`). Without an approved rule card, a judgment case passes only by abstaining at the approved-rule gate with sources, in the user's language, queued for the scholar. Remaining strict xfails: TC-F1/TC-G1 (scholar adjudication). Arabic judgment phrasings without halal/haram keywords (هل يحق, هل يصح, هل تتحول, هل يتحول, من يتحمل) are listed in `AR_JUDGMENT_ASKS` in `src/chatbot/commercial_assessment.py`. Pilot draft rule cards are in `data/rule_cards/pilot-draft-cards.yaml` (all pending).
 
 ## Product Purpose
 
@@ -50,6 +51,7 @@ As of V1.5 on 2026-06-01, the Egypt financial institutions workstream has moved 
 - fra.gov.eg answers `/robots.txt` with a security page; collection runs under the recorded user decision (`acquisition-templates/fra-first-2026-10-02/fra-access-decision.md`) and stops on any register-page security response.
 - OCR text of FRA documents is a reading aid: verify against the page image before quoting. A diff on OCR text alone produced three false differences on 2026-10-03.
 - FRA documents and comparisons describe documents only; they never supply a Sharia verdict.
+- Brand-link evidence lives in `acquisition-templates/fra-first-2026-10-02/lead-confirmation-2026-10-03.json`; `build_brand_links.py` applies it. A parent group's statement is `verified`, never `established`. As of 2026-10-03: 16 established, 20 verified, 15 lead, 1 unlinked of 52.
 
 ## Current Architecture
 
@@ -211,7 +213,7 @@ Current broad verification snapshot from 2026-10-01:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q --timeout=90
-# 1234 passed, 12 failed (expected: awaiting scholar decisions), 47 skipped
+# 1,661 passed, 2 xfailed (TC-F1, TC-G1 await the scholar), 48 skipped
 npx playwright test
 # 30 passed
 ```
@@ -256,7 +258,7 @@ Scholar-review persistence:
 - `.planning/sharia-compliance-chatbot/docs/project-documentation.md`: current full technical documentation.
 - `.planning/sharia-compliance-chatbot/docs/ai-project-brief.md`: detailed AI-agent handoff with runtime contracts, data authority ladder, L5/L6 status, commands, and safe edit rules.
 - `.planning/sharia-compliance-chatbot/docs/client-guide.md`: the single client-facing guide (status, behaviour, market work, scholar role, release plan, decisions). Older client reports are kept as `*-legacy.md`.
-- `outputs/client-review-pack/index.html`: client decision document for the 12 cases waiting for a scholar.
+- `.planning/sharia-compliance-chatbot/docs/client-pages/scholar-review-pack.html` (built by `scripts/build_client_pages.py`; shared artifact https://claude.ai/artifact/4CE8SuwyTbb4vCQK56asMQ): 15 review cases, five draft rule cards, open client/scholar questions and reply template. `outputs/client-review-pack/index.html` is an older copy.
 - `.planning/sharia-compliance-chatbot/docs/chatbot-architecture.md`: detailed answer-generation architecture.
 - `.planning/sharia-compliance-chatbot/docs/l5-production-readiness.md`: release/readiness runbook.
 - `.planning/sharia-compliance-chatbot/docs/research/l6-rules-first-evaluator-research.md`: research input for the L6 rules-first evaluator direction.

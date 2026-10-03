@@ -342,24 +342,24 @@ body { margin: 0; }
       <tbody>
         <tr><td>Chat, API and Arabic/English search</td><td><span class="state ok">Working</span> in V1.5</td></tr>
         <tr><td>Questions about your own deal</td><td><span class="state ok">Built</span> reads the user's own figures and asks up to two follow-up questions</td></tr>
-        <tr><td>Sharia conclusions</td><td><span class="state hold">Waiting</span> only through scholar-approved rule cards; none exist yet, so Mushir defers every permissibility question</td></tr>
-        <tr><td>Company lookups for pilot companies</td><td><span class="state wait">Planned</span> waits for the pilot list and legal review</td></tr>
-        <tr><td>Scholar</td><td><span class="state hold">Not appointed</span> the main blocker</td></tr>
+        <tr><td>Sharia conclusions</td><td><span class="state hold">Waiting</span> only through scholar-approved rule cards. Five are drafted and none is approved yet, so Mushir defers every permissibility question to the scholar. That is the designed V1.6 behaviour</td></tr>
+        <tr><td>Company lookups for pilot companies</td><td><span class="state wait">Planned</span> seven companies identified; waits for their contracts and a legal review</td></tr>
+        <tr><td>Scholar</td><td><span class="state hold">Not appointed</span> first meeting expected around 15 October</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="meters">
     <div class="meter">
-      <div class="label"><span>Automated checks</span><span class="num">1,234 / 1,246</span></div>
-      <div class="bar" role="img" aria-label="1,234 of 1,246 automated checks pass; 12 wait for a scholar"><span class="done" style="width:99.04%"></span><span class="open" style="width:0.96%"></span></div>
+      <div class="label"><span>Automated checks</span><span class="num">1,661 / 1,663</span></div>
+      <div class="bar" role="img" aria-label="1,661 of 1,663 automated checks pass; 2 wait for a scholar"><span class="done" style="width:99.88%"></span><span class="open" style="width:0.12%"></span></div>
     </div>
     <div class="meter">
-      <div class="label"><span>Browser and API checks</span><span class="num">30 / 30</span></div>
-      <div class="bar" role="img" aria-label="30 of 30 browser and API checks pass"><span class="done" style="width:100%"></span></div>
+      <div class="label"><span>Browser and API checks</span><span class="num">42 / 42</span></div>
+      <div class="bar" role="img" aria-label="42 of 42 browser and API checks pass"><span class="done" style="width:100%"></span></div>
     </div>
   </div>
-  <p class="callout prose">The 12 open checks are not faults. Each expects a verdict that Mushir now correctly withholds until a scholar approves a rule. They are listed one by one in the <a href="scholar-review-pack.html">Scholar Review Pack</a>.</p>
+  <p class="callout prose"><b>What the tests measure.</b> Our test set checks Mushir's general features: Arabic and English understanding, a short reasoning summary with each answer, sources, one clear question when a fact is missing, and saying "I don't know" for the right reason when no approved rule covers a question. Declining is a feature at this stage, and it is always reported next to how many questions Mushir does answer. Each scholar decision, and later your training material, widens what it can answer. The 2 open checks are routing questions waiting for the scholar; see the <a href="scholar-review-pack.html">Scholar Review Pack</a>.</p>
 </section>
 
 <section id="stands" aria-labelledby="h-stands">
@@ -378,9 +378,9 @@ body { margin: 0; }
       <tbody>
         <tr><td>Evidence-safe answers</td><td><span class="state ok">Mostly built</span></td><td>No verdict without an approved rule; source dates on every answer; every answer saved for review before it is shown</td></tr>
         <tr><td>Questions about your own deal</td><td><span class="state ok">Mostly built</span></td><td>Reads amounts, down payment, months and lender from the user's words; never assumes the contract type from words like "instalment"</td></tr>
-        <tr><td>Dossiers for seven pilot companies</td><td><span class="state wait">Not started</span></td><td>Waits for your confirmation of the pilot list</td></tr>
+        <tr><td>Dossiers for seven pilot companies</td><td><span class="state ok">Started</span></td><td>valU, Contact, Souhoola, Aman and Halan: legal names recorded in English and Arabic from the regulator's register and their own sites; dated public pages captured with an audit trail; request letters for their contracts drafted, waiting for your approval</td></tr>
         <tr><td>Company lookups</td><td><span class="state wait">Not started</span></td><td>Waits for the dossiers and a legal review</td></tr>
-        <tr><td>Scholar-verified V1.6 release</td><td><span class="state hold">Blocked</span></td><td>Waits for a scholar</td></tr>
+        <tr><td>Scholar-verified V1.6 release</td><td><span class="state hold">Blocked</span></td><td>Waits for a scholar. The review pack, 15 cases and five draft rule cards are ready for the first meeting</td></tr>
       </tbody>
     </table>
   </div>
@@ -434,7 +434,7 @@ body { margin: 0; }
         <tr><td>"Instalment" is taken as a contract type</td><td>Generic words never set the contract type; a document must show it</td></tr>
         <tr><td>A precise-looking number misleads users</td><td>The confidence percentage was removed; answers show sources and their age</td></tr>
         <tr><td>An answer cannot be traced later</td><td>Every answer is saved for review before the user sees it; if saving fails, it is not shown</td></tr>
-        <tr><td>Personal details are kept forever</td><td>Review records are deleted automatically after 365 days (a setting you can change)</td></tr>
+        <tr><td>Personal details are kept forever</td><td>Review records are kept until the scholar finishes reviewing, then deleted after 365 days once that policy is switched on (a setting you can change)</td></tr>
         <tr><td>A practice contract is mistaken for real terms</td><td>Practice material is labelled and kept out of company answers</td></tr>
       </tbody>
     </table>
@@ -498,6 +498,7 @@ body { margin: 0; }
     <li><b>Two registers, two kinds of company.</b> FRA licenses <i>consumer-finance companies</i>, and separately registers <i>consumer-finance providers</i>, defined as "producers or distributors of goods who practise consumer finance" (sellers that finance their own goods). Examples: B.TECH runs its in-house plan "minicash" under provider licence 7/2020, and separately runs Mylo through its finance company. The register shows which kind a company is; the customer contract still decides who sells and who lends in a given deal.</li>
     <li><b>A legal minimum for every contract.</b> FRA's model contracts (Decree 869/2021, republished in the 6 September 2026 rulebook) are the minimum every licensed company's contract must follow. An earlier decree (457/2020) also applied a minimum list to sellers that finance their own goods; the 2026 rulebook no longer lists it, so whether it still applies is being checked. This gives the scholar the baseline of what every customer signs.</li>
     <li><b>Sharia model contracts.</b> FRA publishes guiding Islamic contracts: Murabaha for consumer finance, lease-to-own (Ijarah), diminishing partnership (Musharaka), investment agency (Wakala) and micro-Murabaha. The Murabaha template contains points the scholar should look at, such as the supplier invoicing the customer directly. Mushir flags these points; the scholar decides. FRA lists only three consumer-finance companies as licensed for an Islamic (Murabaha) product: B.TECH (Mylo), Aman, and Abu Dhabi Islamic, whose contract is still under FRA Sharia committee review.</li>
+    <li><b>Who is behind each brand (checked 3 October 2026).</b> Each company on FRA's lists was matched to its market brand using one page the company itself publishes. 36 of 52 are now confirmed (16 where the company's own page names the licensed company, 20 through the register name or the parent group's own page); 15 are still unconfirmed, mostly because their sites are unreachable or never name the licensed company. One finding matters for the scholar: Contact's group includes seven more registered companies, among them the Bravo app and several car dealers' instalment companies, so a dealer-branded car plan can sit inside the same financing group.</li>
     <li><b>Sharia oversight.</b> Any company that sells products as Sharia-compliant must have its contracts reviewed by a Sharia committee whose members are registered with FRA. FRA's central Sharia committee has published rulings, for example that sukuk must be redeemed at market value rather than a guaranteed face value.</li>
   </ul>
   <p class="prose"><b>2021 vs 2026 model contracts (compared 3 October 2026).</b> The models did not change in substance: same 15 clauses, same obligations. The one change is wording: the promissory notes and cheques a lender may ask for are now called "guarantees" instead of "commercial papers". What matters more for the scholar is what the models leave out: late payment and default, who sells and delivers the goods, and insurance, which has its own 2026 model. Those terms appear only in each company's own contract, which is why the pilot companies' contracts are still needed. Many older FRA documents are scanned images; their text was recovered by OCR and checked against the page before anything was quoted.</p>
@@ -561,8 +562,8 @@ body { margin: 0; }
     <div class="node strong center">Reviewing scholar<span>to be appointed</span></div>
     <div class="fanrows">
       <div><b>Approves rule cards</b><span>→ Mushir gives its first approved conclusions</span></div>
-      <div><b>Decides the 12 open cases</b><span>→ all automated checks pass</span></div>
-      <div><b>Reviews about 100 V1.6 cases</b><span>→ V1.6 can be released</span></div>
+      <div><b>Decides the 15 review cases and five draft cards</b><span>→ Mushir answers more questions</span></div>
+      <div><b>Reviews about 100 V1.6 cases</b><span>→ V1.6 can be released; the feedback shapes V1.7</span></div>
       <div><b>Sets the acceptable error level</b><span>→ defines "ready to launch"</span></div>
     </div>
   </div>
@@ -580,7 +581,7 @@ body { margin: 0; }
   <h2 id="h-releases">Release plan</h2>
   <figure class="viz">
   <ol class="ladder" aria-label="Release ladder">
-    <li class="now"><b>V1.6</b><span class="name">Dual-lane prototype</span><span>Your own deal · seven pilot companies · ~100 scholar-reviewed cases</span></li>
+    <li class="now"><b>V1.6</b><span class="name">Dual-lane prototype</span><span>Your own deal · seven pilot companies · ~100 feature-tested cases reviewed by the scholar</span></li>
     <li><b>V1.7</b><span class="name">Rules and schedules</span><span>Your rules as approved checklists · reading schedule screenshots</span></li>
     <li><b>V1.8</b><span class="name">Lender coverage</span><span>All 52 FRA consumer-finance companies and seller-financiers · shops linked to lenders</span></li>
     <li><b>V1.9</b><span class="name">Learned behaviour</span><span>Smarter first questions · model tuned on approved examples</span></li>
@@ -591,7 +592,7 @@ body { margin: 0; }
     <table>
       <thead><tr><th>Version</th><th>Ready to move on when</th></tr></thead>
       <tbody>
-        <tr><td class="n">V1.6</td><td>The scholar reviews about 100 cases with no wrong conclusions, and the live checks pass</td></tr>
+        <tr><td class="n">V1.6</td><td>About 100 fixed cases pass the feature checks, the scholar's review of them finds no wrong conclusions, and the live checks pass</td></tr>
         <tr><td class="n">V1.7</td><td>Every rule in use is approved; schedule reading accuracy is reported</td></tr>
         <tr><td class="n">V1.8</td><td>All 52 FRA consumer-finance entities (39 licensed companies + 13 seller-financiers) covered at template level; old or conflicting information is flagged</td></tr>
         <tr><td class="n">V1.9</td><td>Tests prove that estimates never change a conclusion</td></tr>
@@ -603,7 +604,7 @@ body { margin: 0; }
   <figure class="viz">
   <ol class="path" aria-label="Steps to the V1.6 release">
     <li class="ext">Appoint scholar</li>
-    <li>Decide the 12 open cases</li>
+    <li>Decide the 15 review cases</li>
     <li>Approve first rule cards</li>
     <li class="ext">Confirm the pilot companies</li>
     <li>Build company dossiers</li>
@@ -633,16 +634,18 @@ body { margin: 0; }
     <table>
       <thead><tr><th>#</th><th>Decision or input</th><th>Why it matters</th></tr></thead>
       <tbody>
-        <tr><td class="n">1</td><td><b>Appoint a reviewing scholar</b></td><td>Every conclusion, the 12 open cases and the V1.6 release depend on it</td></tr>
+        <tr><td class="n">1</td><td><b>Appoint a reviewing scholar</b></td><td>Every conclusion, the 15 review cases and the V1.6 release depend on it</td></tr>
         <tr><td class="n">2</td><td><b>Your Sharia rule files</b> (riba and other financing rules)</td><td>They become the rule book</td></tr>
         <tr><td class="n">3</td><td><b>Which source wins</b> when your rules and AAOIFI differ, or whether every difference goes to the scholar</td><td>Mushir must never blend two positions</td></tr>
-        <tr><td class="n">4</td><td><b>The five pilot companies</b> (proposed: Contact, Souhoola, RUSHBRUSH, IKEA Egypt or Smart Furniture, plus one bank Islamic product or one retailer with a named financier)</td><td>Defines the first company lookups</td></tr>
+        <tr><td class="n">4</td><td><b>Confirm the seven pilot companies</b>: valU, Contact, Souhoola, Aman, Halan, B.TECH (Mylo) and Drive Finance (Forsa), and <b>approve sending the request letters</b> for their contracts (drafted for the first five)</td><td>Defines the first company lookups; their contracts are not public</td></tr>
         <tr><td class="n">5</td><td><b>The scholar's view on staff donating their own agreements</b></td><td>Decides whether complete real contracts can be studied early</td></tr>
         <tr><td class="n">6</td><td><b>The acceptable error level</b>, from the scholar</td><td>Defines "ready"</td></tr>
         <tr><td class="n">7</td><td><b>Four default settings</b>: record retention, approved-reviewer list, removal of the confidence %, storage location</td><td>Listed in the <a href="scholar-review-pack.html#defaults">Scholar Review Pack</a></td></tr>
+        <tr><td class="n">8</td><td><b>Your training material</b> beyond the rule files, and when to expect it</td><td>The next step in improving Mushir after the scholar's first decisions</td></tr>
       </tbody>
     </table>
   </div>
+  <p class="prose">The full list of open questions for you and for the scholar, with a reply template, is in the <a href="scholar-review-pack.html#asks">Scholar Review Pack</a>.</p>
 </section>
 
 <section id="wording" aria-labelledby="h-wording">
@@ -670,8 +673,8 @@ body { margin: 0; }
     <details><summary>Is Mushir useful before a scholar is appointed?</summary><div class="body"><p>Yes, for explaining standards and for walking a user through their own deal to the right document. It will not give conclusions until rules are approved.</p></div></details>
     <details><summary>Why not let the AI answer well-known rulings?</summary><div class="body"><p>"Well-known" rulings often carry conditions, follow one school over another, or differ from your own rules. A rule card makes those choices visible and approved once, and then covers every future question on that topic.</p></div></details>
     <details><summary>Why was the confidence percentage removed?</summary><div class="body"><p>It had never been checked against scholar decisions, so it could mislead. A certainty measure returns only after it is tested against scholar-reviewed answers.</p></div></details>
-    <details><summary>What is stored about users?</summary><div class="body"><p>Each answer is saved with the question, the facts the user stated and the checks applied, under a random session code. Records are deleted after 365 days unless you choose another period.</p></div></details>
-    <details><summary>What happens to the 12 open test questions?</summary><div class="body"><p>Each needs a scholar decision. The <a href="scholar-review-pack.html">Scholar Review Pack</a> lists them with options, our suggestions, a reply template and answers to more questions.</p></div></details>
+    <details><summary>What is stored about users?</summary><div class="body"><p>Each answer is saved with the question, the facts the user stated and the checks applied, under a random session code. Records are kept until the scholar finishes reviewing; after that, records older than 365 days are deleted once you switch that policy on.</p></div></details>
+    <details><summary>Mushir says "I don't know" a lot. Is that a problem?</summary><div class="body"><p>Not at this stage. When no scholar-approved rule covers a question, declining with sources and queuing the question for the scholar is the correct behaviour, and our tests check that it happens for the right reason. Each rule the scholar approves turns a group of these questions into answered ones. The <a href="scholar-review-pack.html">Scholar Review Pack</a> lists the 15 cases and five draft rules waiting for that decision.</p></div></details>
   </div>
 </section>
 

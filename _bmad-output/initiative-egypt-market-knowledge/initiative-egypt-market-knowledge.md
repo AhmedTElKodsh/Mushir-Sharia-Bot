@@ -20,7 +20,7 @@ The spec's success signal: on the live Space a pilot-company question returns da
 
 ## Done when
 
-1. V1.6 passes its release-ladder exit gate on the live Space: ~100 scholar-reviewed frozen cases, zero wrong verdicts, live smoke green.
+1. V1.6 passes its release-ladder exit gate on the live Space: ~100 frozen cases pass the feature gold set (bilingual understanding, reasoning summary, cited sources, one-question clarification, correct abstention, with coverage reported), scholar review finds zero wrong verdicts, live smoke green.
 2. No answer surface shows a numeric confidence, and no permissibility result is ever produced from an unknown or contradicted condition or an unapproved rule.
 3. Every runtime rule card is scholar-approved, and synthetic material is provably absent from named-company retrieval.
 4. All 52 FRA consumer-finance entities (39 licensed companies + 13 registered providers, register of 2026-10-02) are covered at template level with explicit access gaps.
@@ -46,6 +46,7 @@ Capability boundary per the spec; see its Non-goals (no merchant census, no auto
 
 - Decision: shared decisions have one home each. Semantics live in the spec companions (the spine); code-level contracts for slots, gates, review log, intent taxonomy, rule-card loader and dossier schema live in epic-evidence-safe-runtime entry 1; the frozen-set format lives in epic-scholar-verified-v1-6-release, which every adopter follows (2026-09-30).
 - Decision: scholar pilot decisions promote rule cards to `approved` inside V1.6 (user, 2026-09-30).
+- Decision: the golden set tests general features, and correct abstention is one of them; verdict accuracy grows progressively with scholar feedback and client training material. Developer-written rulings remain scholar-pending targets (user, 2026-10-01; spec companion `release-ladder.md`).
 - Decision: legal review gates public named-company answers in epic-named-offer-lane (2026-09-30).
 - Decision: primary V1.6 user is a retail buyer (O4, user, 2026-09-30).
 - Decision: pilot entities are seven: valU (established financier), Contact, Souhoola, Aman, Halan, B.TECH/Mylo, Drive/Forsa (user, 2026-10-02); client confirmation is requested in the client guide and the review pack.

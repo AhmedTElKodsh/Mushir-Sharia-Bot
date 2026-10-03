@@ -1,0 +1,84 @@
+[
+  {
+    "decision_id": "pilot-contact-20261002-followup",
+    "origin": "https://contact.eg",
+    "allowed_paths": [
+      "/robots.txt",
+      "/en",
+      "/en/",
+      "/en/contact-us",
+      "/en/contact-us/",
+      "/terms-and-conditions-en.pdf",
+      "/wp-content/uploads/2020/11/Digital-Terms-and-Conditions-Form-03.pdf"
+    ],
+    "terms_state": "reviewed_allowed",
+    "terms_reference": "_bmad-output\\initiative-egypt-market-knowledge\\acquisition-templates\\pilot-2026-10-02\\source-policy-review.md#contact",
+    "reviewed_by": "Codex automated operator; no human/source permission asserted",
+    "reviewed_at": "2026-10-02T11:29:40.014010+00:00",
+    "expires_at": "2026-10-03T11:29:40.014010+00:00",
+    "reuse_rights": "internal_research_only; publication rights unestablished"
+  },
+  {
+    "decision_id": "pilot-halan-20261002-followup",
+    "origin": "https://halan.com",
+    "allowed_paths": [
+      "/robots.txt",
+      "/shop/",
+      "/contact-us-2/",
+      "/personal-lending/"
+    ],
+    "terms_state": "reviewed_allowed",
+    "terms_reference": "_bmad-output\\initiative-egypt-market-knowledge\\acquisition-templates\\pilot-2026-10-02\\source-policy-review.md#halan",
+    "reviewed_by": "Codex automated operator; no human/source permission asserted",
+    "reviewed_at": "2026-10-02T11:29:40.014010+00:00",
+    "expires_at": "2026-10-03T11:29:40.014010+00:00",
+    "reuse_rights": "internal_research_only; publication rights unestablished"
+  },
+  {
+    "decision_id": "pilot-aman-20261002-followup",
+    "origin": "https://aman.eg",
+    "allowed_paths": [
+      "/robots.txt",
+      "/en",
+      "/en/",
+      "/en/service/get-aman-installment-limit/",
+      "/en/service/shop-online/",
+      "/en/contact-us/"
+    ],
+    "terms_state": "reviewed_allowed",
+    "terms_reference": "_bmad-output\\initiative-egypt-market-knowledge\\acquisition-templates\\pilot-2026-10-02\\source-policy-review.md#aman",
+    "reviewed_by": "Codex automated operator; no human/source permission asserted",
+    "reviewed_at": "2026-10-02T11:29:40.014010+00:00",
+    "expires_at": "2026-10-03T11:29:40.014010+00:00",
+    "reuse_rights": "internal_research_only; publication rights unestablished"
+  },
+  {
+    "decision_id": "pilot-valu-20261002-followup",
+    "origin": "https://valugroup.com",
+    "allowed_paths": [
+      "/robots.txt",
+      "/terms-and-conditions"
+    ],
+    "terms_state": "restricted",
+    "terms_reference": "_bmad-output\\initiative-egypt-market-knowledge\\acquisition-templates\\pilot-2026-10-02\\source-policy-review.md#valu",
+    "reviewed_by": "Codex automated operator; no human/source permission asserted",
+    "reviewed_at": "2026-10-02T11:29:40.014010+00:00",
+    "expires_at": "2026-10-03T11:29:40.014010+00:00",
+    "reuse_rights": "internal_research_only; publication rights unestablished"
+  },
+  {
+    "decision_id": "pilot-souhoola-20261002-followup",
+    "origin": "https://souhoola.com",
+    "allowed_paths": [
+      "/robots.txt",
+      "/terms-conditions",
+      "/about"
+    ],
+    "terms_state": "unknown",
+    "terms_reference": "_bmad-output\\initiative-egypt-market-knowledge\\acquisition-templates\\pilot-2026-10-02\\source-policy-review.md#souhoola",
+    "reviewed_by": "Codex automated operator; no human/source permission asserted",
+    "reviewed_at": "2026-10-02T11:29:40.014010+00:00",
+    "expires_at": "2026-10-03T11:29:40.014010+00:00",
+    "reuse_rights": "internal_research_only; publication rights unestablished"
+  }
+]
